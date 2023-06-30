@@ -1,0 +1,14 @@
+{
+  "name": "@zanbar/desktop",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "npm run tauri dev",
+    "build": "npm run tauri build",
+    "tauri": "tauri"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@tauri-apps/cli": "1.4.0",
+    "typescript": "5.0.4"
+  }
+}
