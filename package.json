@@ -1,0 +1,23 @@
+{
+  "name": "glazer",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --continue",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,html,json,js,yaml,scss}\" --ignore-path .gitignore"
+  },
+  "devDependencies": {
+    "prettier": "2.8.7",
+    "turbo": "1.9.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
+  "packageManager": "pnpm@7.12.2"
+}

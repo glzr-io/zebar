@@ -1,0 +1,7 @@
+# Set LF as the line ending to use for files that Git interprets as text files.
+# CRLF is used for file types where the line ending *has to* be CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ahk text eol=crlf
+

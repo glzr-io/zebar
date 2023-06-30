@@ -1,0 +1,20 @@
+{
+  "name": "@zanbar/frontend",
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "vite --mode development",
+    "build": "vite build --mode production"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "1.4.0",
+    "solid-js": "1.7.3"
+  },
+  "devDependencies": {
+    "@types/node": "18.15.12",
+    "sass": "1.62.0",
+    "typescript": "5.0.4",
+    "vite": "4.3.0",
+    "vite-plugin-solid": "2.7.0"
+  }
+}
