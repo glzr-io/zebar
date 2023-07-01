@@ -10,7 +10,7 @@ export const useConfig = memoize(() => {
   const commands = useDesktopCommands();
 
   const [config] = createResource(async () => {
-    const config = await commands.readConfigFile('config.yaml');
+    const config = await commands.readConfigFile();
 
     // Parse the config as YAML.
     const parsedConfig = parse(config);
