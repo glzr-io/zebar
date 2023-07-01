@@ -22,7 +22,7 @@ importers:
     specifiers:
       '@tauri-apps/api': 1.4.0
       '@types/node': 18.15.12
-      sass: 1.62.0
+      sass: '1.63.6 '
       solid-js: 1.7.3
       typescript: 5.0.4
       vite: 4.3.0
@@ -34,9 +34,9 @@ importers:
       yaml: 2.3.1
     devDependencies:
       '@types/node': 18.15.12
-      sass: 1.62.0
+      sass: 1.63.6
       typescript: 5.0.4
-      vite: 4.3.0_kdgmlsav4mmt6u4ajgmjg7skje
+      vite: 4.3.0_6yh6anjhwlaoarf2a5hux5p4cm
       vite-plugin-solid: 2.7.0_solid-js@1.7.3+vite@4.3.0
 
 packages:
@@ -1081,8 +1081,8 @@ packages:
       fsevents: 2.3.2
     dev: true
 
-  /sass/1.62.0:
-    resolution: {integrity: sha512-Q4USplo4pLYgCi+XlipZCWUQz5pkg/ruSSgJ0WRDSb/+3z9tXUOkQ7QPYn4XrhZKYAK4HlpaQecRwKLJX6+DBg==}
+  /sass/1.63.6:
+    resolution: {integrity: sha512-MJuxGMHzaOW7ipp+1KdELtqKbfAWbH7OLIdoSMnVe3EXPMTmxTmlaZDCTsgIpPCs3w99lLo9/zDKkOrJuT5byw==}
     engines: {node: '>=14.0.0'}
     hasBin: true
     dependencies:
@@ -1236,13 +1236,13 @@ packages:
       merge-anything: 5.1.5
       solid-js: 1.7.3
       solid-refresh: 0.5.2_solid-js@1.7.3
-      vite: 4.3.0_kdgmlsav4mmt6u4ajgmjg7skje
+      vite: 4.3.0_6yh6anjhwlaoarf2a5hux5p4cm
       vitefu: 0.2.4_vite@4.3.0
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  /vite/4.3.0_kdgmlsav4mmt6u4ajgmjg7skje:
+  /vite/4.3.0_6yh6anjhwlaoarf2a5hux5p4cm:
     resolution: {integrity: sha512-JTGFgDh3dVxeGBpuQX04Up+JZmuG6wu9414Ei36vQzaEruY/M4K0AgwtuB2b4HaBgB7R8l+LHxjB0jcgz4d2qQ==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
@@ -1271,7 +1271,7 @@ packages:
       esbuild: 0.17.17
       postcss: 8.4.23
       rollup: 3.21.0
-      sass: 1.62.0
+      sass: 1.63.6
     optionalDependencies:
       fsevents: 2.3.2
     dev: true
@@ -1284,7 +1284,7 @@ packages:
       vite:
         optional: true
     dependencies:
-      vite: 4.3.0_kdgmlsav4mmt6u4ajgmjg7skje
+      vite: 4.3.0_6yh6anjhwlaoarf2a5hux5p4cm
     dev: true
 
   /yallist/3.1.1:
