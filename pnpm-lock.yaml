@@ -27,9 +27,11 @@ importers:
       typescript: 5.0.4
       vite: 4.3.0
       vite-plugin-solid: 2.7.0
+      yaml: 2.3.1
     dependencies:
       '@tauri-apps/api': 1.4.0
       solid-js: 1.7.3
+      yaml: 2.3.1
     devDependencies:
       '@types/node': 18.15.12
       sass: 1.62.0
@@ -1288,3 +1290,8 @@ packages:
   /yallist/3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
     dev: true
+
+  /yaml/2.3.1:
+    resolution: {integrity: sha512-2eHWfjaoXgTBC2jNM1LRef62VQa0umtvRiDSk6HSzW7RvS5YtkabJrwYLLEKWBc8a5U2PTSCs+dJjUTJdlHsWQ==}
+    engines: {node: '>= 14'}
+    dev: false
