@@ -1,13 +1,13 @@
 import { invoke as tauriInvoke, InvokeArgs } from '@tauri-apps/api/tauri';
-import { createRoot } from 'solid-js';
 
 import { useLogger } from './logging/use-logger.hook';
+import { memoize } from './utils/memoize';
 
 function isTauri(): boolean {
   return !!(window && window.__TAURI__);
 }
 
-export const useDesktopCommands = createRoot(() => {
+export const useDesktopCommands = memoize(() => {
   const logger = useLogger('useDesktopCommands');
 
   async function invoke<T>(command: string, args?: InvokeArgs): Promise<T> {
@@ -27,11 +27,11 @@ export const useDesktopCommands = createRoot(() => {
     }
   }
 
-  function greet(name: string): Promise<string> {
-    return invoke<string>('greet', { name });
+  function readConfigFile(path: string): Promise<string> {
+    return invoke<string>('read_config_file', { path });
   }
 
   return {
-    greet,
+    readConfigFile,
   };
 });
