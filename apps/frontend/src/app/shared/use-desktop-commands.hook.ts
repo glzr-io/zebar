@@ -27,8 +27,8 @@ export const useDesktopCommands = memoize(() => {
     }
   }
 
-  function readConfigFile(path: string): Promise<string> {
-    return invoke<string>('read_config_file', { path });
+  function readConfigFile(): Promise<string> {
+    return invoke<string>('read_config_file');
   }
 
   return {
