@@ -1,22 +1,22 @@
 general:
-	position_x: {{screen_x}} - 10px
-	position_y: {{screen_y}} - 10px
+  position_x: '{{screen_x}} - 10px'
+  position_y: '{{screen_y}} - 10px'
   width: 100% - 10px
-  height: {{screen_width}} - 20px
-	opacity: 1.0
-	enable_devtools: false
+  height: '{{screen_width}} - 20px'
+  opacity: 1.0
+  enable_devtools: false
   enable_default_styles: true
   global_styles: |
     --some-var: blue;
-	global_stylesheet_path: ./custom.scss
+  global_stylesheet_path: ./custom.scss
 
 bar/main:
   styles: |
-	  background: "#20242cc4";
-	  color: "#ffffff";
-	  font-family: "Segoe UI";
-	  font-size: "13px";
-	  padding: "4px 6px";
+    background: "#20242cc4";
+    color: "#ffffff";
+    font-family: "Segoe UI";
+    font-size: "13px";
+    padding: "4px 6px";
   template: |
     <div id="{{id}}">
       {{ components_left }}
@@ -32,7 +32,7 @@ bar/main:
       </div>
     components:
       - type: cpu
-        style: |
+        styles: |
           background: green;
         label: <div class="lorem">{{cpu_frequency}} {{cpu_temp}}</div>
 
@@ -63,4 +63,3 @@ bar/main:
 
             <p>Currently playing: {{song.name}} by {{artist}}</p>
           </div>
-
