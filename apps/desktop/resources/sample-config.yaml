@@ -1,0 +1,66 @@
+general:
+	position_x: {{screen_x}} - 10px
+	position_y: {{screen_y}} - 10px
+  width: 100% - 10px
+  height: {{screen_width}} - 20px
+	opacity: 1.0
+	enable_devtools: false
+  enable_default_styles: true
+  global_styles: |
+    --some-var: blue;
+	global_stylesheet_path: ./custom.scss
+
+bar/main:
+  styles: |
+	  background: "#20242cc4";
+	  color: "#ffffff";
+	  font-family: "Segoe UI";
+	  font-size: "13px";
+	  padding: "4px 6px";
+  template: |
+    <div id="{{id}}">
+      {{ components_left }}
+      {{ components_center }}
+      {{ components_right }}
+    </div>
+  components_left:
+    styles: |
+      display: "flex";
+    template: |
+      <div id="{{id}}">
+        {{ components }}
+      </div>
+    components:
+      - type: cpu
+        style: |
+          background: green;
+        label: <div class="lorem">{{cpu_frequency}} {{cpu_temp}}</div>
+
+      - type: custom
+        template_variables:
+          hardcoded_var: 3
+          song:
+            source: script
+            script_path: ./scripts/get-spotify-song.js # Outputs JSON (eg. '{ name: Africa, isPlaying: true }').
+            script_args: current
+            refresh_interval_ms: 1000
+          artist:
+            source: script
+            script_path: ./scripts/get-artist.js # Outputs a string (eg. 'Toto').
+            refresh_interval_ms: 1000
+        template_commands:
+          play: spotify play
+          pause: spotify play
+          next: spotify play
+          previous: spotify play
+        template: |
+          <div id="{{id}}">
+            {{#if song.isPlaying}}
+              <span onClick="{{pause}}">Pause</span>
+            {{else}}
+              <span onClick="{{play}}">Play</span>
+            {{/if}}
+
+            <p>Currently playing: {{song.name}} by {{artist}}</p>
+          </div>
+
