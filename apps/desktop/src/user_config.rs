@@ -34,7 +34,7 @@ fn create_from_sample(
 ) -> Result<String> {
   let sample_path = app_handle
     .path_resolver()
-    .resolve_resource("sample-config.yaml")
+    .resolve_resource("resources/sample-config.yaml")
     .context("Failed to resolve sample config.")?;
 
   let mut sample_file =
