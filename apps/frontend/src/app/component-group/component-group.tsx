@@ -1,7 +1,8 @@
-import { createEffect, createSignal } from 'solid-js';
+import { createEffect, createSignal, on } from 'solid-js';
 import { renderString } from 'nunjucks';
 
 import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
+import template from './component-group.njk?raw';
 
 export interface ComponentGroupProps {
   id: string;
@@ -9,14 +10,6 @@ export interface ComponentGroupProps {
 }
 
 export function ComponentGroup(props: ComponentGroupProps) {
-  const defaultTemplate = `
-    <div class="group" {{ root_props }}">
-	    {% for component in components %}
-        {{ component }}
-      {% endfor %}
-    </div>
-  `;
-
   const [components, setComponents] = createSignal<number[]>([]);
 
   // Test whether updates are working.
@@ -28,17 +21,20 @@ export function ComponentGroup(props: ComponentGroupProps) {
   element.innerHTML = parseTemplate();
 
   function parseTemplate() {
-    return renderString(defaultTemplate, {
+    return renderString(template, {
       id: props.id,
       components: components(),
     });
   }
 
-  createEffect(() => {
-    // TODO: Use element.replaceWith()?
-    console.log('reran effect', components());
-    element.innerHTML = parseTemplate();
-  });
+  createEffect(
+    on(
+      () => components(),
+      () => {
+        element.innerHTML = parseTemplate();
+      },
+    ),
+  );
 
   return element;
 }
