@@ -1,6 +1,6 @@
 export interface UserConfig {
   general: GeneralConfig;
-  [key: `bars/${string}`]: BarConfig;
+  [key: `bar/${string}`]: BarConfig;
 }
 
 export interface GeneralConfig {
@@ -18,12 +18,12 @@ export interface GeneralConfig {
 export interface BarConfig {
   style: string;
   template: string;
-  components_left: ComponentContainerConfig;
-  components_middle: ComponentContainerConfig;
-  components_right: ComponentContainerConfig;
+  components_left: ComponentGroupConfig;
+  components_middle: ComponentGroupConfig;
+  components_right: ComponentGroupConfig;
 }
 
-export interface ComponentContainerConfig {
+export interface ComponentGroupConfig {
   style: string;
   template_variables: Record<string, string | ScriptVariableConfig>;
   template_commands: Record<string, string>;

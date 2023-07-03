@@ -1,26 +1,21 @@
-import { Show } from 'solid-js';
-import { compileString } from 'sass';
+import { Show, createMemo } from 'solid-js';
 
 import s from './app.module.scss';
 import { useConfig } from './shared/use-config.hook';
+import { ComponentGroup } from './component-group/component-group';
 
 export function App() {
   const config = useConfig();
 
-  console.log(
-    compileString(`
-      .box {
-        width: 10px + 15px;
-      }
-    `),
-  );
+  const barConfig = createMemo(() => config()?.['bar/main']);
 
   return (
-    <Show when={config()}>
+    <Show when={barConfig()}>
       {config => (
         <div class={s.app}>
-          <p>Hello</p>
-          <p>{JSON.stringify(config())}</p>
+          <ComponentGroup id="temp" config={config().components_left} />
+          <ComponentGroup id="temp" config={config().components_middle} />
+          <ComponentGroup id="temp" config={config().components_right} />
         </div>
       )}
     </Show>
