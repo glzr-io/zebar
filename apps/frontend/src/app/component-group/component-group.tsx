@@ -1,5 +1,4 @@
-import { createMemo } from 'solid-js';
-import html from 'solid-js/html';
+import { createEffect, createSignal } from 'solid-js';
 import { renderString } from 'nunjucks';
 
 import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
@@ -18,12 +17,28 @@ export function ComponentGroup(props: ComponentGroupProps) {
     </div>
   `;
 
-  const compiledHtml = createMemo(() => {
+  const [components, setComponents] = createSignal<number[]>([]);
+
+  // Test whether updates are working.
+  setInterval(() => {
+    setComponents([Math.random(), Math.random(), Math.random()]);
+  }, 1000);
+
+  const element = document.createElement('div');
+  element.innerHTML = parseTemplate();
+
+  function parseTemplate() {
     return renderString(defaultTemplate, {
       id: props.id,
-      components: props.config.components,
+      components: components(),
     });
+  }
+
+  createEffect(() => {
+    // TODO: Use element.replaceWith()?
+    console.log('reran effect', components());
+    element.innerHTML = parseTemplate();
   });
 
-  return html`${compiledHtml()}`;
+  return element;
 }
