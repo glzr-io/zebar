@@ -1,7 +1,7 @@
-import { createEffect, createSignal, on } from 'solid-js';
+import { createEffect, on, onCleanup } from 'solid-js';
 
-import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
 import template from './component-group.njk?raw';
+import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
 import { diffAndMutate } from '~/shared/utils/diff-and-mutate';
 import { parseTemplate } from '~/shared/utils/parse-template';
 
@@ -11,30 +11,35 @@ export interface ComponentGroupProps {
 }
 
 export function ComponentGroup(props: ComponentGroupProps) {
-  const [components, setComponents] = createSignal<number[]>([]);
-
-  // Test whether updates are working.
-  setInterval(() => {
-    setComponents([Math.random(), Math.random(), Math.random()]);
-  }, 1000);
-
   const element = getTemplate();
-
-  function getTemplate() {
-    return parseTemplate(template, {
-      id: props.id,
-      components: components(),
-    });
-  }
 
   createEffect(
     on(
-      () => components(),
+      () => [
+        props.config.template_variables,
+        props.config.template_commands,
+        props.config.components,
+      ],
       () => {
         diffAndMutate(element, getTemplate());
       },
     ),
   );
+
+  onCleanup(() => {
+    console.log('cleanup');
+  });
+
+  function getTemplate() {
+    return parseTemplate(template, {
+      bindings: {
+        strings: {
+          id: props.id,
+        },
+        components: {},
+      },
+    });
+  }
 
   return element;
 }
