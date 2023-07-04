@@ -1,5 +1,6 @@
 import { renderString } from 'nunjucks';
 import { JSXElement } from 'solid-js';
+import { render } from 'solid-js/web';
 
 export interface ParseTemplateOptions {
   bindings?: {
@@ -28,6 +29,17 @@ export function parseTemplate(
 
   const element = document.createElement('div');
   element.innerHTML = compiledTemplate;
+
+  const componentBindings = Object.entries(bindings.components ?? {});
+
+  for (const [componentName, component] of componentBindings) {
+    // TODO: This should query by text content.
+    const root = element.querySelector(`#${componentName}`);
+
+    if (root) {
+      render(component, root);
+    }
+  }
 
   return element;
 }
@@ -62,4 +74,10 @@ function parseTemplateStrings(
   });
 
   return compiledTemplate;
+}
+
+function getElementsByText(text: string, tag = '*') {
+  return Array.prototype.slice
+    .call(document.getElementsByTagName(tag))
+    .filter(el => el.textContent.trim() === text.trim());
 }

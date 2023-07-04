@@ -16,13 +16,11 @@ export function ComponentGroup(props: ComponentGroupProps) {
   createEffect(
     on(
       () => [
-        props.config.template_variables,
-        props.config.template_commands,
-        props.config.components,
+        props.config?.template_variables,
+        props.config?.template_commands,
+        props.config?.components,
       ],
-      () => {
-        diffAndMutate(element, getTemplate());
-      },
+      () => diffAndMutate(element, getTemplate()),
     ),
   );
 
