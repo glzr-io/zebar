@@ -12,7 +12,7 @@ export interface BarProps {
 }
 
 export function Bar(props: BarProps) {
-  const element = getTemplate();
+  const element = getParsedTemplate();
 
   createEffect(
     on(
@@ -23,11 +23,11 @@ export function Bar(props: BarProps) {
         props.config.components_center,
         props.config.components_right,
       ],
-      () => diffAndMutate(element, getTemplate()),
+      () => diffAndMutate(element, getParsedTemplate()),
     ),
   );
 
-  function getTemplate() {
+  function getParsedTemplate() {
     return parseTemplate(template, {
       bindings: {
         strings: {
