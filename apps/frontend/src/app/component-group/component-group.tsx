@@ -1,8 +1,9 @@
 import { createEffect, createSignal, on } from 'solid-js';
-import { renderString } from 'nunjucks';
 
 import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
 import template from './component-group.njk?raw';
+import { diffAndMutate } from '~/shared/utils/diff-and-mutate';
+import { parseTemplate } from '~/shared/utils/parse-template';
 
 export interface ComponentGroupProps {
   id: string;
@@ -17,11 +18,10 @@ export function ComponentGroup(props: ComponentGroupProps) {
     setComponents([Math.random(), Math.random(), Math.random()]);
   }, 1000);
 
-  const element = document.createElement('div');
-  element.innerHTML = parseTemplate();
+  const element = getTemplate();
 
-  function parseTemplate() {
-    return renderString(template, {
+  function getTemplate() {
+    return parseTemplate(template, {
       id: props.id,
       components: components(),
     });
@@ -31,7 +31,7 @@ export function ComponentGroup(props: ComponentGroupProps) {
     on(
       () => components(),
       () => {
-        element.innerHTML = parseTemplate();
+        diffAndMutate(element, getTemplate());
       },
     ),
   );

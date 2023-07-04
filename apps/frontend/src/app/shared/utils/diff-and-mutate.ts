@@ -1,4 +1,8 @@
-function diffAndMutate(element1: HTMLElement, element2: HTMLElement) {
+/**
+ * Diffs two elements and mutates the first element in-place to match the second
+ * element.
+ */
+export function diffAndMutate(element1: Element, element2: Element) {
   // Compare the tag names of the elements.
   if (element1.tagName !== element2.tagName) {
     // If the tag names are different, replace element1 with element2.
@@ -8,27 +12,30 @@ function diffAndMutate(element1: HTMLElement, element2: HTMLElement) {
   }
 
   // Compare the attributes of the elements.
-  const attributes1 = Array.from(element1.attributes);
-  const attributes2 = Array.from(element2.attributes);
+  const attributes1 = element1.getAttributeNames();
+  const attributes2 = element2.getAttributeNames();
 
   attributes1.forEach(attr => {
-    const name = attr.name;
-
     // Remove attributes from element1 that are not present in element2.
-    if (!element2.hasAttribute(name)) {
-      element1.removeAttribute(name);
+    if (!element2.hasAttribute(attr)) {
+      element1.removeAttribute(attr);
     }
   });
 
   attributes2.forEach(attr => {
-    const name = attr.name;
-    const value = attr.value;
+    const value = element2.getAttribute(attr)!;
 
     // Update attributes in element1 to match element2.
-    if (!element1.hasAttribute(name) || element1.getAttribute(name) !== value) {
-      element1.setAttribute(name, value);
+    if (!element1.hasAttribute(attr) || element1.getAttribute(attr) !== value) {
+      element1.setAttribute(attr, value);
     }
   });
+
+  // TODO: Temporary way to replace child nodes. Should deep diff and mutate
+  // for better performance.
+  element1.replaceChildren(...Array.from(element2.childNodes));
+
+  return element1;
 
   // Compare the child nodes of the elements.
   const childNodes1 = Array.from(element1.childNodes);
@@ -42,6 +49,7 @@ function diffAndMutate(element1: HTMLElement, element2: HTMLElement) {
     const child2 = childNodes2[i];
 
     if (child1 && child2) {
+      // TODO: This doesn't work for comment or text nodes.
       diffAndMutate(child1 as HTMLElement, child2 as HTMLElement);
     } else if (child1) {
       // Remove extra child nodes from element1.
