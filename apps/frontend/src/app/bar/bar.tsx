@@ -23,9 +23,7 @@ export function Bar(props: BarProps) {
         props.config.components_center,
         props.config.components_right,
       ],
-      () => {
-        diffAndMutate(element, getTemplate());
-      },
+      () => diffAndMutate(element, getTemplate()),
     ),
   );
 
