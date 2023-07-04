@@ -4,6 +4,7 @@ import template from './component-group.njk?raw';
 import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
 import { diffAndMutate } from '~/shared/utils/diff-and-mutate';
 import { parseTemplate } from '~/shared/utils/parse-template';
+import { ClockComponent } from '~/components/clock/clock-component';
 
 export interface ComponentGroupProps {
   id: string;
@@ -11,7 +12,7 @@ export interface ComponentGroupProps {
 }
 
 export function ComponentGroup(props: ComponentGroupProps) {
-  const element = getTemplate();
+  const element = getParsedTemplate();
 
   createEffect(
     on(
@@ -20,24 +21,29 @@ export function ComponentGroup(props: ComponentGroupProps) {
         props.config?.template_commands,
         props.config?.components,
       ],
-      () => diffAndMutate(element, getTemplate()),
+      () => diffAndMutate(element, getParsedTemplate()),
     ),
   );
 
-  onCleanup(() => {
-    console.log('cleanup');
-  });
-
-  function getTemplate() {
+  function getParsedTemplate() {
     return parseTemplate(template, {
       bindings: {
         strings: {
           id: props.id,
         },
-        components: {},
+        components: {
+          components: () => (
+            // TODO: Avoid harcoding component + turn into array.
+            <ClockComponent id="aaa" config={props.config.components[0]} />
+          ),
+        },
       },
     });
   }
+
+  onCleanup(() => {
+    console.log('cleanup'); // Never gets called.
+  });
 
   return element;
 }
