@@ -42,8 +42,7 @@ export function parseTemplate(
     const replacementDiv = `<div id="${tempId}"></div>`;
 
     element.innerHTML = element.innerHTML.replace(
-      // TODO: Allow for multiple spaces in-between curly braces.
-      `{{ ${componentName} }}`,
+      new RegExp(`{{\\s*${componentName}\\s*}}`),
       replacementDiv,
     );
 
