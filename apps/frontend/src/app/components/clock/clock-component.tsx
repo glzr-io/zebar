@@ -7,9 +7,8 @@ import {
 } from 'solid-js';
 
 import template from './clock-component.njk?raw';
-import { ClockComponentConfig } from '~/shared/user-config/clock-component-config.model';
-import { parseTemplate } from '~/shared/template-parsing/parse-template';
-import { updateParsedTemplate } from '~/shared/template-parsing';
+import { ClockComponentConfig } from '~/shared/user-config';
+import { parseTemplate, updateParsedTemplate } from '~/shared/template-parsing';
 
 export interface ClockComponentProps {
   id: string;
