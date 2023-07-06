@@ -3,16 +3,10 @@ import { render } from 'solid-js/web';
 
 import { TemplateBindings } from './template-bindings.model';
 
-export interface ParseTemplateOptions {
-  bindings?: TemplateBindings;
-}
-
 export function parseTemplate(
   template: string,
-  options: ParseTemplateOptions,
+  bindings: TemplateBindings = {},
 ): HTMLElement {
-  const { bindings = {} } = options;
-
   const compiledTemplate = parseTemplateStrings(
     template,
     bindings.strings ?? {},

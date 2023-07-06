@@ -12,7 +12,7 @@ export interface ComponentGroupProps {
 }
 
 export function ComponentGroup(props: ComponentGroupProps) {
-  const element = parseTemplate(template, { bindings: getBindings() });
+  const element = parseTemplate(template, getBindings());
 
   createEffect(
     on(
@@ -21,8 +21,7 @@ export function ComponentGroup(props: ComponentGroupProps) {
         props.config?.template_commands,
         props.config?.components,
       ],
-      () =>
-        updateParsedTemplate(element, template, { bindings: getBindings() }),
+      () => updateParsedTemplate(element, template, getBindings()),
     ),
   );
 
