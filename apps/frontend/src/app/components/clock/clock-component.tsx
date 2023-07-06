@@ -8,8 +8,8 @@ import {
 
 import template from './clock-component.njk?raw';
 import { ClockComponentConfig } from '~/shared/user-config/clock-component-config.model';
-import { diffAndMutate } from '~/shared/utils/diff-and-mutate';
-import { parseTemplate } from '~/shared/utils/parse-template';
+import { parseTemplate } from '~/shared/template-parsing/parse-template';
+import { updateParsedTemplate } from '~/shared/template-parsing';
 
 export interface ClockComponentProps {
   id: string;
@@ -21,10 +21,9 @@ export function ClockComponent(props: ClockComponentProps) {
 
   const minutes = createMemo(() => date().getMinutes());
   const hours = createMemo(() => date().getHours());
-
-  const element = getParsedTemplate();
-
   const interval = setInterval(() => setDate(new Date()), 1000);
+
+  const element = parseTemplate(template, { bindings: getBindings() });
 
   createEffect(
     on(
@@ -34,7 +33,8 @@ export function ClockComponent(props: ClockComponentProps) {
         minutes(),
         hours(),
       ],
-      () => diffAndMutate(element, getParsedTemplate()),
+      () =>
+        updateParsedTemplate(element, template, { bindings: getBindings() }),
     ),
   );
 
@@ -43,16 +43,14 @@ export function ClockComponent(props: ClockComponentProps) {
     clearInterval(interval);
   });
 
-  function getParsedTemplate() {
-    return parseTemplate(template, {
-      bindings: {
-        strings: {
-          minutes: String(minutes()),
-          hours: String(hours()),
-        },
-        components: {},
+  function getBindings() {
+    return {
+      strings: {
+        minutes: minutes(),
+        hours: hours(),
       },
-    });
+      components: {},
+    };
   }
 
   return element;

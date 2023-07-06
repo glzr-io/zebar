@@ -1,13 +1,10 @@
 import { renderString } from 'nunjucks';
-import { JSXElement } from 'solid-js';
 import { render } from 'solid-js/web';
 
+import { TemplateBindings } from './template-bindings.model';
+
 export interface ParseTemplateOptions {
-  bindings?: {
-    strings?: Record<string, string | boolean | number>;
-    functions?: Record<string, (...args: unknown[]) => unknown>;
-    components?: Record<string, () => JSXElement>;
-  };
+  bindings?: TemplateBindings;
 }
 
 export function parseTemplate(
