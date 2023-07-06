@@ -12,7 +12,7 @@ export interface BarProps {
 }
 
 export function Bar(props: BarProps) {
-  const element = parseTemplate(template, { bindings: getBindings() });
+  const element = parseTemplate(template, getBindings());
 
   createEffect(
     on(
@@ -23,8 +23,7 @@ export function Bar(props: BarProps) {
         props.config.components_center,
         props.config.components_right,
       ],
-      () =>
-        updateParsedTemplate(element, template, { bindings: getBindings() }),
+      () => updateParsedTemplate(element, template, getBindings()),
     ),
   );
 

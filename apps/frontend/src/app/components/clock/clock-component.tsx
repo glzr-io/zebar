@@ -23,7 +23,7 @@ export function ClockComponent(props: ClockComponentProps) {
   const hours = createMemo(() => date().getHours());
   const interval = setInterval(() => setDate(new Date()), 1000);
 
-  const element = parseTemplate(template, { bindings: getBindings() });
+  const element = parseTemplate(template, getBindings());
 
   createEffect(
     on(
@@ -33,8 +33,7 @@ export function ClockComponent(props: ClockComponentProps) {
         minutes(),
         hours(),
       ],
-      () =>
-        updateParsedTemplate(element, template, { bindings: getBindings() }),
+      () => updateParsedTemplate(element, template, getBindings()),
     ),
   );
 
