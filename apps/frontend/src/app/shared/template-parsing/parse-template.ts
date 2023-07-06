@@ -1,5 +1,5 @@
 import { renderString } from 'nunjucks';
-import { render } from 'solid-js/web';
+import { insert } from 'solid-js/web';
 
 import { TemplateBindings } from './template-bindings.model';
 
@@ -28,7 +28,7 @@ export function parseTemplate(
     const root = element.querySelector(`#${componentName}`);
 
     if (root) {
-      render(component, root);
+      insert(root, component);
     }
   }
 
