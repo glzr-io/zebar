@@ -1,9 +1,8 @@
 import { createEffect, on, onCleanup } from 'solid-js';
 
 import template from './component-group.njk?raw';
-import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
-import { updateParsedTemplate } from '~/shared/template-parsing/update-parsed-template';
-import { parseTemplate } from '~/shared/template-parsing/parse-template';
+import { ComponentGroupConfig } from '~/shared/user-config';
+import { parseTemplate, updateParsedTemplate } from '~/shared/template-parsing';
 import { ClockComponent } from '~/components/clock/clock-component';
 
 export interface ComponentGroupProps {

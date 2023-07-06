@@ -3,12 +3,12 @@ import { configure } from 'nunjucks';
 
 import s from './app.module.scss';
 import { Bar } from './bar/bar';
-import { useConfig } from './shared/use-config.hook';
+import { useUserConfig } from './shared/user-config';
 
 export function App() {
-  const config = useConfig();
+  const userConfig = useUserConfig();
 
-  const barConfig = createMemo(() => config()?.['bar/main']);
+  const barConfig = createMemo(() => userConfig()?.['bar/main']);
 
   // Prevent Nunjucks from escaping HTML.
   configure({ autoescape: false });

@@ -1,10 +1,9 @@
 import { createEffect, on } from 'solid-js';
 
 import template from './bar.njk?raw';
-import { BarConfig } from '~/shared/user-config/user-config.model';
-import { parseTemplate } from '~/shared/template-parsing/parse-template';
+import { BarConfig } from '~/shared/user-config';
+import { parseTemplate, updateParsedTemplate } from '~/shared/template-parsing';
 import { ComponentGroup } from '~/component-group/component-group';
-import { updateParsedTemplate } from '~/shared/template-parsing';
 
 export interface BarProps {
   id: string;

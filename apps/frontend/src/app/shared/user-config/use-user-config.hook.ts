@@ -1,12 +1,12 @@
 import { createResource } from 'solid-js';
 import { parse } from 'yaml';
 
-import { useLogger } from './logging/use-logger.hook';
-import { useDesktopCommands } from './use-desktop-commands.hook';
-import { memoize } from './utils/memoize';
-import { UserConfig } from './user-config/user-config.model';
+import { useLogger } from '../logging/use-logger.hook';
+import { useDesktopCommands } from '../use-desktop-commands.hook';
+import { memoize } from '../utils/memoize';
+import { UserConfig } from './user-config.model';
 
-export const useConfig = memoize(() => {
+export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
   const commands = useDesktopCommands();
 
