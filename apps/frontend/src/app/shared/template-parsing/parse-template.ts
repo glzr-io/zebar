@@ -3,9 +3,14 @@ import { insert } from 'solid-js/web';
 
 import { TemplateBindings } from './template-bindings.model';
 
+export interface ParseTemplateOptions {
+  skipComponentBindings?: boolean;
+}
+
 export function parseTemplate(
   template: string,
   bindings: TemplateBindings = {},
+  options: ParseTemplateOptions = { skipComponentBindings: false },
 ): HTMLElement {
   const compiledTemplate = parseTemplateStrings(
     template,
@@ -21,6 +26,10 @@ export function parseTemplate(
   const element = document.createElement('div');
   element.innerHTML = compiledTemplate;
 
+  if (options.skipComponentBindings) {
+    return getFirstChild(element);
+  }
+
   const componentBindings = Object.entries(bindings.components ?? {});
 
   for (const [componentName, component] of componentBindings) {
@@ -32,7 +41,19 @@ export function parseTemplate(
     }
   }
 
-  return element;
+  return getFirstChild(element);
+}
+
+function getFirstChild(element: HTMLElement) {
+  const { firstChild } = element;
+
+  if (!firstChild) {
+    throw new Error(
+      "Invalid 'template' in config. Template must have a child element.",
+    );
+  }
+
+  return firstChild as HTMLElement;
 }
 
 export interface ParseTemplateStringsOptions {
