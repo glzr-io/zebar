@@ -28,7 +28,7 @@ export function ComponentGroup(props: ComponentGroupProps) {
   function getBindings() {
     return {
       strings: {
-        id: props.id,
+        root_props: 'id="asdf" data-root="true"',
       },
       components: {
         components: () => (

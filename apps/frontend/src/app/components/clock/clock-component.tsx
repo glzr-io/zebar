@@ -47,6 +47,7 @@ export function ClockComponent(props: ClockComponentProps) {
       strings: {
         minutes: minutes(),
         hours: hours(),
+        root_props: 'id="asdf" data-root="true"',
       },
       components: {},
     };
