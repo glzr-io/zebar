@@ -2,9 +2,9 @@ import { createEffect, on } from 'solid-js';
 
 import template from './bar.njk?raw';
 import { BarConfig } from '~/shared/user-config/user-config.model';
-import { diffAndMutate } from '~/shared/utils/diff-and-mutate';
-import { parseTemplate } from '~/shared/utils/parse-template';
+import { parseTemplate } from '~/shared/template-parsing/parse-template';
 import { ComponentGroup } from '~/component-group/component-group';
+import { updateParsedTemplate } from '~/shared/template-parsing';
 
 export interface BarProps {
   id: string;
@@ -12,7 +12,7 @@ export interface BarProps {
 }
 
 export function Bar(props: BarProps) {
-  const element = getParsedTemplate();
+  const element = parseTemplate(template, { bindings: getBindings() });
 
   createEffect(
     on(
@@ -23,29 +23,28 @@ export function Bar(props: BarProps) {
         props.config.components_center,
         props.config.components_right,
       ],
-      () => diffAndMutate(element, getParsedTemplate()),
+      () =>
+        updateParsedTemplate(element, template, { bindings: getBindings() }),
     ),
   );
 
-  function getParsedTemplate() {
-    return parseTemplate(template, {
-      bindings: {
-        strings: {
-          id: props.id,
-        },
-        components: {
-          left: () => (
-            <ComponentGroup id="aaa" config={props.config.components_left} />
-          ),
-          center: () => (
-            <ComponentGroup id="bbb" config={props.config.components_center} />
-          ),
-          right: () => (
-            <ComponentGroup id="ccc" config={props.config.components_right} />
-          ),
-        },
+  function getBindings() {
+    return {
+      strings: {
+        id: props.id,
       },
-    });
+      components: {
+        left: () => (
+          <ComponentGroup id="aaa" config={props.config.components_left} />
+        ),
+        center: () => (
+          <ComponentGroup id="bbb" config={props.config.components_center} />
+        ),
+        right: () => (
+          <ComponentGroup id="ccc" config={props.config.components_right} />
+        ),
+      },
+    };
   }
 
   return element;

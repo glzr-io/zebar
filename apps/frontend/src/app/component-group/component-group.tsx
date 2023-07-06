@@ -2,8 +2,8 @@ import { createEffect, on, onCleanup } from 'solid-js';
 
 import template from './component-group.njk?raw';
 import { ComponentGroupConfig } from '~/shared/user-config/user-config.model';
-import { diffAndMutate } from '~/shared/utils/diff-and-mutate';
-import { parseTemplate } from '~/shared/utils/parse-template';
+import { updateParsedTemplate } from '~/shared/template-parsing/update-parsed-template';
+import { parseTemplate } from '~/shared/template-parsing/parse-template';
 import { ClockComponent } from '~/components/clock/clock-component';
 
 export interface ComponentGroupProps {
@@ -12,7 +12,7 @@ export interface ComponentGroupProps {
 }
 
 export function ComponentGroup(props: ComponentGroupProps) {
-  const element = getParsedTemplate();
+  const element = parseTemplate(template, { bindings: getBindings() });
 
   createEffect(
     on(
@@ -21,24 +21,23 @@ export function ComponentGroup(props: ComponentGroupProps) {
         props.config?.template_commands,
         props.config?.components,
       ],
-      () => diffAndMutate(element, getParsedTemplate()),
+      () =>
+        updateParsedTemplate(element, template, { bindings: getBindings() }),
     ),
   );
 
-  function getParsedTemplate() {
-    return parseTemplate(template, {
-      bindings: {
-        strings: {
-          id: props.id,
-        },
-        components: {
-          components: () => (
-            // TODO: Avoid harcoding component + turn into array.
-            <ClockComponent id="aaa" config={props.config.components[0]} />
-          ),
-        },
+  function getBindings() {
+    return {
+      strings: {
+        id: props.id,
       },
-    });
+      components: {
+        components: () => (
+          // TODO: Avoid harcoding component + turn into array.
+          <ClockComponent id="aaa" config={props.config.components[0]} />
+        ),
+      },
+    };
   }
 
   onCleanup(() => {
