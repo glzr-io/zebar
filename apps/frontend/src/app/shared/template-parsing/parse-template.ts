@@ -12,6 +12,7 @@ export function parseTemplate(
   bindings: TemplateBindings = {},
   options: ParseTemplateOptions = { skipComponentBindings: false },
 ): HTMLElement {
+  // Compile string bindings with template engine.
   const compiledTemplate = parseTemplateStrings(
     template,
     bindings.strings ?? {},
@@ -30,15 +31,24 @@ export function parseTemplate(
     return getFirstChild(element);
   }
 
-  const componentBindings = Object.entries(bindings.components ?? {});
+  // Get component bindings that are used in the template.
+  const componentBindings = Object.entries(bindings.components ?? {}).filter(
+    ([componentName]) => compiledTemplate.includes(componentName),
+  );
 
   for (const [componentName, component] of componentBindings) {
-    // TODO: This should query by text content.
-    const root = element.querySelector(`#${componentName}`);
+    // Create a temporary div that will be mounted by the component.
+    const tempId = `${componentName}-${Math.random().toString().slice(2)}`;
+    const replacementDiv = `<div id="${tempId}"></div>`;
 
-    if (root) {
-      insert(root, component);
-    }
+    element.innerHTML = element.innerHTML.replace(
+      // TODO: Allow for multiple spaces in-between curly braces.
+      `{{ ${componentName} }}`,
+      replacementDiv,
+    );
+
+    const mount = element.querySelector(`#${tempId}`)!;
+    insert(mount, component);
   }
 
   return getFirstChild(element);
@@ -86,10 +96,4 @@ function parseTemplateStrings(
   });
 
   return compiledTemplate;
-}
-
-function getElementsByText(text: string, tag = '*') {
-  return Array.prototype.slice
-    .call(document.getElementsByTagName(tag))
-    .filter(el => el.textContent.trim() === text.trim());
 }
