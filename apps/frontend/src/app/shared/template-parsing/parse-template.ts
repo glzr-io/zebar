@@ -11,7 +11,7 @@ export function parseTemplate(
   template: string,
   bindings: TemplateBindings = {},
   options: ParseTemplateOptions = { skipComponentBindings: false },
-): HTMLElement {
+): Element {
   // Compile string bindings with template engine.
   const compiledTemplate = parseTemplateStrings(
     template,
@@ -47,13 +47,16 @@ export function parseTemplate(
     );
 
     const mount = element.querySelector(`#${tempId}`)!;
-    insert(mount, component);
+    insert(mount, () => component());
+
+    // Flatten the div wrapping the mounted component.
+    mount.replaceWith(mount.firstChild!);
   }
 
   return getFirstChild(element);
 }
 
-function getFirstChild(element: HTMLElement) {
+function getFirstChild(element: Element) {
   const { firstChild } = element;
 
   if (!firstChild) {
@@ -62,7 +65,7 @@ function getFirstChild(element: HTMLElement) {
     );
   }
 
-  return firstChild as HTMLElement;
+  return firstChild as Element;
 }
 
 export interface ParseTemplateStringsOptions {

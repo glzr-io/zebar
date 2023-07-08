@@ -1,8 +1,9 @@
-import { createEffect, on } from 'solid-js';
+import { createEffect, on, onCleanup, onMount } from 'solid-js';
+import { insert } from 'solid-js/web';
 
 import template from './bar.njk?raw';
 import { BarConfig } from '~/shared/user-config';
-import { parseTemplate, updateParsedTemplate } from '~/shared/template-parsing';
+import { parseTemplate } from '~/shared/template-parsing';
 import { ComponentGroup } from '~/component-group/component-group';
 
 export interface BarProps {
@@ -11,7 +12,17 @@ export interface BarProps {
 }
 
 export function Bar(props: BarProps) {
-  const element = parseTemplate(template, getBindings());
+  const tempId = `bar-${Math.random().toString().slice(2)}`;
+  // const element = parseTemplate(template, getBindings());
+  let element = document.createElement('div');
+  element.id = tempId;
+  // element.innerHTML = '';
+  //  element = parseTemplate(template, getBindings())
+  // element = parseTemplate(
+  //   element,
+  //   template,
+  //   getBindings(),
+  // ) as HTMLDivElement;
 
   createEffect(
     on(
@@ -22,14 +33,39 @@ export function Bar(props: BarProps) {
         props.config.components_center,
         props.config.components_right,
       ],
-      () => updateParsedTemplate(element, template, getBindings()),
+      () => {
+        // const fdsa = parseTemplate(template, getBindings()) as HTMLDivElement;
+        // const oldElement = document.getElementById(tempId)!;
+        // oldElement.innerHTML = '';
+        // const oldElement = document.querySelectorAll(`#${tempId}`)!;
+        // console.log('oldElement', oldElement);
+
+        // oldElement.innerHTML = '';
+        // console.log('oldElement', oldElement.cloneNode(true), tempId, fdsa);
+        // element.innerHTML = '';
+        const oldElement = document.getElementById(tempId)!;
+        oldElement.innerHTML = '';
+        const fdsa = parseTemplate(template, getBindings());
+        insert(oldElement, () => fdsa);
+
+        fdsa.parentElement?.replaceWith(fdsa);
+        // element = fdsa;
+        // render(() => fdsa, oldElement);
+        // element = parseTemplate(
+        //   element,
+        //   template,
+        //   getBindings(),
+        // ) as HTMLDivElement;
+        // element = updateParsedTemplate(element, template, getBindings()),
+      },
+      // { defer: true },
     ),
   );
 
   function getBindings() {
     return {
       strings: {
-        root_props: 'id="asdf" data-root="true"',
+        root_props: `id="${tempId}" data-root="true"`,
       },
       components: {
         left: () => (
@@ -44,6 +80,9 @@ export function Bar(props: BarProps) {
       },
     };
   }
+
+  onMount(() => console.log('Bar mounted'));
+  onCleanup(() => console.log('Bar cleanup'));
 
   return element;
 }
