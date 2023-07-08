@@ -1,10 +1,10 @@
 import { createEffect, on, onCleanup, onMount } from 'solid-js';
-import { insert } from 'solid-js/web';
 
 import template from './component-group.njk?raw';
 import { ComponentGroupConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
 import { ClockComponent } from '~/components/clock/clock-component';
+import { insertAndReplace } from '~/shared/utils';
 
 export interface ComponentGroupProps {
   id: string;
@@ -13,7 +13,7 @@ export interface ComponentGroupProps {
 
 export function ComponentGroup(props: ComponentGroupProps) {
   const tempId = `group-${Math.random().toString().slice(2)}`;
-  let element = document.createElement('div');
+  const element = document.createElement('div');
   element.id = tempId;
 
   createEffect(
@@ -23,14 +23,10 @@ export function ComponentGroup(props: ComponentGroupProps) {
         props.config.template_commands,
         props.config.components,
       ],
-      () => {
-        const oldElement = document.getElementById(tempId)!;
-        oldElement.innerHTML = '';
-        const fdsa = parseTemplate(template, getBindings());
-        insert(oldElement, () => fdsa);
-
-        fdsa.parentElement?.replaceWith(fdsa);
-      },
+      () =>
+        insertAndReplace(document.getElementById(tempId)!, () =>
+          parseTemplate(template, getBindings()),
+        ),
     ),
   );
 

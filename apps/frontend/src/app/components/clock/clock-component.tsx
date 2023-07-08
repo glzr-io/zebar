@@ -6,11 +6,11 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { insert } from 'solid-js/web';
 
 import template from './clock-component.njk?raw';
 import { ClockComponentConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
+import { insertAndReplace } from '~/shared/utils';
 
 export interface ClockComponentProps {
   id: string;
@@ -25,7 +25,7 @@ export function ClockComponent(props: ClockComponentProps) {
   const interval = setInterval(() => setDate(new Date()), 1000);
 
   const tempId = `clock-${Math.random().toString().slice(2)}`;
-  let element = document.createElement('div');
+  const element = document.createElement('div');
   element.id = tempId;
 
   createEffect(
@@ -36,13 +36,10 @@ export function ClockComponent(props: ClockComponentProps) {
         minutes(),
         hours(),
       ],
-      () => {
-        const oldElement = document.getElementById(tempId)!;
-        oldElement.innerHTML = '';
-        const fdsa = parseTemplate(template, getBindings());
-        insert(oldElement, () => fdsa);
-        fdsa.parentElement?.replaceWith(fdsa);
-      },
+      () =>
+        insertAndReplace(document.getElementById(tempId)!, () =>
+          parseTemplate(template, getBindings()),
+        ),
     ),
   );
 

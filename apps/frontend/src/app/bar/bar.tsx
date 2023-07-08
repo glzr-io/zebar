@@ -1,10 +1,10 @@
 import { createEffect, on, onCleanup, onMount } from 'solid-js';
-import { insert } from 'solid-js/web';
 
 import template from './bar.njk?raw';
 import { BarConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
 import { ComponentGroup } from '~/component-group/component-group';
+import { insertAndReplace } from '~/shared/utils';
 
 export interface BarProps {
   id: string;
@@ -13,16 +13,8 @@ export interface BarProps {
 
 export function Bar(props: BarProps) {
   const tempId = `bar-${Math.random().toString().slice(2)}`;
-  // const element = parseTemplate(template, getBindings());
-  let element = document.createElement('div');
+  const element = document.createElement('div');
   element.id = tempId;
-  // element.innerHTML = '';
-  //  element = parseTemplate(template, getBindings())
-  // element = parseTemplate(
-  //   element,
-  //   template,
-  //   getBindings(),
-  // ) as HTMLDivElement;
 
   createEffect(
     on(
@@ -33,32 +25,10 @@ export function Bar(props: BarProps) {
         props.config.components_center,
         props.config.components_right,
       ],
-      () => {
-        // const fdsa = parseTemplate(template, getBindings()) as HTMLDivElement;
-        // const oldElement = document.getElementById(tempId)!;
-        // oldElement.innerHTML = '';
-        // const oldElement = document.querySelectorAll(`#${tempId}`)!;
-        // console.log('oldElement', oldElement);
-
-        // oldElement.innerHTML = '';
-        // console.log('oldElement', oldElement.cloneNode(true), tempId, fdsa);
-        // element.innerHTML = '';
-        const oldElement = document.getElementById(tempId)!;
-        oldElement.innerHTML = '';
-        const fdsa = parseTemplate(template, getBindings());
-        insert(oldElement, () => fdsa);
-
-        fdsa.parentElement?.replaceWith(fdsa);
-        // element = fdsa;
-        // render(() => fdsa, oldElement);
-        // element = parseTemplate(
-        //   element,
-        //   template,
-        //   getBindings(),
-        // ) as HTMLDivElement;
-        // element = updateParsedTemplate(element, template, getBindings()),
-      },
-      // { defer: true },
+      () =>
+        insertAndReplace(document.getElementById(tempId)!, () =>
+          parseTemplate(template, getBindings()),
+        ),
     ),
   );
 
