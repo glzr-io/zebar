@@ -18,11 +18,7 @@ export function ComponentGroup(props: ComponentGroupProps) {
 
   createEffect(
     on(
-      () => [
-        props.config.template_variables,
-        props.config.template_commands,
-        props.config.components,
-      ],
+      () => props.config,
       () => {
         const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
           parseTemplate(template, getBindings()),

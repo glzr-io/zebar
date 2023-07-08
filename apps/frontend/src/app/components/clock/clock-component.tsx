@@ -30,12 +30,7 @@ export function ClockComponent(props: ClockComponentProps) {
 
   createEffect(
     on(
-      () => [
-        props.config?.template_variables,
-        props.config?.template_commands,
-        minutes(),
-        hours(),
-      ],
+      () => [props.config, minutes(), hours()],
       () => {
         const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
           parseTemplate(template, getBindings()),
