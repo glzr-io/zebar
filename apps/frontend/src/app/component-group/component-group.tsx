@@ -34,10 +34,10 @@ export function ComponentGroup(props: ComponentGroupProps) {
         root_props: `id="${tempId}" data-root="true"`,
       },
       components: {
-        components: () => (
-          // TODO: Avoid harcoding component + turn into array.
+        components: () =>
+          props.config.components.map(component => (
           <ClockComponent id="aaa" config={props.config.components[0]} />
-        ),
+          )),
       },
     };
   }

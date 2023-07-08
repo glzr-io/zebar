@@ -1,7 +1,7 @@
 import { renderString } from 'nunjucks';
-import { insert } from 'solid-js/web';
 
 import { TemplateBindings } from './template-bindings.model';
+import { insertAndReplace } from '../utils';
 
 export interface ParseTemplateOptions {
   skipComponentBindings?: boolean;
@@ -47,10 +47,7 @@ export function parseTemplate(
     );
 
     const mount = element.querySelector(`#${tempId}`)!;
-    insert(mount, () => component());
-
-    // Flatten the div wrapping the mounted component.
-    mount.replaceWith(mount.firstChild!);
+    insertAndReplace(mount, component);
   }
 
   return getFirstChild(element);
