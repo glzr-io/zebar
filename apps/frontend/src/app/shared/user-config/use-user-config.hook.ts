@@ -3,7 +3,7 @@ import { parse } from 'yaml';
 
 import { useDesktopCommands } from '../desktop';
 import { useLogger } from '../logging';
-import { UserConfig } from './user-config.model';
+import { UserConfig } from './types/user-config.model';
 import { memoize } from '../utils';
 
 export const useUserConfig = memoize(() => {
