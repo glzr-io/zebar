@@ -37,7 +37,6 @@ export function ClockComponent(props: ClockComponentProps) {
         hours(),
       ],
       () => {
-        console.log('createEffect clock', minutes(), hours());
         const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
           parseTemplate(template, getBindings()),
         );
