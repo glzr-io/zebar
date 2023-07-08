@@ -24,5 +24,11 @@ export const useUserConfig = memoize(() => {
     return parsedConfig;
   });
 
-  return config;
+  const [generalConfig] = createResource(config, config => config.general);
+  const [barConfig] = createResource(config, config => config['bar/main']);
+
+  return {
+    generalConfig,
+    barConfig,
+  };
 });
