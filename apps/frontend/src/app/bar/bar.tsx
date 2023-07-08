@@ -18,13 +18,7 @@ export function Bar(props: BarProps) {
 
   createEffect(
     on(
-      () => [
-        props.config.template_variables,
-        props.config.template_commands,
-        props.config.components_left,
-        props.config.components_center,
-        props.config.components_right,
-      ],
+      () => props.config,
       () => {
         const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
           parseTemplate(template, getBindings()),
