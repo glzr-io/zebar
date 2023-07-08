@@ -1,6 +1,6 @@
-import { ScriptVariableConfig } from './script-variable-config.model';
+import { ScriptVariableConfig } from '../script-variable-config.model';
 
-export interface ComponentConfig {
+export interface ComponentConfigBase {
   type: string;
   style: string;
   template_variables: Record<string, string | ScriptVariableConfig>;
