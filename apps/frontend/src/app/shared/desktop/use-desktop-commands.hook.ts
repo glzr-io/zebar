@@ -1,7 +1,7 @@
 import { invoke as tauriInvoke, InvokeArgs } from '@tauri-apps/api/tauri';
 
-import { useLogger } from './logging/use-logger.hook';
-import { memoize } from './utils/memoize';
+import { useLogger } from '../logging';
+import { memoize } from '../utils';
 
 function isTauri(): boolean {
   return !!(window && window.__TAURI__);
