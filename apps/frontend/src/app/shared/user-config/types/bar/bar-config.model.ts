@@ -1,4 +1,4 @@
-import { ScriptVariableConfig } from './script-variable-config.model';
+import { ScriptVariableConfig } from '../script-variable-config.model';
 import { ComponentGroupConfig } from './component-group-config.model';
 
 export interface BarConfig {

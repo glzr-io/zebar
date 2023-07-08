@@ -1,5 +1,5 @@
 import { ComponentConfig } from './component-config.model';
-import { ScriptVariableConfig } from './script-variable-config.model';
+import { ScriptVariableConfig } from '../script-variable-config.model';
 
 export interface ComponentGroupConfig {
   style: string;
