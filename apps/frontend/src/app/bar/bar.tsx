@@ -25,10 +25,12 @@ export function Bar(props: BarProps) {
         props.config.components_center,
         props.config.components_right,
       ],
-      () =>
-        insertAndReplace(document.getElementById(tempId)!, () =>
+      () => {
+        const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
           parseTemplate(template, getBindings()),
-        ),
+        );
+        onCleanup(() => dispose());
+      },
     ),
   );
 

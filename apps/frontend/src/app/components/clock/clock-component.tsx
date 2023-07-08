@@ -36,10 +36,13 @@ export function ClockComponent(props: ClockComponentProps) {
         minutes(),
         hours(),
       ],
-      () =>
-        insertAndReplace(document.getElementById(tempId)!, () =>
+      () => {
+        console.log('createEffect clock', minutes(), hours());
+        const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
           parseTemplate(template, getBindings()),
-        ),
+        );
+        onCleanup(() => dispose());
+      },
     ),
   );
 

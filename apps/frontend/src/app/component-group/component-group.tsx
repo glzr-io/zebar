@@ -23,10 +23,12 @@ export function ComponentGroup(props: ComponentGroupProps) {
         props.config.template_commands,
         props.config.components,
       ],
-      () =>
-        insertAndReplace(document.getElementById(tempId)!, () =>
+      () => {
+        const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
           parseTemplate(template, getBindings()),
-        ),
+        );
+        onCleanup(() => dispose());
+      },
     ),
   );
 
