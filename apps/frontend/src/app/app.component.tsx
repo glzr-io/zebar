@@ -6,13 +6,13 @@ import { Bar } from './bar/bar';
 import { useUserConfig } from './shared/user-config';
 
 export function App() {
-  const { barConfig } = useUserConfig();
+  const userConfig = useUserConfig();
 
   // Prevent Nunjucks from escaping HTML.
   configure({ autoescape: false });
 
   return (
-    <Show when={barConfig()}>
+    <Show when={userConfig.barConfig()}>
       {barConfig => (
         <div class={s.app}>
           <Bar id="temp" config={barConfig()} />
