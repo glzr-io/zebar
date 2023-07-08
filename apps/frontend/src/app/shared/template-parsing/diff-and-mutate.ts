@@ -2,61 +2,61 @@
  * Diffs two elements and mutates the first element in-place to match the second
  * element.
  */
-export function diffAndMutate(element1: Element, element2: Element) {
+export function diffAndMutate(sourceEl: Element, targetEl: Element) {
   // Compare the tag names of the elements.
-  if (element1.tagName !== element2.tagName) {
-    // If the tag names are different, replace element1 with element2.
-    const parent = element1.parentNode;
-    parent?.replaceChild(element2.cloneNode(true), element1);
+  if (sourceEl.tagName !== targetEl.tagName) {
+    // If the tag names are different, replace `sourceEl` with `targetEl`.
+    const parent = sourceEl.parentNode;
+    parent?.replaceChild(targetEl.cloneNode(true), sourceEl);
     return;
   }
 
-  // Compare the attributes of the elements.
-  const attributes1 = element1.getAttributeNames();
-  const attributes2 = element2.getAttributeNames();
+  const sourceAttr = sourceEl.getAttributeNames();
+  const targetAttr = targetEl.getAttributeNames();
 
-  attributes1.forEach(attr => {
-    // Remove attributes from element1 that are not present in element2.
-    if (!element2.hasAttribute(attr)) {
-      element1.removeAttribute(attr);
+  // Remove attributes from `sourceEl` that are not present in `targetEl`.
+  for (const attr of sourceAttr) {
+    if (!targetEl.hasAttribute(attr)) {
+      sourceEl.removeAttribute(attr);
     }
-  });
+  }
 
-  attributes2.forEach(attr => {
-    const value = element2.getAttribute(attr)!;
+  for (const attr of targetAttr) {
+    const value = targetEl.getAttribute(attr)!;
 
-    // Update attributes in element1 to match element2.
-    if (!element1.hasAttribute(attr) || element1.getAttribute(attr) !== value) {
-      element1.setAttribute(attr, value);
+    // Update attributes in `sourceEl` to match `targetEl`.
+    if (!sourceEl.hasAttribute(attr) || sourceEl.getAttribute(attr) !== value) {
+      sourceEl.setAttribute(attr, value);
     }
-  });
+  }
 
-  // TODO: Temporary way to replace child nodes. Should deep diff and mutate
-  // for better performance.
-  element1.replaceChildren(...Array.from(element2.childNodes));
+  const sourceChildren = Array.from(sourceEl.childNodes);
+  const targetChildren = Array.from(targetEl.childNodes);
 
-  return element1;
-
-  // Compare the child nodes of the elements.
-  const childNodes1 = Array.from(element1.childNodes);
-  const childNodes2 = Array.from(element2.childNodes);
-
-  const length = Math.max(childNodes1.length, childNodes2.length);
+  const length = Math.max(sourceChildren.length, targetChildren.length);
 
   // Recursively diff and mutate child nodes.
   for (let i = 0; i < length; i++) {
-    const child1 = childNodes1[i];
-    const child2 = childNodes2[i];
+    const sourceChild = sourceChildren[i];
+    const targetChild = targetChildren[i];
 
-    if (child1 && child2) {
-      // TODO: This doesn't work for comment or text nodes.
-      diffAndMutate(child1 as HTMLElement, child2 as HTMLElement);
-    } else if (child1) {
-      // Remove extra child nodes from element1.
-      element1.removeChild(child1);
-    } else if (child2) {
-      // Add missing child nodes to element1.
-      element1.appendChild(child2.cloneNode(true));
+    if (sourceChild && targetChild) {
+      if (
+        sourceChild.nodeType === Node.ELEMENT_NODE &&
+        targetChild.nodeType === Node.ELEMENT_NODE
+      ) {
+        diffAndMutate(sourceChild as Element, targetChild as Element);
+      } else {
+        targetEl.replaceChild(sourceChild.cloneNode(true), targetChild);
+      }
+    } else if (sourceChild) {
+      // Remove extra child nodes from `sourceEl`.
+      sourceEl.removeChild(sourceChild);
+    } else if (targetChild) {
+      // Add missing child nodes to `sourceEl`.
+      sourceEl.appendChild(targetChild.cloneNode(true));
     }
   }
+
+  return sourceEl;
 }
