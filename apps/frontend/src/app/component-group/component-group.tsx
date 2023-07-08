@@ -1,7 +1,7 @@
 import { createEffect, on, onCleanup, onMount } from 'solid-js';
 
 import template from './component-group.njk?raw';
-import { ComponentGroupConfig } from '~/shared/user-config';
+import { ComponentConfig, ComponentGroupConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
 import { ClockComponent } from '~/components/clock/clock-component';
 import { insertAndReplace } from '~/shared/utils';
@@ -28,6 +28,21 @@ export function ComponentGroup(props: ComponentGroupProps) {
     ),
   );
 
+  function getComponentType(id: string, componentConfig: ComponentConfig) {
+    switch (componentConfig.type) {
+      case 'clock':
+        return <ClockComponent id={id} config={componentConfig} />;
+      case 'cpu':
+        return <p>Not implemented.</p>;
+      default:
+        throw new Error(
+          `Unknown component type '${
+            (componentConfig as ComponentConfig).type
+          }'.`,
+        );
+    }
+  }
+
   function getBindings() {
     return {
       strings: {
@@ -35,9 +50,9 @@ export function ComponentGroup(props: ComponentGroupProps) {
       },
       components: {
         components: () =>
-          props.config.components.map(component => (
-          <ClockComponent id="aaa" config={props.config.components[0]} />
-          )),
+          props.config.components.map(componentConfig =>
+            getComponentType('temp', componentConfig),
+          ),
       },
     };
   }
