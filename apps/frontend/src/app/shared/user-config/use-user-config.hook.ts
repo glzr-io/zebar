@@ -10,7 +10,7 @@ export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
   const commands = useDesktopCommands();
 
-  const [config] = createResource(async () => {
+  const [config, { refetch: reload }] = createResource(async () => {
     const config = await commands.readConfigFile();
 
     // Parse the config as YAML.
@@ -30,5 +30,6 @@ export const useUserConfig = memoize(() => {
   return {
     generalConfig,
     barConfig,
+    reload,
   };
 });
