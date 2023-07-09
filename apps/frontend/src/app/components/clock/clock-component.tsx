@@ -51,7 +51,7 @@ export function ClockComponent(props: ClockComponentProps) {
       strings: {
         minutes: minutes(),
         hours: hours(),
-        root_props: `id="${tempId}" data-root="true"`,
+        root_props: `id="${tempId}"`,
       },
       components: {},
     };

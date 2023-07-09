@@ -48,7 +48,7 @@ export function ComponentGroup(props: ComponentGroupProps) {
   function getBindings() {
     return {
       strings: {
-        root_props: `id="${tempId}" data-root="true"`,
+        root_props: `id="${tempId}"`,
       },
       components: {
         components: () =>
