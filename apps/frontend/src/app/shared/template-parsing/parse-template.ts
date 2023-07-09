@@ -2,6 +2,7 @@ import { renderString } from 'nunjucks';
 
 import { TemplateBindings } from './template-bindings.model';
 import { createUniqueId, insertAndReplace } from '../utils';
+import { getBindingRegex } from './get-binding-regex';
 
 export function parseTemplate(
   template: string,
@@ -39,7 +40,7 @@ export function parseTemplate(
     const replacementDiv = `<div id="${tempId}"></div>`;
 
     element.innerHTML = element.innerHTML.replace(
-      new RegExp(`{{\\s*${componentName}\\s*}}`),
+      getBindingRegex(componentName),
       replacementDiv,
     );
 
@@ -64,14 +65,12 @@ function parseTemplateStrings(
 ): string {
   const { bindingsToEscape = [] } = options;
 
-  const regex = new RegExp(
-    new RegExp(`{{\\s*(${bindingsToEscape.join('|')})\\s*}}`),
-    'g',
-  );
-
   // Need to somehow ignore bindings that shouldn't be compiled by Nunjucks.
   // Accomplish this by wrapping them in '{% raw %}' tag.
-  const escapedTemplate = template.replace(regex, '{% raw %}$&{% endraw %}');
+  const escapedTemplate = template.replace(
+    getBindingRegex(bindingsToEscape, 'g'),
+    '{% raw %}$&{% endraw %}',
+  );
 
   return renderString(escapedTemplate, bindings);
 }
