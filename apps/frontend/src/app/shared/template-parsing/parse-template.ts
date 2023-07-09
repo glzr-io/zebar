@@ -1,7 +1,7 @@
 import { renderString } from 'nunjucks';
 
 import { TemplateBindings } from './template-bindings.model';
-import { insertAndReplace } from '../utils';
+import { createUniqueId, insertAndReplace } from '../utils';
 
 export function parseTemplate(
   template: string,
@@ -35,7 +35,7 @@ export function parseTemplate(
 
   for (const [componentName, component] of componentBindings) {
     // Create a temporary div that will be mounted by the component.
-    const tempId = `${componentName}-${Math.random().toString().slice(2)}`;
+    const tempId = createUniqueId();
     const replacementDiv = `<div id="${tempId}"></div>`;
 
     element.innerHTML = element.innerHTML.replace(
@@ -71,7 +71,7 @@ function parseTemplateStrings(
       ...acc,
       [binding]: `{{ ${binding} }}`,
     }),
-    bindings,
+    {},
   );
 
   const compiledTemplate = renderString(template, {
