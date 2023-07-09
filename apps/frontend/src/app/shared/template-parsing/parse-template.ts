@@ -64,20 +64,14 @@ function parseTemplateStrings(
 ): string {
   const { bindingsToEscape = [] } = options;
 
-  // Need to somehow ignore bindings that shouldn't be compiled by Nunjucks.
-  // Accomplish this by wrapping them in '{{ }}'.
-  const escapedBindings = bindingsToEscape.reduce(
-    (acc, binding) => ({
-      ...acc,
-      [binding]: `{{ ${binding} }}`,
-    }),
-    {},
+  const regex = new RegExp(
+    new RegExp(`{{\\s*(${bindingsToEscape.join('|')})\\s*}}`),
+    'g',
   );
 
-  const compiledTemplate = renderString(template, {
-    ...bindings,
-    ...escapedBindings,
-  });
+  // Need to somehow ignore bindings that shouldn't be compiled by Nunjucks.
+  // Accomplish this by wrapping them in '{% raw %}' tag.
+  const escapedTemplate = template.replace(regex, '{% raw %}$&{% endraw %}');
 
-  return compiledTemplate;
+  return renderString(escapedTemplate, bindings);
 }
