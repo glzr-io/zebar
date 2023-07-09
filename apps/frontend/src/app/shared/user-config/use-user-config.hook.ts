@@ -17,7 +17,7 @@ export const useUserConfig = memoize(() => {
     const parsedConfig = parse(config) as UserConfig;
     logger.debug(`Read config:`, parsedConfig);
 
-    const expandConfig = expandKeysToObject(parsedConfig, [
+    const expandConfig = expandObjectKeys(parsedConfig, [
       'bar',
       'group',
       'slot',
@@ -43,11 +43,6 @@ export const useUserConfig = memoize(() => {
   };
 });
 
-/** An object that can be traversed, allowing nested objects and arrays. */
-type Traversable = {
-  [key: string]: unknown | Traversable | Traversable[];
-};
-
 /**
  * Expand 'bar/', 'group/', and 'slot/' keys within config.
 
@@ -56,87 +51,45 @@ type Traversable = {
  * expandKeysToObject({ 'bar/main': { ... } }) // -> { bar: { main: { ... } } }
  * ```
  * */
-export function expandKeysToObject<T extends Traversable>(
-  obj: T,
+export function expandObjectKeys(
+  value: unknown | unknown[],
   keysToExpand: string[],
-): T {
-  return Object.keys(obj).reduce((acc, key) => {
-    const shouldExpand = keysToExpand.some(e => key.startsWith(e));
+): unknown | unknown[] {
+  // Ignore values that cannot be further traversed.
+  if (!(isPlainObject(value) || Array.isArray(value))) {
+    return value;
+  }
 
-    if (shouldExpand) {
-      const [mainKey, subKey] = key.split('/');
-      const expandedValue = expandKeysToObject(
-        obj[key] as Traversable,
-        keysToExpand,
-      );
+  if (Array.isArray(value)) {
+    return value.map(item => expandObjectKeys(item, keysToExpand));
+  }
 
+  return Object.keys(value).reduce((acc, key) => {
+    const shouldExpand = keysToExpand.some(keyToExpand =>
+      key.startsWith(keyToExpand),
+    );
+
+    // If key shouldn't be expanded, continue traversing.
+    if (!shouldExpand) {
       return {
         ...acc,
-        [mainKey]: {
-          ...(acc?.[mainKey] ?? {}),
-          [subKey]: expandedValue,
-        },
-      };
-    } else {
-      return {
-        ...acc,
-        [key]:
-          typeof obj[key] === 'object'
-            ? expandKeysToObject(obj[key] as Traversable, keysToExpand)
-            : obj[key],
+        [key]: expandObjectKeys((value as any)[key], keysToExpand),
       };
     }
-  }, {} as T);
+
+    const [mainKey, subKey] = key.split('/');
+
+    return {
+      ...acc,
+      [mainKey]: {
+        ...(acc?.[mainKey] ?? {}),
+        [subKey]: expandObjectKeys((value as any)[key], keysToExpand),
+      },
+    };
+  }, {} as Record<string, unknown>);
 }
 
-// v1
-function expandConfig(config) {
-  return {
-    ...config,
-    // Expand 'bar/**' keys to object.
-    bars: keysWithPrefix(config, 'bar/').reduce((acc, key) => {
-      const barConfig = config[key];
-      const barConfigKey = key.replace('bar/', '');
-
-      return {
-        ...acc,
-        [barConfigKey]: {
-          ...barConfig,
-          // Expand 'group/**' keys to object.
-          groups: keysWithPrefix(barConfig, `group/${key}/`).reduce(
-            (acc, key) => {
-              const groupConfig = barConfig[key];
-              const groupConfigKey = key.replace('group/', '');
-
-              return {
-                ...acc,
-                [groupConfigKey]: {
-                  ...groupConfig,
-                  // Expand 'slot/**' keys to object.
-                  components: keysWithPrefix(config, `slot/${key}/`).reduce(
-                    (acc, key) => {},
-                    {},
-                  ),
-                  // components: config[key].components.map(component => {
-                  //   return {
-                  //     ...component,
-                  //     slot: {
-                  //       ...(component.slot ? { default: component.slot } : {}),
-                  //       // ...
-                  //     },
-                  //   };
-                  // }),
-                },
-              };
-            },
-            {},
-          ),
-        },
-      };
-    }, {}),
-  };
-}
-
-export function keysWithPrefix(obj, prefix) {
-  return Object.keys(obj).filter(key => key.startsWith(prefix));
+/** Whether given value is an object literal. */
+export function isPlainObject(value: unknown): value is object {
+  return value instanceof Object && !(value instanceof Array);
 }
