@@ -3,14 +3,9 @@ import { renderString } from 'nunjucks';
 import { TemplateBindings } from './template-bindings.model';
 import { insertAndReplace } from '../utils';
 
-export interface ParseTemplateOptions {
-  skipComponentBindings?: boolean;
-}
-
 export function parseTemplate(
   template: string,
   bindings: TemplateBindings = {},
-  options: ParseTemplateOptions = { skipComponentBindings: false },
 ): Element {
   // Compile string bindings with template engine.
   const compiledTemplate = parseTemplateStrings(
@@ -27,8 +22,10 @@ export function parseTemplate(
   const element = document.createElement('div');
   element.innerHTML = compiledTemplate;
 
-  if (options.skipComponentBindings) {
-    return getFirstChild(element);
+  if (!element.firstChild) {
+    throw new Error(
+      "Invalid 'template' in config. Template must have a child element.",
+    );
   }
 
   // Get component bindings that are used in the template.
@@ -50,19 +47,7 @@ export function parseTemplate(
     insertAndReplace(mount, component);
   }
 
-  return getFirstChild(element);
-}
-
-function getFirstChild(element: Element) {
-  const { firstChild } = element;
-
-  if (!firstChild) {
-    throw new Error(
-      "Invalid 'template' in config. Template must have a child element.",
-    );
-  }
-
-  return firstChild as Element;
+  return element.firstChild as Element;
 }
 
 export interface ParseTemplateStringsOptions {
