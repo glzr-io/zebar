@@ -1,0 +1,17 @@
+<div {{ root_props }}>
+  {% for workspace in workspaces %}
+    {% if workspace.is_focused %}
+      <button class="focused-workspace">
+        {{ slot.focused || slot.default }}
+      </button>
+    {% elif workspace.is_active %}
+      <button class="active-workspace" onClick="{{ focus_workspace }}">
+        {{ slot.active || slot.default }}
+      </button>
+    {% else %}
+      <button class="normal-workspace" onClick="{{ focus_workspace }}">
+        {{ slot.normal || slot.default }}
+      </button>
+    {% endif %}
+  {% endfor %}
+</div>

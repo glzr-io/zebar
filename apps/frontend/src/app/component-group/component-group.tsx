@@ -34,6 +34,8 @@ export function ComponentGroup(props: ComponentGroupProps) {
         return <ClockComponent id={id} config={componentConfig} />;
       case 'cpu':
         return <p>Not implemented.</p>;
+      case 'glazewm':
+        return <p>Not implemented.</p>;
       default:
         throw new Error(
           `Unknown component type '${
