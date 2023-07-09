@@ -2,7 +2,7 @@ import { ScriptVariableConfig } from '../script-variable-config.model';
 
 export interface ComponentConfigBase {
   id: string;
-  root_class_name: string;
+  class_name: string;
   type: string;
   style: string;
   template_variables: Record<string, string | ScriptVariableConfig>;

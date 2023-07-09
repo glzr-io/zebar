@@ -34,14 +34,15 @@ export function Bar(props: BarProps) {
         root_props: `id="${tempId}"`,
       },
       components: {
-        left: () => (
-          <ComponentGroup id="aaa" config={props.config.components_left} />
+        // TODO: Dynamically create based on 'group/*' keys available in config.
+        'group.left': () => (
+          <ComponentGroup id="aaa" config={props.config['group/left']} />
         ),
-        center: () => (
-          <ComponentGroup id="bbb" config={props.config.components_center} />
+        'group.center': () => (
+          <ComponentGroup id="bbb" config={props.config['group/center']} />
         ),
-        right: () => (
-          <ComponentGroup id="ccc" config={props.config.components_right} />
+        'group.right': () => (
+          <ComponentGroup id="ccc" config={props.config['group/right']} />
         ),
       },
     };

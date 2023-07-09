@@ -3,12 +3,10 @@ import { ComponentGroupConfig } from './component-group-config.model';
 
 export interface BarConfig {
   id: string;
-  root_class_name: string;
+  class_name: string;
   style: string;
   template_variables: Record<string, string | ScriptVariableConfig>;
   template_commands: Record<string, string>;
   template: string;
-  components_left: ComponentGroupConfig;
-  components_center: ComponentGroupConfig;
-  components_right: ComponentGroupConfig;
+  [key: `group/${string}`]: ComponentGroupConfig;
 }
