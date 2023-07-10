@@ -16,20 +16,22 @@ type NestedConfig =
 type Indexable = Record<string, any>;
 
 /**
- * Expand `bar/`, `group/`, and `slot/` keys within config.
+ * Expand `bar/`, `group/`, and `slot/` keys within config. If there is no
+ * subkey (eg. `bar` instead of `bar/<NAME>`), then it defaults to `default`.
  *
  * @example
  * ```typescript
  * expandConfigKeys({ 'bar/main': { ... } }) // -> { bar: { main: { ... } } }
+ * expandConfigKeys({ 'bar': { ... } }) // -> { bar: { default: { ... } } }
  * ```
  * */
-export function expandConfigKeys<T extends NestedConfig>(
-  config: T,
+export function expandConfigKeys(
+  config: Record<string, unknown>,
   keysToExpand: string[],
-): T {
+): NestedConfig {
   return Object.keys(config).reduce((acc, key) => {
-    const shouldExpand = keysToExpand.some(keyToExpand =>
-      key.startsWith(keyToExpand),
+    const shouldExpand = keysToExpand.some(
+      keyToExpand => key === keyToExpand || key.startsWith(`${keyToExpand}/`),
     );
 
     // If key shouldn't be expanded, assign key as usual.
@@ -47,21 +49,21 @@ export function expandConfigKeys<T extends NestedConfig>(
       ...acc,
       [mainKey]: {
         ...((acc as Indexable)?.[mainKey] ?? {}),
-        [subKey]: getNestedConfigValue(config, key, keysToExpand),
+        [subKey ?? 'default']: getNestedConfigValue(config, key, keysToExpand),
       },
     };
-  }, {} as T);
+  }, {} as NestedConfig);
 }
 
-function getNestedConfigValue<T extends NestedConfig>(
-  config: T,
+function getNestedConfigValue(
+  config: unknown,
   key: string,
   keysToExpand: string[],
 ): unknown {
   const value = (config as Indexable)[key];
 
   if (isObject(value)) {
-    return expandConfigKeys(value as NestedConfig, keysToExpand);
+    return expandConfigKeys(value as Record<string, unknown>, keysToExpand);
   }
 
   if (Array.isArray(value)) {
