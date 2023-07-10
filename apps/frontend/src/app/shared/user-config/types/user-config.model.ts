@@ -3,7 +3,7 @@ import { ValidateNested } from 'class-validator';
 
 import { BarConfig } from './bar/bar-config.model';
 import { GeneralConfig } from './general-config.model';
-import { toRecordType } from '~/shared/utils';
+import { toRecordType, ValidateRecord } from '~/shared/utils';
 
 export class UserConfig {
   @Type(() => GeneralConfig)
@@ -11,6 +11,6 @@ export class UserConfig {
   general: GeneralConfig;
 
   @Transform(toRecordType(BarConfig))
-  @ValidateNested()
+  @ValidateRecord()
   bar: Record<string, BarConfig>;
 }
