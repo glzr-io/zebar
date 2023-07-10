@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 import { ComponentConfig } from './component-config.model';
 import { ScriptVariableConfig } from '../script-variable-config.model';
@@ -25,5 +26,6 @@ export class ComponentGroupConfig {
       ],
     },
   })
+  @ValidateNested()
   components: ComponentConfig[];
 }
