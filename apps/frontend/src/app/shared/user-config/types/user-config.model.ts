@@ -1,7 +1,12 @@
+import { Type } from 'class-transformer';
+
 import { BarConfig } from './bar/bar-config.model';
 import { GeneralConfig } from './general-config.model';
 
-export interface UserConfig {
+export class UserConfig {
+  @Type(() => GeneralConfig)
   general: GeneralConfig;
-  [key: `bar/${string}`]: BarConfig;
+
+  @Type(() => BarConfig)
+  bar: Record<string, BarConfig>;
 }

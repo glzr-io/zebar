@@ -1,5 +1,5 @@
 import { ComponentConfigBase } from '../component-config-base.model';
 
-export interface GlazeWMComponentConfig extends ComponentConfigBase {
+export class GlazeWMComponentConfig extends ComponentConfigBase {
   type: 'glazewm';
 }
