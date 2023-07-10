@@ -1,16 +1,11 @@
-import { Transform, Type } from 'class-transformer';
-import { ValidateNested } from 'class-validator';
+import { z } from 'zod';
 
 import { BarConfig } from './bar/bar-config.model';
 import { GeneralConfig } from './general-config.model';
-import { toRecordType, ValidateRecord } from '~/shared/utils';
 
-export class UserConfig {
-  @Type(() => GeneralConfig)
-  @ValidateNested()
-  general: GeneralConfig;
+export const UserConfig = z.object({
+  general: GeneralConfig,
+  bar: z.record(z.string().startsWith('bar/'), z.string()),
+});
 
-  @Transform(toRecordType(BarConfig))
-  @ValidateRecord()
-  bar: Record<string, BarConfig>;
-}
+export type UserConfig = z.infer<typeof UserConfig>;

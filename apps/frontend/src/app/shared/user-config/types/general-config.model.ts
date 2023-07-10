@@ -1,30 +1,17 @@
-import { Expose, Type } from 'class-transformer';
+import { z } from 'zod';
 
-export class GeneralConfig {
-  @Expose({ name: 'position_x' })
-  positionX: string;
+export const GeneralConfig = z
+  .object({
+    positionX: z.string(),
+    positionY: z.string(),
+    width: z.string(),
+    height: z.string(),
+    opacity: z.number(),
+    enableDevtools: z.boolean(),
+    enableDefaultStyles: z.boolean(),
+    globalStyles: z.string(),
+    globalStylesheetPath: z.string(),
+  })
+  .partial();
 
-  @Expose({ name: 'position_y' })
-  positionY: string;
-
-  width: string;
-
-  height: string;
-
-  @Type(() => Number)
-  opacity: number;
-
-  @Expose({ name: 'enable_devtools' })
-  @Type(() => Boolean)
-  enableDevtools: boolean;
-
-  @Expose({ name: 'enable_default_styles' })
-  @Type(() => Boolean)
-  enableDefaultStyles: boolean;
-
-  @Expose({ name: 'global_styles' })
-  globalStyles: string;
-
-  @Expose({ name: 'global_stylesheet_path' })
-  globalStylesheetPath: string;
-}
+export type GeneralConfig = z.infer<typeof GeneralConfig>;
