@@ -1,6 +1,10 @@
+import { z } from 'zod';
+
 import { ComponentConfigBase } from '../component-config-base.model';
 
-export class CpuComponentConfig extends ComponentConfigBase {
-  type: 'cpu';
-  refresh_interval_ms: number;
-}
+export const CpuComponentConfig = ComponentConfigBase.extend({
+  type: z.literal('cpu'),
+  refresh_interval_ms: z.number(),
+});
+
+export type CpuComponentConfig = z.infer<typeof CpuComponentConfig>;

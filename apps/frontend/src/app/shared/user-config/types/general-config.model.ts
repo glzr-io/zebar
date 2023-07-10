@@ -2,15 +2,15 @@ import { z } from 'zod';
 
 export const GeneralConfig = z
   .object({
-    positionX: z.string(),
-    positionY: z.string(),
+    position_x: z.string(),
+    position_y: z.string(),
     width: z.string(),
     height: z.string(),
     opacity: z.number(),
-    enableDevtools: z.boolean(),
-    enableDefaultStyles: z.boolean(),
-    globalStyles: z.string(),
-    globalStylesheetPath: z.string(),
+    enable_devtools: z.boolean(),
+    enable_default_styles: z.boolean(),
+    global_styles: z.string(),
+    global_stylesheet_path: z.string(),
   })
   .partial();
 
