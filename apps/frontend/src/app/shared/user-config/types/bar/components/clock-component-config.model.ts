@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { ComponentConfigBaseSchema } from '../component-config-base.model';
+import { ElementSchema } from '../../shared/element.model';
 
-export const ClockComponentConfigSchema = ComponentConfigBaseSchema.extend({
+export const ClockComponentConfigSchema = ElementSchema.extend({
   type: z.literal('clock'),
 });
 
