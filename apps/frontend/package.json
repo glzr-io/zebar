@@ -8,10 +8,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "1.4.0",
-    "class-transformer": "0.5.1",
-    "class-validator": "0.14.0",
     "nunjucks": "3.2.4",
-    "reflect-metadata": "0.1.13",
     "solid-js": "1.7.3",
     "yaml": "2.3.1",
     "zod": "3.21.4"

@@ -1,5 +1,4 @@
 /* @refresh reload */
-import 'reflect-metadata';
 import { render } from 'solid-js/web';
 
 import './index.scss';
