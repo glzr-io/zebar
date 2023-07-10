@@ -37,6 +37,7 @@ export function ComponentGroup(props: ComponentGroupProps) {
       case 'glazewm':
         return <p>Not implemented.</p>;
       default:
+        // TODO: This can probably be removed after adding class-validator.
         throw new Error(
           `Unknown component type '${
             (componentConfig as ComponentConfig).type

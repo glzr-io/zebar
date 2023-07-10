@@ -1,6 +1,17 @@
-export interface ScriptVariableConfig {
+import { IsIn } from 'class-validator';
+import { Expose, Type } from 'class-transformer';
+
+export class ScriptVariableConfig {
+  @IsIn(['script'])
   source: 'script';
-  script_path: string;
-  script_args: string;
-  refresh_interval_ms: number;
+
+  @Expose({ name: 'script_path' })
+  scriptPath: string;
+
+  @Expose({ name: 'script_args' })
+  scriptArgs: string;
+
+  @Expose({ name: 'refresh_interval_ms' })
+  @Type(() => Number)
+  refreshIntervalMs: number;
 }

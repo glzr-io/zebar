@@ -1,3 +1,4 @@
+import { plainToInstance } from 'class-transformer';
 import { createResource } from 'solid-js';
 import { parse } from 'yaml';
 
@@ -15,18 +16,19 @@ export const useUserConfig = memoize(() => {
     const config = await commands.readConfigFile();
 
     // Parse the config as YAML.
-    const parsedConfig = parse(config) as UserConfig;
+    const parsedConfig = parse(config);
     logger.debug(`Read config:`, parsedConfig);
 
-    const expandConfig = expandConfigKeys(parsedConfig, [
+    const expandedConfig = expandConfigKeys(parsedConfig, [
       'bar',
       'group',
       'slot',
     ]);
 
-    logger.debug(`Expanded config:`, expandConfig);
+    const configInstance = plainToInstance(UserConfig, expandedConfig);
 
-    // const transformedConfig =
+    logger.debug(`Expanded config:`, configInstance);
+
     // TODO: Traverse config and add IDs to each component.
     // TODO: Traverse config and aggregate `styles`. Compile this and
     // add it to the DOM somehow.

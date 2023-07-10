@@ -1,6 +1,6 @@
 import { ScriptVariableConfig } from '../script-variable-config.model';
 
-export interface ComponentConfigBase {
+export abstract class ComponentConfigBase {
   id: string;
   class_name: string;
   type: string;
