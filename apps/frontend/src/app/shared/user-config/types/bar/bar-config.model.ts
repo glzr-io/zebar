@@ -1,7 +1,8 @@
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 
 import { ScriptVariableConfig } from '../script-variable-config.model';
 import { ComponentGroupConfig } from './component-group-config.model';
+import { toRecordType } from '~/shared/utils';
 
 export class BarConfig {
   id: string;
@@ -11,6 +12,6 @@ export class BarConfig {
   template_commands: Record<string, string>;
   template: string;
 
-  @Type(() => ComponentGroupConfig)
+  @Transform(toRecordType(BarConfig))
   group: Record<string, ComponentGroupConfig>;
 }
