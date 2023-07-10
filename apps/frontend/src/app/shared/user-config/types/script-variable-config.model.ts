@@ -1,17 +1,10 @@
-import { IsIn } from 'class-validator';
-import { Expose, Type } from 'class-transformer';
+import { z } from 'zod';
 
-export class ScriptVariableConfig {
-  @IsIn(['script'])
-  source: 'script';
+export const ScriptVariableConfig = z.object({
+  source: z.literal('script'),
+  script_path: z.string(),
+  script_args: z.string(),
+  refresh_interval_ms: z.number(),
+});
 
-  @Expose({ name: 'script_path' })
-  scriptPath: string;
-
-  @Expose({ name: 'script_args' })
-  scriptArgs: string;
-
-  @Expose({ name: 'refresh_interval_ms' })
-  @Type(() => Number)
-  refreshIntervalMs: number;
-}
+export type ScriptVariableConfig = z.infer<typeof ScriptVariableConfig>;

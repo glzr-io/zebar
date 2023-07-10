@@ -1,8 +1,9 @@
-import { IsIn } from 'class-validator';
+import { z } from 'zod';
 
 import { ComponentConfigBase } from '../component-config-base.model';
 
-export class ClockComponentConfig extends ComponentConfigBase {
-  @IsIn(['clock'])
-  type: 'clock';
-}
+export const ClockComponentConfig = ComponentConfigBase.extend({
+  type: z.literal('clock'),
+});
+
+export type ClockComponentConfig = z.infer<typeof ClockComponentConfig>;
