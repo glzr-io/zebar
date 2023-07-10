@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
 import { ComponentGroupConfig } from './component-group-config.model';
+import { delimitedKey } from '../../delimited-key';
 import { Prettify } from '~/shared/utils';
 
-export const BarConfig = z.intersection(
-  z.object({
+export const BarConfig = z
+  .object({
     group: ComponentGroupConfig.optional(),
-  }),
-  z.record(z.string().startsWith('group/'), ComponentGroupConfig),
-);
+  })
+  .and(z.record(delimitedKey('group'), ComponentGroupConfig).optional());
 
 export type BarConfig = Prettify<z.infer<typeof BarConfig>>;
