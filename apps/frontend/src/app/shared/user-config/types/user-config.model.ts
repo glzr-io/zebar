@@ -4,15 +4,15 @@ import { BarConfig } from './bar/bar-config.model';
 import { GeneralConfig } from './general-config.model';
 import { Prettify } from '~/shared/utils';
 
-export const UserConfig = z.intersection(
-  z.object({
+const getKey = z.custom<`bar/${string}`>(val => {
+  return (val as string).startsWith('bar/');
+});
+
+export const UserConfig = z
+  .object({
     general: GeneralConfig.optional(),
     bar: BarConfig.optional(),
-  }),
-  z
-    .record(z.string().startsWith('bar/'), BarConfig)
-    .optional()
-    .refine((_): _ is { [key: `bar/${string}`]: BarConfig } => true),
-);
+  })
+  .and(z.record(getKey, BarConfig).optional());
 
 export type UserConfig = Prettify<z.infer<typeof UserConfig>>;
