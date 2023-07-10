@@ -33,6 +33,7 @@ importers:
       vite: 4.3.0
       vite-plugin-solid: 2.7.0
       yaml: 2.3.1
+      zod: 3.21.4
     dependencies:
       '@tauri-apps/api': 1.4.0
       class-transformer: 0.5.1
@@ -41,6 +42,7 @@ importers:
       reflect-metadata: 0.1.13
       solid-js: 1.7.3
       yaml: 2.3.1
+      zod: 3.21.4
     devDependencies:
       '@types/node': 18.15.12
       '@types/nunjucks': 3.2.3
@@ -1365,4 +1367,8 @@ packages:
   /yaml/2.3.1:
     resolution: {integrity: sha512-2eHWfjaoXgTBC2jNM1LRef62VQa0umtvRiDSk6HSzW7RvS5YtkabJrwYLLEKWBc8a5U2PTSCs+dJjUTJdlHsWQ==}
     engines: {node: '>= 14'}
+    dev: false
+
+  /zod/3.21.4:
+    resolution: {integrity: sha512-m46AKbrzKVzOzs/DZgVnG5H55N1sv1M8qZU3A8RIKbs3mrACDNeIOeilDymVb2HdmP8uwshOCF4uJ8uM9rCqJw==}
     dev: false
