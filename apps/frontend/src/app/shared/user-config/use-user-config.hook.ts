@@ -3,9 +3,8 @@ import { parse } from 'yaml';
 
 import { useDesktopCommands } from '../desktop';
 import { useLogger } from '../logging';
-import { UserConfig } from './types/user-config.model';
+import { UserConfigSchema } from './types/user-config.model';
 import { memoize } from '../utils';
-import { expandConfigKeys } from './expand-config-keys';
 
 export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
@@ -15,17 +14,17 @@ export const useUserConfig = memoize(() => {
     const config = await commands.readConfigFile();
 
     // Parse the config as YAML.
-    const configObj = parse(config);
+    const configObj = parse(config) as unknown;
     logger.debug(`Read config:`, configObj);
 
-    const parsedConfig = await UserConfig.parseAsync(configObj);
+    const parsedConfig = await UserConfigSchema.parseAsync(configObj);
     logger.debug(`Parsed config:`, parsedConfig);
 
     // TODO: Traverse config and add IDs to each component.
     // TODO: Traverse config and aggregate `styles`. Compile this and
     // add it to the DOM somehow.
 
-    return configObj;
+    return parsedConfig;
   });
 
   const [generalConfig] = createResource(config, config => config.general);

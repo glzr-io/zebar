@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const GeneralConfig = z
+export const GeneralConfigSchema = z
   .object({
     position_x: z.string(),
     position_y: z.string(),
@@ -14,4 +14,4 @@ export const GeneralConfig = z
   })
   .partial();
 
-export type GeneralConfig = z.infer<typeof GeneralConfig>;
+export type GeneralConfig = z.infer<typeof GeneralConfigSchema>;

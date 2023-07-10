@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import { ComponentGroupConfig } from './component-group-config.model';
+import { ComponentGroupConfigSchema } from './component-group-config.model';
 import { delimitedKey } from '../../delimited-key';
 import { Prettify } from '~/shared/utils';
 
-export const BarConfig = z
+export const BarConfigSchema = z
   .object({
-    group: ComponentGroupConfig.optional(),
+    group: ComponentGroupConfigSchema.optional(),
   })
-  .and(z.record(delimitedKey('group'), ComponentGroupConfig).optional());
+  .and(z.record(delimitedKey('group'), ComponentGroupConfigSchema).optional());
 
-export type BarConfig = Prettify<z.infer<typeof BarConfig>>;
+export type BarConfig = Prettify<z.infer<typeof BarConfigSchema>>;
