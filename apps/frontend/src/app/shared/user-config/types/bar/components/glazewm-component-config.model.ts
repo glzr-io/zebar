@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
-import { ComponentConfigBase } from '../component-config-base.model';
+import { ComponentConfigBaseSchema } from '../component-config-base.model';
 
-export const GlazeWMComponentConfig = ComponentConfigBase.extend({
+export const GlazeWMComponentConfigSchema = ComponentConfigBaseSchema.extend({
   type: z.literal('glazewm'),
 });
 
-export type GlazeWMComponentConfig = z.infer<typeof GlazeWMComponentConfig>;
+export type GlazeWMComponentConfig = z.infer<
+  typeof GlazeWMComponentConfigSchema
+>;

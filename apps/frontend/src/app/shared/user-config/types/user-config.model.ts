@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
-import { BarConfig } from './bar/bar-config.model';
-import { GeneralConfig } from './general-config.model';
+import { BarConfigSchema } from './bar/bar-config.model';
+import { GeneralConfigSchema } from './general-config.model';
 import { Prettify } from '~/shared/utils';
 import { delimitedKey } from '../delimited-key';
 
-export const UserConfig = z
+export const UserConfigSchema = z
   .object({
-    general: GeneralConfig.optional(),
-    bar: BarConfig.optional(),
+    general: GeneralConfigSchema.optional(),
+    bar: BarConfigSchema.optional(),
   })
-  .and(z.record(delimitedKey('bar'), BarConfig).optional());
+  .and(z.record(delimitedKey('bar'), BarConfigSchema).optional());
 
-export type UserConfig = Prettify<z.infer<typeof UserConfig>>;
+export type UserConfig = Prettify<z.infer<typeof UserConfigSchema>>;

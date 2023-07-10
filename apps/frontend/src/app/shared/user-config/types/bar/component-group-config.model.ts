@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-import { ComponentConfig } from './component-config.model';
+import { ComponentConfigSchema } from './component-config.model';
 
-export const ComponentGroupConfig = z.object({
-  components: z.array(ComponentConfig),
+export const ComponentGroupConfigSchema = z.object({
+  components: z.array(ComponentConfigSchema),
 });
 
-export type ComponentGroupConfig = z.infer<typeof ComponentGroupConfig>;
+export type ComponentGroupConfig = z.infer<typeof ComponentGroupConfigSchema>;
