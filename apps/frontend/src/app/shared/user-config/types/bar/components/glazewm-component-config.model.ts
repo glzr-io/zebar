@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { ComponentConfigBaseSchema } from '../component-config-base.model';
+import { ElementSchema } from '../../shared/element.model';
 
-export const GlazeWMComponentConfigSchema = ComponentConfigBaseSchema.extend({
+export const GlazeWMComponentConfigSchema = ElementSchema.extend({
   type: z.literal('glazewm'),
 });
 

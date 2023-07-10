@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
 import { ComponentConfigSchema } from './component-config.model';
+import { ElementSchema } from '../shared/element.model';
 
-export const ComponentGroupConfigSchema = z.object({
+export const ComponentGroupConfigSchema = ElementSchema.extend({
   components: z.array(ComponentConfigSchema),
 });
 

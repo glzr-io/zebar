@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { ComponentConfigBaseSchema } from '../component-config-base.model';
+import { ElementSchema } from '../../shared/element.model';
 
-export const CpuComponentConfigSchema = ComponentConfigBaseSchema.extend({
+export const CpuComponentConfigSchema = ElementSchema.extend({
   type: z.literal('cpu'),
   refresh_interval_ms: z.number(),
 });

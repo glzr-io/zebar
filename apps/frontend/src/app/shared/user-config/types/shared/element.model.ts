@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { ScriptVariableConfigSchema } from '../script-variable-config.model';
+import { ScriptVariableConfigSchema } from './script-variable-config.model';
 
-export const ComponentConfigBaseSchema = z.object({
+export const ElementSchema = z.object({
   id: z.string(),
   class_name: z.string(),
   style: z.string(),
@@ -15,4 +15,5 @@ export const ComponentConfigBaseSchema = z.object({
   label: z.string(),
 });
 
-export type ComponentConfigBase = z.infer<typeof ComponentConfigBaseSchema>;
+/** Base type for elements with a template. */
+export type Element = z.infer<typeof ElementSchema>;

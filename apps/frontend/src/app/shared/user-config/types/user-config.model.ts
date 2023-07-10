@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 import { BarConfigSchema } from './bar/bar-config.model';
+import { delimitedKey } from '../delimited-key';
 import { GeneralConfigSchema } from './general-config.model';
 import { Prettify } from '~/shared/utils';
-import { delimitedKey } from '../delimited-key';
 
 export const UserConfigSchema = z
   .object({
