@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 
 import { ScriptVariableConfig } from '../script-variable-config.model';
 import { ComponentGroupConfig } from './component-group-config.model';
@@ -13,5 +14,6 @@ export class BarConfig {
   template: string;
 
   @Transform(toRecordType(BarConfig))
+  @ValidateNested()
   group: Record<string, ComponentGroupConfig>;
 }

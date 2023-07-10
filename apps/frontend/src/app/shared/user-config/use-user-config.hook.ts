@@ -1,4 +1,5 @@
 import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { createResource } from 'solid-js';
 import { parse } from 'yaml';
 
@@ -26,8 +27,13 @@ export const useUserConfig = memoize(() => {
     ]);
 
     const configInstance = plainToInstance(UserConfig, expandedConfig);
-
     logger.debug(`Expanded config:`, configInstance);
+
+    const validationErrors = await validate(configInstance);
+
+    if (validationErrors.length > 0) {
+      logger.error(`Config errors:`, validationErrors);
+    }
 
     // TODO: Traverse config and add IDs to each component.
     // TODO: Traverse config and aggregate `styles`. Compile this and
