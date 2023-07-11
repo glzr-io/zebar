@@ -7,7 +7,7 @@ import { Prettify } from '~/shared/utils';
 
 export const UserConfigSchema = z
   .object({
-    general: GeneralConfigSchema.optional(),
+    general: GeneralConfigSchema,
     bar: BarConfigSchema.optional(),
   })
   .and(z.record(delimitedKey('bar'), BarConfigSchema).optional());
