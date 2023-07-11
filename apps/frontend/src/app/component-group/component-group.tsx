@@ -6,32 +6,27 @@ import { parseTemplate } from '~/shared/template-parsing';
 import { ClockComponent } from '~/components/clock/clock-component';
 import { insertAndReplace } from '~/shared/utils';
 
-export interface ComponentGroupProps {
-  id: string;
-  config: ComponentGroupConfig;
-}
-
-export function ComponentGroup(props: ComponentGroupProps) {
-  const tempId = `group-${Math.random().toString().slice(2)}`;
+export function ComponentGroup(props: { config: ComponentGroupConfig }) {
   const element = document.createElement('div');
-  element.id = tempId;
+  element.id = props.config.id;
 
   createEffect(
     on(
       () => props.config,
       () => {
-        const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
-          parseTemplate(template, getBindings()),
+        const dispose = insertAndReplace(
+          document.getElementById(props.config.id)!,
+          () => parseTemplate(template, getBindings()),
         );
         onCleanup(() => dispose());
       },
     ),
   );
 
-  function getComponentType(id: string, componentConfig: ComponentConfig) {
+  function getComponentType(componentConfig: ComponentConfig) {
     switch (componentConfig.type) {
       case 'clock':
-        return <ClockComponent id={id} config={componentConfig} />;
+        return <ClockComponent config={componentConfig} />;
       case 'cpu':
         return <p>Not implemented.</p>;
       case 'glazewm':
@@ -49,13 +44,10 @@ export function ComponentGroup(props: ComponentGroupProps) {
   function getBindings() {
     return {
       strings: {
-        root_props: `id="${tempId}"`,
+        root_props: `id="${props.config.id}"`,
       },
       components: {
-        components: () =>
-          props.config.components.map(componentConfig =>
-            getComponentType('temp', componentConfig),
-          ),
+        components: () => props.config.components.map(getComponentType),
       },
     };
   }

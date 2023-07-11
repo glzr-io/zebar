@@ -15,7 +15,7 @@ export function App() {
     <Show when={userConfig.barConfig()}>
       {barConfig => (
         <div class={s.app}>
-          <Bar id="temp" config={barConfig()} />
+          <Bar config={barConfig()} />
         </div>
       )}
     </Show>

@@ -12,28 +12,23 @@ import { ClockComponentConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
 import { insertAndReplace } from '~/shared/utils';
 
-export interface ClockComponentProps {
-  id: string;
-  config: ClockComponentConfig;
-}
-
-export function ClockComponent(props: ClockComponentProps) {
+export function ClockComponent(props: { config: ClockComponentConfig }) {
   const [date, setDate] = createSignal(new Date());
 
   const minutes = createMemo(() => date().getMinutes());
   const hours = createMemo(() => date().getHours());
   const interval = setInterval(() => setDate(new Date()), 1000);
 
-  const tempId = `clock-${Math.random().toString().slice(2)}`;
   const element = document.createElement('div');
-  element.id = tempId;
+  element.id = props.config.id;
 
   createEffect(
     on(
       () => [props.config, minutes(), hours()],
       () => {
-        const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
-          parseTemplate(template, getBindings()),
+        const dispose = insertAndReplace(
+          document.getElementById(props.config.id)!,
+          () => parseTemplate(template, getBindings()),
         );
         onCleanup(() => dispose());
       },
@@ -42,7 +37,7 @@ export function ClockComponent(props: ClockComponentProps) {
 
   onMount(() => console.log('Clock mounted'));
   onCleanup(() => {
-    console.log('Clock cleanup'); // Never gets called.
+    console.log('Clock cleanup');
     clearInterval(interval);
   });
 
@@ -51,7 +46,7 @@ export function ClockComponent(props: ClockComponentProps) {
       strings: {
         minutes: minutes(),
         hours: hours(),
-        root_props: `id="${tempId}"`,
+        root_props: `id="${props.config.id}"`,
       },
       components: {},
     };
