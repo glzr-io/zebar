@@ -1,34 +1,46 @@
-import { createResource } from 'solid-js';
+import { createResource, createSignal } from 'solid-js';
 import { parse } from 'yaml';
 
 import { useDesktopCommands } from '../desktop';
 import { useLogger } from '../logging';
 import { UserConfigSchema } from './types/user-config.model';
-import { memoize } from '../utils';
+import { Prettify, memoize } from '../utils';
 
 export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
   const commands = useDesktopCommands();
 
+  // TODO: Get name of bar from launch args. Default to 'default.'
+  const [barName] = createSignal('default');
+
   const [config, { refetch: reload }] = createResource(async () => {
-    const config = await commands.readConfigFile();
+    try {
+      const config = await commands.readConfigFile();
 
-    // Parse the config as YAML.
-    const configObj = parse(config) as unknown;
-    logger.debug(`Read config:`, configObj);
+      // Parse the config as YAML.
+      const configObj = parse(config) as unknown;
+      logger.debug(`Read config:`, configObj);
 
-    const parsedConfig = await UserConfigSchema.parseAsync(configObj);
-    logger.debug(`Parsed config:`, parsedConfig);
+      const parsedConfig = await UserConfigSchema.parseAsync(configObj);
+      logger.debug(`Parsed config:`, parsedConfig);
 
-    // TODO: Traverse config and add IDs to each component.
-    // TODO: Traverse config and aggregate `styles`. Compile this and
-    // add it to the DOM somehow.
-
-    return parsedConfig;
+      return parsedConfig;
+    } catch (err) {
+      commands.exitWithError(`Problem reading config file: ${err}`);
+    }
   });
 
   const [generalConfig] = createResource(config, config => config.general);
-  const [barConfig] = createResource(config, config => config['bar/main']);
+
+  const [barConfig] = createResource(config, config => {
+    const barConfig = config[`bar/${barName()}`];
+
+    if (!barConfig) {
+      commands.exitWithError(`Could not find bar config for '${barName()}'.`);
+    }
+
+    return barConfig;
+  });
 
   return {
     generalConfig,
