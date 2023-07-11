@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
 import { ScriptVariableConfigSchema } from './script-variable-config.model';
+import { createUniqueId } from '~/shared/utils';
 
 export const ElementSchema = z.object({
-  id: z.string(),
+  id: z.string().default(createUniqueId),
   class_name: z.string(),
-  style: z.string(),
+  styles: z.string(),
   template_variables: z.record(
     z.string(),
     z.union([z.string(), ScriptVariableConfigSchema]),
