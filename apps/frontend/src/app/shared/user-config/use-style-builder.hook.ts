@@ -8,7 +8,7 @@ import { ComponentGroupConfig } from './types/bar/component-group-config.model';
 import { BarConfig } from './types/bar/bar-config.model';
 
 export const useStyleBuilder = memoize(() => {
-  const logger = useLogger('useStyleBuilder');
+  const logger = useLogger(useStyleBuilder.name);
   const userConfig = useUserConfig();
 
   // Traverse the bar config and aggregate `styles`. Compile this and add
@@ -17,18 +17,19 @@ export const useStyleBuilder = memoize(() => {
     () => resolved([userConfig.generalConfig(), userConfig.barConfig()]),
     async ([generalConfig, barConfig]) => {
       const groups = getGroups(barConfig);
-      const groupStyles = groups.map(group => group?.styles);
+      const groupStyles = groups.map(group =>
+        scopeWith(group.id, group?.styles),
+      );
 
       const componentStyles = groups
-        .flatMap(group => group.components)
-        .map(component => component?.styles);
+        .flatMap(group => group.components ?? [])
+        .map(component => scopeWith(component.id, component?.styles));
 
       // TODO: Merge with default styles.
       // TODO: Add scopes to default styles.
-      // TODO: Add scopes to user-defined styles.
       const styles = [
         generalConfig.global_styles,
-        barConfig.styles,
+        scopeWith(barConfig.id, barConfig.styles),
         ...groupStyles,
         ...componentStyles,
       ]
@@ -43,8 +44,13 @@ export const useStyleBuilder = memoize(() => {
 
   function getGroups(barConfig: BarConfig) {
     return Object.entries(barConfig)
-      .filter(([key]) => key.startsWith('group'))
+      .filter(([key, value]) => key.startsWith('group') && !!value)
       .map(([_, value]) => value) as ComponentGroupConfig[];
+  }
+
+  // Wrap user-defined styles in a scope.
+  function scopeWith(id: string, styles: string | undefined) {
+    return styles ? `#${id} { ${styles} }` : '';
   }
 
   return {
