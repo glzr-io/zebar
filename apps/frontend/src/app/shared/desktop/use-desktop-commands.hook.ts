@@ -31,7 +31,14 @@ export const useDesktopCommands = memoize(() => {
     return invoke<string>('read_config_file');
   }
 
+  // TODO: Implement this. Should kill the window and show error dialog. If
+  // there are no windows remaining, then exit the app.
+  function exitWithError(message: string): Promise<void> {
+    throw new Error(message);
+  }
+
   return {
     readConfigFile,
+    exitWithError,
   };
 });
