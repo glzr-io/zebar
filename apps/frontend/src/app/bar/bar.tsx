@@ -6,22 +6,17 @@ import { parseTemplate } from '~/shared/template-parsing';
 import { ComponentGroup } from '~/component-group/component-group';
 import { insertAndReplace } from '~/shared/utils';
 
-export interface BarProps {
-  id: string;
-  config: BarConfig;
-}
-
-export function Bar(props: BarProps) {
-  const tempId = `bar-${Math.random().toString().slice(2)}`;
+export function Bar(props: { config: BarConfig }) {
   const element = document.createElement('div');
-  element.id = tempId;
+  element.id = props.config.id;
 
   createEffect(
     on(
       () => props.config,
       () => {
-        const dispose = insertAndReplace(document.getElementById(tempId)!, () =>
-          parseTemplate(template, getBindings()),
+        const dispose = insertAndReplace(
+          document.getElementById(props.config.id)!,
+          () => parseTemplate(template, getBindings()),
         );
         onCleanup(() => dispose());
       },
@@ -31,18 +26,18 @@ export function Bar(props: BarProps) {
   function getBindings() {
     return {
       strings: {
-        root_props: `id="${tempId}"`,
+        root_props: `id="${props.config.id}"`,
       },
       components: {
         // TODO: Dynamically create based on 'group/*' keys available in config.
         'group.left': () => (
-          <ComponentGroup id="aaa" config={props.config['group/left']} />
+          <ComponentGroup config={props.config['group/left']} />
         ),
         'group.center': () => (
-          <ComponentGroup id="bbb" config={props.config['group/center']} />
+          <ComponentGroup config={props.config['group/center']} />
         ),
         'group.right': () => (
-          <ComponentGroup id="ccc" config={props.config['group/right']} />
+          <ComponentGroup config={props.config['group/right']} />
         ),
       },
     };
