@@ -33,7 +33,7 @@ export const useDesktopCommands = memoize(() => {
 
   // TODO: Implement this. Should kill the window and show error dialog. If
   // there are no windows remaining, then exit the app.
-  function exitWithError(message: string): Promise<void> {
+  function exitWithError(message: string): never {
     throw new Error(message);
   }
 

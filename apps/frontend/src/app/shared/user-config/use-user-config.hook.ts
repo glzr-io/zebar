@@ -1,10 +1,11 @@
 import { createResource, createSignal } from 'solid-js';
 import { parse } from 'yaml';
+import { ZodError } from 'zod';
 
 import { useDesktopCommands } from '../desktop';
 import { useLogger } from '../logging';
 import { UserConfigSchema } from './types/user-config.model';
-import { Prettify, memoize } from '../utils';
+import { memoize } from '../utils';
 
 export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
@@ -26,7 +27,7 @@ export const useUserConfig = memoize(() => {
 
       return parsedConfig;
     } catch (err) {
-      commands.exitWithError(`Problem reading config file: ${err}`);
+      handleConfigError(err);
     }
   });
 
@@ -41,6 +42,26 @@ export const useUserConfig = memoize(() => {
 
     return barConfig;
   });
+
+  function handleConfigError(err: unknown) {
+    if (!(err instanceof Error)) {
+      commands.exitWithError('Problem reading config file.');
+    }
+
+    if (err instanceof ZodError) {
+      const [firstError] = err.errors;
+      const { path, message } = firstError;
+      const fullPath = path.join('.');
+
+      commands.exitWithError(
+        `Property '${fullPath}' in config isn't valid. Reason: '${message}'.`,
+      );
+    }
+
+    commands.exitWithError(
+      `Problem reading config file: ${(err as Error).message}.`,
+    );
+  }
 
   return {
     generalConfig,
