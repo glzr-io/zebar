@@ -15,6 +15,16 @@
         "open": true
       }
     },
+    "cli": {
+      "description": "Command example `sub1 sub2`",
+      "subcommands": {
+        "sub1": {
+          "subcommands": {
+            "sub2": {}
+          }
+        }
+      }
+    },
     "bundle": {
       "active": true,
       "targets": "all",
