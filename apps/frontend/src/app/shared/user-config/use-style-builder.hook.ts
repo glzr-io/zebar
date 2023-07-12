@@ -2,7 +2,7 @@ import { createResource } from 'solid-js';
 import { compileString } from 'sass';
 
 import { useLogger } from '../logging';
-import { isDefined, memoize, resolved } from '../utils';
+import { memoize, resolved } from '../utils';
 import { useUserConfig } from './use-user-config.hook';
 import { ComponentGroupConfig } from './types/bar/component-group-config.model';
 import { BarConfig } from './types/bar/bar-config.model';
@@ -18,26 +18,26 @@ export const useStyleBuilder = memoize(() => {
     async ([generalConfig, barConfig]) => {
       const groups = getGroups(barConfig);
       const groupStyles = groups.map(group =>
-        scopeWith(group.id, group?.styles),
+        scopeWith(`#${group.id}`, group?.styles),
       );
 
       const componentStyles = groups
         .flatMap(group => group.components ?? [])
-        .map(component => scopeWith(component.id, component?.styles));
+        .map(component => scopeWith(`#${component.id}`, component?.styles));
 
       // TODO: Merge with default styles.
       // TODO: Add scopes to default styles.
       const styles = [
-        generalConfig.global_styles,
-        scopeWith(barConfig.id, barConfig.styles),
+        scopeWith(':root', generalConfig.global_styles),
+        scopeWith(`#${barConfig.id}`, barConfig.styles),
         ...groupStyles,
         ...componentStyles,
-      ]
-        .filter(isDefined)
-        .join('');
+      ].join('');
 
       // Compile SCSS into CSS.
       const { css } = compileString(styles);
+      logger.debug('Compiled SCSS into CSS:', css);
+
       return css;
     },
   );
@@ -49,8 +49,8 @@ export const useStyleBuilder = memoize(() => {
   }
 
   // Wrap user-defined styles in a scope.
-  function scopeWith(id: string, styles: string | undefined) {
-    return styles ? `#${id} { ${styles} }` : '';
+  function scopeWith(selector: string, styles: string | undefined) {
+    return styles ? `${selector} { ${styles} }` : '';
   }
 
   return {
