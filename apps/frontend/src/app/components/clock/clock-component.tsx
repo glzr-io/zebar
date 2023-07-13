@@ -7,7 +7,7 @@ import {
   onMount,
 } from 'solid-js';
 
-import template from './clock-component.njk?raw';
+import defaultTemplate from './clock-component.njk?raw';
 import { ClockComponentConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
 import { insertAndReplace } from '~/shared/utils';
@@ -28,7 +28,11 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
       () => {
         const dispose = insertAndReplace(
           document.getElementById(props.config.id)!,
-          () => parseTemplate(template, getBindings()),
+          () =>
+            parseTemplate(
+              props.config.template ?? defaultTemplate,
+              getBindings(),
+            ),
         );
         onCleanup(() => dispose());
       },
@@ -46,7 +50,7 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
       strings: {
         minutes: minutes(),
         hours: hours(),
-        root_props: `id="${props.config.id}"`,
+        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       components: {},
     };

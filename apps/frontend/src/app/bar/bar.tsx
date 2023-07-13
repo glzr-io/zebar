@@ -1,6 +1,6 @@
 import { createEffect, on, onCleanup, onMount } from 'solid-js';
 
-import template from './bar.njk?raw';
+import defaultTemplate from './bar.njk?raw';
 import { BarConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
 import { ComponentGroup } from '~/component-group/component-group';
@@ -16,7 +16,11 @@ export function Bar(props: { config: BarConfig }) {
       () => {
         const dispose = insertAndReplace(
           document.getElementById(props.config.id)!,
-          () => parseTemplate(template, getBindings()),
+          () =>
+            parseTemplate(
+              props.config.template ?? defaultTemplate,
+              getBindings(),
+            ),
         );
         onCleanup(() => dispose());
       },
@@ -26,7 +30,7 @@ export function Bar(props: { config: BarConfig }) {
   function getBindings() {
     return {
       strings: {
-        root_props: `id="${props.config.id}"`,
+        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       components: {
         // TODO: Dynamically create based on 'group/*' keys available in config.

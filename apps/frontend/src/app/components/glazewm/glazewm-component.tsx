@@ -5,7 +5,7 @@ export function GlazeWMComponent(props: { config: GlazeWMComponentConfig }) {
     return {
       strings: {
         binding_mode: '',
-        root_props: `id="${props.config.id}"`,
+        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
         workspaces: [],
       },
       functions: {
