@@ -1,9 +1,9 @@
-import defaultTemplate from './component-group.njk?raw';
+import defaultTemplate from './group.njk?raw';
 import { ClockComponent } from '~/components/clock/clock-component';
 import { createTemplateElement } from '~/shared/template-parsing';
-import { ComponentConfig, ComponentGroupConfig } from '~/shared/user-config';
+import { ComponentConfig, GroupConfig } from '~/shared/user-config';
 
-export function ComponentGroup(props: { config: ComponentGroupConfig }) {
+export function Group(props: { config: GroupConfig }) {
   function getComponentType(componentConfig: ComponentConfig) {
     switch (componentConfig.type) {
       case 'clock':
@@ -25,6 +25,7 @@ export function ComponentGroup(props: { config: ComponentGroupConfig }) {
       },
     };
   }
+
   return createTemplateElement({
     bindings: getBindings,
     config: () => props.config,
