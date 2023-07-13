@@ -1,49 +1,17 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  on,
-  onCleanup,
-  onMount,
-} from 'solid-js';
+import { createMemo, createSignal, onCleanup } from 'solid-js';
 
 import defaultTemplate from './clock-component.njk?raw';
 import { ClockComponentConfig } from '~/shared/user-config';
-import { parseTemplate } from '~/shared/template-parsing';
-import { insertAndReplace } from '~/shared/utils';
+import { createTemplateElement } from '~/shared/template-parsing';
 
 export function ClockComponent(props: { config: ClockComponentConfig }) {
   const [date, setDate] = createSignal(new Date());
 
   const minutes = createMemo(() => date().getMinutes());
   const hours = createMemo(() => date().getHours());
+
   const interval = setInterval(() => setDate(new Date()), 1000);
-
-  const element = document.createElement('div');
-  element.id = props.config.id;
-
-  createEffect(
-    on(
-      () => [props.config, minutes(), hours()],
-      () => {
-        const dispose = insertAndReplace(
-          document.getElementById(props.config.id)!,
-          () =>
-            parseTemplate(
-              props.config.template ?? defaultTemplate,
-              getBindings(),
-            ),
-        );
-        onCleanup(() => dispose());
-      },
-    ),
-  );
-
-  onMount(() => console.log('Clock mounted'));
-  onCleanup(() => {
-    console.log('Clock cleanup');
-    clearInterval(interval);
-  });
+  onCleanup(() => clearInterval(interval));
 
   function getBindings() {
     return {
@@ -56,5 +24,9 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
     };
   }
 
-  return element;
+  return createTemplateElement({
+    bindings: getBindings,
+    config: () => props.config,
+    defaultTemplate: () => defaultTemplate,
+  });
 }
