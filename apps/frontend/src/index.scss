@@ -1,0 +1,21 @@
+html {
+  box-sizing: border-box;
+}
+
+/**
+ * Set default `box-sizing` for all elements to border-box.
+ */
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+/**
+ * Disable overscroll.
+ */
+body {
+  overflow: hidden;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+}
