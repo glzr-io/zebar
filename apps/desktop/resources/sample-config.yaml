@@ -4,13 +4,13 @@
 # Docs re. general: https://some-future-docs-link.com
 general:
   # X-position of the bar in physical pixels.
-  position_x: '{{ vars.screen_x }} - 10px'
+  position_x: '{{ vars.screen_x }} - 10'
   # Y-position of the bar in physical pixels.
-  position_y: '{{ vars.screen_y }} - 10px'
+  position_y: '{{ vars.screen_y }} - 10'
   # Width of the bar in physical pixels.
   width: '{{ vars.screen_width }}'
   # Height of the bar in physical pixels.
-  height: '30px'
+  height: '30'
   # Whether bar window should be transparent. Can be combined with `opacity`
   # or a semi-transparent `background-color` in the bar styles for semi-
   # transparent windows.
