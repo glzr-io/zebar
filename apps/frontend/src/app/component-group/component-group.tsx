@@ -1,32 +1,9 @@
-import { createEffect, on, onCleanup, onMount } from 'solid-js';
-
 import defaultTemplate from './component-group.njk?raw';
-import { ComponentConfig, ComponentGroupConfig } from '~/shared/user-config';
-import { parseTemplate } from '~/shared/template-parsing';
 import { ClockComponent } from '~/components/clock/clock-component';
-import { insertAndReplace } from '~/shared/utils';
+import { createTemplateElement } from '~/shared/template-parsing';
+import { ComponentConfig, ComponentGroupConfig } from '~/shared/user-config';
 
 export function ComponentGroup(props: { config: ComponentGroupConfig }) {
-  const element = document.createElement('div');
-  element.id = props.config.id;
-
-  createEffect(
-    on(
-      () => props.config,
-      () => {
-        const dispose = insertAndReplace(
-          document.getElementById(props.config.id)!,
-          () =>
-            parseTemplate(
-              props.config.template ?? defaultTemplate,
-              getBindings(),
-            ),
-        );
-        onCleanup(() => dispose());
-      },
-    ),
-  );
-
   function getComponentType(componentConfig: ComponentConfig) {
     switch (componentConfig.type) {
       case 'clock':
@@ -48,9 +25,9 @@ export function ComponentGroup(props: { config: ComponentGroupConfig }) {
       },
     };
   }
-
-  onMount(() => console.log('ComponentGroup mounted'));
-  onCleanup(() => console.log('ComponentGroup cleanup'));
-
-  return element;
+  return createTemplateElement({
+    bindings: getBindings,
+    config: () => props.config,
+    defaultTemplate: () => defaultTemplate,
+  });
 }
