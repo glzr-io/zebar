@@ -4,32 +4,46 @@ import { ZodError } from 'zod';
 
 import { useDesktopCommands } from '../desktop';
 import { useLogger } from '../logging';
+import { getBindingRegex } from '../template-parsing';
 import { UserConfigSchema } from './types/user-config.model';
 import { memoize } from '../utils';
+import { useConfigVariables } from './use-config-variables.hook';
 
 export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
   const commands = useDesktopCommands();
+  const configVariables = useConfigVariables();
 
   // TODO: Get name of bar from launch args. Default to 'default.'
   const [barName] = createSignal('default');
 
-  const [config, { refetch: reload }] = createResource(async () => {
-    try {
-      const config = await commands.readConfigFile();
+  const [config, { refetch: reload }] = createResource(
+    configVariables,
+    async configVariables => {
+      try {
+        let config = await commands.readConfigFile();
 
-      // Parse the config as YAML.
-      const configObj = parse(config) as unknown;
-      logger.debug(`Read config:`, configObj);
+        // Prior to parsing, replace any config variables found.
+        for (const [name, value] of Object.entries(configVariables)) {
+          config = config.replace(
+            getBindingRegex(`vars.${name}`),
+            value.toString(),
+          );
+        }
 
-      const parsedConfig = await UserConfigSchema.parseAsync(configObj);
-      logger.debug(`Parsed config:`, parsedConfig);
+        // Parse the config as YAML.
+        const configObj = parse(config) as unknown;
+        logger.debug(`Read config:`, configObj);
 
-      return parsedConfig;
-    } catch (err) {
-      handleConfigError(err);
-    }
-  });
+        const parsedConfig = await UserConfigSchema.parseAsync(configObj);
+        logger.debug(`Parsed config:`, parsedConfig);
+
+        return parsedConfig;
+      } catch (err) {
+        handleConfigError(err);
+      }
+    },
+  );
 
   const [generalConfig] = createResource(config, config => config.general);
 
