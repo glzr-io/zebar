@@ -19,6 +19,7 @@ export const UserConfigSchema = UserConfigSchema1.passthrough().superRefine(
       const res = BarConfigSchema.safeParse(arg[key]);
 
       if (res.success) {
+        arg[key] = res.data;
         continue;
       }
 

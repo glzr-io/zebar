@@ -6,9 +6,8 @@ export const GeneralConfigSchema = z
     position_y: z.string(),
     width: z.string(),
     height: z.string(),
-    opacity: z.number(),
+    transparent: z.boolean(),
     enable_devtools: z.boolean(),
-    enable_default_styles: z.boolean(),
     global_styles: z.string(),
     global_stylesheet_path: z.string(),
   })
