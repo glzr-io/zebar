@@ -1,3 +1,8 @@
+import {
+  PhysicalPosition,
+  PhysicalSize,
+  getCurrent as getCurrentWindow,
+} from '@tauri-apps/api/window';
 import { Show, createEffect, on } from 'solid-js';
 import { configure } from 'nunjucks';
 
@@ -11,6 +16,23 @@ export function App() {
 
   // Prevent Nunjucks from escaping HTML.
   configure({ autoescape: false });
+
+  // Set bar position based on config values.
+  createEffect(
+    on(
+      () => userConfig.generalConfig(),
+      async generalConfig => {
+        // TODO: Default to x = 0, y = 0, width = 100%, height = 50px.
+        const x = eval(generalConfig?.position_x!);
+        const y = eval(generalConfig?.position_y!);
+        const width = eval(generalConfig?.width!);
+        const height = eval(generalConfig?.height!);
+
+        getCurrentWindow().setPosition(new PhysicalPosition(x, y));
+        getCurrentWindow().setSize(new PhysicalSize(width, height));
+      },
+    ),
+  );
 
   // Dynamically create <style> tag and append it to <head>.
   createEffect(
