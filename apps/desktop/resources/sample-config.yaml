@@ -1,65 +1,47 @@
+# Thanks for trying out Zanbar!
+# Yaml is white-space sensitive btw (always use 2 spaces).
+
+# Docs re. general: https://some-future-docs-link.com
 general:
-  position_x: '{{screen_x}} - 10px'
-  position_y: '{{screen_y}} - 10px'
-  width: 100% - 10px
-  height: '{{screen_width}} - 20px'
-  opacity: 1.0
+  # X-position of the bar in physical pixels.
+  position_x: '{{ vars.screen_x }} - 10px'
+  # Y-position of the bar in physical pixels.
+  position_y: '{{ vars.screen_y }} - 10px'
+  # Width of the bar in physical pixels.
+  width: '{{ vars.screen_width }}'
+  # Height of the bar in physical pixels.
+  height: '30px'
+  # Whether bar window should be transparent. Can be combined with `opacity`
+  # or a semi-transparent `background-color` in the bar styles for semi-
+  # transparent windows.
+  transparent: false
+  # Whether to enable devtools. Can be launched by focusing the bar
+  # window and pressing f12.
   enable_devtools: false
-  enable_default_styles: true
+  # Is merged with styles defined in `general.global_stylesheet_url`.
   global_styles: |
     --some-var: blue;
+  # Path to CSS or SCSS file with global styles. Is merged with
+  # styles defined in `general.global_styles`.
   global_stylesheet_path: ./custom.scss
 
-bar/main:
+# Docs re. bar: https://some-future-docs-link.com
+bar/default:
   styles: |
-    background: "#20242cc4";
-    color: "#ffffff";
-    font-family: "Segoe UI";
-    font-size: "13px";
-    padding: "4px 6px";
-  template: |
-    <div id="{{id}}">
-      {{ components_left }}
-      {{ components_center }}
-      {{ components_right }}
-    </div>
-  components_left:
+    background: #20242cc4;
+    color: #ffffff;
+    font-family: Segoe UI;
+    font-size: 13px;
+    padding: 4px 6px;
+  group/left:
     styles: |
-      display: "flex";
-    template: |
-      <div id="{{id}}">
-        {{ components }}
-      </div>
+      display: flex;
     components:
-      - type: cpu
-        styles: |
-          background: green;
-        label: <div class="lorem">{{cpu_frequency}} {{cpu_temp}}</div>
-
-      - type: custom
-        template_variables:
-          hardcoded_var: 3
-          song:
-            source: script
-            script_path: ./scripts/get-spotify-song.js # Outputs JSON (eg. '{ name: Africa, isPlaying: true }').
-            script_args: current
-            refresh_interval_ms: 1000
-          artist:
-            source: script
-            script_path: ./scripts/get-artist.js # Outputs a string (eg. 'Toto').
-            refresh_interval_ms: 1000
-        template_commands:
-          play: spotify play
-          pause: spotify play
-          next: spotify play
-          previous: spotify play
-        template: |
-          <div id="{{id}}">
-            {{#if song.isPlaying}}
-              <span onClick="{{pause}}">Pause</span>
-            {{else}}
-              <span onClick="{{play}}">Play</span>
-            {{/if}}
-
-            <p>Currently playing: {{song.name}} by {{artist}}</p>
-          </div>
+      - type: 'clock'
+      - type: 'cpu'
+  group/center:
+    components:
+      - type: 'clock'
+  group/right:
+    components:
+      - type: 'clock'
