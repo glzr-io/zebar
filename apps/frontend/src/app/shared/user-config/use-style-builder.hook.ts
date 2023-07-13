@@ -4,7 +4,7 @@ import { compileString } from 'sass';
 import { useLogger } from '../logging';
 import { memoize, resolved } from '../utils';
 import { useUserConfig } from './use-user-config.hook';
-import { ComponentGroupConfig } from './types/bar/component-group-config.model';
+import { GroupConfig } from './types/bar/group-config.model';
 import { BarConfig } from './types/bar/bar-config.model';
 
 export const useStyleBuilder = memoize(() => {
@@ -52,7 +52,7 @@ export const useStyleBuilder = memoize(() => {
   function getGroupConfigs(barConfig: BarConfig) {
     return Object.entries(barConfig)
       .filter(([key, value]) => key.startsWith('group') && !!value)
-      .map(([_, value]) => value) as ComponentGroupConfig[];
+      .map(([_, value]) => value) as GroupConfig[];
   }
 
   // Wrap user-defined styles in a scope.

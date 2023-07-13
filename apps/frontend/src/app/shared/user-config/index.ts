@@ -3,7 +3,7 @@ export * from './types/bar/components/cpu-component-config.model';
 export * from './types/bar/components/glazewm-component-config.model';
 export * from './types/bar/bar-config.model';
 export * from './types/bar/component-config.model';
-export * from './types/bar/component-group-config.model';
+export * from './types/bar/group-config.model';
 export * from './types/shared/element.model';
 export * from './types/shared/script-variable-config.model';
 export * from './types/general-config.model';

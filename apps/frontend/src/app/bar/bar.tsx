@@ -1,7 +1,7 @@
 import defaultTemplate from './bar.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
 import { BarConfig } from '~/shared/user-config';
-import { ComponentGroup } from '~/component-group/component-group';
+import { Group } from '~/group/group';
 
 export function Bar(props: { config: BarConfig }) {
   function getBindings() {
@@ -14,7 +14,7 @@ export function Bar(props: { config: BarConfig }) {
       (acc, name) => ({
         ...acc,
         [`group.${name}`]: () => (
-          <ComponentGroup config={props.config[`group/${name}`]} />
+          <Group config={props.config[`group/${name}`]} />
         ),
       }),
       {},
