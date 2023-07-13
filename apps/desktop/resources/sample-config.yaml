@@ -28,6 +28,8 @@ general:
 # Docs re. bar: https://some-future-docs-link.com
 bar/default:
   styles: |
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     background: #20242cc4;
     color: #ffffff;
     font-family: Segoe UI;
