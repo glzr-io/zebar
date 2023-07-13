@@ -1,6 +1,6 @@
 import { createEffect, on, onCleanup, onMount } from 'solid-js';
 
-import template from './component-group.njk?raw';
+import defaultTemplate from './component-group.njk?raw';
 import { ComponentConfig, ComponentGroupConfig } from '~/shared/user-config';
 import { parseTemplate } from '~/shared/template-parsing';
 import { ClockComponent } from '~/components/clock/clock-component';
@@ -16,7 +16,11 @@ export function ComponentGroup(props: { config: ComponentGroupConfig }) {
       () => {
         const dispose = insertAndReplace(
           document.getElementById(props.config.id)!,
-          () => parseTemplate(template, getBindings()),
+          () =>
+            parseTemplate(
+              props.config.template ?? defaultTemplate,
+              getBindings(),
+            ),
         );
         onCleanup(() => dispose());
       },
@@ -31,20 +35,13 @@ export function ComponentGroup(props: { config: ComponentGroupConfig }) {
         return <p>Not implemented.</p>;
       case 'glazewm':
         return <p>Not implemented.</p>;
-      default:
-        // TODO: This can probably be removed after adding class-validator.
-        throw new Error(
-          `Unknown component type '${
-            (componentConfig as ComponentConfig).type
-          }'.`,
-        );
     }
   }
 
   function getBindings() {
     return {
       strings: {
-        root_props: `id="${props.config.id}"`,
+        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       components: {
         components: () => props.config.components.map(getComponentType),
