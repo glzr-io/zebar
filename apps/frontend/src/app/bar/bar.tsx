@@ -1,10 +1,12 @@
+import { createMemo } from 'solid-js';
+
 import defaultTemplate from './bar.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
 import { BarConfig } from '~/shared/user-config';
 import { Group } from '~/group/group';
 
 export function Bar(props: { config: BarConfig }) {
-  function getBindings() {
+  const bindings = createMemo(() => {
     const groupNames = Object.keys(props.config)
       .filter(key => key.startsWith('group/'))
       .map(key => key.replace('group/', ''));
@@ -26,10 +28,10 @@ export function Bar(props: { config: BarConfig }) {
       },
       components: groupComponentMap,
     };
-  }
+  });
 
   return createTemplateElement({
-    bindings: getBindings,
+    bindings,
     config: () => props.config,
     defaultTemplate: () => defaultTemplate,
   });
