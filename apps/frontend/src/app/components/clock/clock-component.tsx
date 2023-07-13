@@ -13,7 +13,7 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
   const interval = setInterval(() => setDate(new Date()), 1000);
   onCleanup(() => clearInterval(interval));
 
-  function getBindings() {
+  const bindings = createMemo(() => {
     return {
       strings: {
         minutes: minutes(),
@@ -22,10 +22,10 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
       },
       components: {},
     };
-  }
+  });
 
   return createTemplateElement({
-    bindings: getBindings,
+    bindings,
     config: () => props.config,
     defaultTemplate: () => defaultTemplate,
   });

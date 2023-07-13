@@ -1,9 +1,11 @@
+import { createMemo } from 'solid-js';
+
 import defaultTemplate from './glazewm-component.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
 import { GlazeWMComponentConfig } from '~/shared/user-config';
 
 export function GlazeWMComponent(props: { config: GlazeWMComponentConfig }) {
-  function getBindings() {
+  const bindings = createMemo(() => {
     return {
       strings: {
         binding_mode: '',
@@ -14,10 +16,10 @@ export function GlazeWMComponent(props: { config: GlazeWMComponentConfig }) {
         focus_workspace: () => {},
       },
     };
-  }
+  });
 
   return createTemplateElement({
-    bindings: getBindings,
+    bindings,
     config: () => props.config,
     defaultTemplate: () => defaultTemplate,
   });
