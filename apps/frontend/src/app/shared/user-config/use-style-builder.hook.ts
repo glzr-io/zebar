@@ -16,9 +16,15 @@ export const useStyleBuilder = memoize(() => {
   const [builtCss] = createResource(
     () => resolved([userConfig.generalConfig(), userConfig.barConfig()]),
     async ([generalConfig, barConfig]) => {
-      const groups = getGroups(barConfig);
+      const groups = getGroupConfigs(barConfig);
       const groupStyles = groups.map(group =>
         scopeWith(`#${group.id}`, group?.styles),
+      );
+
+      const defaultBarScss = await importScss('~/bar/bar.scss');
+      const defaultBarStyles = defaultBarScss.replace(
+        ':host',
+        `:where(.${barConfig.class_name})`,
       );
 
       const componentStyles = groups
@@ -28,6 +34,7 @@ export const useStyleBuilder = memoize(() => {
       // TODO: Merge with default styles.
       // TODO: Add scopes to default styles.
       const styles = [
+        defaultBarStyles,
         scopeWith(':root', generalConfig.global_styles),
         scopeWith(`#${barConfig.id}`, barConfig.styles),
         ...groupStyles,
@@ -42,7 +49,7 @@ export const useStyleBuilder = memoize(() => {
     },
   );
 
-  function getGroups(barConfig: BarConfig) {
+  function getGroupConfigs(barConfig: BarConfig) {
     return Object.entries(barConfig)
       .filter(([key, value]) => key.startsWith('group') && !!value)
       .map(([_, value]) => value) as ComponentGroupConfig[];
@@ -51,6 +58,12 @@ export const useStyleBuilder = memoize(() => {
   // Wrap user-defined styles in a scope.
   function scopeWith(selector: string, styles: string | undefined) {
     return styles ? `${selector} { ${styles} }` : '';
+  }
+
+  async function importScss(path: string) {
+    path = path.replace('~/', '../../');
+    const { default: scss } = await import(path);
+    return scss as string;
   }
 
   return {
