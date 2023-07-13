@@ -1,54 +1,36 @@
-import { createEffect, on, onCleanup, onMount } from 'solid-js';
-
 import defaultTemplate from './bar.njk?raw';
+import { createTemplateElement } from '~/shared/template-parsing';
 import { BarConfig } from '~/shared/user-config';
-import { parseTemplate } from '~/shared/template-parsing';
 import { ComponentGroup } from '~/component-group/component-group';
-import { insertAndReplace } from '~/shared/utils';
 
 export function Bar(props: { config: BarConfig }) {
-  const element = document.createElement('div');
-  element.id = props.config.id;
-
-  createEffect(
-    on(
-      () => props.config,
-      () => {
-        const dispose = insertAndReplace(
-          document.getElementById(props.config.id)!,
-          () =>
-            parseTemplate(
-              props.config.template ?? defaultTemplate,
-              getBindings(),
-            ),
-        );
-        onCleanup(() => dispose());
-      },
-    ),
-  );
-
   function getBindings() {
+    const groupNames = Object.keys(props.config)
+      .filter(key => key.startsWith('group/'))
+      .map(key => key.replace('group/', ''));
+
+    // Dynamically create based on 'group/*' keys available in config.
+    const groupComponentMap = groupNames.reduce(
+      (acc, name) => ({
+        ...acc,
+        [`group.${name}`]: () => (
+          <ComponentGroup config={props.config[`group/${name}`]} />
+        ),
+      }),
+      {},
+    );
+
     return {
       strings: {
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
-      components: {
-        // TODO: Dynamically create based on 'group/*' keys available in config.
-        'group.left': () => (
-          <ComponentGroup config={props.config['group/left']} />
-        ),
-        'group.center': () => (
-          <ComponentGroup config={props.config['group/center']} />
-        ),
-        'group.right': () => (
-          <ComponentGroup config={props.config['group/right']} />
-        ),
-      },
+      components: groupComponentMap,
     };
   }
 
-  onMount(() => console.log('Bar mounted'));
-  onCleanup(() => console.log('Bar cleanup'));
-
-  return element;
+  return createTemplateElement({
+    bindings: getBindings,
+    config: () => props.config,
+    defaultTemplate: () => defaultTemplate,
+  });
 }
