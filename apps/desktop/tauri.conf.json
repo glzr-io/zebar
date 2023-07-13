@@ -1,4 +1,5 @@
 {
+  "$schema": "node_modules/@tauri-apps/cli/schema.json",
   "build": {
     "devPath": "http://localhost:4200",
     "distDir": "../frontend/dist"
@@ -13,6 +14,10 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "window": {
+        "setPosition": true,
+        "setSize": true
       }
     },
     "cli": {
@@ -45,9 +50,10 @@
       {
         "fullscreen": false,
         "resizable": false,
+        "decorations": false,
         "title": "Zanbar",
-        "width": 800,
-        "height": 600
+        "width": 1,
+        "height": 1
       }
     ]
   }
