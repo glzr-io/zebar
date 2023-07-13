@@ -8,5 +8,6 @@ export * from './types/shared/element.model';
 export * from './types/shared/script-variable-config.model';
 export * from './types/general-config.model';
 export * from './types/user-config.model';
+export * from './use-config-variables.hook';
 export * from './use-user-config.hook';
 export * from './use-style-builder.hook';
