@@ -1,7 +1,4 @@
-import {
-  currentMonitor as getCurrentMonitor,
-  getCurrent as getCurrentWindow,
-} from '@tauri-apps/api/window';
+import { currentMonitor as getCurrentMonitor } from '@tauri-apps/api/window';
 
 import { memoize } from '../utils';
 import { createResource } from 'solid-js';
