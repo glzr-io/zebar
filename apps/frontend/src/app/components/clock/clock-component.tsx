@@ -16,8 +16,12 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
   const bindings = createMemo(() => {
     return {
       strings: {
-        minutes: minutes(),
-        hours: hours(),
+        get minutes() {
+          return minutes();
+        },
+        get hours() {
+          return hours();
+        },
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       components: {},
@@ -25,6 +29,7 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
   });
 
   return createTemplateElement({
+    //@ts-ignore
     bindings,
     config: () => props.config,
     defaultTemplate: () => defaultTemplate,
