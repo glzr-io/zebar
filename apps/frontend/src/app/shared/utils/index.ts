@@ -1,6 +1,7 @@
 export * from './types/non-nullable-array';
 export * from './types/non-nullable-obj';
 export * from './types/prettify';
+export * from './create-tracked-object';
 export * from './create-unique-id';
 export * from './insert-and-replace';
 export * from './is-defined';
