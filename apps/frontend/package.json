@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "1.4.0",
+    "axios": "1.4.0",
     "nunjucks": "3.2.4",
     "solid-js": "1.7.3",
     "yaml": "2.3.1",
