@@ -8,12 +8,13 @@ export function parseTemplate(
   template: string,
   bindings: TemplateBindings,
 ): Element {
-  // Compile string bindings with template engine.
+  // Compile variable + slot bindings with template engine.
   const compiledTemplate = runTemplateEngine(template, bindings);
 
   const element = document.createElement('div');
   element.innerHTML = compiledTemplate;
 
+  // TODO: Move to user config valdiation, rather than handling this here.
   if (!element.firstChild) {
     throw new Error(
       "Invalid 'template' in config. Template must have a child element.",
@@ -43,14 +44,14 @@ export function parseTemplate(
 }
 
 /**
- * Nunjucks is used to evaluate strings in the template.
+ * Nunjucks is used to evaluate variable + slot bindings in the template.
  */
 function runTemplateEngine(
   template: string,
   bindings: TemplateBindings,
 ): string {
   const {
-    strings = {},
+    variables = {},
     slots = {},
     functions = {},
     components = {},
@@ -68,13 +69,18 @@ function runTemplateEngine(
     '{% raw %}$&{% endraw %}',
   );
 
-  const firstPass = renderString(escapedTemplate, { ...strings, slot: slots });
-
-  // TODO: Refactor this so that it doesn't make 2 passes.
-  const escapedTemplate2 = firstPass.replace(
-    getBindingRegex(bindingsToEscape, 'g'),
-    '{% raw %}$&{% endraw %}',
+  const compiledSlots = Object.keys(slots).reduce<Record<string, string>>(
+    (acc, slot) => {
+      return {
+        ...acc,
+        [slot]: renderString(slots[slot], variables),
+      };
+    },
+    {},
   );
 
-  return renderString(escapedTemplate2, { ...strings });
+  return renderString(escapedTemplate, {
+    ...variables,
+    slot: compiledSlots,
+  });
 }

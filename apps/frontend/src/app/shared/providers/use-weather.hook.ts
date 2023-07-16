@@ -110,7 +110,9 @@ export const useWeather = memoize((latitude?: string, longitude?: string) => {
   }
 
   createEffect(
-    on(weather, weather => logger.debug('Received weather data:', weather), {}),
+    on(weather, weather => logger.debug('Received weather data:', weather), {
+      defer: true,
+    }),
   );
 
   return weather;

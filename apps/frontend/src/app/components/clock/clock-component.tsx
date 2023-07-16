@@ -15,13 +15,9 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
 
   const bindings = createMemo(() => {
     return {
-      strings: {
-        get minutes() {
-          return minutes();
-        },
-        get hours() {
-          return hours();
-        },
+      variables: {
+        minutes: minutes(),
+        hours: hours(),
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       components: {},

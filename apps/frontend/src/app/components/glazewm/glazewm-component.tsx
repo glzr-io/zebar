@@ -7,7 +7,7 @@ import { GlazeWMComponentConfig } from '~/shared/user-config';
 export function GlazeWMComponent(props: { config: GlazeWMComponentConfig }) {
   const bindings = createMemo(() => {
     return {
-      strings: {
+      variables: {
         binding_mode: '',
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
         workspaces: '',
