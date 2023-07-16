@@ -1,8 +1,9 @@
 import axios from 'axios';
-import { createResource } from 'solid-js';
+import { createEffect, createResource, on } from 'solid-js';
 
 import { memoize } from '../utils';
 import { usePublicIp } from './use-public-ip.hook';
+import { useLogger } from '../logging';
 
 export enum WeatherStatus {
   CLEAR_DAY,
@@ -16,27 +17,69 @@ export enum WeatherStatus {
   THUNDER,
 }
 
-// TODO: Remove `memoize` and instead pass latitude and longitde as args.
-export const useWeather = memoize(() => {
+export interface OpenMeteoApiResponse {
+  latitude: number;
+  longitude: number;
+  generationtime_ms: number;
+  utc_offset_seconds: number;
+  timezone: string;
+  timezone_abbreviation: string;
+  elevation: number;
+  current_weather: {
+    temperature: number;
+    windspeed: number;
+    winddirection: number;
+    weathercode: number;
+    is_day: number;
+    time: string;
+  };
+  daily_units: {
+    time: string;
+    sunset: string;
+    sunrise: string;
+  };
+  daily: {
+    time: string[];
+    sunset: string[];
+    sunrise: string[];
+  };
+}
+
+export const useWeather = memoize((latitude?: string, longitude?: string) => {
+  const logger = useLogger('useWeather');
   const publicIp = usePublicIp();
 
   const [weather] = createResource(publicIp, async publicIp => {
-    const weather = await axios.get(
-      `https://wttr.in/${publicIp.city}+${publicIp.country}?format=j1`,
-    );
-
     // Use OpenMeteo as provider for weather-related info.
     // Documentation: https://open-meteo.com/en/docs
-    const res = await axios.get('https://api.open-meteo.com/v1/forecast', {
-      params: {
-        latitude: publicIp.latitude,
-        longitude: publicIp.longitude,
-        temperature_unit: 'celsius',
-        current_weather: true,
-        daily: 'sunset, sunrise',
-        timezone: 'auto',
-      },
-    });
+    return axios
+      .get<OpenMeteoApiResponse>('https://api.open-meteo.com/v1/forecast', {
+        params: {
+          latitude: latitude ?? publicIp.latitude,
+          longitude: longitude ?? publicIp.longitude,
+          temperature_unit: 'celsius',
+          current_weather: true,
+          daily: 'sunset,sunrise',
+          timezone: 'auto',
+        },
+      })
+      .then(({ data }) => {
+        const currentWeather = data.current_weather;
+        const isDaytime = currentWeather.is_day === 1;
+
+        const weatherStatus = getWeatherStatus(
+          currentWeather.weathercode,
+          isDaytime,
+        );
+
+        return {
+          isDaytime,
+          weatherStatus,
+          celsiusTemp: currentWeather.temperature,
+          fahrenheitTemp: celsiusToFahrenheit(currentWeather.temperature),
+          windSpeed: currentWeather.windspeed,
+        };
+      });
   });
 
   // Relevant documentation: https://open-meteo.com/en/docs#weathervariables
@@ -61,6 +104,14 @@ export const useWeather = memoize(() => {
       return WeatherStatus.SNOW;
     }
   }
+
+  function celsiusToFahrenheit(celsiusTemp: number) {
+    return (celsiusTemp * 9) / 5 + 32;
+  }
+
+  createEffect(
+    on(weather, weather => logger.debug('Received weather data:', weather), {}),
+  );
 
   return weather;
 });
