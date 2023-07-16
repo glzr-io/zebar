@@ -29,7 +29,6 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
   });
 
   return createTemplateElement({
-    //@ts-ignore
     bindings,
     config: () => props.config,
     defaultTemplate: () => defaultTemplate,
