@@ -5,7 +5,7 @@ import { ElementSchema } from '../../shared/element.model';
 export const WeatherComponentConfigSchema = ElementSchema.extend({
   type: z.literal('weather'),
   class_name: z.string().default('weather-component'),
-  slot: z.string().default('{{ temp_celsius }}°C'),
+  slot: z.string().default('{{ celsius_temp }}°C'),
   // Latitude to retrieve weather for. If not provided, latitude is instead
   // estimated based on public IP.
   latitude: z.string().optional(),

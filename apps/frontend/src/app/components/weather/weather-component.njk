@@ -1,21 +1,21 @@
 <div {{ root_props }}>
   {% if weather_status == WeatherStatus.CLEAR_DAY %}
-    {{ slot.clear_day | d(slot.default) }}
+    {{ slot.clear_day | default(slot.default) }}
   {% elif weather_status == WeatherStatus.CLEAR_NIGHT %}
-    {{ slot.clear_night | d(slot.default) }}
+    {{ slot.clear_night | default(slot.default) }}
   {% elif weather_status == WeatherStatus.CLOUDY_DAY %}
-    {{ slot.cloudy_day | d(slot.default) }}
+    {{ slot.cloudy_day | default(slot.default) }}
   {% elif weather_status == WeatherStatus.CLOUDY_NIGHT %}
-    {{ slot.cloudy_night | d(slot.default) }}
+    {{ slot.cloudy_night | default(slot.default) }}
   {% elif weather_status == WeatherStatus.OVERCAST %}
-    {{ slot.overcast | d(slot.default) }}
+    {{ slot.overcast | default(slot.default) }}
   {% elif weather_status == WeatherStatus.LIGHT_RAIN %}
-    {{ slot.light_rain | d(slot.default) }}
+    {{ slot.light_rain | default(slot.default) }}
   {% elif weather_status == WeatherStatus.HEAVY_RAIN %}
-    {{ slot.heavy_rain | d(slot.default) }}
+    {{ slot.heavy_rain | default(slot.default) }}
   {% elif weather_status == WeatherStatus.SNOW %}
-    {{ slot.snow | d(slot.default) }}
+    {{ slot.snow | default(slot.default) }}
   {% elif weather_status == WeatherStatus.THUNDER %}
-    {{ slot.thunder | d(slot.default) }}
+    {{ slot.thunder | default(slot.default) }}
   {% endif %}
 </div>

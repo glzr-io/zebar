@@ -6,19 +6,10 @@ import { getBindingRegex } from './get-binding-regex';
 
 export function parseTemplate(
   template: string,
-  bindings: TemplateBindings = {},
+  bindings: TemplateBindings,
 ): Element {
   // Compile string bindings with template engine.
-  const compiledTemplate = parseTemplateStrings(
-    template,
-    bindings.strings ?? {},
-    {
-      bindingsToEscape: [
-        ...Object.keys(bindings.functions ?? {}),
-        ...Object.keys(bindings.components ?? {}),
-      ],
-    },
-  );
+  const compiledTemplate = runTemplateEngine(template, bindings);
 
   const element = document.createElement('div');
   element.innerHTML = compiledTemplate;
@@ -51,26 +42,39 @@ export function parseTemplate(
   return element.firstChild as Element;
 }
 
-export interface ParseTemplateStringsOptions {
-  bindingsToEscape?: string[];
-}
-
 /**
  * Nunjucks is used to evaluate strings in the template.
  */
-function parseTemplateStrings(
+function runTemplateEngine(
   template: string,
-  bindings: Record<string, string | boolean | number>,
-  options: ParseTemplateStringsOptions = {},
+  bindings: TemplateBindings,
 ): string {
-  const { bindingsToEscape = [] } = options;
+  const {
+    strings = {},
+    slots = {},
+    functions = {},
+    components = {},
+  } = bindings;
 
-  // Need to somehow ignore bindings that shouldn't be compiled by Nunjucks.
-  // Accomplish this by wrapping them in '{% raw %}' tag.
+  const bindingsToEscape = [
+    ...Object.keys(functions),
+    ...Object.keys(components),
+  ];
+
+  // Need to ignore bindings that shouldn't be compiled by Nunjucks. Accomplish
+  // this by wrapping them in '{% raw %}' tag.
   const escapedTemplate = template.replace(
     getBindingRegex(bindingsToEscape, 'g'),
     '{% raw %}$&{% endraw %}',
   );
 
-  return renderString(escapedTemplate, bindings);
+  const firstPass = renderString(escapedTemplate, { ...strings, slot: slots });
+
+  // TODO: Refactor this so that it doesn't make 2 passes.
+  const escapedTemplate2 = firstPass.replace(
+    getBindingRegex(bindingsToEscape, 'g'),
+    '{% raw %}$&{% endraw %}',
+  );
+
+  return renderString(escapedTemplate2, { ...strings });
 }
