@@ -2,6 +2,11 @@ html {
   box-sizing: border-box;
 }
 
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
 /**
  * Set default `box-sizing` for all elements to border-box.
  */
