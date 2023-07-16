@@ -6,15 +6,17 @@ import { parseTemplate } from './parse-template';
 import { TemplateBindings } from './template-bindings.model';
 import { useLogger } from '../logging';
 
-export interface CreateTemplateElementArgs {
+export interface CreateTemplateElementProps {
   // TODO: Rename to TemplateElementConfig.
   config: Accessor<Element>;
   bindings: Accessor<TemplateBindings>;
   defaultTemplate: Accessor<string>;
 }
 
-export function createTemplateElement(props: CreateTemplateElementArgs) {
-  const logger = useLogger(props.config().class_name);
+export function createTemplateElement(props: CreateTemplateElementProps) {
+  const logger = useLogger(
+    `.${props.config().class_name}#${props.config().id}`,
+  );
 
   const element = document.createElement('div');
   element.id = props.config().id;
@@ -23,13 +25,13 @@ export function createTemplateElement(props: CreateTemplateElementArgs) {
     on(
       () => props.bindings(),
       bindings => {
-        const dispose = insertAndReplace(
-          document.getElementById(props.config().id)!,
-          () =>
-            parseTemplate(
-              props.config().template ?? props.defaultTemplate(),
-              bindings,
-            ),
+        const mount = document.getElementById(props.config().id)!;
+
+        const dispose = insertAndReplace(mount, () =>
+          parseTemplate(
+            props.config().template ?? props.defaultTemplate(),
+            bindings,
+          ),
         );
 
         onCleanup(() => dispose());

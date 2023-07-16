@@ -6,9 +6,9 @@ import { WeatherComponentConfig } from '~/shared/user-config';
 import { WeatherStatus, useWeather } from '~/shared/providers/use-weather.hook';
 
 export function WeatherComponent(props: { config: WeatherComponentConfig }) {
-  const bindings = createMemo(() => {
-    const weather = useWeather(props.config.latitude, props.config.longitude);
+  const weather = useWeather(props.config.latitude, props.config.longitude);
 
+  const bindings = createMemo(() => {
     return {
       strings: {
         celsius_temp: weather()?.celsiusTemp ?? '0°C',
@@ -16,6 +16,9 @@ export function WeatherComponent(props: { config: WeatherComponentConfig }) {
         wind_speed: weather()?.windSpeed ?? '0',
         weather_status: weather()?.weatherStatus ?? WeatherStatus.CLEAR_DAY,
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
+      },
+      slots: {
+        default: props.config.slot,
       },
     };
   });
