@@ -16,10 +16,10 @@ export interface IpInfoApiResponse {
   readme: string;
 }
 
-export const usePublicIp = memoize(() => {
+export const useIpProvider = memoize(() => {
   const logger = useLogger('usePublicIp');
 
-  const [publicIp] = createResource(() => {
+  const [ipData, { refetch }] = createResource(() => {
     // Use https://ipinfo.io as provider for IP-related info.
     return axios
       .get<IpInfoApiResponse>('https://ipinfo.io/json')
@@ -33,10 +33,13 @@ export const usePublicIp = memoize(() => {
   });
 
   createEffect(
-    on(publicIp, publicIp => logger.debug('Received IP data:', publicIp), {
+    on(ipData, ipData => logger.debug('Received IP data:', ipData), {
       defer: true,
     }),
   );
 
-  return publicIp;
+  return {
+    data: ipData,
+    refetch,
+  };
 });
