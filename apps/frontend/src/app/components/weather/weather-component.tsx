@@ -10,11 +10,12 @@ export function WeatherComponent(props: { config: WeatherComponentConfig }) {
 
   const bindings = createMemo(() => {
     return {
-      strings: {
-        celsius_temp: weather()?.celsiusTemp ?? '0°C',
-        fahrenheit_temp: weather()?.fahrenheitTemp ?? '0°C',
-        wind_speed: weather()?.windSpeed ?? '0',
+      variables: {
+        celsius_temp: weather()?.celsiusTemp ?? 0,
+        fahrenheit_temp: weather()?.fahrenheitTemp ?? 0,
+        wind_speed: weather()?.windSpeed ?? 0,
         weather_status: weather()?.weatherStatus ?? WeatherStatus.CLEAR_DAY,
+        WeatherStatus: WeatherStatus,
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       slots: {

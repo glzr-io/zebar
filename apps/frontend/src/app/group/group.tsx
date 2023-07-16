@@ -24,7 +24,7 @@ export function Group(props: { config: GroupConfig }) {
 
   const bindings = createMemo(() => {
     return {
-      strings: {
+      variables: {
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       components: {

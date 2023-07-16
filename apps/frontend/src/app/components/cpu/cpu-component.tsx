@@ -7,7 +7,7 @@ import { CpuComponentConfig } from '~/shared/user-config';
 export function CpuComponent(props: { config: CpuComponentConfig }) {
   const bindings = createMemo(() => {
     return {
-      strings: {
+      variables: {
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
     };

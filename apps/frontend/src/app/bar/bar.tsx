@@ -23,7 +23,7 @@ export function Bar(props: { config: BarConfig }) {
     );
 
     return {
-      strings: {
+      variables: {
         root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
       },
       components: groupComponentMap,

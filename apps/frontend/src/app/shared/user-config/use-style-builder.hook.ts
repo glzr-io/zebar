@@ -8,11 +8,11 @@ import { GroupConfig } from './types/bar/group-config.model';
 import { BarConfig } from './types/bar/bar-config.model';
 
 export const useStyleBuilder = memoize(() => {
-  const logger = useLogger(useStyleBuilder.name);
+  const logger = useLogger('useStyleBuilder');
   const userConfig = useUserConfig();
 
-  // Traverse the bar config and aggregate `styles`. Compile this and add
-  // it to the DOM somehow.
+  // Traverse the bar config and aggregate all `styles` properties. Compile the
+  // result from SCSS -> CSS to be added to the DOM later.
   const [builtCss] = createResource(
     () => resolved([userConfig.generalConfig(), userConfig.barConfig()]),
     async ([generalConfig, barConfig]) => {
@@ -25,8 +25,6 @@ export const useStyleBuilder = memoize(() => {
         .flatMap(group => group.components ?? [])
         .map(component => scopeWith(`#${component.id}`, component?.styles));
 
-      // TODO: Merge with default styles.
-      // TODO: Add scopes to default styles.
       const styles = [
         scopeWith(':root', generalConfig.global_styles),
         scopeWith(`#${barConfig.id}`, barConfig.styles),
