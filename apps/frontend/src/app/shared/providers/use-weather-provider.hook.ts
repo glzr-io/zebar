@@ -118,10 +118,8 @@ export const useWeatherProvider = memoize(
     createEffect(
       on(
         weatherData,
-        weather => logger.debug('Received weather data:', weather),
-        {
-          defer: true,
-        },
+        weatherData => logger.debug('Received weather data:', weatherData),
+        { defer: true },
       ),
     );
 
