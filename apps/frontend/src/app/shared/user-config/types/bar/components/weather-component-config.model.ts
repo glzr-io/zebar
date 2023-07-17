@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { ElementSchema } from '../../shared/element.model';
+import { ComponentConfigBaseSchema } from '../component-config-base.model';
 
-export const WeatherComponentConfigSchema = ElementSchema.extend({
+export const WeatherComponentConfigSchema = ComponentConfigBaseSchema.extend({
   type: z.literal('weather'),
   class_name: z.string().default('weather-component'),
   slot: z.string().default('{{ celsius_temp }}°C'),
