@@ -31,6 +31,7 @@ export function App() {
         getCurrentWindow().setPosition(new PhysicalPosition(x, y));
         getCurrentWindow().setSize(new PhysicalSize(width, height));
       },
+      { defer: true },
     ),
   );
 
