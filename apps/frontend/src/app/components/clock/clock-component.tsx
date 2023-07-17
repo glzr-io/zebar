@@ -13,16 +13,12 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
   const interval = setInterval(() => setDate(new Date()), 1000);
   onCleanup(() => clearInterval(interval));
 
-  const bindings = createMemo(() => {
-    return {
-      variables: {
-        minutes: minutes(),
-        hours: hours(),
-        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
-      },
-      components: {},
-    };
-  });
+  const bindings = createMemo(() => ({
+    variables: {
+      minutes: minutes(),
+      hours: hours(),
+    },
+  }));
 
   return createTemplateElement({
     bindings,

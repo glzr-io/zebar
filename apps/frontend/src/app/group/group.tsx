@@ -9,6 +9,12 @@ import { createTemplateElement } from '~/shared/template-parsing';
 import { ComponentConfig, GroupConfig } from '~/shared/user-config';
 
 export function Group(props: { config: GroupConfig }) {
+  const bindings = createMemo(() => ({
+    components: {
+      components: () => props.config.components.map(getComponentType),
+    },
+  }));
+
   function getComponentType(componentConfig: ComponentConfig) {
     switch (componentConfig.type) {
       case 'clock':
@@ -21,17 +27,6 @@ export function Group(props: { config: GroupConfig }) {
         return <WeatherComponent config={componentConfig} />;
     }
   }
-
-  const bindings = createMemo(() => {
-    return {
-      variables: {
-        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
-      },
-      components: {
-        components: () => props.config.components.map(getComponentType),
-      },
-    };
-  });
 
   return createTemplateElement({
     bindings,
