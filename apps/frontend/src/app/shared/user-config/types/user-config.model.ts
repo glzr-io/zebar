@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { BarConfigSchema } from './bar/bar-config.model';
 import { GeneralConfigSchema } from './general-config.model';
 import { addDelimitedKey } from './shared/add-delimited-key';
-import { Prettify, ExcludeIndexedKeys } from '~/shared/utils';
+import { Prettify } from '~/shared/utils';
 
 export const UserConfigSchema = z
   .object({
@@ -11,7 +11,6 @@ export const UserConfigSchema = z
     bar: BarConfigSchema.optional(),
   })
   .passthrough()
-  .superRefine(addDelimitedKey('bar', BarConfigSchema.optional()))
-  .refine((v): v is ExcludeIndexedKeys<typeof v> => true);
+  .superRefine(addDelimitedKey('bar', BarConfigSchema));
 
 export type UserConfig = Prettify<z.infer<typeof UserConfigSchema>>;
