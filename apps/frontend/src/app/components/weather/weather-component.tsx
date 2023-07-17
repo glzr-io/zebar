@@ -23,11 +23,6 @@ export function WeatherComponent(props: { config: WeatherComponentConfig }) {
         fahrenheit_temp: weatherData?.fahrenheitTemp ?? 0,
         wind_speed: weatherData?.windSpeed ?? 0,
         weather_status: weatherData?.weatherStatus ?? WeatherStatus.CLEAR_DAY,
-        WeatherStatus: WeatherStatus,
-        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
-      },
-      slots: {
-        default: props.config.slot,
       },
     };
   });

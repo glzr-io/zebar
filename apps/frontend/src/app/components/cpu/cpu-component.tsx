@@ -8,7 +8,9 @@ export function CpuComponent(props: { config: CpuComponentConfig }) {
   const bindings = createMemo(() => {
     return {
       variables: {
-        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
+        cpu_usage: 0,
+        cpu_temp: 0,
+        cpu_frequency: 1000,
       },
     };
   });

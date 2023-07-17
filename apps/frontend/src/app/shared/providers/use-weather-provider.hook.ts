@@ -6,15 +6,15 @@ import { useIpProvider } from './use-ip-provider.hook';
 import { useLogger } from '../logging';
 
 export enum WeatherStatus {
-  CLEAR_DAY,
-  CLEAR_NIGHT,
-  CLOUDY_DAY,
-  CLOUDY_NIGHT,
-  OVERCAST,
-  LIGHT_RAIN,
-  HEAVY_RAIN,
-  SNOW,
-  THUNDER,
+  CLEAR_DAY = 'clear_day',
+  CLEAR_NIGHT = 'clear_night',
+  CLOUDY_DAY = 'cloudy_day',
+  CLOUDY_NIGHT = 'cloudy_night',
+  OVERCAST = 'overcast',
+  LIGHT_RAIN = 'light_rain',
+  HEAVY_RAIN = 'heavy_rain',
+  SNOW = 'snow',
+  THUNDER = 'thunder',
 }
 
 export interface OpenMeteoApiResponse {

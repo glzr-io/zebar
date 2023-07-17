@@ -9,8 +9,12 @@ export function GlazeWMComponent(props: { config: GlazeWMComponentConfig }) {
     return {
       variables: {
         binding_mode: '',
-        root_props: `id="${props.config.id}" class="${props.config.class_name}"`,
-        workspaces: '',
+        workspaces: [
+          { name: '1', state: 'focused' },
+          { name: '2', state: 'active' },
+          { name: '3', state: 'normal' },
+          { name: '4', state: 'normal' },
+        ],
       },
       functions: {
         focus_workspace: () => {},
