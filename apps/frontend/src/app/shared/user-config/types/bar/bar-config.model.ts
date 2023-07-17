@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 import { GroupConfigSchema } from './group-config.model';
 import { addDelimitedKey } from '../shared/add-delimited-key';
-import { ElementSchema } from '../shared/element.model';
+import { TemplateElementConfigSchema } from '../shared/template-element-config.model';
 import { Prettify } from '~/shared/utils';
 
-export const BarConfigSchema = ElementSchema.extend({
+export const BarConfigSchema = TemplateElementConfigSchema.extend({
   class_name: z.string().default('bar'),
   group: GroupConfigSchema.optional(),
 })

@@ -1,14 +1,13 @@
 import { Accessor, createEffect, on, onCleanup, onMount } from 'solid-js';
 
-import { Element } from '../user-config';
+import { TemplateElementConfig } from '../user-config';
 import { insertAndReplace } from '../utils';
 import { parseTemplate } from './parse-template';
 import { TemplateBindings } from './template-bindings.model';
 import { useLogger } from '../logging';
 
 export interface CreateTemplateElementProps {
-  // TODO: Rename to TemplateElementConfig.
-  config: Accessor<Element>;
+  config: Accessor<TemplateElementConfig>;
   bindings: Accessor<TemplateBindings>;
   defaultTemplate: Accessor<string>;
 }
