@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { ElementSchema } from '../shared/element.model';
+import { TemplateElementConfigSchema } from '../shared/template-element-config.model';
 
-export const ComponentConfigBaseSchema = ElementSchema.extend({
+export const ComponentConfigBaseSchema = TemplateElementConfigSchema.extend({
   type: z.string(),
   slot: z.string().optional(),
 }).passthrough();

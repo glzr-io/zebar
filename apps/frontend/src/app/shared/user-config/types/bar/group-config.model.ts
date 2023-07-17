@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 import { ComponentConfigSchema } from './component-config.model';
-import { ElementSchema } from '../shared/element.model';
+import { TemplateElementConfigSchema } from '../shared/template-element-config.model';
 
-export const GroupConfigSchema = ElementSchema.extend({
+export const GroupConfigSchema = TemplateElementConfigSchema.extend({
   class_name: z.string().default('group'),
   components: z.array(ComponentConfigSchema).default([]),
 });
