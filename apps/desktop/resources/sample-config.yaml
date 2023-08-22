@@ -11,13 +11,19 @@ general:
   width: '{{ vars.screen_width }}'
   # Height of the bar in physical pixels.
   height: '30'
-  # Whether bar window should be transparent. Can be combined with `opacity`
-  # or a semi-transparent `background-color` in the bar styles for semi-
-  # transparent windows.
+  # Whether the bar window should be transparent. Can be combined with
+  # `opacity` or a semi-transparent `background-color` in the bar styles for
+  # semi-transparent windows.
   transparent: false
   # Whether to enable devtools. Can be launched by focusing the bar
   # window and pressing f12.
   enable_devtools: false
+  # Whether to show the bar above all other windows.
+  alwaysOnTop: true
+  # Whether the bar should be shown in the taskbar.
+  showInTaskbar: false
+  # Whether the bar should have resize handles.
+  resizable: false
   # Is merged with styles defined in `general.global_stylesheet_url`.
   global_styles: |
     --some-var: blue;
