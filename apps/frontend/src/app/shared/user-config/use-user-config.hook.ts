@@ -19,30 +19,7 @@ export const useUserConfig = memoize(() => {
 
   const [config, { refetch: reload }] = createResource(
     configVariables,
-    async configVariables => {
-      try {
-        let config = await commands.readConfigFile();
-
-        // Prior to parsing, replace any config variables found.
-        for (const [name, value] of Object.entries(configVariables)) {
-          config = config.replace(
-            getBindingRegex(`vars.${name}`),
-            value.toString(),
-          );
-        }
-
-        // Parse the config as YAML.
-        const configObj = parse(config) as unknown;
-        logger.debug(`Read config:`, configObj);
-
-        const parsedConfig = await UserConfigSchema.parseAsync(configObj);
-        logger.debug(`Parsed config:`, parsedConfig);
-
-        return parsedConfig;
-      } catch (err) {
-        handleConfigError(err);
-      }
-    },
+    evaluateUserConfig,
   );
 
   const [generalConfig] = createResource(config, config => config.general);
@@ -57,6 +34,33 @@ export const useUserConfig = memoize(() => {
     return barConfig;
   });
 
+  // Read and parse user config file.
+  async function evaluateUserConfig(configVariables: Record<string, string>) {
+    try {
+      let config = await commands.readConfigFile();
+
+      // Prior to parsing, replace any config variables found.
+      for (const [name, value] of Object.entries(configVariables)) {
+        config = config.replace(
+          getBindingRegex(`vars.${name}`),
+          value.toString(),
+        );
+      }
+
+      // Parse the config as YAML.
+      const configObj = parse(config) as unknown;
+      logger.debug(`Read config:`, configObj);
+
+      const parsedConfig = await UserConfigSchema.parseAsync(configObj);
+      logger.debug(`Parsed config:`, parsedConfig);
+
+      return parsedConfig;
+    } catch (err) {
+      handleConfigError(err);
+    }
+  }
+
+  // Handle errors in the user config file.
   function handleConfigError(err: unknown) {
     if (!(err instanceof Error)) {
       commands.exitWithError('Problem reading config file.');
