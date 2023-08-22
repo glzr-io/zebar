@@ -1,18 +1,15 @@
-import {
-  PhysicalPosition,
-  PhysicalSize,
-  getCurrent as getCurrentWindow,
-} from '@tauri-apps/api/window';
 import { Show, createEffect, on } from 'solid-js';
 import { configure } from 'nunjucks';
 
 import { Bar } from './bar/bar';
 import { useStyleBuilder, useUserConfig } from './shared/user-config';
+import { useCurrentWindow } from './shared/desktop';
 import { resolved } from './shared/utils';
 
 export function App() {
   const userConfig = useUserConfig();
   const styleBuilder = useStyleBuilder();
+  const currentWindow = useCurrentWindow();
 
   // Prevent Nunjucks from escaping HTML.
   configure({ autoescape: false });
@@ -22,14 +19,20 @@ export function App() {
     on(
       () => userConfig.generalConfig(),
       async generalConfig => {
-        // TODO: Default to x = 0, y = 0, width = 100%, height = 50px.
-        const x = eval(generalConfig?.position_x!);
-        const y = eval(generalConfig?.position_y!);
-        const width = eval(generalConfig?.width!);
-        const height = eval(generalConfig?.height!);
+        if (generalConfig) {
+          await currentWindow.setPosition({
+            x: generalConfig.position_x,
+            y: generalConfig.position_y,
+            width: generalConfig.width,
+            height: generalConfig.height,
+          });
 
-        getCurrentWindow().setPosition(new PhysicalPosition(x, y));
-        getCurrentWindow().setSize(new PhysicalSize(width, height));
+          await currentWindow.setStyles({
+            alwaysOnTop: generalConfig.alwaysOnTop,
+            showInTaskbar: generalConfig.showInTaskbar,
+            resizable: generalConfig.resizable,
+          });
+        }
       },
       { defer: true },
     ),
@@ -48,6 +51,7 @@ export function App() {
           return () => document.head.removeChild(styleElement);
         }
       },
+      { defer: true },
     ),
   );
 
