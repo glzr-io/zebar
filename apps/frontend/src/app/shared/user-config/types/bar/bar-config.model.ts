@@ -1,15 +1,18 @@
 import { z } from 'zod';
 
 import { GroupConfigSchema } from './group-config.model';
-import { addDelimitedKey } from '../shared/add-delimited-key';
 import { TemplateElementConfigSchema } from '../shared/template-element-config.model';
+import { withDynamicKey } from '../shared/with-dynamic-key';
 import { Prettify } from '~/shared/utils';
 
-export const BarConfigSchema = TemplateElementConfigSchema.extend({
+const BarConfigSchemaP1 = TemplateElementConfigSchema.extend({
   class_name: z.string().default('bar'),
   group: GroupConfigSchema.optional(),
-})
-  .passthrough()
-  .superRefine(addDelimitedKey('group', GroupConfigSchema));
+});
+
+export const BarConfigSchema = withDynamicKey(BarConfigSchemaP1, {
+  isKey: (key: string): key is `group/${string}` => key.startsWith('group/'),
+  schema: GroupConfigSchema,
+});
 
 export type BarConfig = Prettify<z.infer<typeof BarConfigSchema>>;
