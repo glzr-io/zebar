@@ -7,16 +7,20 @@ import { useUserConfig } from './use-user-config.hook';
 import { GroupConfig } from './types/bar/group-config.model';
 import { BarConfig } from './types/bar/bar-config.model';
 
+/**
+ * Hook for compiling user-provided SCSS to CSS.
+ */
 export const useStyleBuilder = memoize(() => {
   const logger = useLogger('useStyleBuilder');
   const userConfig = useUserConfig();
 
   // Traverse the bar config and aggregate all `styles` properties. Compile the
   // result from SCSS -> CSS to be added to the DOM later.
-  const [builtCss] = createResource(
+  const [builtCss, { refetch: rebuild }] = createResource(
     () => resolved([userConfig.generalConfig(), userConfig.barConfig()]),
     async ([generalConfig, barConfig]) => {
       const groups = getGroupConfigs(barConfig);
+
       const groupStyles = groups.map(group =>
         scopeWith(`#${group.id}`, group?.styles),
       );
@@ -40,6 +44,7 @@ export const useStyleBuilder = memoize(() => {
     },
   );
 
+  // Get group configs (ie. `group/xx`) within bar config.
   function getGroupConfigs(barConfig: BarConfig) {
     return Object.entries(barConfig)
       .filter(([key, value]) => key.startsWith('group') && !!value)
@@ -53,5 +58,6 @@ export const useStyleBuilder = memoize(() => {
 
   return {
     builtCss,
+    rebuild,
   };
 });
