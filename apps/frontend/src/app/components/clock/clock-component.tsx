@@ -4,7 +4,7 @@ import defaultTemplate from './clock-component.njk?raw';
 import { ClockComponentConfig } from '~/shared/user-config';
 import { createTemplateElement } from '~/shared/template-parsing';
 
-export function ClockComponent(props: { config: ClockComponentConfig }) {
+export function ClockComponent(config: ClockComponentConfig): Element {
   const [date, setDate] = createSignal(new Date());
 
   const minutes = createMemo(() => date().getMinutes());
@@ -22,7 +22,7 @@ export function ClockComponent(props: { config: ClockComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

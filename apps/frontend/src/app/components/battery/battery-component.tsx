@@ -5,7 +5,7 @@ import { createTemplateElement } from '~/shared/template-parsing';
 import { BatteryComponentConfig } from '~/shared/user-config';
 
 // TODO: Implement `BatteryComponent`.
-export function BatteryComponent(props: { config: BatteryComponentConfig }) {
+export function BatteryComponent(config: BatteryComponentConfig): Element {
   const bindings = createMemo(() => {
     return {
       variables: {
@@ -16,7 +16,7 @@ export function BatteryComponent(props: { config: BatteryComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

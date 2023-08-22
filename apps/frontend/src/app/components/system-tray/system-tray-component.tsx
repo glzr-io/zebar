@@ -5,9 +5,9 @@ import { createTemplateElement } from '~/shared/template-parsing';
 import { SystemTrayComponentConfig } from '~/shared/user-config';
 
 // TODO: Implement `SystemTrayComponent`.
-export function SystemTrayComponent(props: {
-  config: SystemTrayComponentConfig;
-}) {
+export function SystemTrayComponent(
+  config: SystemTrayComponentConfig,
+): Element {
   const bindings = createMemo(() => {
     return {
       variables: {},
@@ -16,7 +16,7 @@ export function SystemTrayComponent(props: {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

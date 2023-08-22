@@ -8,29 +8,31 @@ import { WeatherComponent } from '~/components/weather/weather-component';
 import { createTemplateElement } from '~/shared/template-parsing';
 import { ComponentConfig, GroupConfig } from '~/shared/user-config';
 
-export function Group(props: { config: GroupConfig }) {
+export function Group(config: GroupConfig): Element {
   const bindings = createMemo(() => ({
     components: {
-      components: () => props.config.components.map(getComponentType),
+      components: () => config.components.map(getComponentType),
     },
   }));
 
   function getComponentType(componentConfig: ComponentConfig) {
     switch (componentConfig.type) {
       case 'clock':
-        return <ClockComponent config={componentConfig} />;
+        return ClockComponent(componentConfig);
       case 'cpu':
-        return <CpuComponent config={componentConfig} />;
+        return CpuComponent(componentConfig);
       case 'glazewm':
-        return <GlazeWMComponent config={componentConfig} />;
+        return GlazeWMComponent(componentConfig);
       case 'weather':
-        return <WeatherComponent config={componentConfig} />;
+        return WeatherComponent(componentConfig);
+      default:
+        throw new Error(`Unrecognized component type ${componentConfig.type}`);
     }
   }
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

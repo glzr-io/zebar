@@ -5,7 +5,7 @@ import { createTemplateElement } from '~/shared/template-parsing';
 import { NetworkComponentConfig } from '~/shared/user-config';
 
 // TODO: Implement `NetworkComponent`.
-export function NetworkComponent(props: { config: NetworkComponentConfig }) {
+export function NetworkComponent(config: NetworkComponentConfig): Element {
   const bindings = createMemo(() => {
     return {
       variables: {},
@@ -14,7 +14,7 @@ export function NetworkComponent(props: { config: NetworkComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

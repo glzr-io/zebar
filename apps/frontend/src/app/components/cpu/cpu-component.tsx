@@ -4,7 +4,7 @@ import defaultTemplate from './cpu-component.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
 import { CpuComponentConfig } from '~/shared/user-config';
 
-export function CpuComponent(props: { config: CpuComponentConfig }) {
+export function CpuComponent(config: CpuComponentConfig): Element {
   const bindings = createMemo(() => {
     return {
       variables: {
@@ -17,7 +17,7 @@ export function CpuComponent(props: { config: CpuComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

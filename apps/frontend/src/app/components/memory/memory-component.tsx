@@ -5,7 +5,7 @@ import { createTemplateElement } from '~/shared/template-parsing';
 import { MemoryComponentConfig } from '~/shared/user-config';
 
 // TODO: Implement `MemoryComponent`.
-export function MemoryComponent(props: { config: MemoryComponentConfig }) {
+export function MemoryComponent(config: MemoryComponentConfig): Element {
   const bindings = createMemo(() => {
     return {
       variables: {
@@ -16,7 +16,7 @@ export function MemoryComponent(props: { config: MemoryComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }
