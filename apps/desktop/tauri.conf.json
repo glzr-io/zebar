@@ -10,14 +10,15 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false,
       "shell": {
-        "all": false,
         "open": true
       },
       "window": {
         "setPosition": true,
-        "setSize": true
+        "setSize": true,
+        "setAlwaysOnTop": true,
+        "setSkipTaskbar": true,
+        "setResizable": true
       }
     },
     "cli": {
@@ -50,6 +51,7 @@
       {
         "fullscreen": false,
         "resizable": false,
+        "transparent": true,
         "decorations": false,
         "title": "Zanbar",
         "width": 1,
