@@ -11,9 +11,8 @@ import { SystemTrayComponentConfigSchema } from './components/system-tray-compon
 import { WeatherComponentConfigSchema } from './components/weather-component-config.model';
 import { WindowTitleComponentConfigSchema } from './components/window-title-component-config.model';
 import { Prettify } from '~/shared/utils';
-import { withDynamicKey } from '../shared/with-dynamic-key';
 
-const ComponentConfigSchemaP1 = z.discriminatedUnion('type', [
+export const ComponentConfigSchema = z.union([
   BatteryComponentConfigSchema,
   ClockComponentConfigSchema,
   CpuComponentConfigSchema,
@@ -25,10 +24,5 @@ const ComponentConfigSchemaP1 = z.discriminatedUnion('type', [
   WeatherComponentConfigSchema,
   WindowTitleComponentConfigSchema,
 ]);
-
-export const ComponentConfigSchema = withDynamicKey(ComponentConfigSchemaP1, {
-  isKey: (key: string): key is `slot/${string}` => key.startsWith('slot/'),
-  schema: z.string(),
-});
 
 export type ComponentConfig = Prettify<z.infer<typeof ComponentConfigSchema>>;
