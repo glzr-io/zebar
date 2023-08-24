@@ -4,7 +4,7 @@ import defaultTemplate from './glazewm-component.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
 import { GlazeWMComponentConfig } from '~/shared/user-config';
 
-export function GlazeWMComponent(props: { config: GlazeWMComponentConfig }) {
+export function GlazeWMComponent(config: GlazeWMComponentConfig): Element {
   const socket = new WebSocket('ws://localhost:61423');
 
   socket.onopen = function (e) {
@@ -52,7 +52,7 @@ export function GlazeWMComponent(props: { config: GlazeWMComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

@@ -2,8 +2,6 @@
   "extends": "../../base-tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
     "noEmit": true,
     "types": ["vite/client"],
     "paths": {

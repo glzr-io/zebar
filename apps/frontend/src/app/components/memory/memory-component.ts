@@ -1,22 +1,22 @@
 import { createMemo } from 'solid-js';
 
-import defaultTemplate from './battery-component.njk?raw';
+import defaultTemplate from './memory-component.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
-import { BatteryComponentConfig } from '~/shared/user-config';
+import { MemoryComponentConfig } from '~/shared/user-config';
 
-// TODO: Implement `BatteryComponent`.
-export function BatteryComponent(props: { config: BatteryComponentConfig }) {
+// TODO: Implement `MemoryComponent`.
+export function MemoryComponent(config: MemoryComponentConfig): Element {
   const bindings = createMemo(() => {
     return {
       variables: {
-        battery_level: 0,
+        mem_usage: 0,
       },
     };
   });
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }
