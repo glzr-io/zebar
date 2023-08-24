@@ -1,9 +1,7 @@
 import path from 'path';
 import { defineConfig } from 'vite';
-import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
-  plugins: [solidPlugin()],
   // Prevent vite from obscuring Rust errors.
   clearScreen: false,
   // Tauri expects a fixed port. Fail if that port is not available.
