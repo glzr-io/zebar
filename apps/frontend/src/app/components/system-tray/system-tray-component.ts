@@ -1,11 +1,13 @@
 import { createMemo } from 'solid-js';
 
-import defaultTemplate from './network-component.njk?raw';
+import defaultTemplate from './system-tray-component.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
-import { NetworkComponentConfig } from '~/shared/user-config';
+import { SystemTrayComponentConfig } from '~/shared/user-config';
 
-// TODO: Implement `NetworkComponent`.
-export function NetworkComponent(props: { config: NetworkComponentConfig }) {
+// TODO: Implement `SystemTrayComponent`.
+export function SystemTrayComponent(
+  config: SystemTrayComponentConfig,
+): Element {
   const bindings = createMemo(() => {
     return {
       variables: {},
@@ -14,7 +16,7 @@ export function NetworkComponent(props: { config: NetworkComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

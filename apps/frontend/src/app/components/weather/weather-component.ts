@@ -8,11 +8,8 @@ import {
   useWeatherProvider,
 } from '~/shared/providers/use-weather-provider.hook';
 
-export function WeatherComponent(props: { config: WeatherComponentConfig }) {
-  const weatherProvider = useWeatherProvider(
-    props.config.latitude,
-    props.config.longitude,
-  );
+export function WeatherComponent(config: WeatherComponentConfig): Element {
+  const weatherProvider = useWeatherProvider(config.latitude, config.longitude);
 
   const bindings = createMemo(() => {
     const weatherData = weatherProvider.data();
@@ -29,7 +26,7 @@ export function WeatherComponent(props: { config: WeatherComponentConfig }) {
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }

@@ -1,5 +1,3 @@
-import { JSXElement } from 'solid-js';
-
 type SupportedPrimitive = string | boolean | number;
 
 type TemplateVariable =
@@ -12,5 +10,5 @@ export interface TemplateBindings {
   variables?: Record<string, TemplateVariable>;
   slots?: Record<string, string>;
   functions?: Record<string, (...args: unknown[]) => unknown>;
-  components?: Record<string, () => JSXElement>;
+  components?: Record<string, () => Element | Element[]>;
 }

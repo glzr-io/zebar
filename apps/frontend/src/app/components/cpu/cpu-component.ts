@@ -1,22 +1,23 @@
 import { createMemo } from 'solid-js';
 
-import defaultTemplate from './memory-component.njk?raw';
+import defaultTemplate from './cpu-component.njk?raw';
 import { createTemplateElement } from '~/shared/template-parsing';
-import { MemoryComponentConfig } from '~/shared/user-config';
+import { CpuComponentConfig } from '~/shared/user-config';
 
-// TODO: Implement `MemoryComponent`.
-export function MemoryComponent(props: { config: MemoryComponentConfig }) {
+export function CpuComponent(config: CpuComponentConfig): Element {
   const bindings = createMemo(() => {
     return {
       variables: {
-        mem_usage: 0,
+        cpu_usage: 0,
+        cpu_temp: 0,
+        cpu_frequency: 1000,
       },
     };
   });
 
   return createTemplateElement({
     bindings,
-    config: () => props.config,
+    config: () => config,
     defaultTemplate: () => defaultTemplate,
   });
 }
