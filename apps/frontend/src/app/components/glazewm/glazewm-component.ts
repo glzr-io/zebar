@@ -21,6 +21,7 @@ export function GlazeWMComponent(config: GlazeWMComponentConfig): Element {
   });
 
   return createTemplateElement({
+    //@ts-ignore
     bindings,
     config: () => config,
     defaultTemplate: () => defaultTemplate,

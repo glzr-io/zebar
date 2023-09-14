@@ -1,9 +1,8 @@
 import { createEffect, createResource } from 'solid-js';
+import { GwmClient, GwmEventType } from 'glazewm';
 
 import { memoize } from '../utils';
 import { useLogger } from '../logging';
-// TODO: Fix this import.
-import { GwmClient, GwmEventType } from '../glazewm';
 
 export const useGlazeWmProvider = memoize(() => {
   const logger = useLogger('useGlazeWm');

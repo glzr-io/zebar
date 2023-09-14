@@ -24,6 +24,7 @@ importers:
       '@types/node': 18.15.12
       '@types/nunjucks': 3.2.3
       axios: 1.4.0
+      glazewm: 1.1.1
       nunjucks: 3.2.4
       sass: '1.63.6 '
       solid-js: 1.7.3
@@ -34,6 +35,7 @@ importers:
     dependencies:
       '@tauri-apps/api': 1.4.0
       axios: 1.4.0
+      glazewm: 1.1.1
       nunjucks: 3.2.4
       solid-js: 1.7.3
       yaml: 2.3.1
@@ -507,6 +509,18 @@ packages:
     dev: true
     optional: true
 
+  /glazewm/1.1.1:
+    resolution: {integrity: sha512-r0zN79F+8UC6G6R/nK5RcE+9uDIB182GOKSMU4pLQO9rCpRrDGH9HFZjjbIosMjAchZzF2y7NzW+4qHP6bDoOw==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      ws: '*'
+    peerDependenciesMeta:
+      ws:
+        optional: true
+    dependencies:
+      tslib: 2.6.1
+    dev: false
+
   /glob-parent/5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
     engines: {node: '>= 6'}
@@ -656,6 +670,10 @@ packages:
     dependencies:
       is-number: 7.0.0
     dev: true
+
+  /tslib/2.6.1:
+    resolution: {integrity: sha512-t0hLfiEKfMUoqhG+U1oid7Pva4bbDPHYfJNiB7BiIjRkj1pyC++4N3huJfqY6aRH6VTB0rvtzQwjM4K6qpfOig==}
+    dev: false
 
   /turbo-darwin-64/1.9.3:
     resolution: {integrity: sha512-0dFc2cWXl82kRE4Z+QqPHhbEFEpUZho1msHXHWbz5+PqLxn8FY0lEVOHkq5tgKNNEd5KnGyj33gC/bHhpZOk5g==}
