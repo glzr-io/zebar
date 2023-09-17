@@ -1,38 +1,37 @@
-# Thanks for trying out Zanbar!
-# Yaml is white-space sensitive btw (always use 2 spaces).
+# Thanks for trying out Zanbar :)
+# Yaml is white-space sensitive BTW (always use 2 spaces).
 
-# Docs re. general: https://some-future-docs-link.com
+##
+# Docs regarding general: https://some-future-docs-link.com
+##
 general:
-  # X-position of the bar in physical pixels.
-  position_x: '{{ vars.screen_x }} - 10'
-  # Y-position of the bar in physical pixels.
-  position_y: '{{ vars.screen_y }} - 10'
-  # Width of the bar in physical pixels.
-  width: '{{ vars.screen_width }}'
-  # Height of the bar in physical pixels.
-  height: '30'
-  # Whether the bar window should be transparent. Can be combined with
-  # `opacity` or a semi-transparent `background-color` in the bar styles for
-  # semi-transparent windows.
-  transparent: false
-  # Whether to enable devtools. Can be launched by focusing the bar
-  # window and pressing f12.
-  enable_devtools: false
-  # Whether to show the bar above all other windows.
-  alwaysOnTop: true
-  # Whether the bar should be shown in the taskbar.
-  showInTaskbar: false
-  # Whether the bar should have resize handles.
-  resizable: false
-  # Is merged with styles defined in `general.global_stylesheet_url`.
+  # CSS/SCSS to apply to the root document. Styles defined here will apply
+  # to all bars and popups.
   global_styles: |
     --some-var: blue;
   # Path to CSS or SCSS file with global styles. Is merged with
   # styles defined in `general.global_styles`.
   global_stylesheet_path: ./custom.scss
 
-# Docs re. bar: https://some-future-docs-link.com
+##
+# Docs regarding bar: https://some-future-docs-link.com
+##
 bar/default:
+  # Width of the bar in physical pixels.
+  width: '{{ env.screen_width }}'
+  # Height of the bar in physical pixels.
+  height: '200'
+  # X-position of the bar in physical pixels.
+  position_x: '{{ env.screen_x }}'
+  # Y-position of the bar in physical pixels.
+  position_y: '{{ env.screen_y }}'
+  # Whether to show the bar above all other windows.
+  always_on_top: true
+  # Whether the bar should be shown in the taskbar.
+  show_in_taskbar: false
+  # Whether the bar should have resize handles.
+  resizable: false
+  # CSS/SCSS styles to apply to the bar element.
   styles: |
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;

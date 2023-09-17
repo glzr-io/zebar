@@ -42,7 +42,7 @@ export const useUserConfig = memoize(() => {
       // Prior to parsing, replace any config variables found.
       for (const [name, value] of Object.entries(configVariables)) {
         config = config.replace(
-          getBindingRegex(`vars.${name}`),
+          getBindingRegex(`env.${name}`),
           value.toString(),
         );
       }
