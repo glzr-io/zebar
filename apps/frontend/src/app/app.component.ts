@@ -31,20 +31,20 @@ export function App(): Element {
   // Set bar position based on config values.
   createEffect(
     on(
-      () => userConfig.generalConfig(),
-      async generalConfig => {
-        if (generalConfig) {
+      () => userConfig.barConfig(),
+      async barConfig => {
+        if (barConfig) {
           await currentWindow.setPosition({
-            x: generalConfig.position_x,
-            y: generalConfig.position_y,
-            width: generalConfig.width,
-            height: generalConfig.height,
+            x: barConfig.position_x,
+            y: barConfig.position_y,
+            width: barConfig.width,
+            height: barConfig.height,
           });
 
           await currentWindow.setStyles({
-            alwaysOnTop: generalConfig.alwaysOnTop,
-            showInTaskbar: generalConfig.showInTaskbar,
-            resizable: generalConfig.resizable,
+            alwaysOnTop: barConfig.always_on_top,
+            showInTaskbar: barConfig.show_in_taskbar,
+            resizable: barConfig.resizable,
           });
         }
       },

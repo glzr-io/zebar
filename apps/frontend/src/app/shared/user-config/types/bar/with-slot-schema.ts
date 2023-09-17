@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { withDynamicKey } from '../shared/with-dynamic-key';
 
 /**
- * Adds a `slot/` property to a component schema.
+ * Adds `slot/**` keys to a component schema.
  */
 export function withSlotSchema<T extends z.AnyZodObject>(schema: T) {
   return withDynamicKey(schema, {
