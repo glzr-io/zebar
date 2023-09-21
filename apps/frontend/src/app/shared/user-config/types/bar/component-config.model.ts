@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-import { TemplateElementConfigSchema } from '../shared/template-element-config.model';
+import { BaseElementConfigSchema } from './base-element-config.model';
 import { withDynamicKey } from '../shared/with-dynamic-key';
 
-export const ComponentConfigSchemaP1 = TemplateElementConfigSchema.extend({
+export const ComponentConfigSchemaP1 = BaseElementConfigSchema.extend({
   providers: z.string(),
   slot: z.string().optional(),
 });

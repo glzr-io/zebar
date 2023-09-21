@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-import { ScriptVariableConfigSchema } from './script-variable-config.model';
+import { ScriptVariableConfigSchema } from '../shared/script-variable-config.model';
 import { createUniqueId } from '~/shared/utils';
 
-export const TemplateElementConfigSchema = z.object({
+export const BaseElementConfigSchema = z.object({
   id: z.string().default(createUniqueId),
   class_name: z.string(),
   styles: z.string().optional(),
@@ -23,5 +23,5 @@ export const TemplateElementConfigSchema = z.object({
   label: z.string().optional(),
 });
 
-/** Base config for elements with a template. */
-export type TemplateElementConfig = z.infer<typeof TemplateElementConfigSchema>;
+/** Base config for bar, groups, and components. */
+export type BaseElementConfig = z.infer<typeof BaseElementConfigSchema>;

@@ -1,13 +1,13 @@
 import { Accessor, createEffect, on, onCleanup, onMount } from 'solid-js';
 
-import { TemplateElementConfig } from '../user-config';
+import { BaseElementConfig } from '../user-config';
 import { parseTemplate } from './parse-template';
 import { TemplateBindings } from './template-bindings.model';
 import { useLogger } from '../logging';
 import { mount } from '../utils/mount';
 
 export interface CreateTemplateElementArgs {
-  config: Accessor<TemplateElementConfig>;
+  config: Accessor<BaseElementConfig>;
   bindings: Accessor<TemplateBindings>;
   defaultTemplate: Accessor<string>;
 }
@@ -65,7 +65,7 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
 
         return {
           ...acc,
-          [slotName]: args.config()[key as keyof TemplateElementConfig],
+          [slotName]: args.config()[key as keyof BaseElementConfig],
         };
       }, {});
   }

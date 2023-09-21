@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
 import { GroupConfigSchema } from './group-config.model';
-import { TemplateElementConfigSchema } from '../shared/template-element-config.model';
+import { BaseElementConfigSchema } from './base-element-config.model';
 import { withDynamicKey } from '../shared/with-dynamic-key';
 import { Prettify } from '~/shared/utils';
 
-const BarConfigSchemaP1 = TemplateElementConfigSchema.extend({
+const BarConfigSchemaP1 = BaseElementConfigSchema.extend({
   class_name: z.string().default('bar'),
   position_x: z.string(),
   position_y: z.string(),
