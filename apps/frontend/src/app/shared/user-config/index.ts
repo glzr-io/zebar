@@ -12,7 +12,6 @@ export * from './types/bar/bar-config.model';
 export * from './types/bar/base-element-config.model';
 export * from './types/bar/provider-config.model';
 export * from './types/bar/group-config.model';
-export * from './types/shared/script-variable-config.model';
 export * from './types/general-config.model';
 export * from './types/user-config.model';
 export * from './use-config-variables.hook';

@@ -6,7 +6,7 @@ import { Prettify } from '~/shared/utils';
 
 export const GroupConfigSchema = BaseElementConfigSchema.extend({
   class_name: z.string().default('group'),
-  components: z.array(ComponentConfigSchema).optional(),
+  components: z.array(ComponentConfigSchema).default([]),
 });
 
 export type GroupConfig = Prettify<z.infer<typeof GroupConfigSchema>>;
