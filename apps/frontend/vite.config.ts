@@ -1,9 +1,10 @@
 import path from 'path';
 import { defineConfig } from 'vite';
 import tsChecker from 'vite-plugin-checker';
+import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
-  plugins: [tsChecker({ typescript: true })],
+  plugins: [solidPlugin(), tsChecker({ typescript: true })],
   // Prevent vite from obscuring Rust errors.
   clearScreen: false,
   // Tauri expects a fixed port. Fail if that port is not available.
