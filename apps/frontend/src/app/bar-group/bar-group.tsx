@@ -9,7 +9,7 @@ export interface BarGroupProps {
 }
 
 export function BarGroup(props: BarGroupProps) {
-  const componentConfigs = createMemo(() => props.config.components);
+  const componentConfigs = createMemo(() => props.config.components ?? []);
 
   return (
     <div class={clsx(props.config.id, props.config.class_name)}>

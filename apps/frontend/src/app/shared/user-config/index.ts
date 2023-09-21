@@ -9,7 +9,7 @@ export * from './types/bar/providers/system-tray-provider-config.model';
 export * from './types/bar/providers/weather-provider-config.model';
 export * from './types/bar/providers/window-title-provider-config.model';
 export * from './types/bar/bar-config.model';
-export * from './types/bar/component-config.model';
+export * from './types/bar/provider-config.model';
 export * from './types/bar/group-config.model';
 export * from './types/shared/script-variable-config.model';
 export * from './types/shared/template-element-config.model';
