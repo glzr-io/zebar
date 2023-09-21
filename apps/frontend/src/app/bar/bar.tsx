@@ -1,7 +1,7 @@
 import { For, createMemo } from 'solid-js';
 
 import { BarConfig, GroupConfig } from '~/shared/user-config';
-import { Group } from '~/group/group';
+import { BarGroup } from '~/bar-group/bar-group';
 import { clsx } from '~/shared/utils';
 
 export interface BarProps {
@@ -20,7 +20,7 @@ export function Bar(props: BarProps) {
   return (
     <div class={clsx(props.config.id, props.config.class_name)}>
       <For each={groupConfigs()}>
-        {groupConfig => <Group config={groupConfig} />}
+        {groupConfig => <BarGroup config={groupConfig} />}
       </For>
     </div>
   );

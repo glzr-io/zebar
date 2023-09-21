@@ -4,11 +4,11 @@ import { BarComponent } from '~/bar-component/bar-component';
 import { GroupConfig } from '~/shared/user-config';
 import { clsx } from '~/shared/utils';
 
-export interface GroupProps {
+export interface BarGroupProps {
   config: GroupConfig;
 }
 
-export function Group(props: GroupProps) {
+export function BarGroup(props: BarGroupProps) {
   const componentConfigs = createMemo(() => props.config.components);
 
   return (
