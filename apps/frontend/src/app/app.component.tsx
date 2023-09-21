@@ -1,32 +1,18 @@
-import { createEffect, on } from 'solid-js';
+import { Show, createEffect, on } from 'solid-js';
 import { configure } from 'nunjucks';
 
 import { Bar } from './bar/bar';
 import { useStyleBuilder, useUserConfig } from './shared/user-config';
 import { useCurrentWindow } from './shared/desktop';
-import { mount } from './shared/utils';
+import { resolved } from './shared/utils';
 
-export function App(): Element {
+export function App() {
   const userConfig = useUserConfig();
   const styleBuilder = useStyleBuilder();
   const currentWindow = useCurrentWindow();
 
-  const element = document.createElement('div');
-
   // Prevent Nunjucks from escaping HTML.
   configure({ autoescape: false });
-
-  // Mount bar when built CSS + user config is ready.
-  createEffect(
-    on(
-      () => [styleBuilder.builtCss(), userConfig.barConfig()] as const,
-      ([builtCss, barConfig]) => {
-        if (builtCss && barConfig) {
-          mount(element, Bar(barConfig));
-        }
-      },
-    ),
-  );
 
   // Set bar position based on config values.
   createEffect(
@@ -69,5 +55,13 @@ export function App(): Element {
     ),
   );
 
-  return element;
+  return (
+    <Show
+      when={resolved([userConfig.barConfig(), styleBuilder.builtCss()])}
+      keyed
+    >
+      {/* Mount bar when built CSS + bar config is ready. */}
+      {([barConfig]) => <Bar config={barConfig} />}
+    </Show>
+  );
 }
