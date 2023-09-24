@@ -14,7 +14,7 @@ export const useIpProvider = memoize((config: IpProviderConfig) => {
     return axios
       .get<IpInfoApiResponse>('https://ipinfo.io/json')
       .then(({ data }) => ({
-        ip: data.ip,
+        ipAddress: data.ip,
         city: data.city,
         country: data.country,
         latitude: data.loc.split(',')[0],
@@ -29,8 +29,23 @@ export const useIpProvider = memoize((config: IpProviderConfig) => {
   );
 
   return {
-    // variables: ipData,
-    variables: { x: 1 },
+    variables: {
+      get ip_address() {
+        return ipData()?.ipAddress ?? '';
+      },
+      get city() {
+        return ipData()?.city ?? '';
+      },
+      get country() {
+        return ipData()?.country ?? '';
+      },
+      get latitude() {
+        return ipData()?.latitude ?? '';
+      },
+      get longitude() {
+        return ipData()?.longitude ?? '';
+      },
+    },
     commands: {
       refetch,
     },

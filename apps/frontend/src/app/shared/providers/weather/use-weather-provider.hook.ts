@@ -41,11 +41,11 @@ export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
           );
 
           return {
-            is_day_time: isDaytime,
+            isDayTime: isDaytime,
             status: weatherStatus,
-            celsius_temp: currentWeather.temperature,
-            fahrenheit_temp: celsiusToFahrenheit(currentWeather.temperature),
-            wind_speed: currentWeather.windspeed,
+            celsiusTemp: currentWeather.temperature,
+            fahrenheitTemp: celsiusToFahrenheit(currentWeather.temperature),
+            windSpeed: currentWeather.windspeed,
           };
         });
     },
@@ -87,8 +87,23 @@ export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
   );
 
   return {
-    // variables: weatherData,
-    variables: { xx: 1 },
+    variables: {
+      get is_day_time() {
+        return weatherData()?.isDayTime ?? true;
+      },
+      get status() {
+        return weatherData()?.status ?? WeatherStatus.CLEAR_DAY;
+      },
+      get celsius_temp() {
+        return weatherData()?.celsiusTemp ?? 0;
+      },
+      get fahrenheit_temp() {
+        return weatherData()?.fahrenheitTemp ?? 0;
+      },
+      get wind_speed() {
+        return weatherData()?.windSpeed ?? 0;
+      },
+    },
     commands: {
       refetch,
     },
