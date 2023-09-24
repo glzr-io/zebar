@@ -21,9 +21,15 @@ export const useDateTimeProvider = memoize((config: DateTimeProviderConfig) => {
 
   return {
     variables: {
-      now,
-      minutes,
-      hours,
+      get now() {
+        return now();
+      },
+      get minutes() {
+        return minutes();
+      },
+      get hours() {
+        return hours();
+      },
     },
     commands: {},
   };
