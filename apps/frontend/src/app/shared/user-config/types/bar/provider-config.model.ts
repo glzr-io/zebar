@@ -5,6 +5,7 @@ import { ClockProviderConfigSchema } from './providers/clock-provider-config.mod
 import { CpuProviderConfigSchema } from './providers/cpu-provider-config.model';
 import { CustomProviderConfigSchema } from './providers/custom-provider-config.model';
 import { GlazeWMProviderConfigSchema } from './providers/glazewm-provider-config.model';
+import { IpProviderConfigSchema } from './providers/ip-provider-config.model';
 import { MemoryProviderConfigSchema } from './providers/memory-provider-config.model';
 import { NetworkProviderConfigSchema } from './providers/network-provider-config.model';
 import { SystemTrayProviderConfigSchema } from './providers/system-tray-provider-config.model';
@@ -18,6 +19,7 @@ export const ProviderConfigSchema = z.union([
   CpuProviderConfigSchema,
   CustomProviderConfigSchema,
   GlazeWMProviderConfigSchema,
+  IpProviderConfigSchema,
   MemoryProviderConfigSchema,
   NetworkProviderConfigSchema,
   SystemTrayProviderConfigSchema,
