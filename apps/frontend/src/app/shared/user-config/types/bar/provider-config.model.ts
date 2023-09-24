@@ -10,10 +10,11 @@ import { MemoryProviderConfigSchema } from './providers/memory-provider-config.m
 import { NetworkProviderConfigSchema } from './providers/network-provider-config.model';
 import { SystemTrayProviderConfigSchema } from './providers/system-tray-provider-config.model';
 import { WeatherProviderConfigSchema } from './providers/weather-provider-config.model';
-import { WindowTitleProviderConfigSchema } from './providers/window-title-provider-config.model';
+import { ActiveWindowProviderConfigSchema } from './providers/active-window-provider-config.model';
 import { Prettify } from '~/shared/utils';
 
 export const ProviderConfigSchema = z.union([
+  ActiveWindowProviderConfigSchema,
   BatteryProviderConfigSchema,
   ClockProviderConfigSchema,
   CpuProviderConfigSchema,
@@ -24,7 +25,6 @@ export const ProviderConfigSchema = z.union([
   NetworkProviderConfigSchema,
   SystemTrayProviderConfigSchema,
   WeatherProviderConfigSchema,
-  WindowTitleProviderConfigSchema,
 ]);
 
 export type ProviderConfig = Prettify<z.infer<typeof ProviderConfigSchema>>;
