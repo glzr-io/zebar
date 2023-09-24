@@ -3,6 +3,7 @@ import { createEffect, createResource, on } from 'solid-js';
 
 import { memoize } from '../utils';
 import { useLogger } from '../logging';
+import { IpProviderConfig } from '../user-config';
 
 export interface IpInfoApiResponse {
   ip: string;
@@ -16,7 +17,7 @@ export interface IpInfoApiResponse {
   readme: string;
 }
 
-export const useIpProvider = memoize(() => {
+export const useIpProvider = memoize((config: IpProviderConfig) => {
   const logger = useLogger('usePublicIp');
 
   const [ipData, { refetch }] = createResource(() => {
