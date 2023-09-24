@@ -4,7 +4,10 @@ import { memoize } from '~/shared/utils';
 export const useActiveWindowProvider = memoize(
   (config: ActiveWindowProviderConfig) => {
     return {
-      title: '',
+      variables: {
+        title: '',
+      },
+      commands: {},
     };
   },
 );

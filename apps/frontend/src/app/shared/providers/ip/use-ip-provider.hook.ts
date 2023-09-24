@@ -29,7 +29,10 @@ export const useIpProvider = memoize((config: IpProviderConfig) => {
   );
 
   return {
-    data: ipData,
-    refetch,
+    // variables: ipData,
+    variables: { x: 1 },
+    commands: {
+      refetch,
+    },
   };
 });

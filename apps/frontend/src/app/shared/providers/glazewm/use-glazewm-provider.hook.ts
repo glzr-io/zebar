@@ -25,8 +25,12 @@ export const useGlazewmProvider = memoize((config: GlazewmProviderConfig) => {
   createEffect(() => console.info('workspaces changed', workspaces()));
 
   return {
-    binding_mode: '',
-    workspaces,
-    focus_workspace: () => {},
+    variables: {
+      binding_mode: '',
+      workspaces,
+    },
+    commands: {
+      focus_workspace: () => {},
+    },
   };
 });

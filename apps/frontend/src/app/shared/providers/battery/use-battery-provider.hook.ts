@@ -3,8 +3,11 @@ import { memoize } from '../../utils';
 
 export const useBatteryProvider = memoize((config: BatteryProviderConfig) => {
   return {
-    percent: '',
-    is_charging: true,
-    has_battery: true,
+    variables: {
+      percent: '',
+      is_charging: true,
+      has_battery: true,
+    },
+    commands: {},
   };
 });

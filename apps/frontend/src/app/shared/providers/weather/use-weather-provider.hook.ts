@@ -16,7 +16,7 @@ export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
   });
 
   const [weatherData, { refetch }] = createResource(
-    ipProvider.data,
+    ipProvider.variables,
     async ipData => {
       // Use OpenMeteo as provider for weather-related info.
       // Documentation: https://open-meteo.com/en/docs
@@ -87,7 +87,10 @@ export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
   );
 
   return {
-    data: weatherData,
-    refetch,
+    // variables: weatherData,
+    variables: { xx: 1 },
+    commands: {
+      refetch,
+    },
   };
 });

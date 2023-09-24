@@ -1,3 +1,5 @@
+import { createMemo } from 'solid-js';
+
 import { ProviderConfig, ProviderType } from '../user-config';
 import { useActiveWindowProvider } from './active-window/use-active-window-provider.hook';
 import { useBatteryProvider } from './battery/use-battery-provider.hook';
@@ -13,44 +15,45 @@ import { useWeatherProvider } from './weather/use-weather-provider.hook';
 export const useProviders = (
   providerConfigs: (ProviderType | ProviderConfig)[],
 ) => {
-  const providers = getProviders();
+  const providers = providerConfigs.map(useProvider);
 
-  function getProviders() {
-    return providerConfigs.map(configOrType => {
-      const config =
-        typeof configOrType === 'string'
-          ? ({ type: configOrType } as ProviderConfig)
-          : configOrType;
+  const variables = createMemo(() => providers.flatMap(e => e.variables));
+  const commands = createMemo(() => providers.flatMap(e => e.commands));
 
-      switch (config.type) {
-        case 'active_window':
-          return useActiveWindowProvider(config);
-        case 'battery':
-          return useBatteryProvider(config);
-        case 'cpu':
-          return useCpuProvider(config);
-        case 'date_time':
-          return useDateTimeProvider(config);
-        case 'glazewm':
-          return useGlazewmProvider(config);
-        case 'ip':
-          return useIpProvider(config);
-        case 'memory':
-          return useMemoryProvider(config);
-        case 'network':
-          return useNetworkProvider(config);
-        case 'system_tray':
-          return useSystemTrayProvider(config);
-        case 'weather':
-          return useWeatherProvider(config);
-        default:
-          throw new Error(`Not a supported provided type '${config.type}'.`);
-      }
-    });
+  function useProvider(configOrType: ProviderType | ProviderConfig) {
+    const config =
+      typeof configOrType === 'string'
+        ? ({ type: configOrType } as ProviderConfig)
+        : configOrType;
+
+    switch (config.type) {
+      case 'active_window':
+        return useActiveWindowProvider(config);
+      case 'battery':
+        return useBatteryProvider(config);
+      case 'cpu':
+        return useCpuProvider(config);
+      case 'date_time':
+        return useDateTimeProvider(config);
+      case 'glazewm':
+        return useGlazewmProvider(config);
+      case 'ip':
+        return useIpProvider(config);
+      case 'memory':
+        return useMemoryProvider(config);
+      case 'network':
+        return useNetworkProvider(config);
+      case 'system_tray':
+        return useSystemTrayProvider(config);
+      case 'weather':
+        return useWeatherProvider(config);
+      default:
+        throw new Error(`Not a supported provided type '${config.type}'.`);
+    }
   }
 
   return {
-    variables: {},
-    commands: {},
+    variables,
+    commands,
   };
 };

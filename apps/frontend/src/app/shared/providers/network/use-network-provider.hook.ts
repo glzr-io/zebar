@@ -3,6 +3,9 @@ import { memoize } from '../../utils';
 
 export const useNetworkProvider = memoize((config: NetworkProviderConfig) => {
   return {
-    xx: '',
+    variables: {
+      xx: '',
+    },
+    commands: {},
   };
 });

@@ -3,6 +3,9 @@ import { memoize } from '../../utils';
 
 export const useMemoryProvider = memoize((config: MemoryProviderConfig) => {
   return {
-    usage: 0,
+    variables: {
+      usage: 0,
+    },
+    commands: {},
   };
 });

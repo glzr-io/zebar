@@ -20,8 +20,11 @@ export const useDateTimeProvider = memoize((config: DateTimeProviderConfig) => {
   onCleanup(() => clearInterval(interval));
 
   return {
-    now,
-    minutes,
-    hours,
+    variables: {
+      now,
+      minutes,
+      hours,
+    },
+    commands: {},
   };
 });
