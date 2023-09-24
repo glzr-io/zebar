@@ -8,6 +8,7 @@ export const useDateTimeProvider = memoize((config: DateTimeProviderConfig) => {
   const logger = useLogger('useDateTime');
 
   const [date, setDate] = createSignal(new Date());
+  const now = createMemo(() => date().valueOf());
   const minutes = createMemo(() => date().getMinutes());
   const hours = createMemo(() => date().getHours());
 
@@ -19,7 +20,7 @@ export const useDateTimeProvider = memoize((config: DateTimeProviderConfig) => {
   onCleanup(() => clearInterval(interval));
 
   return {
-    date,
+    now,
     minutes,
     hours,
   };

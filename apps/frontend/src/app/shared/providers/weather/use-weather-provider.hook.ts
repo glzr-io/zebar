@@ -41,11 +41,11 @@ export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
           );
 
           return {
-            isDaytime,
-            weatherStatus,
-            celsiusTemp: currentWeather.temperature,
-            fahrenheitTemp: celsiusToFahrenheit(currentWeather.temperature),
-            windSpeed: currentWeather.windspeed,
+            is_day_time: isDaytime,
+            status: weatherStatus,
+            celsius_temp: currentWeather.temperature,
+            fahrenheit_temp: celsiusToFahrenheit(currentWeather.temperature),
+            wind_speed: currentWeather.windspeed,
           };
         });
     },

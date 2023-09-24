@@ -1,4 +1,4 @@
-{% for workspace in workspaces %}
+{% for workspace in glazewm.workspaces %}
   {% if workspace.state == 'focused' %}
     <button class="focused-workspace">
       {{ slot.focused | default(slot.default) }}

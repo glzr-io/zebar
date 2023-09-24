@@ -25,6 +25,8 @@ export const useGlazeWmProvider = memoize((config: GlazeWMProviderConfig) => {
   createEffect(() => console.info('workspaces changed', workspaces()));
 
   return {
+    binding_mode: '',
     workspaces,
+    focus_workspace: () => {},
   };
 });

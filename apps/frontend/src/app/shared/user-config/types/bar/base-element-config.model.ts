@@ -8,8 +8,24 @@ export const BaseElementConfigSchema = z.object({
   class_name: z.string(),
   styles: z.string().optional(),
   providers: z
-    // TODO
-    .array(z.union([ProviderConfigSchema, z.enum(['cpu', 'gpu'])]))
+    .array(
+      z.union([
+        ProviderConfigSchema,
+        z.enum([
+          'active_window',
+          'battery',
+          'cpu',
+          'custom',
+          'date_time',
+          'glazewm',
+          'ip',
+          'memory',
+          'network',
+          'system_tray',
+          'weather',
+        ]),
+      ]),
+    )
     .default([]),
 });
 
