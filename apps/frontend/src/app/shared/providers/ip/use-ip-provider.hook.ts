@@ -1,21 +1,10 @@
 import axios from 'axios';
 import { createEffect, createResource, on } from 'solid-js';
 
-import { memoize } from '../utils';
-import { useLogger } from '../logging';
-import { IpProviderConfig } from '../user-config';
-
-export interface IpInfoApiResponse {
-  ip: string;
-  city: string;
-  region: string;
-  country: string;
-  loc: string;
-  org: string;
-  postal: string;
-  timezone: string;
-  readme: string;
-}
+import { memoize } from '../../utils';
+import { useLogger } from '../../logging';
+import { IpProviderConfig } from '../../user-config';
+import { IpInfoApiResponse } from './ip-info-api-response.model';
 
 export const useIpProvider = memoize((config: IpProviderConfig) => {
   const logger = useLogger('usePublicIp');

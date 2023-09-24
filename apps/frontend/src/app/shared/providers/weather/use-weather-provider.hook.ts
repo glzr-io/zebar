@@ -1,50 +1,12 @@
 import axios from 'axios';
 import { createEffect, createResource, on } from 'solid-js';
 
-import { memoize } from '../utils';
-import { useIpProvider } from './use-ip-provider.hook';
-import { useLogger } from '../logging';
-import { WeatherProviderConfig } from '../user-config';
-
-export enum WeatherStatus {
-  CLEAR_DAY = 'clear_day',
-  CLEAR_NIGHT = 'clear_night',
-  CLOUDY_DAY = 'cloudy_day',
-  CLOUDY_NIGHT = 'cloudy_night',
-  OVERCAST = 'overcast',
-  LIGHT_RAIN = 'light_rain',
-  HEAVY_RAIN = 'heavy_rain',
-  SNOW = 'snow',
-  THUNDER = 'thunder',
-}
-
-export interface OpenMeteoApiResponse {
-  latitude: number;
-  longitude: number;
-  generationtime_ms: number;
-  utc_offset_seconds: number;
-  timezone: string;
-  timezone_abbreviation: string;
-  elevation: number;
-  current_weather: {
-    temperature: number;
-    windspeed: number;
-    winddirection: number;
-    weathercode: number;
-    is_day: number;
-    time: string;
-  };
-  daily_units: {
-    time: string;
-    sunset: string;
-    sunrise: string;
-  };
-  daily: {
-    time: string[];
-    sunset: string[];
-    sunrise: string[];
-  };
-}
+import { memoize } from '../../utils';
+import { useIpProvider } from '../ip/use-ip-provider.hook';
+import { useLogger } from '../../logging';
+import { WeatherProviderConfig } from '../../user-config';
+import { WeatherStatus } from './weather-status.enum';
+import { OpenMeteoApiResponse } from './open-meteo-api-response';
 
 export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
   const logger = useLogger('useWeather');

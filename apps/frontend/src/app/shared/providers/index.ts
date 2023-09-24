@@ -1,3 +1,3 @@
-export * from './use-glazewm-provider.hook';
-export * from './use-ip-provider.hook';
-export * from './use-weather-provider.hook';
+export * from './glazewm/use-glazewm-provider.hook';
+export * from './ip/use-ip-provider.hook';
+export * from './weather/use-weather-provider.hook';
