@@ -1,5 +1,7 @@
-import { ProviderConfig } from '../user-config';
+import { ProviderConfig, ProviderType } from '../user-config';
 
-export const useProviders = (providerConfigs: (string | ProviderConfig)[]) => {
+export const useProviders = (
+  providerConfigs: (ProviderType | ProviderConfig)[],
+) => {
   return;
 };
