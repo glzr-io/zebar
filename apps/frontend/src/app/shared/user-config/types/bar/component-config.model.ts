@@ -5,6 +5,7 @@ import { withDynamicKey } from '../shared/with-dynamic-key';
 
 export const ComponentConfigSchemaP1 = BaseElementConfigSchema.extend({
   providers: z.string(),
+  template: z.string(),
   slot: z.string().optional(),
 });
 

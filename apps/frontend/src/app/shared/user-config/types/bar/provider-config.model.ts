@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { BatteryProviderConfigSchema } from './providers/battery-provider-config.model';
-import { ClockProviderConfigSchema } from './providers/clock-provider-config.model';
+import { DateTimeProviderConfigSchema } from './providers/date-time-provider-config.model';
 import { CpuProviderConfigSchema } from './providers/cpu-provider-config.model';
 import { CustomProviderConfigSchema } from './providers/custom-provider-config.model';
 import { GlazeWMProviderConfigSchema } from './providers/glazewm-provider-config.model';
@@ -16,9 +16,9 @@ import { Prettify } from '~/shared/utils';
 export const ProviderConfigSchema = z.union([
   ActiveWindowProviderConfigSchema,
   BatteryProviderConfigSchema,
-  ClockProviderConfigSchema,
   CpuProviderConfigSchema,
   CustomProviderConfigSchema,
+  DateTimeProviderConfigSchema,
   GlazeWMProviderConfigSchema,
   IpProviderConfigSchema,
   MemoryProviderConfigSchema,

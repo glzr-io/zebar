@@ -1,6 +1,6 @@
 export * from './types/bar/providers/active-window-provider-config.model';
 export * from './types/bar/providers/battery-provider-config.model';
-export * from './types/bar/providers/clock-provider-config.model';
+export * from './types/bar/providers/date-time-provider-config.model';
 export * from './types/bar/providers/cpu-provider-config.model';
 export * from './types/bar/providers/custom-provider-config.model';
 export * from './types/bar/providers/glazewm-provider-config.model';
