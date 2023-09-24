@@ -1,7 +1,7 @@
 import { For, createMemo } from 'solid-js';
 
+import { BarGroup } from './bar-group.component';
 import { BarConfig, GroupConfig } from '~/shared/user-config';
-import { BarGroup } from '~/bar-group/bar-group';
 import { clsx } from '~/shared/utils';
 
 export interface BarProps {

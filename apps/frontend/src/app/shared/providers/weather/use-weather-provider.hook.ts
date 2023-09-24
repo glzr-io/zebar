@@ -6,7 +6,7 @@ import { useIpProvider } from '../ip/use-ip-provider.hook';
 import { useLogger } from '../../logging';
 import { WeatherProviderConfig } from '../../user-config';
 import { WeatherStatus } from './weather-status.enum';
-import { OpenMeteoApiResponse } from './open-meteo-api-response';
+import { OpenMeteoApiResponse } from './open-meteo-api-response.model';
 
 export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
   const logger = useLogger('useWeather');

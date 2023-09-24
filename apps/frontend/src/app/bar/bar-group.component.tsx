@@ -1,6 +1,6 @@
 import { For, createMemo } from 'solid-js';
-import { BarComponent } from '~/bar-component/bar-component';
 
+import { BarComponent } from './bar-component.component';
 import { GroupConfig } from '~/shared/user-config';
 import { clsx } from '~/shared/utils';
 
