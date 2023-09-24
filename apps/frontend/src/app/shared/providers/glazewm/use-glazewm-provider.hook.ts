@@ -3,10 +3,10 @@ import { GwmClient, GwmEventType } from 'glazewm';
 
 import { memoize } from '../../utils';
 import { useLogger } from '../../logging';
-import { GlazeWMProviderConfig } from '../../user-config';
+import { GlazewmProviderConfig } from '../../user-config';
 
-export const useGlazeWmProvider = memoize((config: GlazeWMProviderConfig) => {
-  const logger = useLogger('useGlazeWm');
+export const useGlazewmProvider = memoize((config: GlazewmProviderConfig) => {
+  const logger = useLogger('useGlazewm');
 
   const client = new GwmClient();
 

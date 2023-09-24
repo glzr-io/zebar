@@ -3,6 +3,8 @@ import { memoize } from '../../utils';
 
 export const useSystemTrayProvider = memoize(
   (config: SystemTrayProviderConfig) => {
-    return {};
+    return {
+      xx: '',
+    };
   },
 );

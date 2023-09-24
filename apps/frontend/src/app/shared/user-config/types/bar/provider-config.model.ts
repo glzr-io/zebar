@@ -5,7 +5,7 @@ import { BatteryProviderConfigSchema } from './providers/battery-provider-config
 import { CpuProviderConfigSchema } from './providers/cpu-provider-config.model';
 import { CustomProviderConfigSchema } from './providers/custom-provider-config.model';
 import { DateTimeProviderConfigSchema } from './providers/date-time-provider-config.model';
-import { GlazeWMProviderConfigSchema } from './providers/glazewm-provider-config.model';
+import { GlazewmProviderConfigSchema } from './providers/glazewm-provider-config.model';
 import { IpProviderConfigSchema } from './providers/ip-provider-config.model';
 import { MemoryProviderConfigSchema } from './providers/memory-provider-config.model';
 import { NetworkProviderConfigSchema } from './providers/network-provider-config.model';
@@ -19,7 +19,7 @@ export const ProviderConfigSchema = z.union([
   CpuProviderConfigSchema,
   CustomProviderConfigSchema,
   DateTimeProviderConfigSchema,
-  GlazeWMProviderConfigSchema,
+  GlazewmProviderConfigSchema,
   IpProviderConfigSchema,
   MemoryProviderConfigSchema,
   NetworkProviderConfigSchema,
