@@ -1,7 +1,7 @@
-import { createMemo } from 'solid-js';
+import { Accessor, createMemo } from 'solid-js';
 
-import glazewmWorkspacesTemplate from './glazewm-workspaces.template.njk?raw';
-import weatherTemplate from './weather.template.njk?raw';
+import glazewmWorkspacesTemplate from './templates/glazewm-workspaces.template.njk?raw';
+import weatherTemplate from './templates/weather.template.njk?raw';
 import { useProviders } from '~/shared/providers';
 import { useTemplateParser } from '~/shared/template-parsing';
 import { ComponentConfig } from '~/shared/user-config';
@@ -41,10 +41,16 @@ export function BarComponent(props: BarComponentProps) {
   });
 
   return templateParser.createElement({
-    id: props.config.id,
-    className: props.config.class_name,
-    variables: providers.variables,
-    commands: providers.commands,
+    id: () => props.config.id,
+    className: () => props.config.class_name,
+    // TODO: Improve type.
+    variables: providers.variables as unknown as Accessor<
+      Record<string, unknown>
+    >,
+    // TODO: Improve type.
+    commands: providers.commands as unknown as Accessor<
+      Record<string, (...args: unknown[]) => unknown>
+    >,
     template,
     slots,
   });

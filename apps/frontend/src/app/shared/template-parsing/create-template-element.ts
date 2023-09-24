@@ -8,7 +8,7 @@ export interface CreateTemplateElementArgs {
   id: Accessor<string>;
   className: Accessor<string>;
   variables: Accessor<Record<string, unknown>>;
-  commands: Accessor<Record<string, string>>;
+  commands: Accessor<Record<string, (...args: unknown[]) => unknown>>;
   template: Accessor<string>;
   slots: Accessor<Record<string, string>>;
 }
@@ -22,7 +22,7 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
 
   createEffect(
     on(
-      () => args,
+      () => args.variables(),
       () => {
         // Compile template with template engine.
         const newElement = createRootElement();

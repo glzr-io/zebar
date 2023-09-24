@@ -1,6 +1,8 @@
 import { memoize } from '../utils';
+import { createTemplateElement } from './create-template-element';
 
 export const useTemplateParser = memoize(() => {
-  // TODO
-  return;
+  return {
+    createElement: createTemplateElement,
+  };
 });

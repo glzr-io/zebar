@@ -44,11 +44,19 @@ bar/default:
     styles: |
       display: flex;
     components:
-      - type: 'clock'
-      - type: 'cpu'
+      - providers: ['date_time']
+        template: |
+          {{ date_time.hours }}:{{ date_time.minutes }}
+      - providers: ['cpu']
+        template: |
+          {{ cpu.temp }}
   group/center:
     components:
-      - type: 'clock'
+      - providers: ['date_time']
+        template: |
+          {{ date_time.now }}
   group/right:
     components:
-      - type: 'clock'
+      - providers: ['date_time']
+        template: |
+          {{ date_time.now }}
