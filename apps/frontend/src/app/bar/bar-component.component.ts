@@ -1,4 +1,4 @@
-import { Accessor, createMemo } from 'solid-js';
+import { createMemo } from 'solid-js';
 
 import glazewmWorkspacesTemplate from './templates/glazewm-workspaces.template.njk?raw';
 import weatherTemplate from './templates/weather.template.njk?raw';
@@ -44,13 +44,9 @@ export function BarComponent(props: BarComponentProps) {
     id: () => props.config.id,
     className: () => props.config.class_name,
     // TODO: Improve type.
-    variables: providers.variables as unknown as Accessor<
-      Record<string, unknown>
-    >,
+    variables: providers.variables as any,
     // TODO: Improve type.
-    commands: providers.commands as unknown as Accessor<
-      Record<string, (...args: unknown[]) => unknown>
-    >,
+    commands: providers.commands as any,
     template,
     slots,
   });

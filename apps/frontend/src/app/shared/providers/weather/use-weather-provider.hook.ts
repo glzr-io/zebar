@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { createEffect, createResource, on } from 'solid-js';
+import { createStore } from 'solid-js/store';
 
 import { memoize } from '../../utils';
 import { useIpProvider } from '../ip/use-ip-provider.hook';
@@ -14,6 +15,20 @@ export const useWeatherProvider = memoize((config: WeatherProviderConfig) => {
     type: 'ip',
     refresh_interval_ms: 60 * 1000,
   });
+
+  const [store, setStore] = createStore({
+    is_day_time: true,
+    status: WeatherStatus.CLEAR_DAY,
+    celsius_temp: 0,
+    fahrenheit_temp: 0,
+    wind_speed: 0,
+    is_refreshing: false,
+    is_loading: false,
+  });
+
+  createEffect(() => refresh());
+
+  async function refresh() {}
 
   const [weatherData, { refetch }] = createResource(
     ipProvider.variables,
