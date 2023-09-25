@@ -1,7 +1,7 @@
 import { Show, createEffect, on } from 'solid-js';
 import { configure } from 'nunjucks';
 
-import { Bar } from './bar/bar';
+import { Bar } from './bar/bar.component';
 import { useStyleBuilder, useUserConfig } from './shared/user-config';
 import { useCurrentWindow } from './shared/desktop';
 import { resolved } from './shared/utils';
