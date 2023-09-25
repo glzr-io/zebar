@@ -43,10 +43,8 @@ export function BarComponent(props: BarComponentProps) {
   return templateParser.createElement({
     id: () => props.config.id,
     className: () => props.config.class_name,
-    // TODO: Improve type.
-    variables: providers.variables as any,
-    // TODO: Improve type.
-    commands: providers.commands as any,
+    variables: providers.variables,
+    commands: providers.commands,
     template,
     slots,
   });

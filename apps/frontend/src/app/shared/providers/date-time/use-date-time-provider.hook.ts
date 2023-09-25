@@ -1,30 +1,20 @@
-import { createMemo, createSignal, onCleanup } from 'solid-js';
-
-import { memoize } from '../../utils';
-import { useLogger } from '../../logging';
-import { DateTimeProviderConfig } from '../../user-config';
+import { onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-export const useDateTimeProvider = memoize((config: DateTimeProviderConfig) => {
-  const logger = useLogger('useDateTime');
+import { memoize } from '../../utils';
+import { DateTimeProviderConfig } from '../../user-config';
 
+export const useDateTimeProvider = memoize((config: DateTimeProviderConfig) => {
   const [store, setStore] = createStore({
     now: 0,
     minutes: 0,
     hours: 0,
   });
 
-  // const interval = setInterval(() => refresh(), config.refresh_interval_ms);
   const interval = setInterval(() => refresh(), 1000);
-  onCleanup(() => {
-    console.log('ran cleanup');
-
-    clearInterval(interval);
-  });
+  onCleanup(() => clearInterval(interval));
 
   function refresh() {
-    console.log('ran refresh');
-
     const date = new Date();
 
     setStore({

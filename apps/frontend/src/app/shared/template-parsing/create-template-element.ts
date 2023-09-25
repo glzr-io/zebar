@@ -1,7 +1,6 @@
-import { Accessor, createEffect, on, onCleanup, onMount } from 'solid-js';
+import { Accessor, createEffect, onCleanup, onMount } from 'solid-js';
 
 import { useLogger } from '../logging';
-import { mount } from '../utils/mount';
 import { runTemplateEngine } from './run-template-engine';
 
 export interface CreateTemplateElementArgs {
@@ -20,30 +19,18 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
   const element = document.createElement('div');
   element.id = args.id();
 
-  createEffect(
-    on(
-      () => args.variables(),
-      () => {
-        console.log('ranaaa');
-        // Compile template with template engine.
-        const newElement = createRootElement();
-        newElement.innerHTML = runTemplateEngine(
-          args.template(),
-          args.slots(),
-          args.variables(),
-        );
-        console.log('newElement', newElement);
+  createEffect(() => {
+    // Compile template with template engine.
+    const newElement = createRootElement();
+    newElement.innerHTML = runTemplateEngine(
+      args.template(),
+      args.slots(),
+      args.variables(),
+    );
 
-        // TODO: Is it actually necessary to use `createRoot` around the mounted
-        // elemented ? Is`onCleanup` called corrrectly when it's omitted?
-        const oldElement = document.getElementById(args.id());
-        oldElement?.replaceWith(newElement);
-        // const dispose = mount(oldElement, newElement);
-
-        // onCleanup(() => dispose());
-      },
-    ),
-  );
+    const oldElement = document.getElementById(args.id());
+    oldElement!.replaceWith(newElement);
+  });
 
   function createRootElement() {
     const element = document.createElement('div');

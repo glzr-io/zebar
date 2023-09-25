@@ -1,4 +1,4 @@
-import { createEffect, createMemo } from 'solid-js';
+import { createMemo } from 'solid-js';
 
 import { useActiveWindowProvider } from './active-window/use-active-window-provider.hook';
 import { useBatteryProvider } from './battery/use-battery-provider.hook';
@@ -17,24 +17,24 @@ export const useProviders = memoize(
   (configOrTypes: (ProviderType | ProviderConfig)[]) => {
     const configs = createMemo(() => configOrTypes.map(toProviderConfig));
 
-    const providers = createMemo(() =>
-      configs().map(config => {
-        const provider = useProvider(config);
-
-        return {
-          type: config.type,
-          variables: provider.variables,
-          commands: provider.commands,
-        };
-      }),
-    );
-
     const variables = createMemo(() =>
-      providers().reduce((acc, e) => ({ ...acc, [e.type]: e.variables }), {}),
+      configs().reduce(
+        (acc, config) => ({
+          ...acc,
+          [config.type]: useProvider(config).variables,
+        }),
+        {},
+      ),
     );
 
     const commands = createMemo(() =>
-      providers().reduce((acc, e) => ({ ...acc, [e.type]: e.commands }), {}),
+      configs().reduce(
+        (acc, config) => ({
+          ...acc,
+          [config.type]: useProvider(config).commands,
+        }),
+        {},
+      ),
     );
 
     function toProviderConfig(configOrType: ProviderType | ProviderConfig) {
@@ -69,10 +69,6 @@ export const useProviders = memoize(
           throw new Error(`Not a supported provided type '${config.type}'.`);
       }
     }
-
-    createEffect(() => {
-      console.log('variables changed', variables());
-    });
 
     return {
       variables,

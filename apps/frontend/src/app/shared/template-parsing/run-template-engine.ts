@@ -16,9 +16,6 @@ export function runTemplateEngine(
     {},
   );
 
-  console.log('template', template);
-  console.log('templateContext', templateContext);
-
   return renderString(template, {
     ...templateContext,
     slot: compiledSlots,
