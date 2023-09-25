@@ -26,7 +26,7 @@ bar/default:
   # Y-position of the bar in physical pixels.
   position_y: '{{ env.screen_y }}'
   # Whether to show the bar above all other windows.
-  always_on_top: true
+  always_on_top: false
   # Whether the bar should be shown in the taskbar.
   show_in_taskbar: false
   # Whether the bar should have resize handles.
@@ -47,16 +47,13 @@ bar/default:
       - providers: ['date_time']
         template: |
           {{ date_time.hours }}:{{ date_time.minutes }}
-      - providers: ['cpu']
-        template: |
-          {{ cpu.temp }}
   group/center:
     components:
-      - providers: ['date_time']
+      - providers: ['ip']
         template: |
-          {{ date_time.now }}
+          {{ ip.ip_address }}
   group/right:
     components:
-      - providers: ['date_time']
+      - providers: ['weather']
         template: |
-          {{ date_time.now }}
+          {{ weather.status }} {{weather.celsius_temp}}

@@ -1,53 +1,47 @@
 import axios from 'axios';
-import { createEffect, createResource, on } from 'solid-js';
+import { onCleanup } from 'solid-js';
+import { createStore } from 'solid-js/store';
 
 import { memoize } from '../../utils';
-import { useLogger } from '../../logging';
 import { IpProviderConfig } from '../../user-config';
 import { IpInfoApiResponse } from './ip-info-api-response.model';
 
 export const useIpProvider = memoize((config: IpProviderConfig) => {
-  const logger = useLogger('usePublicIp');
-
-  const [ipData, { refetch }] = createResource(() => {
-    // Use https://ipinfo.io as provider for IP-related info.
-    return axios
-      .get<IpInfoApiResponse>('https://ipinfo.io/json')
-      .then(({ data }) => ({
-        ipAddress: data.ip,
-        city: data.city,
-        country: data.country,
-        latitude: data.loc.split(',')[0],
-        longitude: data.loc.split(',')[1],
-      }));
+  const [ipVariables, setIpVariables] = createStore({
+    ip_address: '',
+    city: '',
+    country: '',
+    latitude: '',
+    longitude: '',
+    is_loading: true,
+    is_refreshing: false,
   });
 
-  createEffect(
-    on(ipData, ipData => logger.debug('Received IP data:', ipData), {
-      defer: true,
-    }),
-  );
+  refresh();
+  const interval = setInterval(() => refresh(), 60 * 1000);
+  onCleanup(() => clearInterval(interval));
+
+  async function refresh() {
+    // Use https://ipinfo.io as provider for IP-related info.
+    const { data } = await axios.get<IpInfoApiResponse>(
+      'https://ipinfo.io/json',
+    );
+
+    setIpVariables({
+      ip_address: data.ip,
+      city: data.city,
+      country: data.country,
+      latitude: data.loc.split(',')[0],
+      longitude: data.loc.split(',')[1],
+      is_loading: false,
+      is_refreshing: false,
+    });
+  }
 
   return {
-    variables: {
-      get ip_address() {
-        return ipData()?.ipAddress ?? '';
-      },
-      get city() {
-        return ipData()?.city ?? '';
-      },
-      get country() {
-        return ipData()?.country ?? '';
-      },
-      get latitude() {
-        return ipData()?.latitude ?? '';
-      },
-      get longitude() {
-        return ipData()?.longitude ?? '';
-      },
-    },
+    variables: ipVariables,
     commands: {
-      refetch,
+      refresh,
     },
   };
 });
