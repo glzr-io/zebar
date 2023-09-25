@@ -8,15 +8,16 @@ export function runTemplateEngine(
   slots: Record<string, string>,
   templateContext: Record<string, unknown>,
 ): string {
-  const compiledSlots = Object.keys(slots).reduce<Record<string, string>>(
-    (acc, slot) => {
-      return {
-        ...acc,
-        [slot]: renderString(slots[slot], templateContext),
-      };
-    },
+  const compiledSlots = Object.entries(slots).reduce<Record<string, string>>(
+    (acc, [slotName, slotTemplate]) => ({
+      ...acc,
+      [slotName]: renderString(slotTemplate, templateContext),
+    }),
     {},
   );
+
+  console.log('template', template);
+  console.log('templateContext', templateContext);
 
   return renderString(template, {
     ...templateContext,

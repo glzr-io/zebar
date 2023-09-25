@@ -24,17 +24,18 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
     on(
       () => args.variables(),
       () => {
+        console.log('in component', args.variables(), args);
+
         // Compile template with template engine.
         const newElement = createRootElement();
         newElement.innerHTML = runTemplateEngine(
           args.template(),
           args.slots(),
-          {
-            ...args.variables(),
-            ...args.commands(),
-          },
+          completeAssign(args.variables(), args.commands()),
         );
 
+        // TODO: Is it actually necessary to use `createRoot` around the mounted
+        // elemented ? Is`onCleanup` called corrrectly when it's omitted?
         const oldElement = document.getElementById(args.id());
         const dispose = mount(oldElement, newElement);
 
@@ -48,6 +49,24 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
     element.id = args.id();
     element.className = args.className();
     return element;
+  }
+
+  function completeAssign(target: any, ...sources: any[]) {
+    sources.forEach(source => {
+      let descriptors = Object.keys(source).reduce((descriptors, key) => {
+        descriptors[key] = Object.getOwnPropertyDescriptor(source, key);
+        return descriptors;
+      }, {} as any);
+      // by default, Object.assign copies enumerable Symbols too
+      Object.getOwnPropertySymbols(source).forEach(sym => {
+        let descriptor = Object.getOwnPropertyDescriptor(source, sym);
+        if (descriptor?.enumerable) {
+          descriptors[sym] = descriptor;
+        }
+      });
+      Object.defineProperties(target, descriptors);
+    });
+    return target;
   }
 
   onMount(() => logger.debug('Mounted'));
