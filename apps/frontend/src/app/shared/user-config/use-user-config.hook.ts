@@ -9,6 +9,7 @@ import { memoize } from '../utils';
 import { useConfigVariables } from './use-config-variables.hook';
 import { getBarConfigs } from './utils/get-bar-configs';
 import { createStore } from 'solid-js/store';
+import { useProviderTree } from '../providers';
 
 // In bar.component.ts:
 // const providerTree = useProviderTree();
@@ -22,7 +23,7 @@ import { createStore } from 'solid-js/store';
 export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
   const commands = useDesktopCommands();
-  const configVariables = useConfigVariables();
+  const providerTree = useProviderTree();
 
   // TODO: Get name of bar from launch args. Default to 'default.'
   const [barName] = createSignal('default');
@@ -36,29 +37,6 @@ export const useUserConfig = memoize(() => {
       logger.debug(`Read config:`, configObj);
 
       return configObj;
-    } catch (err) {
-      handleConfigError(err);
-    }
-  });
-
-  const [providerTree] = createResource(configObj, async configObj => {
-    try {
-      const [providerTree, setProviderTree] = createStore({
-        id: 'root',
-        variables: {},
-        functions: {},
-        slots: {},
-        parent: null,
-        children: [],
-      });
-
-      // Need to traverse every `provider` and `variables` property.
-
-      for (const barconfig of getBarConfigs(configObj as UserConfig)) {
-        // const
-      }
-
-      return providerTree;
     } catch (err) {
       handleConfigError(err);
     }

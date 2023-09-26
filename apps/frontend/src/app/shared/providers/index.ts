@@ -9,4 +9,4 @@ export * from './network/use-network-provider.hook';
 export * from './system-tray/use-system-tray-provider.hook';
 export * from './weather/use-weather-provider.hook';
 export * from './provider-node.model';
-export * from './use-providers.hook';
+export * from './use-provider-tree.hook';
