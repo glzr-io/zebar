@@ -1,34 +1,56 @@
-import { createEffect, createResource } from 'solid-js';
-import { GwmClient, GwmEventType } from 'glazewm';
+import { createStore } from 'solid-js/store';
+import { GwmClient, GwmEventType, Workspace } from 'glazewm';
 
 import { memoize } from '../../utils';
-import { useLogger } from '../../logging';
 import { GlazewmProviderConfig } from '../../user-config';
+import { useCurrentMonitor } from '~/shared/desktop';
 
 export const useGlazewmProvider = memoize((config: GlazewmProviderConfig) => {
-  const logger = useLogger('useGlazewm');
+  const currentMonitor = useCurrentMonitor();
 
   const client = new GwmClient();
+
+  const [glazewmVariables, setGlazewmVariables] = createStore({
+    workspaces: [] as Workspace[],
+    binding_mode: '',
+  });
 
   client.onConnect(e => console.log('onOpen', e));
   client.onMessage(e => console.log('onMessage', e));
   client.onDisconnect(e => console.log('onClose', e));
   client.onError(e => console.log('onError', e));
-  client.getMonitors().then(e => console.log('>>>>', e));
 
-  const [workspaces, { refetch }] = createResource(() =>
-    client.getWorkspaces(),
+  // Get initial workspaces.
+  refetch();
+
+  client.subscribeMany(
+    [GwmEventType.WORKSPACE_ACTIVATED, GwmEventType.WORKSPACE_DEACTIVATED],
+    () => refetch(),
   );
 
-  client.subscribe(GwmEventType.WORKSPACE_ACTIVATED, () => refetch());
+  async function refetch() {
+    const currentPosition = await currentMonitor.getPosition();
+    const monitors = await client.getMonitors();
 
-  createEffect(() => console.info('workspaces changed', workspaces()));
+    // Get GlazeWM monitor that corresponds to the bar's monitor.
+    const monitor = monitors.reduce((a, b) =>
+      getDistance(currentPosition, a) < getDistance(currentPosition, b) ? a : b,
+    );
+
+    setGlazewmVariables({ workspaces: monitor.children });
+  }
+
+  function getDistance(
+    pointA: { x: number; y: number },
+    pointB: { x: number; y: number },
+  ) {
+    return Math.sqrt(
+      Math.pow(pointB.x - pointA.x, 2) + Math.pow(pointB.y - pointA.y, 2),
+    );
+  }
 
   return {
-    variables: {
-      binding_mode: '',
-      workspaces,
-    },
+    variables: glazewmVariables,
     commands: {
       focus_workspace: () => {},
     },
