@@ -16,6 +16,8 @@ export * from './types/bar/group-config.model';
 export * from './types/bar/provider-config.model';
 export * from './types/general-config.model';
 export * from './types/user-config.model';
+export * from './utils/get-bar-configs';
+export * from './utils/get-group-configs';
 export * from './use-config-variables.hook';
 export * from './use-user-config.hook';
 export * from './use-style-builder.hook';
