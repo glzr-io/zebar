@@ -5,13 +5,13 @@
 # Docs regarding general: https://some-future-docs-link.com
 ##
 general:
-  # CSS/SCSS to apply to the root document. Styles defined here will apply
-  # to all bars and popups.
-  global_styles: |
+  # CSS/SCSS to apply to the root document (ie. the <html> element).
+  root_styles: |
     --some-var: blue;
-  # Path to CSS or SCSS file with global styles. Is merged with
-  # styles defined in `general.global_styles`.
-  global_stylesheet_path: ./custom.scss
+  # Path to CSS or SCSS file(s). Loaded after inline styles.
+  load_stylesheets: []
+  # Path to JS file(s). Loaded after mounting bar element.
+  load_scripts: []
 
 ##
 # Docs regarding bar: https://some-future-docs-link.com
