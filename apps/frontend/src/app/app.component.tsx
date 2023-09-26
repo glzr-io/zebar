@@ -5,8 +5,10 @@ import { Bar } from './bar/bar.component';
 import { useStyleBuilder, useUserConfig } from './shared/user-config';
 import { useCurrentWindow } from './shared/desktop';
 import { resolved } from './shared/utils';
+import { useProviderTree } from './shared/providers';
 
 export function App() {
+  const providerTree = useProviderTree();
   const userConfig = useUserConfig();
   const styleBuilder = useStyleBuilder();
   const currentWindow = useCurrentWindow();
@@ -61,7 +63,9 @@ export function App() {
       keyed
     >
       {/* Mount bar when built CSS + bar config is ready. */}
-      {([barConfig]) => <Bar config={barConfig} />}
+      {([barConfig]) => (
+        <Bar config={barConfig} provider={providerTree.value} />
+      )}
     </Show>
   );
 }

@@ -23,7 +23,7 @@ import { createStore } from 'solid-js/store';
 import { ProviderNode } from './provider-node.model';
 
 export const useProviderTree = memoize(() => {
-  const [providerTree, setProviderTree] = createStore<ProviderNode>({
+  const [value, setProviderTree] = createStore<ProviderNode>({
     id: 'root',
     variables: {},
     functions: {},
@@ -34,7 +34,7 @@ export const useProviderTree = memoize(() => {
 
   // createEffect(on(userConfig.config, config => {}));
 
-  async function update(configObj: unknown) {
+  function update(configObj: unknown) {
     // Need to traverse every `provider` and `variables` property.
     const root: ProviderNode = {
       id: 'root',
@@ -46,7 +46,7 @@ export const useProviderTree = memoize(() => {
     };
 
     for (const barconfig of getBarConfigs(configObj as UserConfig)) {
-      const barProviders = await ProvidersConfigSchema.parseAsync(
+      const barProviders = ProvidersConfigSchema.parse(
         barconfig.providers ?? [],
       );
       const variables = getVariables(barProviders);
@@ -63,7 +63,7 @@ export const useProviderTree = memoize(() => {
       root.children.push(barNode);
 
       for (const groupConfig of getGroupConfigs(barconfig)) {
-        const groupProviders = await ProvidersConfigSchema.parseAsync(
+        const groupProviders = ProvidersConfigSchema.parse(
           groupConfig.providers ?? [],
         );
         const variables = getVariables(groupProviders);
@@ -80,7 +80,7 @@ export const useProviderTree = memoize(() => {
         barNode.children.push(groupNode);
 
         for (const componentConfig of groupConfig.components) {
-          const componentProviders = await ProvidersConfigSchema.parseAsync(
+          const componentProviders = ProvidersConfigSchema.parse(
             componentConfig.providers ?? [],
           );
           const variables = getVariables(componentProviders);
@@ -100,6 +100,7 @@ export const useProviderTree = memoize(() => {
     }
 
     setProviderTree(root);
+    return value;
   }
 
   function getVariables(configs: ProviderConfig[]) {
@@ -150,7 +151,7 @@ export const useProviderTree = memoize(() => {
   }
 
   return {
-    providerTree,
+    value,
     update,
   };
 });

@@ -4,11 +4,8 @@ import { ZodError } from 'zod';
 
 import { useDesktopCommands } from '../desktop';
 import { useLogger } from '../logging';
-import { UserConfig, UserConfigSchema } from './types/user-config.model';
+import { UserConfigSchema } from './types/user-config.model';
 import { memoize } from '../utils';
-import { useConfigVariables } from './use-config-variables.hook';
-import { getBarConfigs } from './utils/get-bar-configs';
-import { createStore } from 'solid-js/store';
 import { useProviderTree } from '../providers';
 
 // In bar.component.ts:
@@ -28,34 +25,26 @@ export const useUserConfig = memoize(() => {
   // TODO: Get name of bar from launch args. Default to 'default.'
   const [barName] = createSignal('default');
 
-  const [configObj, { refetch: reload }] = createResource(async () => {
+  const [config, { refetch: reload }] = createResource(async () => {
     try {
-      // Read and parse the config as YAML.
       const config = await commands.readConfigFile();
-      const configObj = parse(config) as unknown;
 
+      // Parse the config as YAML.
+      const configObj = parse(config) as unknown;
       logger.debug(`Read config:`, configObj);
 
-      return configObj;
+      const tree = providerTree.update(configObj);
+      console.log('providerTree', providerTree);
+
+      // Need to somehow traverse down config and compile all templates.
+      const parsedConfig = await UserConfigSchema.parseAsync(configObj);
+      logger.debug(`Parsed config:`, parsedConfig);
+
+      return parsedConfig;
     } catch (err) {
       handleConfigError(err);
     }
   });
-
-  const [config] = createResource(
-    () => [configObj(), providerTree()] as const,
-    async ([configObj, providerTree]) => {
-      try {
-        // Read and parse the config as YAML.
-        const parsedConfig = await UserConfigSchema.parseAsync(configObj);
-        logger.debug(`Parsed config:`, parsedConfig);
-
-        return parsedConfig;
-      } catch (err) {
-        handleConfigError(err);
-      }
-    },
-  );
 
   const [generalConfig] = createResource(config, config => config.general);
 
