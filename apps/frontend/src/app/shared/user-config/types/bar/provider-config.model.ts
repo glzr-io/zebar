@@ -28,4 +28,3 @@ export const ProviderConfigSchema = z.union([
 ]);
 
 export type ProviderConfig = Prettify<z.infer<typeof ProviderConfigSchema>>;
-export type ProviderType = ProviderConfig['type'];

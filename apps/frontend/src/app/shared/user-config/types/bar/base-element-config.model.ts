@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { createUniqueId } from '~/shared/utils';
+import { Prettify, createUniqueId } from '~/shared/utils';
 import { ProviderConfigSchema } from './provider-config.model';
 
 export const BaseElementConfigSchema = z.object({
@@ -11,23 +11,27 @@ export const BaseElementConfigSchema = z.object({
     .array(
       z.union([
         ProviderConfigSchema,
-        z.enum([
-          'active_window',
-          'battery',
-          'cpu',
-          'custom',
-          'date_time',
-          'glazewm',
-          'ip',
-          'memory',
-          'network',
-          'system_tray',
-          'weather',
-        ]),
+        z
+          .enum([
+            'active_window',
+            'battery',
+            'cpu',
+            'custom',
+            'date_time',
+            'glazewm',
+            'ip',
+            'memory',
+            'network',
+            'system_tray',
+            'weather',
+          ])
+          .transform(type => ProviderConfigSchema.parse({ type })),
       ]),
     )
     .default([]),
 });
 
 /** Base config for bar, groups, and components. */
-export type BaseElementConfig = z.infer<typeof BaseElementConfigSchema>;
+export type BaseElementConfig = Prettify<
+  z.infer<typeof BaseElementConfigSchema>
+>;
