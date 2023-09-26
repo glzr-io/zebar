@@ -10,15 +10,6 @@ import { useConfigVariables } from './use-config-variables.hook';
 import { getBarConfigs } from './utils/get-bar-configs';
 import { createStore } from 'solid-js/store';
 
-export interface ProviderNode {
-  id: string;
-  variables: Record<string, unknown>;
-  functions: Record<string, unknown>;
-  slots: Record<string, string>; // TODO: Unsure here.
-  parent: ProviderNode;
-  children: ProviderNode[];
-}
-
 // In bar.component.ts:
 // const providerTree = useProviderTree();
 // const providers = providerTree.find(node => node.id === config.id);
