@@ -3,8 +3,9 @@ import { z } from 'zod';
 export const GeneralConfigSchema = z
   .object({
     enable_devtools: z.boolean(),
-    global_styles: z.string(),
-    global_stylesheet_path: z.string(),
+    root_styles: z.string(),
+    load_stylesheets: z.array(z.string()),
+    load_scripts: z.array(z.string()),
   })
   .partial();
 
