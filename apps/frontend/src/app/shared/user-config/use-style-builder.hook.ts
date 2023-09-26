@@ -4,8 +4,7 @@ import { compileString } from 'sass';
 import { useLogger } from '../logging';
 import { memoize, resolved } from '../utils';
 import { useUserConfig } from './use-user-config.hook';
-import { GroupConfig } from './types/bar/group-config.model';
-import { BarConfig } from './types/bar/bar-config.model';
+import { getGroupConfigs } from './utils/get-group-configs';
 
 /**
  * Hook for compiling user-provided SCSS to CSS.
@@ -43,13 +42,6 @@ export const useStyleBuilder = memoize(() => {
       return css;
     },
   );
-
-  // Get group configs (ie. `group/xx`) within bar config.
-  function getGroupConfigs(barConfig: BarConfig) {
-    return Object.entries(barConfig)
-      .filter(([key, value]) => key.startsWith('group') && !!value)
-      .map(([_, value]) => value) as GroupConfig[];
-  }
 
   // Wrap user-defined styles in a scope.
   function scopeWith(selector: string, styles: string | undefined) {
