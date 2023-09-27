@@ -4,7 +4,6 @@ import { configure } from 'nunjucks';
 import { Bar } from './bar/bar.component';
 import { useStyleBuilder, useUserConfig } from './shared/user-config';
 import { useCurrentWindow } from './shared/desktop';
-import { resolved } from './shared/utils';
 import { useProviderTree } from './shared/providers';
 
 export function App() {
@@ -57,15 +56,10 @@ export function App() {
     ),
   );
 
+  // Mount bar when bar config + built CSS is ready.
   return (
-    <Show
-      when={resolved([userConfig.barConfig(), styleBuilder.builtCss()])}
-      keyed
-    >
-      {/* Mount bar when built CSS + bar config is ready. */}
-      {([barConfig]) => (
-        <Bar config={barConfig} provider={providerTree.value} />
-      )}
+    <Show when={userConfig.barConfig() && styleBuilder.builtCss()}>
+      <Bar config={userConfig.barConfig()!} />
     </Show>
   );
 }
