@@ -17,6 +17,7 @@ export * from './types/bar/provider-config.model';
 export * from './types/bar/providers-config.model';
 export * from './types/general-config.model';
 export * from './types/user-config.model';
+export * from './utils/create-config-store';
 export * from './utils/format-config-error';
 export * from './utils/get-bar-configs';
 export * from './utils/get-group-configs';

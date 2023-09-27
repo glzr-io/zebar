@@ -1,12 +1,11 @@
-import { createResource, createSignal } from 'solid-js';
+import { createResource } from 'solid-js';
 import { parse } from 'yaml';
 
 import { useDesktopCommands } from '../desktop';
 import { useLogger } from '../logging';
-import { UserConfigSchema } from './types/user-config.model';
 import { memoize } from '../utils';
-import { useProviderTree } from '../providers';
 import { formatConfigError } from './utils/format-config-error';
+import { createConfigStore } from './utils/create-config-store';
 
 // In bar.component.ts:
 // const providerTree = useProviderTree();
@@ -20,47 +19,47 @@ import { formatConfigError } from './utils/format-config-error';
 export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
   const commands = useDesktopCommands();
-  const providerTree = useProviderTree();
 
-  // TODO: Get name of bar from launch args. Default to 'default.'
-  const [barName] = createSignal('default');
+  const [configObj, { refetch: reload }] = createResource(() =>
+    readUserConfig(),
+  );
 
-  const [config, { refetch: reload }] = createResource(async () => {
+  const config = createConfigStore(configObj);
+
+  const [currentBarConfig] = createResource(
+    () => config.value,
+    config => {
+      // TODO: Get name of bar from launch args. Default to 'default.'
+      const barName = 'default';
+      const barConfig = config[`bar/${barName}`];
+
+      if (!barConfig) {
+        throw new Error(`Could not find bar config for '${barName}'.`);
+      }
+
+      return barConfig;
+    },
+  );
+
+  // Read and parse the config as YAML.
+  async function readUserConfig() {
     try {
       const config = await commands.readConfigFile();
-
-      // Parse the config as YAML.
       const configObj = parse(config) as unknown;
+
       logger.debug(`Read config:`, configObj);
 
-      const tree = providerTree.update(configObj);
-      console.log('providerTree', providerTree);
-
-      // Need to somehow traverse down config and compile all templates.
-      const parsedConfig = await UserConfigSchema.parseAsync(configObj);
-      logger.debug(`Parsed config:`, parsedConfig);
-
-      return parsedConfig;
+      return configObj;
     } catch (err) {
       throw formatConfigError(err);
     }
-  });
-
-  const [generalConfig] = createResource(config, config => config.general);
-
-  const [barConfig] = createResource(config, config => {
-    const barConfig = config[`bar/${barName()}`];
-
-    if (!barConfig) {
-      throw new Error(`Could not find bar config for '${barName()}'.`);
-    }
-
-    return barConfig;
-  });
+  }
 
   return {
-    generalConfig,
-    barConfig,
+    get config() {
+      return config.value;
+    },
+    currentBarConfig,
     reload,
   };
 });
