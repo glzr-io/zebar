@@ -2,13 +2,12 @@ import { createMemo } from 'solid-js';
 
 import glazewmWorkspacesTemplate from './templates/glazewm-workspaces.template.njk?raw';
 import weatherTemplate from './templates/weather.template.njk?raw';
-import { ProviderNode } from '~/shared/providers';
 import { useTemplateParser } from '~/shared/template-parsing';
-import { ComponentConfig } from '~/shared/user-config';
+import { ComponentConfig, GroupConfig } from '~/shared/user-config';
 
 export interface BarComponentProps {
   config: ComponentConfig;
-  provider: ProviderNode;
+  parentConfig: GroupConfig;
 }
 
 export function BarComponent(props: BarComponentProps) {
@@ -43,7 +42,7 @@ export function BarComponent(props: BarComponentProps) {
   return templateParser.createElement({
     id: () => props.config.id,
     className: () => props.config.class_name,
-    provider: props.provider,
+    provider: props.parentConfig,
     template,
   });
 }
