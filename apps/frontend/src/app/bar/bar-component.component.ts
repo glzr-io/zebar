@@ -2,8 +2,8 @@ import { createMemo } from 'solid-js';
 
 import glazewmWorkspacesTemplate from './templates/glazewm-workspaces.template.njk?raw';
 import weatherTemplate from './templates/weather.template.njk?raw';
-import { useTemplateParser } from '~/shared/template-parsing';
 import { ComponentConfig, GroupConfig } from '~/shared/user-config';
+import { createTemplateElement } from '~/shared/template-parsing';
 
 export interface BarComponentProps {
   config: ComponentConfig;
@@ -11,8 +11,6 @@ export interface BarComponentProps {
 }
 
 export function BarComponent(props: BarComponentProps) {
-  const templateParser = useTemplateParser();
-
   const template = createMemo(() => {
     switch (props.config.template) {
       case 'template.glazewm_workspaces':
@@ -39,7 +37,7 @@ export function BarComponent(props: BarComponentProps) {
       }, {});
   });
 
-  return templateParser.createElement({
+  return createTemplateElement({
     id: () => props.config.id,
     className: () => props.config.class_name,
     //@ts-ignore - TODO
