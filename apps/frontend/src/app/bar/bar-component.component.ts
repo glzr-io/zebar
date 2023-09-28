@@ -1,9 +1,11 @@
 import { createMemo } from 'solid-js';
 
-import glazewmWorkspacesTemplate from './templates/glazewm-workspaces.template.njk?raw';
-import weatherTemplate from './templates/weather.template.njk?raw';
 import { ComponentConfig, GroupConfig } from '~/shared/user-config';
-import { createTemplateElement } from '~/shared/template-parsing';
+import {
+  createTemplateElement,
+  glazewmWorkspacesTemplate,
+  weatherTemplate,
+} from '~/shared/templates';
 
 export interface BarComponentProps {
   config: ComponentConfig;
