@@ -42,7 +42,8 @@ export function BarComponent(props: BarComponentProps) {
   return templateParser.createElement({
     id: () => props.config.id,
     className: () => props.config.class_name,
-    provider: props.parentConfig,
+    //@ts-ignore - TODO
+    variables: props.config.variables ?? {},
     template,
   });
 }

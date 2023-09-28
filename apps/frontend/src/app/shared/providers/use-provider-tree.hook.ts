@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, on } from 'solid-js';
+import { createStore } from 'solid-js/store';
 
 import { useActiveWindowProvider } from './active-window/use-active-window-provider.hook';
 import { useBatteryProvider } from './battery/use-battery-provider.hook';
@@ -16,10 +16,8 @@ import {
   UserConfig,
   getBarConfigs,
   getGroupConfigs,
-  useUserConfig,
 } from '../user-config';
 import { memoize } from '../utils';
-import { createStore } from 'solid-js/store';
 import { ProviderNode } from './provider-node.model';
 
 export const useProviderTree = memoize(() => {

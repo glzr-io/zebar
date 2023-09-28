@@ -4,10 +4,8 @@ import { configure } from 'nunjucks';
 import { Bar } from './bar/bar.component';
 import { useStyleBuilder, useUserConfig } from './shared/user-config';
 import { useCurrentWindow } from './shared/desktop';
-import { useProviderTree } from './shared/providers';
 
 export function App() {
-  const providerTree = useProviderTree();
   const userConfig = useUserConfig();
   const styleBuilder = useStyleBuilder();
   const currentWindow = useCurrentWindow();
@@ -18,7 +16,7 @@ export function App() {
   // Set bar position based on config values.
   createEffect(
     on(
-      () => userConfig.barConfig(),
+      () => userConfig.currentBarConfig(),
       async barConfig => {
         if (barConfig) {
           await currentWindow.setPosition({
@@ -58,8 +56,8 @@ export function App() {
 
   // Mount bar when bar config + built CSS is ready.
   return (
-    <Show when={userConfig.barConfig() && styleBuilder.builtCss()}>
-      <Bar config={userConfig.barConfig()!} />
+    <Show when={userConfig.currentBarConfig() && styleBuilder.builtCss()}>
+      <Bar config={userConfig.currentBarConfig()!} />
     </Show>
   );
 }

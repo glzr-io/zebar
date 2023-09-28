@@ -2,12 +2,11 @@ import { Accessor, createEffect, onCleanup, onMount } from 'solid-js';
 
 import { useLogger } from '../logging';
 import { runTemplateEngine } from './run-template-engine';
-import { ProviderNode } from '../providers';
 
 export interface CreateTemplateElementArgs {
   id: Accessor<string>;
   className: Accessor<string>;
-  provider: ProviderNode;
+  variables: Record<string, unknown>;
   template: Accessor<string>;
 }
 
@@ -21,11 +20,7 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
   createEffect(() => {
     // Compile template with template engine.
     const newElement = createRootElement();
-    newElement.innerHTML = runTemplateEngine(
-      args.template(),
-      args.provider.slots,
-      args.provider.variables,
-    );
+    newElement.innerHTML = runTemplateEngine(args.template(), args.variables);
 
     const oldElement = document.getElementById(args.id());
     oldElement!.replaceWith(newElement);

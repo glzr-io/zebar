@@ -7,15 +7,6 @@ import { memoize } from '../utils';
 import { formatConfigError } from './utils/format-config-error';
 import { createConfigStore } from './utils/create-config-store';
 
-// In bar.component.ts:
-// const providerTree = useProviderTree();
-// const providers = providerTree.find(node => node.id === config.id);
-
-// But does bar.component.ts actually care about the provider tree? It just
-// cares about the transformed config values.
-
-// How to deal with `env` variables in
-
 export const useUserConfig = memoize(() => {
   const logger = useLogger('useConfig');
   const commands = useDesktopCommands();
