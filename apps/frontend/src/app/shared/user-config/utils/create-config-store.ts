@@ -8,13 +8,15 @@ import { useProvider } from '~/shared/providers';
 import { BaseElementConfig } from '../types/bar/base-element-config.model';
 import { getGroupConfigs } from './get-group-configs';
 import { formatConfigError } from './format-config-error';
-import { runTemplateEngine } from '~/shared/template-parsing';
+import { useTemplateEngine } from '../use-template-engine.hook';
 
 export interface ConfigStore {
   value: UserConfig | null;
 }
 
 export function createConfigStore(configObj: Resource<unknown>) {
+  const templateEngine = useTemplateEngine();
+
   const [config, setConfig] = createStore<ConfigStore>({ value: null });
 
   createEffect(() => {
@@ -36,7 +38,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
           const barConfigEntries = Object.entries(barConfig).map(
             ([key, value]) => {
               if (typeof value === 'string') {
-                return [key, runTemplateEngine(value, variables)];
+                return [key, templateEngine.compile(value, variables)];
               } else {
                 return [key, value];
               }

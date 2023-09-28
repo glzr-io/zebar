@@ -1,5 +1,4 @@
 import { Show, createEffect, on } from 'solid-js';
-import { configure } from 'nunjucks';
 
 import { Bar } from './bar/bar.component';
 import { useStyleBuilder, useUserConfig } from './shared/user-config';
@@ -9,9 +8,6 @@ export function App() {
   const userConfig = useUserConfig();
   const styleBuilder = useStyleBuilder();
   const currentWindow = useCurrentWindow();
-
-  // Prevent Nunjucks from escaping HTML.
-  configure({ autoescape: false });
 
   // Set bar position based on config values.
   createEffect(

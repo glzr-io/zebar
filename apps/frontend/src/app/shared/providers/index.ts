@@ -8,6 +8,4 @@ export * from './memory/use-memory-provider.hook';
 export * from './network/use-network-provider.hook';
 export * from './system-tray/use-system-tray-provider.hook';
 export * from './weather/use-weather-provider.hook';
-export * from './provider-node.model';
-export * from './use-provider-tree.hook';
 export * from './use-provider.hook';

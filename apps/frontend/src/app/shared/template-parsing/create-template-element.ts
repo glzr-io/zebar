@@ -1,7 +1,6 @@
 import { Accessor, createEffect, onCleanup, onMount } from 'solid-js';
 
 import { useLogger } from '../logging';
-import { runTemplateEngine } from './run-template-engine';
 
 export interface CreateTemplateElementArgs {
   id: Accessor<string>;
@@ -18,9 +17,8 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
   element.id = args.id();
 
   createEffect(() => {
-    // Compile template with template engine.
     const newElement = createRootElement();
-    newElement.innerHTML = runTemplateEngine(args.template(), args.variables);
+    newElement.innerHTML = args.template();
 
     const oldElement = document.getElementById(args.id());
     oldElement!.replaceWith(newElement);
