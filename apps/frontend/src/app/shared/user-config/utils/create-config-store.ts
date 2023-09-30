@@ -1,10 +1,4 @@
-import {
-  Resource,
-  createComputed,
-  createEffect,
-  createRoot,
-  on,
-} from 'solid-js';
+import { Resource, createComputed, createEffect, createRoot } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { UserConfig, UserConfigP1Schema } from '../types/user-config.model';
@@ -19,30 +13,34 @@ import {
   GroupConfigSchemaP1,
 } from '../types/bar/group-config.model';
 import { ComponentConfigSchemaP1 } from '../types/bar/component-config.model';
+import { useConfigVariables } from '../use-config-variables.hook';
 
 export interface ConfigStore {
   value: UserConfig | null;
-  hasInitialized: boolean;
 }
 
 export function createConfigStore(configObj: Resource<unknown>) {
   const templateEngine = useTemplateEngine();
+  const configVariables = useConfigVariables();
 
   const [config, setConfig] = createStore<ConfigStore>({
     value: null,
-    hasInitialized: false,
   });
 
   createEffect(() => {
-    if (!configObj()) {
+    if (!configObj() || !configVariables()) {
       return;
     }
 
     let dispose: () => void;
 
     createRoot(dispose => {
+      dispose = dispose;
+
       try {
-        dispose = dispose;
+        const rootVariables = {
+          env: configVariables()!,
+        };
 
         setConfig('value', UserConfigP1Schema.parse(configObj()));
 
@@ -74,8 +72,6 @@ export function createConfigStore(configObj: Resource<unknown>) {
             setConfig('value', barKey as `bar/${string}`, parsedBarConfig);
           }
 
-          // aa();
-          // createEffect(on(() => variables, aa, { defer: true }));
           createComputed(aa);
 
           const groupConfigs = Object.entries(barConfig).filter(
@@ -114,8 +110,6 @@ export function createConfigStore(configObj: Resource<unknown>) {
               );
             }
 
-            // bb();
-            // createEffect(on(() => variables, bb, { defer: true }));
             createComputed(bb);
 
             for (const [index, componentConfig] of (
@@ -155,16 +149,12 @@ export function createConfigStore(configObj: Resource<unknown>) {
                   parsedComponentConfig,
                 );
               }
-              // cc();
-              // createEffect(on(() => variables, cc, { defer: true }));
               createComputed(cc);
             }
           }
         }
 
         console.log('config', config);
-
-        setConfig('hasInitialized', true);
       } catch (e) {
         dispose();
         throw formatConfigError(e);

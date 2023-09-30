@@ -8,16 +8,16 @@ export const useTemplateEngine = memoize(() => {
 
   var engine = new Liquid({ jsTruthy: true });
 
-  function compile(template: string, templateContext: Record<string, unknown>) {
+  function compile(template: string, context: Record<string, unknown>) {
     if (cache[template]) {
-      return engine.renderSync(cache[template], templateContext);
+      return engine.renderSync(cache[template], context);
     }
 
     // Parse and cache template with LiquidJS.
     var parsed = engine.parse(template);
     setCache(template, engine.parse(template));
 
-    return engine.renderSync(parsed, templateContext);
+    return engine.renderSync(parsed, context);
   }
 
   return {
