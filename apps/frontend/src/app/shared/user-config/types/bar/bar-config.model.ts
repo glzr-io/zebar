@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { GroupConfigSchemaP1 } from './group-config.model';
+import { GroupConfigSchema } from './group-config.model';
 import { BaseElementConfigSchema } from './base-element-config.model';
 import { withDynamicKey } from '../shared/with-dynamic-key';
 import { Prettify } from '~/shared/utils';
@@ -22,7 +22,7 @@ export type BarConfigP1 = Prettify<z.infer<typeof BarConfigSchemaP1>>;
 // Add `group/**` keys to schema.
 export const BarConfigSchema = withDynamicKey(BarConfigSchemaP1, {
   isKey: (key: string): key is `group/${string}` => key.startsWith('group/'),
-  schema: GroupConfigSchemaP1,
+  schema: GroupConfigSchema,
 });
 
 export type BarConfig = Prettify<z.infer<typeof BarConfigSchema>>;
