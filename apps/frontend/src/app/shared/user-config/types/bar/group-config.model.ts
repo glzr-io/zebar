@@ -4,8 +4,13 @@ import { ComponentConfigSchema } from './component-config.model';
 import { BaseElementConfigSchema } from './base-element-config.model';
 import { Prettify } from '~/shared/utils';
 
-export const GroupConfigSchema = BaseElementConfigSchema.extend({
+export const GroupConfigSchemaP1 = BaseElementConfigSchema.extend({
   class_name: z.string().default('group'),
+});
+
+export type GroupConfigP1 = Prettify<z.infer<typeof GroupConfigSchemaP1>>;
+
+export const GroupConfigSchema = GroupConfigSchemaP1.extend({
   components: z.array(ComponentConfigSchema).default([]),
 });
 
