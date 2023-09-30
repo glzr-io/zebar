@@ -1,4 +1,10 @@
-import { Resource, createEffect, createRoot, on } from 'solid-js';
+import {
+  Resource,
+  createComputed,
+  createEffect,
+  createRoot,
+  on,
+} from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { UserConfig, UserConfigP1Schema } from '../types/user-config.model';
@@ -68,8 +74,9 @@ export function createConfigStore(configObj: Resource<unknown>) {
             setConfig('value', barKey as `bar/${string}`, parsedBarConfig);
           }
 
-          aa();
-          createEffect(on(() => variables, aa, { defer: true }));
+          // aa();
+          // createEffect(on(() => variables, aa, { defer: true }));
+          createComputed(aa);
 
           const groupConfigs = Object.entries(barConfig).filter(
             ([e]) => e.startsWith('group/') && e,
@@ -107,8 +114,9 @@ export function createConfigStore(configObj: Resource<unknown>) {
               );
             }
 
-            bb();
-            createEffect(on(() => variables, bb, { defer: true }));
+            // bb();
+            // createEffect(on(() => variables, bb, { defer: true }));
+            createComputed(bb);
 
             for (const [index, componentConfig] of (
               groupConfig.components ?? []
@@ -147,8 +155,9 @@ export function createConfigStore(configObj: Resource<unknown>) {
                   parsedComponentConfig,
                 );
               }
-              cc();
-              createEffect(on(() => variables, cc, { defer: true }));
+              // cc();
+              // createEffect(on(() => variables, cc, { defer: true }));
+              createComputed(cc);
             }
           }
         }
