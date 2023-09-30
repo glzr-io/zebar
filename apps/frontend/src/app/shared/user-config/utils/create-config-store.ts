@@ -51,7 +51,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
         for (const [barKey, barConfig] of barConfigs) {
           const variables = getElementVariables(barConfig);
 
-          function aa() {
+          createComputed(() => {
             const barConfigEntries = Object.entries(barConfig).map(
               ([key, value]) => {
                 if (typeof value === 'string') {
@@ -70,9 +70,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
             console.log('variables changed (bar)', variables, parsedBarConfig);
 
             setConfig('value', barKey as `bar/${string}`, parsedBarConfig);
-          }
-
-          createComputed(aa);
+          });
 
           const groupConfigs = Object.entries(barConfig).filter(
             ([e]) => e.startsWith('group/') && e,
@@ -81,7 +79,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
           for (const [groupKey, groupConfig] of groupConfigs) {
             const variables = getElementVariables(groupConfig);
 
-            function bb() {
+            createComputed(() => {
               const groupConfigEntries = Object.entries(groupConfig).map(
                 ([key, value]) => {
                   if (typeof value === 'string') {
@@ -108,16 +106,14 @@ export function createConfigStore(configObj: Resource<unknown>) {
                 groupKey as `group/${string}`,
                 { ...parsedGroupConfig, components: [] },
               );
-            }
-
-            createComputed(bb);
+            });
 
             for (const [index, componentConfig] of (
               groupConfig.components ?? []
             ).entries()) {
               const variables = getElementVariables(componentConfig);
 
-              function cc() {
+              createComputed(() => {
                 const componentConfigEntries = Object.entries(
                   componentConfig,
                 ).map(([key, value]) => {
@@ -148,8 +144,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
                   index,
                   parsedComponentConfig,
                 );
-              }
-              createComputed(cc);
+              });
             }
           }
         }
