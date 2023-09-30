@@ -44,108 +44,61 @@ export function createConfigStore(configObj: Resource<unknown>) {
 
         setConfig('value', UserConfigP1Schema.parse(configObj()));
 
-        const barConfigs = Object.entries(configObj() as UserConfig).filter(
-          ([e]) => e.startsWith('bar/') && e,
-        ) as [string, BarConfig][];
+        const barConfigs = getBarConfigs(configObj() as UserConfig);
 
+        // Traverse down bar config and update config with compiled +
+        // validated properties.
         for (const [barKey, barConfig] of barConfigs) {
           const variables = getElementVariables(barConfig);
           const barId = `bar-${barKey.split('/')[1]}`;
 
           createComputed(() => {
-            const barConfigEntries = Object.entries({
-              ...barConfig,
-              id: barId,
-            }).map(([key, value]) => {
-              if (typeof value === 'string') {
-                return [key, templateEngine.compile(value, variables)];
-              } else {
-                return [key, value];
-              }
-            });
-
-            const parsedBarConfig = BarConfigSchemaP1.parse(
-              Object.fromEntries(barConfigEntries),
+            const parsedConfig = parseConfig(
+              { ...barConfig, id: barId },
+              BarConfigSchemaP1,
+              variables,
             );
 
-            console.log('variables changed (bar)', variables, parsedBarConfig);
-
-            setConfig('value', barKey as `bar/${string}`, parsedBarConfig);
+            setConfig('value', barKey, parsedConfig);
           });
 
-          const groupConfigs = Object.entries(barConfig).filter(
-            ([e]) => e.startsWith('group/') && e,
-          ) as [string, GroupConfig][];
-
-          for (const [groupKey, groupConfig] of groupConfigs) {
+          for (const [groupKey, groupConfig] of getGroupConfigs(barConfig)) {
             const variables = getElementVariables(groupConfig);
             const groupId = `${barId}-${groupKey.split('/')[1]}`;
+            const componentConfigs = groupConfig.components ?? [];
 
             createComputed(() => {
-              const groupConfigEntries = Object.entries({
-                ...groupConfig,
-                id: groupId,
-              }).map(([key, value]) => {
-                if (typeof value === 'string') {
-                  return [key, templateEngine.compile(value, variables)];
-                } else {
-                  return [key, value];
-                }
-              });
-
-              const parsedGroupConfig = GroupConfigSchemaP1.parse(
-                Object.fromEntries(groupConfigEntries),
-              );
-
-              console.log(
-                'variables changed (group)',
+              const parsedConfig = parseConfig(
+                {
+                  ...groupConfig,
+                  components: componentConfigs,
+                  id: groupId,
+                },
+                GroupConfigSchemaP1,
                 variables,
-                parsedGroupConfig,
               );
 
-              setConfig(
-                'value',
-                barKey as `bar/${string}`,
-                groupKey as `group/${string}`,
-                { ...parsedGroupConfig, components: [] },
-              );
+              setConfig('value', barKey, groupKey, parsedConfig);
             });
 
-            for (const [index, componentConfig] of (
-              groupConfig.components ?? []
-            ).entries()) {
+            for (const [index, componentConfig] of componentConfigs.entries()) {
               const variables = getElementVariables(componentConfig);
               const componentId = `${barId}-${groupId}-${index}`;
 
               createComputed(() => {
-                const componentConfigEntries = Object.entries({
-                  ...componentConfig,
-                  id: componentId,
-                }).map(([key, value]) => {
-                  if (typeof value === 'string') {
-                    return [key, templateEngine.compile(value, variables)];
-                  } else {
-                    return [key, value];
-                  }
-                });
-
-                const parsedComponentConfig = ComponentConfigSchemaP1.parse(
-                  Object.fromEntries(componentConfigEntries),
-                );
-
-                console.log(
-                  'variables changed (component)',
+                const parsedConfig = parseConfig(
+                  { ...componentConfig, id: componentId },
+                  ComponentConfigSchemaP1,
                   variables,
-                  parsedComponentConfig,
                 );
 
                 setConfig(
                   'value',
-                  barKey as `bar/${string}`,
-                  groupKey as `group/${string}`,
+                  barKey,
+                  groupKey,
                   'components',
                   index,
-                  parsedComponentConfig,
+                  parsedConfig,
                 );
               });
             }
@@ -173,6 +126,35 @@ export function createConfigStore(configObj: Resource<unknown>) {
       }),
       {},
     );
+  }
+
+  function getBarConfigs(userConfig: UserConfig) {
+    return Object.entries(userConfig).filter(
+      ([key, value]) => key.startsWith('bar/') && !!value,
+    ) as [`bar/${string}`, BarConfig][];
+  }
+
+  function getGroupConfigs(barConfig: BarConfig) {
+    return Object.entries(barConfig).filter(
+      ([key, value]) => key.startsWith('group/') && !!value,
+    ) as [`group/${string}`, GroupConfig][];
+  }
+
+  // TODO: Use generics.
+  function parseConfig(
+    config: Record<string, unknown>,
+    schema: any,
+    variables: Record<string, unknown>,
+  ) {
+    const compiledConfig = Object.entries(config).map(([key, value]) => {
+      if (typeof value === 'string') {
+        return [key, templateEngine.compile(value, variables)];
+      }
+
+      return [key, value];
+    });
+
+    return schema.parse(Object.fromEntries(compiledConfig));
   }
 
   return config;

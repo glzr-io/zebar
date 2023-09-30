@@ -19,12 +19,9 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
   element.id = args.id();
 
   createEffect(() => {
-    // Compile template with template engine.
+    // Create HTML element with the given template.
     const newElement = createRootElement();
-    newElement.innerHTML = templateEngine.compile(
-      args.template(),
-      args.variables,
-    );
+    newElement.innerHTML = args.template();
 
     const oldElement = document.getElementById(args.id());
     oldElement!.replaceWith(newElement);
