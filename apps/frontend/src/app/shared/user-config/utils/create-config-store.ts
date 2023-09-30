@@ -1,7 +1,7 @@
 import { Resource, createEffect, createRoot } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { UserConfig } from '../types/user-config.model';
+import { UserConfig, UserConfigP1Schema } from '../types/user-config.model';
 import { getBarConfigs } from './get-bar-configs';
 import { ProvidersConfigSchema } from '../types/bar/providers-config.model';
 import { useProvider } from '~/shared/providers';
@@ -9,6 +9,7 @@ import { BaseElementConfig } from '../types/bar/base-element-config.model';
 import { getGroupConfigs } from './get-group-configs';
 import { formatConfigError } from './format-config-error';
 import { useTemplateEngine } from '../use-template-engine.hook';
+import { BarConfigSchemaP1 } from '../types/bar/bar-config.model';
 
 export interface ConfigStore {
   value: UserConfig | null;
@@ -30,7 +31,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
       try {
         dispose = dispose;
 
-        const parsedConfig = { ...(configObj() as UserConfig) };
+        const parsedConfig = UserConfigP1Schema.parse(configObj());
         const barConfigs = getBarConfigs(configObj() as UserConfig);
 
         for (const barConfig of barConfigs) {
@@ -50,7 +51,9 @@ export function createConfigStore(configObj: Resource<unknown>) {
           console.log('barConfigEntries', barConfigEntries);
           console.log('barConfig', barConfig);
 
-          parsedConfig['bar/default'] = Object.fromEntries(barConfigEntries);
+          parsedConfig['bar/default'] = BarConfigSchemaP1.parse(
+            Object.fromEntries(barConfigEntries),
+          );
 
           createEffect(() => {
             console.log('variables changed (bar)', variables);
