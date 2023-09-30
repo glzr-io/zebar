@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-import { Prettify, createUniqueId } from '~/shared/utils';
+import { Prettify } from '~/shared/utils';
 import { ProvidersConfigSchema } from './providers-config.model';
 
 export const BaseElementConfigSchema = z.object({
-  id: z.string().default(createUniqueId),
+  id: z.string(),
   class_name: z.string(),
   styles: z.string().optional(),
   providers: ProvidersConfigSchema,

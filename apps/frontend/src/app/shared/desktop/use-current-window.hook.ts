@@ -51,7 +51,7 @@ export const useCurrentWindow = memoize(() => {
 
   async function setStyles(styles: WindowStyles) {
     await getCurrentWindow().setAlwaysOnTop(styles.alwaysOnTop ?? true);
-    await getCurrentWindow().setSkipTaskbar(styles.showInTaskbar ?? false);
+    await getCurrentWindow().setSkipTaskbar(!styles.showInTaskbar ?? false);
     await getCurrentWindow().setResizable(styles.resizable ?? false);
   }
 
