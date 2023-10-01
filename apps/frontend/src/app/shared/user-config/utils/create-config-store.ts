@@ -38,72 +38,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
       dispose = dispose;
 
       try {
-        const rootVariables = {
-          env: configVariables()!,
-        };
-
-        setConfig('value', UserConfigP1Schema.parse(configObj()));
-
-        const barConfigs = getBarConfigs(configObj() as UserConfig);
-
-        // Traverse down bar config and update config with compiled +
-        // validated properties.
-        for (const [barKey, barConfig] of barConfigs) {
-          const variables = getElementVariables(barConfig);
-          const barId = `bar-${barKey.split('/')[1]}`;
-
-          createComputed(() => {
-            const parsedConfig = parseConfig(
-              { ...barConfig, id: barId },
-              BarConfigSchemaP1,
-              variables,
-            );
-
-            setConfig('value', barKey, parsedConfig);
-          });
-
-          for (const [groupKey, groupConfig] of getGroupConfigs(barConfig)) {
-            const variables = getElementVariables(groupConfig);
-            const groupId = `${barId}-${groupKey.split('/')[1]}`;
-            const componentConfigs = groupConfig.components ?? [];
-
-            createComputed(() => {
-              const parsedConfig = parseConfig(
-                {
-                  ...groupConfig,
-                  components: componentConfigs,
-                  id: groupId,
-                },
-                GroupConfigSchemaP1,
-                variables,
-              );
-
-              setConfig('value', barKey, groupKey, parsedConfig);
-            });
-
-            for (const [index, componentConfig] of componentConfigs.entries()) {
-              const variables = getElementVariables(componentConfig);
-              const componentId = `${barId}-${groupId}-${index}`;
-
-              createComputed(() => {
-                const parsedConfig = parseConfig(
-                  { ...componentConfig, id: componentId },
-                  ComponentConfigSchemaP1,
-                  variables,
-                );
-
-                setConfig(
-                  'value',
-                  barKey,
-                  groupKey,
-                  'components',
-                  index,
-                  parsedConfig,
-                );
-              });
-            }
-          }
-        }
+        updateConfig();
       } catch (e) {
         dispose();
         throw formatConfigError(e);
@@ -112,6 +47,74 @@ export function createConfigStore(configObj: Resource<unknown>) {
 
     return () => dispose();
   });
+
+  // Traverse down user config and update config with compiled +
+  // validated properties.
+  function updateConfig() {
+    const rootVariables = {
+      env: configVariables()!,
+    };
+
+    setConfig('value', UserConfigP1Schema.parse(configObj()));
+
+    const barConfigs = getBarConfigs(configObj() as UserConfig);
+
+    for (const [barKey, barConfig] of barConfigs) {
+      const variables = getElementVariables(barConfig);
+      const barId = `bar-${barKey.split('/')[1]}`;
+
+      createComputed(() => {
+        const parsedConfig = parseConfig(
+          { ...barConfig, id: barId },
+          BarConfigSchemaP1.strip(),
+          variables,
+        );
+
+        setConfig('value', barKey, parsedConfig);
+      });
+
+      for (const [groupKey, groupConfig] of getGroupConfigs(barConfig)) {
+        const variables = getElementVariables(groupConfig);
+        const groupId = `${barId}-${groupKey.split('/')[1]}`;
+        const componentConfigs = groupConfig.components ?? [];
+
+        createComputed(() => {
+          const parsedConfig = parseConfig(
+            { ...groupConfig, id: groupId },
+            GroupConfigSchemaP1.strip(),
+            variables,
+          );
+
+          setConfig('value', barKey, groupKey, prev => ({
+            ...parsedConfig,
+            components: prev?.components ?? [],
+          }));
+        });
+
+        for (const [index, componentConfig] of componentConfigs.entries()) {
+          const variables = getElementVariables(componentConfig);
+          const componentId = `${groupId}-${index}`;
+
+          createComputed(() => {
+            const parsedConfig = parseConfig(
+              { ...componentConfig, id: componentId },
+              ComponentConfigSchemaP1.strip(),
+              variables,
+            );
+
+            setConfig(
+              'value',
+              barKey,
+              groupKey,
+              'components',
+              index,
+              parsedConfig,
+            );
+          });
+        }
+      }
+    }
+  }
 
   // TODO: Get variables from `variables` config as well.
   function getElementVariables(config: BaseElementConfig) {
