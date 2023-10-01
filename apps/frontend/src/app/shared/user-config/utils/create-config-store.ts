@@ -2,7 +2,7 @@ import { Resource, createComputed, createEffect, createRoot } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { z } from 'zod';
 
-import { UserConfig, UserConfigP1Schema } from '../types/user-config.model';
+import { UserConfig } from '../types/user-config.model';
 import { ProvidersConfigSchema } from '../types/bar/providers-config.model';
 import { useProvider } from '~/shared/providers';
 import { BaseElementConfig } from '../types/bar/base-element-config.model';
@@ -14,6 +14,7 @@ import { ComponentConfigSchemaP1 } from '../types/bar/component-config.model';
 import { useConfigVariables } from '../use-config-variables.hook';
 import { getBarConfigs } from './get-bar-configs';
 import { getGroupConfigs } from './get-group-configs';
+import { GeneralConfigSchema } from '../types/general-config.model';
 
 export interface ConfigStore {
   value: UserConfig | null;
@@ -38,7 +39,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
       dispose = dispose;
 
       try {
-        updateConfig();
+        updateConfig(configObj() as UserConfig);
       } catch (e) {
         dispose();
         throw formatConfigError(e);
@@ -50,16 +51,24 @@ export function createConfigStore(configObj: Resource<unknown>) {
 
   // Traverse down user config and update config with parsed + validated
   // properties.
-  function updateConfig() {
+  function updateConfig(configObj: UserConfig) {
     const rootVariables = {
       env: configVariables()!,
     };
 
-    setConfig('value', UserConfigP1Schema.parse(configObj()));
+    // Update general config.
+    createComputed(() => {
+      const parsedConfig = parseConfig(
+        configObj.general,
+        GeneralConfigSchema.strip(),
+        rootVariables,
+      );
 
-    const barConfigs = getBarConfigs(configObj() as UserConfig);
+      setConfig('value', { general: parsedConfig });
+    });
 
-    for (const [barKey, barConfig] of barConfigs) {
+    // Update bar configs.
+    for (const [barKey, barConfig] of getBarConfigs(configObj)) {
       const variables = getElementVariables(barConfig);
       const barId = `bar-${barKey.split('/')[1]}`;
 
