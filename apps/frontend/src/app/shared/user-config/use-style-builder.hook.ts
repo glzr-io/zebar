@@ -2,7 +2,7 @@ import { createResource } from 'solid-js';
 import { compileString } from 'sass';
 
 import { useLogger } from '../logging';
-import { memoize } from '../utils';
+import { memoize, resolved } from '../utils';
 import { useUserConfig } from './use-user-config.hook';
 import { getGroupConfigs } from './utils/get-group-configs';
 import { getBarConfigs } from './utils/get-bar-configs';
@@ -17,23 +17,20 @@ export const useStyleBuilder = memoize(() => {
   // Traverse the bar config and aggregate all `styles` properties. Compile the
   // result from SCSS -> CSS to be added to the DOM later.
   const [builtCss, { refetch: rebuild }] = createResource(
-    () => userConfig.config,
-    async userConfig => {
-      const bars = getBarConfigs(userConfig);
-      const barStyles = bars.map(bar => scopeWith(`#${bar.id}`, bar?.styles));
-
-      const groups = bars.flatMap(bar => getGroupConfigs(bar));
-      const groupStyles = groups.map(group =>
+    () => resolved([userConfig.config, userConfig.currentBarConfig()]),
+    async ([userConfig, barConfig]) => {
+      const groups = getGroupConfigs(barConfig);
+      const groupStyles = groups.map(([_, group]) =>
         scopeWith(`#${group.id}`, group?.styles),
       );
 
       const componentStyles = groups
-        .flatMap(group => group.components ?? [])
+        .flatMap(([_, group]) => group.components ?? [])
         .map(component => scopeWith(`#${component.id}`, component?.styles));
 
       const styles = [
         scopeWith(':root', userConfig.general.root_styles),
-        ...barStyles,
+        scopeWith(`#${barConfig.id}`, barConfig.styles),
         ...groupStyles,
         ...componentStyles,
       ].join('');

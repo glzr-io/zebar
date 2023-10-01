@@ -1,5 +1,6 @@
 import { Resource, createComputed, createEffect, createRoot } from 'solid-js';
 import { createStore } from 'solid-js/store';
+import { z } from 'zod';
 
 import { UserConfig, UserConfigP1Schema } from '../types/user-config.model';
 import { ProvidersConfigSchema } from '../types/bar/providers-config.model';
@@ -7,13 +8,12 @@ import { useProvider } from '~/shared/providers';
 import { BaseElementConfig } from '../types/bar/base-element-config.model';
 import { formatConfigError } from './format-config-error';
 import { useTemplateEngine } from '../use-template-engine.hook';
-import { BarConfig, BarConfigSchemaP1 } from '../types/bar/bar-config.model';
-import {
-  GroupConfig,
-  GroupConfigSchemaP1,
-} from '../types/bar/group-config.model';
+import { BarConfigSchemaP1 } from '../types/bar/bar-config.model';
+import { GroupConfigSchemaP1 } from '../types/bar/group-config.model';
 import { ComponentConfigSchemaP1 } from '../types/bar/component-config.model';
 import { useConfigVariables } from '../use-config-variables.hook';
+import { getBarConfigs } from './get-bar-configs';
+import { getGroupConfigs } from './get-group-configs';
 
 export interface ConfigStore {
   value: UserConfig | null;
@@ -48,8 +48,8 @@ export function createConfigStore(configObj: Resource<unknown>) {
     return () => dispose();
   });
 
-  // Traverse down user config and update config with compiled +
-  // validated properties.
+  // Traverse down user config and update config with parsed + validated
+  // properties.
   function updateConfig() {
     const rootVariables = {
       env: configVariables()!,
@@ -76,7 +76,6 @@ export function createConfigStore(configObj: Resource<unknown>) {
       for (const [groupKey, groupConfig] of getGroupConfigs(barConfig)) {
         const variables = getElementVariables(groupConfig);
         const groupId = `${barId}-${groupKey.split('/')[1]}`;
-        const componentConfigs = groupConfig.components ?? [];
 
         createComputed(() => {
           const parsedConfig = parseConfig(
@@ -91,7 +90,9 @@ export function createConfigStore(configObj: Resource<unknown>) {
           }));
         });
 
-        for (const [index, componentConfig] of componentConfigs.entries()) {
+        const componentConfigs = (groupConfig.components ?? []).entries();
+
+        for (const [index, componentConfig] of componentConfigs) {
           const variables = getElementVariables(componentConfig);
           const componentId = `${groupId}-${index}`;
 
@@ -131,24 +132,10 @@ export function createConfigStore(configObj: Resource<unknown>) {
     );
   }
 
-  function getBarConfigs(userConfig: UserConfig) {
-    return Object.entries(userConfig).filter(
-      ([key, value]) => key.startsWith('bar/') && !!value,
-    ) as [`bar/${string}`, BarConfig][];
-  }
-
-  function getGroupConfigs(barConfig: BarConfig) {
-    return Object.entries(barConfig).filter(
-      ([key, value]) => key.startsWith('group/') && !!value,
-    ) as [`group/${string}`, GroupConfig][];
-  }
-
-  // TODO: Use generics.
-  function parseConfig(
-    config: Record<string, unknown>,
-    schema: any,
-    variables: Record<string, unknown>,
-  ) {
+  function parseConfig<
+    T extends Record<string, unknown>,
+    U extends z.AnyZodObject,
+  >(config: T, schema: U, variables: Record<string, unknown>): z.infer<U> {
     const compiledConfig = Object.entries(config).map(([key, value]) => {
       if (typeof value === 'string') {
         return [key, templateEngine.compile(value, variables)];
