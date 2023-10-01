@@ -12,9 +12,9 @@ export const BarConfigSchemaP1 = BaseElementConfigSchema.extend({
   position_y: z.coerce.number(),
   width: z.coerce.number().min(1),
   height: z.coerce.number().min(1),
-  always_on_top: BooleanLikeSchema,
-  show_in_taskbar: BooleanLikeSchema,
-  resizable: BooleanLikeSchema,
+  always_on_top: BooleanLikeSchema.optional(),
+  show_in_taskbar: BooleanLikeSchema.optional(),
+  resizable: BooleanLikeSchema.optional(),
 });
 
 export type BarConfigP1 = Prettify<z.infer<typeof BarConfigSchemaP1>>;
