@@ -1,4 +1,10 @@
-import { Resource, createComputed, createEffect, createRoot } from 'solid-js';
+import {
+  Resource,
+  createComputed,
+  createEffect,
+  createMemo,
+  createRoot,
+} from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { z } from 'zod';
 
@@ -15,12 +21,14 @@ import { useConfigVariables } from '../use-config-variables.hook';
 import { getBarConfigs } from './get-bar-configs';
 import { getGroupConfigs } from './get-group-configs';
 import { GeneralConfigSchema } from '../types/general-config.model';
+import { useLogger } from '~/shared/logging';
 
 export interface ConfigStore {
   value: UserConfig | null;
 }
 
 export function createConfigStore(configObj: Resource<unknown>) {
+  const logger = useLogger('createConfigStore');
   const templateEngine = useTemplateEngine();
   const configVariables = useConfigVariables();
 
@@ -52,16 +60,16 @@ export function createConfigStore(configObj: Resource<unknown>) {
   // Traverse down user config and update config with parsed + validated
   // properties.
   function updateConfig(configObj: UserConfig) {
-    const rootVariables = {
+    const rootVariables = createMemo(() => ({
       env: configVariables()!,
-    };
+    }));
 
     // Update general config.
     createComputed(() => {
       const parsedConfig = parseConfig(
         configObj.general,
         GeneralConfigSchema.strip(),
-        rootVariables,
+        rootVariables(),
       );
 
       setConfig('value', { general: parsedConfig });
@@ -69,28 +77,36 @@ export function createConfigStore(configObj: Resource<unknown>) {
 
     // Update bar configs.
     for (const [barKey, barConfig] of getBarConfigs(configObj)) {
-      const variables = getElementVariables(barConfig);
       const barId = `bar-${barKey.split('/')[1]}`;
+      const barVariables = createMemo(() => ({
+        ...rootVariables(),
+        ...getElementVariables(barConfig),
+      }));
 
       createComputed(() => {
         const parsedConfig = parseConfig(
           { ...barConfig, id: barId },
           BarConfigSchemaP1.strip(),
-          variables,
+          barVariables(),
         );
 
         setConfig('value', barKey, parsedConfig);
       });
 
+      // Update group configs.
       for (const [groupKey, groupConfig] of getGroupConfigs(barConfig)) {
-        const variables = getElementVariables(groupConfig);
         const groupId = `${barId}-${groupKey.split('/')[1]}`;
+        const groupVariables = createMemo(() => ({
+          ...rootVariables(),
+          ...getElementVariables(barConfig),
+          ...getElementVariables(groupConfig),
+        }));
 
         createComputed(() => {
           const parsedConfig = parseConfig(
             { ...groupConfig, id: groupId },
             GroupConfigSchemaP1.strip(),
-            variables,
+            groupVariables(),
           );
 
           setConfig('value', barKey, groupKey, prev => ({
@@ -101,15 +117,21 @@ export function createConfigStore(configObj: Resource<unknown>) {
 
         const componentConfigs = (groupConfig.components ?? []).entries();
 
+        // Update component configs.
         for (const [index, componentConfig] of componentConfigs) {
-          const variables = getElementVariables(componentConfig);
           const componentId = `${groupId}-${index}`;
+          const componentVariables = createMemo(() => ({
+            ...rootVariables(),
+            ...getElementVariables(barConfig),
+            ...getElementVariables(groupConfig),
+            ...getElementVariables(componentConfig),
+          }));
 
           createComputed(() => {
             const parsedConfig = parseConfig(
               { ...componentConfig, id: componentId },
               ComponentConfigSchemaP1.strip(),
-              variables,
+              componentVariables(),
             );
 
             setConfig(
@@ -145,7 +167,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
     T extends Record<string, unknown>,
     U extends z.AnyZodObject,
   >(config: T, schema: U, variables: Record<string, unknown>): z.infer<U> {
-    const compiledConfig = Object.entries(config).map(([key, value]) => {
+    const newConfigEntries = Object.entries(config).map(([key, value]) => {
       if (typeof value === 'string') {
         return [key, templateEngine.compile(value, variables)];
       }
@@ -153,7 +175,10 @@ export function createConfigStore(configObj: Resource<unknown>) {
       return [key, value];
     });
 
-    return schema.parse(Object.fromEntries(compiledConfig));
+    const newConfig = Object.fromEntries(newConfigEntries);
+    logger.debug('Config updated:', newConfig);
+
+    return schema.parse(newConfig);
   }
 
   return config;
