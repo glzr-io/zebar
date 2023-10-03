@@ -11,7 +11,7 @@ export function Bar(props: BarProps) {
   return (
     <div id={props.config.id} class={props.config.class_name}>
       <For each={getGroupConfigs(props.config)}>
-        {([_, groupConfig]) => (
+        {groupConfig => (
           <BarGroup config={groupConfig} parentConfig={props.config} />
         )}
       </For>

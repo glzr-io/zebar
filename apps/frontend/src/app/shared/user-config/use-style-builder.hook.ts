@@ -5,7 +5,6 @@ import { useLogger } from '../logging';
 import { memoize, resolved } from '../utils';
 import { useUserConfig } from './use-user-config.hook';
 import { getGroupConfigs } from './utils/get-group-configs';
-import { getBarConfigs } from './utils/get-bar-configs';
 
 /**
  * Hook for compiling user-provided SCSS to CSS.
@@ -20,12 +19,12 @@ export const useStyleBuilder = memoize(() => {
     () => resolved([userConfig.config, userConfig.currentBarConfig()]),
     async ([userConfig, barConfig]) => {
       const groups = getGroupConfigs(barConfig);
-      const groupStyles = groups.map(([_, group]) =>
+      const groupStyles = groups.map(group =>
         scopeWith(`#${group.id}`, group?.styles),
       );
 
       const componentStyles = groups
-        .flatMap(([_, group]) => group.components ?? [])
+        .flatMap(group => group.components ?? [])
         .map(component => scopeWith(`#${component.id}`, component?.styles));
 
       const styles = [

@@ -18,8 +18,8 @@ import { BarConfigSchemaP1 } from '../types/bar/bar-config.model';
 import { GroupConfigSchemaP1 } from '../types/bar/group-config.model';
 import { ComponentConfigSchemaP1 } from '../types/bar/component-config.model';
 import { useConfigVariables } from '../use-config-variables.hook';
-import { getBarConfigs } from './get-bar-configs';
-import { getGroupConfigs } from './get-group-configs';
+import { getBarConfigEntries } from './get-bar-configs';
+import { getGroupConfigEntries } from './get-group-configs';
 import { GeneralConfigSchema } from '../types/general-config.model';
 import { useLogger } from '~/shared/logging';
 
@@ -76,7 +76,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
     });
 
     // Update bar configs.
-    for (const [barKey, barConfig] of getBarConfigs(configObj)) {
+    for (const [barKey, barConfig] of getBarConfigEntries(configObj)) {
       const barId = `bar-${barKey.split('/')[1]}`;
       const barVariables = createMemo(() => ({
         ...rootVariables(),
@@ -94,7 +94,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
       });
 
       // Update group configs.
-      for (const [groupKey, groupConfig] of getGroupConfigs(barConfig)) {
+      for (const [groupKey, groupConfig] of getGroupConfigEntries(barConfig)) {
         const groupId = `${barId}-${groupKey.split('/')[1]}`;
         const groupVariables = createMemo(() => ({
           ...rootVariables(),
