@@ -5,12 +5,14 @@ import { GeneralConfigSchema } from './general-config.model';
 import { withDynamicKey } from './shared/with-dynamic-key';
 import { Prettify } from '~/shared/utils';
 
-const UserConfigSchemaP1 = z.object({
+export const UserConfigP1Schema = z.object({
   general: GeneralConfigSchema,
 });
 
+export type UserConfigP1 = Prettify<z.infer<typeof UserConfigP1Schema>>;
+
 // Add `bar/**` keys to schema.
-export const UserConfigSchema = withDynamicKey(UserConfigSchemaP1, {
+export const UserConfigSchema = withDynamicKey(UserConfigP1Schema, {
   isKey: (key: string): key is `bar/${string}` => key.startsWith('bar/'),
   schema: BarConfigSchema,
 });

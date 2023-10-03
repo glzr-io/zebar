@@ -1,19 +1,18 @@
 import { createMemo } from 'solid-js';
 
-import glazewmWorkspacesTemplate from './templates/glazewm-workspaces.template.njk?raw';
-import weatherTemplate from './templates/weather.template.njk?raw';
-import { useProviders } from '~/shared/providers';
-import { useTemplateParser } from '~/shared/template-parsing';
-import { ComponentConfig } from '~/shared/user-config';
+import { ComponentConfig, GroupConfig } from '~/shared/user-config';
+import {
+  createTemplateElement,
+  glazewmWorkspacesTemplate,
+  weatherTemplate,
+} from '~/shared/templates';
 
 export interface BarComponentProps {
   config: ComponentConfig;
+  parentConfig: GroupConfig;
 }
 
 export function BarComponent(props: BarComponentProps) {
-  const providers = useProviders(props.config.providers);
-  const templateParser = useTemplateParser();
-
   const template = createMemo(() => {
     switch (props.config.template) {
       case 'template.glazewm_workspaces':
@@ -40,12 +39,11 @@ export function BarComponent(props: BarComponentProps) {
       }, {});
   });
 
-  return templateParser.createElement({
+  return createTemplateElement({
     id: () => props.config.id,
     className: () => props.config.class_name,
-    variables: providers.variables,
-    commands: providers.commands,
+    //@ts-ignore - TODO
+    variables: props.config.variables ?? {},
     template,
-    slots,
   });
 }

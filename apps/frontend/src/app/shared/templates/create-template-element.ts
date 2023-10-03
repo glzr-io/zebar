@@ -1,18 +1,17 @@
 import { Accessor, createEffect, onCleanup, onMount } from 'solid-js';
 
 import { useLogger } from '../logging';
-import { runTemplateEngine } from './run-template-engine';
+import { useTemplateEngine } from '../user-config';
 
 export interface CreateTemplateElementArgs {
   id: Accessor<string>;
   className: Accessor<string>;
-  variables: Accessor<Record<string, unknown>>;
-  commands: Accessor<Record<string, (...args: unknown[]) => unknown>>;
+  variables: Record<string, unknown>;
   template: Accessor<string>;
-  slots: Accessor<Record<string, string>>;
 }
 
 export function createTemplateElement(args: CreateTemplateElementArgs) {
+  const templateEngine = useTemplateEngine();
   const logger = useLogger(`.${args.className()}#${args.id()}`);
 
   // Create element with ID.
@@ -20,13 +19,9 @@ export function createTemplateElement(args: CreateTemplateElementArgs) {
   element.id = args.id();
 
   createEffect(() => {
-    // Compile template with template engine.
+    // Create HTML element with the given template.
     const newElement = createRootElement();
-    newElement.innerHTML = runTemplateEngine(
-      args.template(),
-      args.slots(),
-      args.variables(),
-    );
+    newElement.innerHTML = args.template();
 
     const oldElement = document.getElementById(args.id());
     oldElement!.replaceWith(newElement);

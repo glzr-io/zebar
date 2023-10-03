@@ -20,7 +20,7 @@ bar/default:
   # Width of the bar in physical pixels.
   width: '{{ env.screen_width }}'
   # Height of the bar in physical pixels.
-  height: '200'
+  height: '50'
   # X-position of the bar in physical pixels.
   position_x: '{{ env.screen_x }}'
   # Y-position of the bar in physical pixels.
@@ -35,6 +35,7 @@ bar/default:
   styles: |
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
+    height: 100%;
     background: #20242cc4;
     color: #ffffff;
     font-family: Segoe UI;

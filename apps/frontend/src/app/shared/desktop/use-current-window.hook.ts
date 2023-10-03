@@ -9,10 +9,10 @@ import { memoize } from '../utils';
 import { useCurrentMonitor } from './use-current-monitor.hook';
 
 export interface WindowPosition {
-  x?: string;
-  y?: string;
-  width?: string;
-  height?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface WindowStyles {
@@ -32,10 +32,10 @@ export const useCurrentWindow = memoize(() => {
     const monitorPosition = await currentMonitor.getPosition();
 
     const parsedPosition = {
-      x: position.x ? evalToInt(position.x) : monitorPosition.x,
-      y: position.y ? evalToInt(position.y) : monitorPosition.y,
-      width: position.width ? evalToInt(position.width) : monitorPosition.width,
-      height: position.height ? evalToInt(position.height) : 30,
+      x: position.x ? position.x : monitorPosition.x,
+      y: position.y ? position.y : monitorPosition.y,
+      width: position.width ? position.width : monitorPosition.width,
+      height: position.height ? position.height : 30,
     };
 
     logger.debug(`Setting window position to:`, parsedPosition);
@@ -51,19 +51,8 @@ export const useCurrentWindow = memoize(() => {
 
   async function setStyles(styles: WindowStyles) {
     await getCurrentWindow().setAlwaysOnTop(styles.alwaysOnTop ?? true);
-    await getCurrentWindow().setSkipTaskbar(styles.showInTaskbar ?? false);
+    await getCurrentWindow().setSkipTaskbar(!styles.showInTaskbar ?? false);
     await getCurrentWindow().setResizable(styles.resizable ?? false);
-  }
-
-  function evalToInt(arg: string): number {
-    try {
-      const result = eval(arg);
-      return parseInt(result);
-    } catch (e) {
-      throw new Error(
-        `Not a valid position variable '${arg}'. It needs to evaluate to a number.`,
-      );
-    }
   }
 
   return {

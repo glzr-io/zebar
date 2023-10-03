@@ -16,10 +16,9 @@ export const useStyleBuilder = memoize(() => {
   // Traverse the bar config and aggregate all `styles` properties. Compile the
   // result from SCSS -> CSS to be added to the DOM later.
   const [builtCss, { refetch: rebuild }] = createResource(
-    () => resolved([userConfig.generalConfig(), userConfig.barConfig()]),
-    async ([generalConfig, barConfig]) => {
+    () => resolved([userConfig.config, userConfig.currentBarConfig()]),
+    async ([userConfig, barConfig]) => {
       const groups = getGroupConfigs(barConfig);
-
       const groupStyles = groups.map(group =>
         scopeWith(`#${group.id}`, group?.styles),
       );
@@ -29,7 +28,7 @@ export const useStyleBuilder = memoize(() => {
         .map(component => scopeWith(`#${component.id}`, component?.styles));
 
       const styles = [
-        scopeWith(':root', generalConfig.root_styles),
+        scopeWith(':root', userConfig.general.root_styles),
         scopeWith(`#${barConfig.id}`, barConfig.styles),
         ...groupStyles,
         ...componentStyles,
