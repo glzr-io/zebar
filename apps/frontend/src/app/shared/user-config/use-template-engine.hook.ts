@@ -6,7 +6,7 @@ import { createGetterProxy, memoize } from '../utils';
 
 export const useTemplateEngine = memoize(() => {
   const [trackedProperties, setTrackedProperties] = createSignal<
-    (string | number | symbol)[]
+    (string | symbol)[][]
   >([]);
 
   const [cache, setCache] = createStore<Record<string, Template[]>>({});
@@ -14,8 +14,8 @@ export const useTemplateEngine = memoize(() => {
   var engine = new Liquid({ jsTruthy: true });
 
   function compile(template: string, context: Record<string, unknown>) {
-    const contextProxy = createGetterProxy(context, (a, b) => {
-      setTrackedProperties(e => [...e, b]);
+    const contextProxy = createGetterProxy(context, a => {
+      setTrackedProperties(e => [...e, a]);
     });
 
     if (cache[template]) {
