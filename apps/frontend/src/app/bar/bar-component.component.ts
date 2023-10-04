@@ -40,10 +40,8 @@ export function BarComponent(props: BarComponentProps) {
   });
 
   return createTemplateElement({
-    id: () => props.config.id,
-    className: () => props.config.class_name,
-    //@ts-ignore - TODO
-    variables: props.config.variables ?? {},
+    id: props.config.id,
+    className: props.config.class_name,
     template,
   });
 }
