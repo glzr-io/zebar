@@ -1,24 +1,37 @@
-import { createStore } from 'solid-js/store';
 import { Liquid, Template } from 'liquidjs';
+import { createEffect, createSignal } from 'solid-js';
+import { createStore } from 'solid-js/store';
 
-import { memoize } from '../utils';
+import { createGetterProxy, memoize } from '../utils';
 
 export const useTemplateEngine = memoize(() => {
+  const [trackedProperties, setTrackedProperties] = createSignal<
+    (string | number | symbol)[]
+  >([]);
+
   const [cache, setCache] = createStore<Record<string, Template[]>>({});
 
   var engine = new Liquid({ jsTruthy: true });
 
   function compile(template: string, context: Record<string, unknown>) {
+    const contextProxy = createGetterProxy(context, (a, b) => {
+      setTrackedProperties(e => [...e, b]);
+    });
+
     if (cache[template]) {
-      return engine.renderSync(cache[template], context);
+      return engine.renderSync(cache[template], contextProxy);
     }
 
     // Parse and cache template with LiquidJS.
-    var parsed = engine.parse(template);
+    const parsed = engine.parse(template);
     setCache(template, engine.parse(template));
 
-    return engine.renderSync(parsed, context);
+    return engine.renderSync(parsed, contextProxy);
   }
+
+  createEffect(() => {
+    console.log('trackedProperties', trackedProperties());
+  });
 
   return {
     compile,
