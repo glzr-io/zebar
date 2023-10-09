@@ -1,3 +1,4 @@
+import { createScanner } from './utils/create-scanner';
 import { TokenType } from './types/token-type.model';
 import { Token } from './types/token.model';
 import { TemplateError } from './utils/template-error';
@@ -7,62 +8,6 @@ export enum TokenizerState {
   IN_OUTPUT,
   IN_TAG_START,
   IN_TAG_BLOCK,
-}
-
-export function createScanner(template: string) {
-  // TODO: Keep track of head and previous?
-  let cursor = 0;
-  let isTerminated = false;
-  let remainder = template;
-  let matched = '';
-
-  // TODO: Could simplify with `scanWithPredicate(e => e.index !== 0)`.
-
-  return {
-    getCursor() {
-      return cursor;
-    },
-    getRemainder() {
-      return remainder;
-    },
-    getMatched() {
-      return matched;
-    },
-    isTerminated() {
-      return isTerminated;
-    },
-    scan(regex: RegExp) {
-      const match = regex.exec(remainder);
-
-      if (match?.index !== 0) {
-        return '';
-      }
-
-      // If there is a match, advance the cursor to the end of the match.
-      matched = match[0];
-      remainder = remainder.substring(matched.length);
-      cursor += matched.length;
-
-      return matched;
-    },
-    scanUntil(regex: RegExp) {
-      const match = regex.exec(remainder);
-
-      if (!match) {
-        return '';
-      }
-
-      // If there is a match, advance the cursor to the end of the match.
-      matched = match[0];
-      remainder = remainder.substring(matched.length);
-      cursor += matched.length;
-
-      return matched;
-    },
-    terminate() {
-      isTerminated = true;
-    },
-  };
 }
 
 export function tokenize(template: string): Token[] {
@@ -119,8 +64,8 @@ export function tokenize(template: string): Token[] {
             index: scanner.getCursor(),
           });
           stateStack.push(TokenizerState.IN_OUTPUT);
-        } else if (scanner.scanUntil(/.*?(?={{)/m)) {
-          // TODO: Needs to search until {{ or @.
+        } else if (scanner.scanUntil(/.*?(?={{|@)/m)) {
+          // Search until the start of a tag or output.
           tokens.push({
             type: TokenType.TEXT,
             index: scanner.getCursor(),
