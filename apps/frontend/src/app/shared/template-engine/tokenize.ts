@@ -81,8 +81,8 @@ export function tokenize(template: string): Token[] {
           pushToken(TokenType.OPEN_TAG_BLOCK);
           stateStack.pop();
           stateStack.push(TokenizerState.IN_TAG_BLOCK);
-        } else if (scanner.scan(/\([\w\-]+\)/)) {
-          // TODO: Need to ignore nested parenthesis within tag start.
+        } else if (scanner.scan(/\((.*?)\)/)) {
+          // TODO: Need to ignore nested parenthesis within tag params.
           pushToken(TokenType.EXPRESSION);
         } else {
           console.log('bad tag start', scanner, tokens, stateStack, template);
