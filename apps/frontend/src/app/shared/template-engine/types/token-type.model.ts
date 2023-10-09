@@ -1,21 +1,21 @@
 export enum TokenType {
   /** Start of if tag (ie. `@if`). */
-  IF_TAG_START = 'IF_TAG_START',
+  IF_TAG = 'IF_TAG',
 
   /** Start of else if tag (ie. `@else if`). */
-  ELSE_IF_TAG_START = 'ELSE_IF_TAG_START',
+  ELSE_IF_TAG = 'ELSE_IF_TAG',
 
   /** Start of else tag (ie. `@else`). */
-  ELSE_TAG_START = 'ELSE_TAG_START',
+  ELSE_TAG = 'ELSE_TAG',
 
   /** Start of for tag (ie. `@for`). */
-  FOR_TAG_START = 'FOR_TAG_START',
+  FOR_TAG = 'FOR_TAG',
 
   /** Start of switch tag (ie. `@switch`). */
-  SWITCH_TAG_START = 'SWITCH_TAG_START',
+  SWITCH_TAG = 'SWITCH_TAG',
 
   /** Start of case tag (ie. `@case`). */
-  CASE_TAG_START = 'CASE_TAG_START',
+  CASE_TAG = 'CASE_TAG',
 
   /** Opening curly brace (ie. `{`) after the start of a tag. */
   OPEN_TAG_BLOCK = 'OPEN_TAG_BLOCK',

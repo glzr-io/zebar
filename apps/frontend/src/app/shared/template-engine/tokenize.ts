@@ -5,9 +5,9 @@ import { TemplateError } from './utils/template-error';
 
 export enum TokenizerState {
   DEFAULT,
-  IN_OUTPUT,
-  IN_TAG_START,
+  IN_TAG_PARAMS,
   IN_TAG_BLOCK,
+  IN_INTERPOLATION,
 }
 
 export function tokenize(template: string): Token[] {
@@ -16,6 +16,13 @@ export function tokenize(template: string): Token[] {
   const tokens: Token[] = [];
   const scanner = createScanner(template);
 
+  function pushToken(type: TokenType) {
+    tokens.push({
+      type,
+      index: scanner.getCursor(),
+    });
+  }
+
   while (!scanner.isTerminated()) {
     // Get current tokenizer state.
     const state = stateStack[stateStack.length - 1];
@@ -23,99 +30,60 @@ export function tokenize(template: string): Token[] {
     switch (state) {
       case TokenizerState.DEFAULT: {
         if (scanner.scan(/@if/)) {
-          tokens.push({
-            type: TokenType.IF_TAG_START,
-            index: scanner.getCursor(),
-          });
-          stateStack.push(TokenizerState.IN_TAG_START);
+          pushToken(TokenType.IF_TAG);
+          stateStack.push(TokenizerState.IN_TAG_PARAMS);
         } else if (scanner.scan(/@else\s+if/)) {
-          tokens.push({
-            type: TokenType.ELSE_IF_TAG_START,
-            index: scanner.getCursor(),
-          });
-          stateStack.push(TokenizerState.IN_TAG_START);
+          pushToken(TokenType.ELSE_IF_TAG);
+          stateStack.push(TokenizerState.IN_TAG_PARAMS);
         } else if (scanner.scan(/@else/)) {
-          tokens.push({
-            type: TokenType.ELSE_TAG_START,
-            index: scanner.getCursor(),
-          });
-          stateStack.push(TokenizerState.IN_TAG_START);
+          pushToken(TokenType.ELSE_TAG);
+          stateStack.push(TokenizerState.IN_TAG_PARAMS);
         } else if (scanner.scan(/@for/)) {
-          tokens.push({
-            type: TokenType.FOR_TAG_START,
-            index: scanner.getCursor(),
-          });
-          stateStack.push(TokenizerState.IN_TAG_START);
+          pushToken(TokenType.FOR_TAG);
+          stateStack.push(TokenizerState.IN_TAG_PARAMS);
         } else if (scanner.scan(/@switch/)) {
-          tokens.push({
-            type: TokenType.SWITCH_TAG_START,
-            index: scanner.getCursor(),
-          });
-          stateStack.push(TokenizerState.IN_TAG_START);
+          pushToken(TokenType.SWITCH_TAG);
+          stateStack.push(TokenizerState.IN_TAG_PARAMS);
         } else if (scanner.scan(/@case/)) {
-          tokens.push({
-            type: TokenType.CASE_TAG_START,
-            index: scanner.getCursor(),
-          });
-          stateStack.push(TokenizerState.IN_TAG_START);
+          pushToken(TokenType.CASE_TAG);
+          stateStack.push(TokenizerState.IN_TAG_PARAMS);
         } else if (scanner.scan(/{{/)) {
-          tokens.push({
-            type: TokenType.OPEN_INTERPOLATION_TAG,
-            index: scanner.getCursor(),
-          });
-          stateStack.push(TokenizerState.IN_OUTPUT);
+          pushToken(TokenType.OPEN_INTERPOLATION_TAG);
+          stateStack.push(TokenizerState.IN_INTERPOLATION);
         } else if (scanner.scanUntil(/.*?(?={{|@)/)) {
-          // Search until the start of a tag or output.
-          tokens.push({
-            type: TokenType.TEXT,
-            index: scanner.getCursor(),
-          });
+          // Search until the start of a tag or interpolation.
+          pushToken(TokenType.TEXT);
         } else {
-          tokens.push({
-            type: TokenType.TEXT,
-            index: scanner.getCursor(),
-          });
+          pushToken(TokenType.TEXT);
           scanner.terminate();
         }
         break;
       }
-      case TokenizerState.IN_OUTPUT: {
+      case TokenizerState.IN_INTERPOLATION: {
         if (scanner.scan(/\s+/)) {
-          // Ignore whitespace within output.
+          // Ignore whitespace within interpolation tag.
         } else if (scanner.scan(/}}/)) {
-          tokens.push({
-            type: TokenType.CLOSE_INTERPOLATION_TAG,
-            index: scanner.getCursor(),
-          });
+          pushToken(TokenType.CLOSE_INTERPOLATION_TAG);
           stateStack.pop();
         } else if (scanner.scan(/.*?(?=}})/)) {
           // Match expression until closing `}}`.
-          tokens.push({
-            type: TokenType.EXPRESSION,
-            index: scanner.getCursor(),
-          });
+          pushToken(TokenType.EXPRESSION);
         } else {
           console.log('bad output', scanner, tokens, stateStack, template);
           throw new TemplateError('aa', scanner.getCursor());
         }
         break;
       }
-      case TokenizerState.IN_TAG_START: {
+      case TokenizerState.IN_TAG_PARAMS: {
         if (scanner.scan(/\s+/)) {
-          // Ignore whitespace within tag start.
+          // Ignore whitespace within tag params.
         } else if (scanner.scan(/{/)) {
-          tokens.push({
-            type: TokenType.OPEN_TAG_BLOCK,
-            index: scanner.getCursor(),
-          });
+          pushToken(TokenType.OPEN_TAG_BLOCK);
           stateStack.pop();
           stateStack.push(TokenizerState.IN_TAG_BLOCK);
         } else if (scanner.scan(/\([\w\-]+\)/)) {
           // TODO: Need to ignore nested parenthesis within tag start.
-          tokens.push({
-            type: TokenType.EXPRESSION,
-            index: scanner.getCursor(),
-          });
+          pushToken(TokenType.EXPRESSION);
         } else {
           console.log('bad tag start', scanner, tokens, stateStack, template);
           throw new TemplateError('aa', scanner.getCursor());
