@@ -60,11 +60,11 @@ export function tokenize(template: string): Token[] {
           stateStack.push(TokenizerState.IN_TAG_START);
         } else if (scanner.scan(/{{/)) {
           tokens.push({
-            type: TokenType.OPEN_OUTPUT,
+            type: TokenType.OPEN_INTERPOLATION_TAG,
             index: scanner.getCursor(),
           });
           stateStack.push(TokenizerState.IN_OUTPUT);
-        } else if (scanner.scanUntil(/.*?(?={{|@)/m)) {
+        } else if (scanner.scanUntil(/.*?(?={{|@)/)) {
           // Search until the start of a tag or output.
           tokens.push({
             type: TokenType.TEXT,
@@ -84,16 +84,18 @@ export function tokenize(template: string): Token[] {
           // Ignore whitespace within output.
         } else if (scanner.scan(/}}/)) {
           tokens.push({
-            type: TokenType.CLOSE_OUTPUT,
+            type: TokenType.CLOSE_INTERPOLATION_TAG,
             index: scanner.getCursor(),
           });
           stateStack.pop();
-        } else if (scanner.scan(/[\w\-]+/)) {
+        } else if (scanner.scan(/.*?(?=}})/)) {
+          // Match expression until closing `}}`.
           tokens.push({
             type: TokenType.EXPRESSION,
             index: scanner.getCursor(),
           });
         } else {
+          console.log('bad output', scanner, tokens, stateStack, template);
           throw new TemplateError('aa', scanner.getCursor());
         }
         break;
@@ -115,6 +117,7 @@ export function tokenize(template: string): Token[] {
             index: scanner.getCursor(),
           });
         } else {
+          console.log('bad tag start', scanner, tokens, stateStack, template);
           throw new TemplateError('aa', scanner.getCursor());
         }
         break;

@@ -5,41 +5,46 @@ export function createScanner(template: string) {
   let remainder = template;
   let matched = '';
 
-  function scan(regex: RegExp) {
+  function scanWithPredicate(
+    regex: RegExp,
+    predicate: (match: RegExpExecArray) => boolean,
+  ) {
     const match = regex.exec(remainder);
 
-    if (match?.index !== 0) {
+    if (!match || !predicate(match)) {
       return '';
     }
 
-    // If there is a match, advance the cursor to the end of the match.
+    // If there is a successful match, advance the cursor.
     matched = match[0];
-    remainder = remainder.substring(matched.length);
-    cursor += matched.length;
+    remainder = remainder.substring(match.index + matched.length);
+    cursor += match.index + matched.length;
+    // remainder = remainder.substring(cursor + matched.length);
+    // cursor += cursor + matched.length;
+    console.log(
+      'found match:',
+      match,
+      match.index,
+      'moved to new index',
+      cursor,
+      remainder,
+    );
 
     return matched;
   }
 
+  function scan(regex: RegExp) {
+    return scanWithPredicate(regex, match => match.index === 0);
+  }
+
   function scanUntil(regex: RegExp) {
-    const match = regex.exec(remainder);
-
-    if (!match) {
-      return '';
-    }
-
-    // If there is a match, advance the cursor to the end of the match.
-    matched = match[0];
-    remainder = remainder.substring(matched.length);
-    cursor += matched.length;
-
-    return matched;
+    return scanWithPredicate(regex, () => true);
   }
 
   function terminate() {
     isTerminated = true;
   }
 
-  // TODO: Could simplify with `scanWithPredicate(e => e.index !== 0)`.
   return {
     getCursor: () => cursor,
     getRemainder: () => remainder,
