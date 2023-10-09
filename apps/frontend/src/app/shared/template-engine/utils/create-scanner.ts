@@ -1,9 +1,15 @@
+export interface ScannerMatch {
+  content: string;
+  endIndex: number;
+  startIndex: number;
+}
+
 export function createScanner(template: string) {
   // TODO: Keep track of head and previous?
   let cursor = 0;
   let isTerminated = false;
   let remainder = template;
-  let matched = '';
+  let matched: ScannerMatch | null = null;
 
   function scanWithPredicate(
     regex: RegExp,
@@ -12,23 +18,19 @@ export function createScanner(template: string) {
     const match = regex.exec(remainder);
 
     if (!match || !predicate(match)) {
-      return '';
+      return null;
     }
 
     // If there is a successful match, advance the cursor.
-    matched = match[0];
-    remainder = remainder.substring(match.index + matched.length);
-    cursor += match.index + matched.length;
-    // remainder = remainder.substring(cursor + matched.length);
-    // cursor += cursor + matched.length;
-    console.log(
-      'found match:',
-      match,
-      match.index,
-      'moved to new index',
-      cursor,
-      remainder,
-    );
+    const originalCursor = cursor;
+    remainder = remainder.substring(match.index + match[0].length);
+    cursor += match.index + match[0].length;
+
+    matched = {
+      content: template.substring(originalCursor, cursor),
+      endIndex: cursor,
+      startIndex: originalCursor,
+    };
 
     return matched;
   }

@@ -17,9 +17,13 @@ export function tokenize(template: string): Token[] {
   const scanner = createScanner(template);
 
   function pushToken(type: TokenType) {
+    const match = scanner.getMatched()!;
+
     tokens.push({
       type,
-      index: scanner.getCursor(),
+      content: match?.content,
+      startIndex: match?.startIndex,
+      endIndex: match?.endIndex,
     });
   }
 

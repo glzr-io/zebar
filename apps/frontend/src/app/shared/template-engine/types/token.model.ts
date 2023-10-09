@@ -2,5 +2,7 @@ import { TokenType } from './token-type.model';
 
 export interface Token {
   type: TokenType;
-  index: number;
+  content: string;
+  startIndex: number;
+  endIndex: number;
 }
