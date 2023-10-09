@@ -1,27 +1,27 @@
 export enum TokenType {
   /** Start of if tag (ie. `@if`). */
-  START_IF_TAG,
+  IF_TAG_START,
 
   /** Start of else if tag (ie. `@else if`). */
-  START_ELSE_IF_TAG,
+  ELSE_IF_TAG_START,
 
   /** Start of else tag (ie. `@else`). */
-  START_ELSE_TAG,
+  ELSE_TAG_START,
 
   /** Start of for tag (ie. `@for`). */
-  START_FOR_TAG,
+  FOR_TAG_START,
 
   /** Start of switch tag (ie. `@switch`). */
-  START_SWITCH_TAG,
+  SWITCH_TAG_START,
 
   /** Start of case tag (ie. `@case`). */
-  START_CASE_TAG,
+  CASE_TAG_START,
 
   /** Opening curly brace (ie. `{`) after the start of a tag. */
-  OPEN_TAG,
+  OPEN_TAG_BLOCK,
 
   /** Closing curly brace (ie. `}`) marking the end of a tag. */
-  CLOSE_TAG,
+  CLOSE_TAG_BLOCK,
 
   /** Opening double curly brace (ie. `{{`) marking the start of an output. */
   OPEN_OUTPUT,
