@@ -26,13 +26,11 @@ export function createScanner(template: string) {
     remainder = remainder.substring(match.index + match[0].length);
     cursor += match.index + match[0].length;
 
-    matched = {
+    return (matched = {
       content: template.substring(originalCursor, cursor),
       endIndex: cursor,
       startIndex: originalCursor,
-    };
-
-    return matched;
+    });
   }
 
   function scan(regex: RegExp) {
