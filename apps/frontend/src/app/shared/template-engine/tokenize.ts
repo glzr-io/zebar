@@ -77,7 +77,6 @@ export function tokenize(template: string): Token[] {
       // Search until the start of a statement or interpolation tag.
       pushToken(TokenType.TEXT);
     } else {
-      pushToken(TokenType.TEXT);
       scanner.terminate();
     }
   }
@@ -119,7 +118,7 @@ export function tokenize(template: string): Token[] {
     } else if (scanner.scan(/}}/)) {
       pushToken(TokenType.CLOSE_INTERPOLATION);
       stateStack.pop();
-    } else if (scanner.scan(/.*?(?=}})/)) {
+    } else if (scanner.scan(/.*?(?=\s*}})/)) {
       // Match expression until closing `}}`.
       pushToken(TokenType.EXPRESSION);
     } else {
