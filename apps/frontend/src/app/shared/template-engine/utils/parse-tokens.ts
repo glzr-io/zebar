@@ -61,6 +61,7 @@ export function parseTokens(tokens: Token[]) {
   while (cursor < tokens.length) {
     const node = parseStandaloneToken(tokens[cursor]);
     nodes.push(node);
+    cursor += 1;
   }
 
   function parseStandaloneToken(token: Token): TemplateNode {
@@ -94,24 +95,25 @@ export function parseTokens(tokens: Token[]) {
 
   function parseNestedTokens(): TemplateNode[] {
     const nodes: TemplateNode[] = [];
-    const next = tokens[cursor];
+    let next = tokens[cursor + 1];
 
     while (
       next.type === TokenType.TEXT ||
+      next.type === TokenType.OPEN_INTERPOLATION ||
       next.type === TokenType.IF_STATEMENT ||
       next.type === TokenType.FOR_STATEMENT ||
       next.type === TokenType.SWITCH_STATEMENT
     ) {
-      const node = parseStandaloneToken(tokens[cursor]);
+      cursor += 1;
+      const node = parseStandaloneToken(next);
       nodes.push(node);
+      next = tokens[cursor + 1];
     }
 
     return nodes;
   }
 
   function parseText(token: Token): TextNode {
-    cursor += 1;
-
     return {
       type: TemplateNodeType.TEXT,
       text: token.content,
@@ -204,7 +206,7 @@ export function parseTokens(tokens: Token[]) {
     const nextMatching = expect(tokenType);
 
     if (!nextMatching) {
-      throw new Error(`Expected token type ${tokenType}.`);
+      throw new Error(`Expected token type '${tokenType}'.`);
     }
 
     return nextMatching;

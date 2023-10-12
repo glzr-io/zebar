@@ -73,8 +73,9 @@ export function tokenize(template: string): Token[] {
     } else if (scanner.scan(/{{/)) {
       pushToken(TokenType.OPEN_INTERPOLATION);
       stateStack.push(TokenizeState.IN_INTERPOLATION);
-    } else if (scanner.scanUntil(/.*?(?={{|@)/)) {
-      // Search until the start of a statement or interpolation tag.
+    } else if (scanner.scanUntil(/.*?(?={{|@|})/)) {
+      // Search until a close block, the start of a statement, or the start of
+      // an interpolation tag.
       pushToken(TokenType.TEXT);
     } else {
       scanner.terminate();
