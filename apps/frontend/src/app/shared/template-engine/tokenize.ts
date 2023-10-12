@@ -1,4 +1,4 @@
-import { createScanner } from './utils/create-scanner';
+import { createStringScanner } from './utils/create-string-scanner';
 import { TokenType } from './types/token-type.model';
 import { Token } from './types/token.model';
 import { TemplateError } from './utils/template-error';
@@ -18,20 +18,20 @@ export function tokenize(template: string): Token[] {
   const tokens: Token[] = [];
 
   // String scanner for advancing through input template.
-  const scanner = createScanner(template);
+  const scanner = createStringScanner(template);
 
   function pushToken(type: TokenType) {
-    const match = scanner.getMatched()!;
+    const match = scanner.latestMatch();
 
-    tokens.push({
-      type,
-      content: match?.content,
-      startIndex: match?.startIndex,
-      endIndex: match?.endIndex,
-    });
+    if (!match) {
+      throw new Error('Cannot push an empty token.');
+    }
+
+    const { substring: content, startIndex, endIndex } = match;
+    tokens.push({ type, content, startIndex, endIndex });
   }
 
-  while (!scanner.isTerminated()) {
+  while (!scanner.isEmpty()) {
     // Get current tokenize state.
     const state = stateStack[stateStack.length - 1];
 
@@ -78,7 +78,7 @@ export function tokenize(template: string): Token[] {
       // an interpolation tag.
       pushToken(TokenType.TEXT);
     } else {
-      scanner.terminate();
+      throw new TemplateError('No valid tokens found.', scanner.cursor());
     }
   }
 
@@ -93,14 +93,7 @@ export function tokenize(template: string): Token[] {
       // TODO: Need to ignore nested parenthesis within statement args.
       pushToken(TokenType.EXPRESSION);
     } else {
-      console.log(
-        'tokenizeStatementArgs',
-        scanner,
-        tokens,
-        stateStack,
-        template,
-      );
-      throw new TemplateError('aa', scanner.getCursor());
+      throw new TemplateError('Missing closing {.', scanner.cursor());
     }
   }
 
@@ -123,14 +116,10 @@ export function tokenize(template: string): Token[] {
       // Match expression until closing `}}`.
       pushToken(TokenType.EXPRESSION);
     } else {
-      console.log(
-        'tokenizeInterpolationTag',
-        scanner,
-        tokens,
-        stateStack,
-        template,
+      throw new TemplateError(
+        'Invalid interpolation tag. Must be of format {{ some_expression }}.',
+        scanner.cursor(),
       );
-      throw new TemplateError('aa', scanner.getCursor());
     }
   }
 
