@@ -1,3 +1,4 @@
+import { evalWithContext } from '~/shared/utils';
 import {
   ForStatementNode,
   IfStatementNode,
@@ -8,6 +9,11 @@ import {
   TextNode,
 } from '../types';
 
+export interface RenderContext {
+  global: Record<string, unknown>;
+  local: Record<string, unknown>[];
+}
+
 /**
  * Takes an abstract syntax tree and renders it to a string.
  */
@@ -15,9 +21,9 @@ export function renderTemplateNodes(
   nodes: TemplateNode[],
   globalContext: Record<string, unknown>,
 ) {
-  const context = {
+  const context: RenderContext = {
     global: globalContext,
-    local: {},
+    local: [],
   };
 
   function visitAll(nodes: TemplateNode[]): string {
@@ -44,14 +50,13 @@ export function renderTemplateNodes(
   }
 
   function visitInterpolationNode(node: InterpolationNode): string {
-    return evalWithContext(node.expression, globalContext);
+    return evalExpression(node.expression);
   }
 
   function visitIfStatementNode(node: IfStatementNode): string {
     for (const branch of node.branches) {
       const shouldVisit =
-        branch.type === 'else' ||
-        Boolean(evalWithContext(branch.expression, context));
+        branch.type === 'else' || Boolean(evalExpression(branch.expression));
 
       if (shouldVisit) {
         return visitAll(branch.children);
@@ -66,12 +71,12 @@ export function renderTemplateNodes(
   }
 
   function visitSwitchStatementNode(node: SwitchStatementNode): string {
-    const value = evalWithContext(node.expression, context);
+    const value = evalExpression(node.expression);
 
     for (const branch of node.branches) {
       const shouldVisit =
         branch.type === 'default' ||
-        value === evalWithContext(branch.expression, context);
+        value === evalExpression(branch.expression);
 
       if (shouldVisit) {
         return visitAll(branch.children);
@@ -81,12 +86,8 @@ export function renderTemplateNodes(
     return '';
   }
 
-  function evalWithContext(
-    expression: string,
-    context: Record<string, unknown>,
-  ) {
-    // TODO: Pass context to eval.
-    return eval(expression);
+  function evalExpression(expression: string) {
+    return evalWithContext(expression, context.global, ...context.local);
   }
 
   return visitAll(nodes);
