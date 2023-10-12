@@ -67,7 +67,20 @@ export function renderTemplateNodes(
   }
 
   function visitForStatementNode(node: ForStatementNode): string {
-    throw new Error('Function not implemented.');
+    const iterator = evalExpression(node.expression);
+
+    return iterator.map(el => {
+      // Push element name and index (optionally) to local context.
+      context.local.push({
+        ['blah']: el,
+        ['index']: 0,
+      });
+
+      const result = visitAll(el);
+      context.local.pop();
+
+      return result;
+    });
   }
 
   function visitSwitchStatementNode(node: SwitchStatementNode): string {
