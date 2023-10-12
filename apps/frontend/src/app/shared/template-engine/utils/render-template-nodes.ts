@@ -21,14 +21,19 @@ export function renderTemplateNodes(
   };
 
   let cursor = 0;
-  let output = '';
 
-  while (cursor < nodes.length) {
-    output += visit(nodes[cursor]);
-    cursor += 1;
+  function visitAll(nodes: TemplateNode[]): string {
+    let output = '';
+
+    while (cursor < nodes.length) {
+      output += visitOne(nodes[cursor]);
+      cursor += 1;
+    }
+
+    return output;
   }
 
-  function visit(node: TemplateNode): string {
+  function visitOne(node: TemplateNode): string {
     switch (node.type) {
       case TemplateNodeType.TEXT:
         return visitTextNode(node);
@@ -53,12 +58,12 @@ export function renderTemplateNodes(
 
   function visitIfStatementNode(node: IfStatementNode): string {
     for (const branch of node.branches) {
-      if (branch.type === 'else') {
-        break;
-      }
+      const shouldVisit =
+        branch.type === 'else' ||
+        Boolean(evalWithContext(branch.expression, context));
 
-      if (Boolean(evalWithContext(branch.expression, globalContext))) {
-        break;
+      if (shouldVisit) {
+        return visitAll(branch.children);
       }
     }
 
@@ -70,7 +75,19 @@ export function renderTemplateNodes(
   }
 
   function visitSwitchStatementNode(node: SwitchStatementNode): string {
-    throw new Error('Function not implemented.');
+    const value = evalWithContext(node.expression, context);
+
+    for (const branch of node.branches) {
+      const shouldVisit =
+        branch.type === 'default' ||
+        value === evalWithContext(branch.expression, context);
+
+      if (shouldVisit) {
+        return visitAll(branch.children);
+      }
+    }
+
+    return '';
   }
 
   function evalWithContext(
@@ -81,5 +98,5 @@ export function renderTemplateNodes(
     return eval(expression);
   }
 
-  return output;
+  return visitAll(nodes);
 }
