@@ -1,5 +1,7 @@
-export function compileTemplate(
-  templates: any[],
+import { TemplateNode } from '../types/template-node.model';
+
+export function renderTemplateNodes(
+  nodes: TemplateNode[],
   globalContext: Record<string, unknown>,
 ) {
   const context = {

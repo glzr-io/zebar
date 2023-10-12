@@ -1,7 +1,7 @@
-import { createStringScanner } from './utils/create-string-scanner';
-import { TokenType } from './types/token-type.model';
-import { Token } from './types/token.model';
-import { TemplateError } from './utils/template-error';
+import { createStringScanner } from './create-string-scanner';
+import { TokenType } from '../types/token-type.model';
+import { Token } from '../types/token.model';
+import { TemplateError } from './template-error';
 
 export enum TokenizeState {
   DEFAULT,
@@ -10,7 +10,7 @@ export enum TokenizeState {
   IN_INTERPOLATION,
 }
 
-export function tokenize(template: string): Token[] {
+export function tokenizeTemplate(template: string): Token[] {
   // Stack of tokenize states. Last element represents current state.
   const stateStack: TokenizeState[] = [TokenizeState.DEFAULT];
 
@@ -24,7 +24,7 @@ export function tokenize(template: string): Token[] {
     const match = scanner.latestMatch();
 
     if (!match) {
-      throw new Error('Cannot push an empty token.');
+      throw new TemplateError('Cannot push an empty token.', scanner.cursor());
     }
 
     const { substring: content, startIndex, endIndex } = match;
@@ -116,10 +116,7 @@ export function tokenize(template: string): Token[] {
       // Match expression until closing `}}`.
       pushToken(TokenType.EXPRESSION);
     } else {
-      throw new TemplateError(
-        'Invalid interpolation tag. Must be of format {{ some_expression }}.',
-        scanner.cursor(),
-      );
+      throw new TemplateError('Missing closing }}.', scanner.cursor());
     }
   }
 
