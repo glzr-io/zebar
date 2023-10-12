@@ -14,11 +14,11 @@ export enum TokenType {
   /** Start of switch statement (ie. `@switch`). */
   SWITCH_STATEMENT = 'SWITCH_STATEMENT',
 
-  /** Start of case statement (ie. `@case`). */
-  CASE_STATEMENT = 'CASE_STATEMENT',
+  /** Start of switch case statement (ie. `@case`). */
+  SWITCH_CASE_STATEMENT = 'SWITCH_CASE_STATEMENT',
 
-  /** Start of default statement (ie. `@default`). */
-  DEFAULT_STATEMENT = 'DEFAULT_STATEMENT',
+  /** Start of switch default statement (ie. `@default`). */
+  SWITCH_DEFAULT_STATEMENT = 'SWITCH_DEFAULT_STATEMENT',
 
   /** Opening curly brace (ie. `{`) after the start of a statement. */
   OPEN_BLOCK = 'OPEN_BLOCK',

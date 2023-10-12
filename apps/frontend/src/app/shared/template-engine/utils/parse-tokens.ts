@@ -36,13 +36,13 @@ export function parseTokens(tokens: Token[]) {
         return parseForStatement(token);
       case TokenType.SWITCH_STATEMENT:
         return parseSwitchStatement(token);
-      case TokenType.CASE_STATEMENT:
+      case TokenType.SWITCH_CASE_STATEMENT:
         throw new Error(
-          'Cannot use a case statement without a switch statement.',
+          'Cannot use a switch case statement without a switch statement.',
         );
-      case TokenType.DEFAULT_STATEMENT:
+      case TokenType.SWITCH_DEFAULT_STATEMENT:
         throw new Error(
-          'Cannot use a default statement without a switch statement.',
+          'Cannot use a switch default statement without a switch statement.',
         );
       case TokenType.ELSE_IF_STATEMENT:
         throw new Error(
@@ -147,7 +147,7 @@ export function parseTokens(tokens: Token[]) {
 
     const branches: (CaseBranch | DefaultBranch)[] = [];
 
-    while (expect(TokenType.CASE_STATEMENT)) {
+    while (expect(TokenType.SWITCH_CASE_STATEMENT)) {
       const expression = need(TokenType.EXPRESSION).substring;
       need(TokenType.OPEN_BLOCK);
       const children = parseNestedTokens();
@@ -156,7 +156,7 @@ export function parseTokens(tokens: Token[]) {
       need(TokenType.CLOSE_BLOCK);
     }
 
-    if (expect(TokenType.DEFAULT_STATEMENT)) {
+    if (expect(TokenType.SWITCH_DEFAULT_STATEMENT)) {
       need(TokenType.OPEN_BLOCK);
       const children = parseNestedTokens();
 

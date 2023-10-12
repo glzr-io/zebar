@@ -66,10 +66,10 @@ export function tokenizeTemplate(template: string): Token[] {
       pushToken(TokenType.SWITCH_STATEMENT);
       stateStack.push(TokenizeState.IN_STATEMENT_ARGS);
     } else if (scanner.scan(/@case/)) {
-      pushToken(TokenType.CASE_STATEMENT);
+      pushToken(TokenType.SWITCH_CASE_STATEMENT);
       stateStack.push(TokenizeState.IN_STATEMENT_ARGS);
     } else if (scanner.scan(/@default/)) {
-      pushToken(TokenType.DEFAULT_STATEMENT);
+      pushToken(TokenType.SWITCH_DEFAULT_STATEMENT);
       stateStack.push(TokenizeState.IN_STATEMENT_ARGS);
     } else if (scanner.scan(/{{/)) {
       pushToken(TokenType.OPEN_INTERPOLATION);
