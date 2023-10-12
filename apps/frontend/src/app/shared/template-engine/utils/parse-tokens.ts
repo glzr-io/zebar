@@ -5,11 +5,12 @@ import {
   TemplateNodeType,
   InterpolationNode,
   IfStatementNode,
-  IfStatementBranch,
+  IfBranch,
   ForStatementNode,
   SwitchStatementNode,
-  SwitchStatementBranch,
+  SwitchBranch,
   Token,
+  ElseBranch,
 } from '../types';
 
 export function parseTokens(tokens: Token[]) {
@@ -89,7 +90,7 @@ export function parseTokens(tokens: Token[]) {
   }
 
   function parseIfStatement(_token: Token): IfStatementNode {
-    const branches: IfStatementBranch[] = [];
+    const branches: (IfBranch | ElseBranch)[] = [];
 
     const expression = need(TokenType.EXPRESSION).substring;
     need(TokenType.OPEN_BLOCK);
@@ -108,11 +109,10 @@ export function parseTokens(tokens: Token[]) {
     }
 
     if (expect(TokenType.ELSE_STATEMENT)) {
-      const expression = need(TokenType.EXPRESSION).substring;
       need(TokenType.OPEN_BLOCK);
       const children = parseNestedTokens();
 
-      branches.push({ type: 'else', expression, children });
+      branches.push({ type: 'else', expression: null, children });
       need(TokenType.CLOSE_BLOCK);
     }
 
@@ -140,7 +140,7 @@ export function parseTokens(tokens: Token[]) {
     const expression = need(TokenType.EXPRESSION).substring;
     need(TokenType.OPEN_BLOCK);
 
-    const branches: SwitchStatementBranch[] = [];
+    const branches: SwitchBranch[] = [];
 
     while (expect(TokenType.CASE_STATEMENT)) {
       const expression = need(TokenType.EXPRESSION).substring;
