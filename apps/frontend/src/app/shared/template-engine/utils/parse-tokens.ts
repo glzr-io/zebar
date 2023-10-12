@@ -1,18 +1,16 @@
-import { TokenType } from '../types/token-type.model';
-import { Token } from '../types/token.model';
-import { ForStatementNode } from '../types/for-statement-node';
 import {
-  IfStatementBranch,
+  TemplateNode,
+  TokenType,
+  TextNode,
+  TemplateNodeType,
+  InterpolationNode,
   IfStatementNode,
-} from '../types/if-statement-node.model';
-import { InterpolationNode } from '../types/interpolation-node.model';
-import {
-  SwitchStatementBranch,
+  IfStatementBranch,
+  ForStatementNode,
   SwitchStatementNode,
-} from '../types/switch-statement-node.model';
-import { TemplateNode } from '../types/template-node.model';
-import { TemplateNodeType } from '../types/template-node-type.model';
-import { TextNode } from '../types/text-node.model';
+  SwitchStatementBranch,
+  Token,
+} from '../types';
 
 export function parseTokens(tokens: Token[]) {
   let cursor = 0;

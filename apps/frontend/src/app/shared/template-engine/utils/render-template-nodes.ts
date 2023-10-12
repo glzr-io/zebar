@@ -1,4 +1,4 @@
-import { TemplateNode } from '../types/template-node.model';
+import { TemplateNode } from '../types';
 
 export function renderTemplateNodes(
   nodes: TemplateNode[],
