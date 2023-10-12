@@ -8,6 +8,7 @@ import {
   TemplateNodeType,
   TextNode,
 } from '../types';
+import { TemplateError } from './template-error';
 
 export interface RenderContext {
   global: Record<string, unknown>;
@@ -67,20 +68,38 @@ export function renderTemplateNodes(
   }
 
   function visitForStatementNode(node: ForStatementNode): string {
-    const iterator = evalExpression(node.expression);
+    const { elementName, iterable } = parseForExpression(node.expression);
 
-    return iterator.map(el => {
-      // Push element name and index (optionally) to local context.
-      context.local.push({
-        ['blah']: el,
-        ['index']: 0,
-      });
+    return iterable
+      .map((el, index) => {
+        // Push element name and index (optionally) to local context.
+        context.local.push({
+          [elementName]: el,
+          ['index']: 0,
+        });
 
-      const result = visitAll(el);
-      context.local.pop();
+        const result = visitAll(el);
+        context.local.pop();
 
-      return result;
-    });
+        return result;
+      })
+      .join('');
+  }
+
+  function parseForExpression(expression: string) {
+    try {
+      const [elementName, iterable] = expression.split(' of ');
+
+      return {
+        elementName,
+        iterable: evalExpression(iterable) as any[],
+      };
+    } catch (e) {
+      throw new TemplateError(
+        "@for loop doesn't have a valid expression. Must be in the format '@for (item of items) { ... }'.",
+        0,
+      );
+    }
   }
 
   function visitSwitchStatementNode(node: SwitchStatementNode): string {
