@@ -20,17 +20,8 @@ export function renderTemplateNodes(
     local: {},
   };
 
-  let cursor = 0;
-
   function visitAll(nodes: TemplateNode[]): string {
-    let output = '';
-
-    while (cursor < nodes.length) {
-      output += visitOne(nodes[cursor]);
-      cursor += 1;
-    }
-
-    return output;
+    return nodes.map(node => visitOne(node)).join('');
   }
 
   function visitOne(node: TemplateNode): string {

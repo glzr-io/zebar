@@ -17,6 +17,9 @@ export enum TokenType {
   /** Start of case statement (ie. `@case`). */
   CASE_STATEMENT = 'CASE_STATEMENT',
 
+  /** Start of default statement (ie. `@default`). */
+  DEFAULT_STATEMENT = 'DEFAULT_STATEMENT',
+
   /** Opening curly brace (ie. `{`) after the start of a statement. */
   OPEN_BLOCK = 'OPEN_BLOCK',
 
