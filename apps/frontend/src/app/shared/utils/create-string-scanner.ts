@@ -12,20 +12,11 @@ export function createStringScanner(input: string) {
   let remainder = input;
   let latestMatch: ScannerMatch | null = null;
 
-  function scanWithPredicate(
-    regex: RegExp,
-    predicate: (match: RegExpExecArray) => boolean,
-  ) {
-    const match = regex.exec(remainder);
-
-    if (!match || !predicate(match)) {
-      return null;
-    }
-
-    // If there is a successful match, advance the cursor.
+  // Set `latestMatch` and advance the cursor accordingly.
+  function setLatestMatch(matchIndex: number, matchLength: number) {
     const originalCursor = cursor;
-    remainder = remainder.substring(match.index + match[0].length);
-    cursor += match.index + match[0].length;
+    remainder = remainder.substring(matchIndex + matchLength);
+    cursor += matchIndex + matchLength;
 
     return (latestMatch = {
       substring: input.substring(originalCursor, cursor),
@@ -34,27 +25,25 @@ export function createStringScanner(input: string) {
     });
   }
 
-  function scan(regex: RegExp) {
-    return scanWithPredicate(regex, match => match.index === 0);
+  // If the regex matches at the *current* cursor position, set latest match
+  // and advance the cursor.
+  function scan(regex: RegExp): ScannerMatch | null {
+    const match = regex.exec(remainder);
+
+    return match?.index !== 0
+      ? null
+      : setLatestMatch(match.index, match[0].length);
   }
 
-  function scanUntil(regex: RegExp) {
-    const match = scanWithPredicate(regex, () => true);
+  // If the regex matches at any of the remaining input, set latest match and
+  // advance the cursor. If there are no matches, advance the cursor to end of
+  // input.
+  function scanUntil(regex: RegExp): ScannerMatch {
+    const match = regex.exec(remainder);
 
-    if (match) {
-      return match;
-    }
-
-    const originalCursor = cursor;
-    const originalRemainder = remainder;
-    remainder = '';
-    cursor += remainder.length;
-
-    return (latestMatch = {
-      substring: originalRemainder,
-      endIndex: cursor,
-      startIndex: originalCursor,
-    });
+    return match
+      ? setLatestMatch(match.index, match[0].length)
+      : setLatestMatch(0, remainder.length);
   }
 
   return {
