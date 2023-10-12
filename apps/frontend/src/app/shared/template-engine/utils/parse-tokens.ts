@@ -1,58 +1,18 @@
 import { TokenType } from '../types/token-type.model';
 import { Token } from '../types/token.model';
-
-export type TemplateNode =
-  | TextNode
-  | InterpolationNode
-  | IfStatementNode
-  | ForStatementNode
-  | SwitchStatementNode;
-
-export enum TemplateNodeType {
-  TEXT,
-  INTERPOLATION,
-  IF_STATEMENT,
-  FOR_STATEMENT,
-  SWITCH_STATEMENT,
-}
-
-export interface TextNode {
-  type: TemplateNodeType.TEXT;
-  text: string;
-}
-
-export interface InterpolationNode {
-  type: TemplateNodeType.INTERPOLATION;
-  expression: string;
-}
-
-export interface IfStatementBranch {
-  type: 'if' | 'else if' | 'else';
-  expression: string;
-  children: TemplateNode[];
-}
-
-export interface IfStatementNode {
-  type: TemplateNodeType.IF_STATEMENT;
-  branches: IfStatementBranch[];
-}
-
-export interface ForStatementNode {
-  type: TemplateNodeType.FOR_STATEMENT;
-  expression: string;
-  children: TemplateNode[];
-}
-
-export interface SwitchStatementBranch {
-  expression: string;
-  children: TemplateNode[];
-}
-
-export interface SwitchStatementNode {
-  type: TemplateNodeType.SWITCH_STATEMENT;
-  expression: string;
-  branches: SwitchStatementBranch[];
-}
+import { ForStatementNode } from '../types/for-statement-node';
+import {
+  IfStatementBranch,
+  IfStatementNode,
+} from '../types/if-statement-node.model';
+import { InterpolationNode } from '../types/interpolation-node.model';
+import {
+  SwitchStatementBranch,
+  SwitchStatementNode,
+} from '../types/switch-statement-node.model';
+import { TemplateNode } from '../types/template-node.model';
+import { TemplateNodeType } from '../types/template-node-type.model';
+import { TextNode } from '../types/text-node.model';
 
 export function parseTokens(tokens: Token[]) {
   let cursor = 0;
