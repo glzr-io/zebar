@@ -1,6 +1,6 @@
-import { createStringScanner } from './create-string-scanner';
 import { TokenType } from '../types/token-type.model';
 import { Token } from '../types/token.model';
+import { createStringScanner } from './create-string-scanner';
 import { TemplateError } from './template-error';
 
 export enum TokenizeState {
@@ -21,17 +21,16 @@ export function tokenizeTemplate(template: string): Token[] {
   const scanner = createStringScanner(template);
 
   function pushToken(type: TokenType) {
-    const match = scanner.latestMatch();
+    const match = scanner.latestMatch;
 
     if (!match) {
-      throw new TemplateError('Cannot push an empty token.', scanner.cursor());
+      throw new TemplateError('Cannot push an empty token.', scanner.cursor);
     }
 
-    const { substring: content, startIndex, endIndex } = match;
-    tokens.push({ type, content, startIndex, endIndex });
+    tokens.push({ type, ...match });
   }
 
-  while (!scanner.isEmpty()) {
+  while (!scanner.isEmpty) {
     // Get current tokenize state.
     const state = stateStack[stateStack.length - 1];
 
@@ -78,7 +77,7 @@ export function tokenizeTemplate(template: string): Token[] {
       // an interpolation tag.
       pushToken(TokenType.TEXT);
     } else {
-      throw new TemplateError('No valid tokens found.', scanner.cursor());
+      throw new TemplateError('No valid tokens found.', scanner.cursor);
     }
   }
 
@@ -93,7 +92,7 @@ export function tokenizeTemplate(template: string): Token[] {
       // TODO: Need to ignore nested parenthesis within statement args.
       pushToken(TokenType.EXPRESSION);
     } else {
-      throw new TemplateError('Missing closing {.', scanner.cursor());
+      throw new TemplateError('Missing closing {.', scanner.cursor);
     }
   }
 
@@ -116,7 +115,7 @@ export function tokenizeTemplate(template: string): Token[] {
       // Match expression until closing `}}`.
       pushToken(TokenType.EXPRESSION);
     } else {
-      throw new TemplateError('Missing closing }}.', scanner.cursor());
+      throw new TemplateError('Missing closing }}.', scanner.cursor);
     }
   }
 

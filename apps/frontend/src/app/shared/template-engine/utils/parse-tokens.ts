@@ -76,12 +76,12 @@ export function parseTokens(tokens: Token[]) {
   function parseText(token: Token): TextNode {
     return {
       type: TemplateNodeType.TEXT,
-      text: token.content,
+      text: token.substring,
     };
   }
 
   function parseInterpolation(_token: Token): InterpolationNode {
-    const expression = need(TokenType.EXPRESSION).content;
+    const expression = need(TokenType.EXPRESSION).substring;
     need(TokenType.CLOSE_INTERPOLATION);
 
     return {
@@ -93,7 +93,7 @@ export function parseTokens(tokens: Token[]) {
   function parseIfStatement(_token: Token): IfStatementNode {
     const branches: IfStatementBranch[] = [];
 
-    const expression = need(TokenType.EXPRESSION).content;
+    const expression = need(TokenType.EXPRESSION).substring;
     need(TokenType.OPEN_BLOCK);
     const children = parseNestedTokens();
 
@@ -101,8 +101,8 @@ export function parseTokens(tokens: Token[]) {
     need(TokenType.CLOSE_BLOCK);
 
     while (expect(TokenType.ELSE_IF_STATEMENT)) {
-      const expression = need(TokenType.EXPRESSION).content;
-      need(TokenType.OPEN_BLOCK).content;
+      const expression = need(TokenType.EXPRESSION).substring;
+      need(TokenType.OPEN_BLOCK).substring;
       const children = parseNestedTokens();
 
       branches.push({ type: 'else if', expression, children });
@@ -110,7 +110,7 @@ export function parseTokens(tokens: Token[]) {
     }
 
     if (expect(TokenType.ELSE_STATEMENT)) {
-      const expression = need(TokenType.EXPRESSION).content;
+      const expression = need(TokenType.EXPRESSION).substring;
       need(TokenType.OPEN_BLOCK);
       const children = parseNestedTokens();
 
@@ -125,7 +125,7 @@ export function parseTokens(tokens: Token[]) {
   }
 
   function parseForStatement(_token: Token): ForStatementNode {
-    const expression = need(TokenType.EXPRESSION).content;
+    const expression = need(TokenType.EXPRESSION).substring;
     need(TokenType.OPEN_BLOCK);
 
     const children = parseNestedTokens();
@@ -139,13 +139,13 @@ export function parseTokens(tokens: Token[]) {
   }
 
   function parseSwitchStatement(_token: Token): SwitchStatementNode {
-    const expression = need(TokenType.EXPRESSION).content;
+    const expression = need(TokenType.EXPRESSION).substring;
     need(TokenType.OPEN_BLOCK);
 
     const branches: SwitchStatementBranch[] = [];
 
     while (expect(TokenType.CASE_STATEMENT)) {
-      const expression = need(TokenType.EXPRESSION).content;
+      const expression = need(TokenType.EXPRESSION).substring;
       need(TokenType.OPEN_BLOCK);
       const children = parseNestedTokens();
 

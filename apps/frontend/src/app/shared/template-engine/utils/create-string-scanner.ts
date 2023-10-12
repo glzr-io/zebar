@@ -58,10 +58,18 @@ export function createStringScanner(input: string) {
   }
 
   return {
-    cursor: () => cursor,
-    remainder: () => remainder,
-    latestMatch: () => latestMatch,
-    isEmpty: () => remainder === '',
+    get cursor() {
+      return cursor;
+    },
+    get remainder() {
+      return remainder;
+    },
+    get latestMatch() {
+      return latestMatch;
+    },
+    get isEmpty() {
+      return remainder === '';
+    },
     scan,
     scanUntil,
   };
