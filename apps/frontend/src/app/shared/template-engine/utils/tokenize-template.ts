@@ -6,6 +6,7 @@ export enum TokenizeStateType {
   DEFAULT,
   IN_STATEMENT_ARGS,
   IN_STATEMENT_BLOCK,
+  IN_INTERPOLATION,
   IN_EXPRESSION,
 }
 
@@ -34,6 +35,8 @@ export function tokenizeTemplate(template: string): Token[] {
         ? typeOrToken
         : { type: typeOrToken, ...scanner.latestMatch! };
 
+    console.log('token', token, tokens, scanner);
+
     if (!token.substring) {
       throw new TemplateError('Cannot push an empty token.', scanner.cursor);
     }
@@ -42,11 +45,15 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   // Push a tokenize state.
-  function pushState(typeOrState: TokenizeStateType | InExpressionState) {
+  function pushState(typeOrState: TokenizeStateType | TokenizeState) {
     const state =
       typeof typeOrState === 'object' ? typeOrState : { type: typeOrState };
 
     stateStack.push(state);
+  }
+
+  function updateLatestState(state: TokenizeState) {
+    stateStack[stateStack.length - 1] = state;
   }
 
   // Get current tokenize state.
@@ -64,6 +71,9 @@ export function tokenizeTemplate(template: string): Token[] {
         break;
       case TokenizeStateType.IN_STATEMENT_BLOCK:
         tokenizeStatementBlock();
+        break;
+      case TokenizeStateType.IN_INTERPOLATION:
+        tokenizeInterpolation();
         break;
       case TokenizeStateType.IN_EXPRESSION:
         tokenizeExpression();
@@ -95,11 +105,7 @@ export function tokenizeTemplate(template: string): Token[] {
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
     } else if (scanner.scan(/{{/)) {
       pushToken(TokenType.OPEN_INTERPOLATION);
-      pushState({
-        type: TokenizeStateType.IN_EXPRESSION,
-        closeSymbol: '}}',
-        ignoreSymbol: null,
-      });
+      pushState(TokenizeStateType.IN_INTERPOLATION);
     } else if (scanner.scanUntil(/.*?(?={{|@|})/)) {
       // Search until a close block, the start of a statement, or the start of
       // an interpolation tag.
@@ -120,6 +126,7 @@ export function tokenizeTemplate(template: string): Token[] {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
         closeSymbol: ')',
+        // closeRegex: /.*?(?=\))/
         ignoreSymbol: null,
       });
     } else {
@@ -136,18 +143,58 @@ export function tokenizeTemplate(template: string): Token[] {
     }
   }
 
+  function tokenizeInterpolation() {
+    if (scanner.scan(/\s+/)) {
+      // Ignore whitespace within interpolation tag.
+    } else if (scanner.scan(/}}/)) {
+      pushToken(TokenType.CLOSE_INTERPOLATION);
+      stateStack.pop();
+    } else if (scanner.scan(/.*?/)) {
+      pushState({
+        type: TokenizeStateType.IN_EXPRESSION,
+        closeSymbol: '}}',
+        ignoreSymbol: null,
+      });
+    } else {
+      throw new TemplateError('Missing closing }}.', scanner.cursor);
+    }
+  }
+
   function tokenizeExpression() {
     const state = getState() as InExpressionState;
     const { closeSymbol, ignoreSymbol, token } = state;
 
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within expression.
-    } else if (scanner.scan(new RegExp(`.*?(?='|\`|"|${closeSymbol})/)`))) {
+    } else if (
+      !ignoreSymbol &&
+      scanner.scan(new RegExp(`.*?(?=${closeSymbol})`))
+    ) {
+      console.log('aa', template, tokens, state, scanner);
+
+      // if (!token) {
+      //   throw new TemplateError('Missing expression.', scanner.cursor);
+      // }
+
+      const { startIndex, endIndex, substring } = scanner.latestMatch!;
+
+      pushToken({
+        type: TokenType.EXPRESSION,
+        startIndex: token?.startIndex ?? startIndex,
+        endIndex,
+        substring: (token?.substring ?? '') + substring,
+      });
+
+      stateStack.pop();
+      // } else if (scanner.scan(new RegExp(`.*?(?='|\`|"|${closeSymbol})/)`))) {
+    } else if (scanner.scan(new RegExp(`.*?(?='|\`|"|${closeSymbol})`))) {
       // Match expression until the close symbol or a string character. Closing
       // symbol should be ignored if wrapped within a string.
       const { startIndex, endIndex, substring } = scanner.latestMatch!;
 
-      // Build expression token.
+      console.log('>', template, scanner.latestMatch);
+
+      // Update expression token.
       state.token = {
         type: TokenType.EXPRESSION,
         startIndex: token?.startIndex ?? startIndex,
@@ -162,6 +209,7 @@ export function tokenizeTemplate(template: string): Token[] {
         lookaheadChar !== '`' &&
         lookaheadChar !== '"'
       ) {
+        state.ignoreSymbol = null;
         return;
       }
 
@@ -174,8 +222,6 @@ export function tokenizeTemplate(template: string): Token[] {
       if (!ignoreSymbol) {
         state.ignoreSymbol = lookaheadChar;
       }
-    } else if (!state.ignoreSymbol && scanner.scan(new RegExp(closeSymbol))) {
-      stateStack.pop();
     } else {
       console.log('err', template, state, scanner);
 
