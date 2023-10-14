@@ -15,6 +15,13 @@ export interface RenderContext {
   local: Record<string, unknown>[];
 }
 
+/** Pattern for the expression in a for loop statement. */
+const FOR_LOOP_EXPRESSION_PATTERN = /^\s*([(),\s0-9A-Za-z_$]*)\s+of\s+(.*)/;
+
+/** Pattern for the loop variable on the left-side of a for loop expression. */
+const FOR_LOOP_VARIABLE_PATTERN =
+  /^\(?\s*([0-9A-Za-z_$]*)\s*,?\s*([0-9A-Za-z_$]*)/;
+
 /**
  * Takes an abstract syntax tree and renders it to a string.
  */
@@ -68,14 +75,16 @@ export function renderTemplateNodes(
   }
 
   function visitForStatementNode(node: ForStatementNode): string {
-    const { elementName, iterable } = parseForExpression(node.expression);
+    const { loopVariable, indexVariable, iterable } = parseForExpression(
+      node.expression,
+    );
 
     return iterable
       .map((el, index) => {
-        // Push element name and index (optionally) to local context.
+        // Push loop variable and index (optionally) to local context.
         context.local.push({
-          [elementName]: el,
-          ['index']: 0,
+          [loopVariable]: el,
+          ...(indexVariable ? { [indexVariable]: index } : {}),
         });
 
         const result = visitAll(el);
@@ -88,10 +97,25 @@ export function renderTemplateNodes(
 
   function parseForExpression(expression: string) {
     try {
-      const [elementName, iterable] = expression.split(' of ');
+      const expressionMatch = expression.match(FOR_LOOP_EXPRESSION_PATTERN);
+      const [loopVariableExpression, iterable] = expressionMatch ?? [];
+
+      if (!loopVariableExpression || !iterable) {
+        throw new Error();
+      }
+
+      const loopVariableMatch = loopVariableExpression.match(
+        FOR_LOOP_VARIABLE_PATTERN,
+      );
+      const [loopVariable, indexVariable] = loopVariableMatch ?? [];
+
+      if (!loopVariable) {
+        throw new Error();
+      }
 
       return {
-        elementName,
+        loopVariable,
+        indexVariable,
         iterable: evalExpression(iterable) as any[],
       };
     } catch (e) {
@@ -119,7 +143,18 @@ export function renderTemplateNodes(
   }
 
   function evalExpression(expression: string) {
-    return evalWithContext(expression, context.global, ...context.local);
+    // const sum = new Function('context', `return (${expression})`);
+    const evalFn = new Function(
+      'global',
+      'local',
+      `with (global) { with (local) { return ${expression} } }`,
+    );
+
+    return evalFn(
+      context.global,
+      context.local.reduce(e => ({ ...e }), {}),
+    );
+    // return evalWithContext(expression, context.global, ...context.local);
   }
 
   return visitAll(nodes);
