@@ -96,34 +96,40 @@ export function renderTemplateNodes(
   }
 
   function parseForExpression(expression: string) {
-    try {
-      const expressionMatch = expression.match(FOR_LOOP_EXPRESSION_PATTERN);
-      const [loopVariableExpression, iterable] = expressionMatch ?? [];
+    // try {
+    const expressionMatch = expression.match(FOR_LOOP_EXPRESSION_PATTERN);
+    const [_, loopVariableExpression, iterable] = expressionMatch ?? [];
 
-      if (!loopVariableExpression || !iterable) {
-        throw new Error();
-      }
+    console.log('a', loopVariableExpression, iterable, expressionMatch);
 
-      const loopVariableMatch = loopVariableExpression.match(
-        FOR_LOOP_VARIABLE_PATTERN,
-      );
-      const [loopVariable, indexVariable] = loopVariableMatch ?? [];
-
-      if (!loopVariable) {
-        throw new Error();
-      }
-
-      return {
-        loopVariable,
-        indexVariable,
-        iterable: evalExpression(iterable) as any[],
-      };
-    } catch (e) {
-      throw new TemplateError(
-        "@for loop doesn't have a valid expression. Must be in the format '@for (item of items) { ... }'.",
-        0,
-      );
+    if (!loopVariableExpression || !iterable) {
+      throw new Error();
     }
+
+    console.log('b');
+    const loopVariableMatch = loopVariableExpression.match(
+      FOR_LOOP_VARIABLE_PATTERN,
+    );
+    const [__, loopVariable, indexVariable] = loopVariableMatch ?? [];
+
+    if (!loopVariable) {
+      throw new Error();
+    }
+
+    console.log('c', loopVariable, indexVariable);
+    const x = {
+      loopVariable,
+      indexVariable,
+      iterable: evalExpression(iterable) as any[],
+    };
+    console.log('d');
+    return x;
+    // } catch (e) {
+    //   throw new TemplateError(
+    //     "@for loop doesn't have a valid expression. Must be in the format '@for (item of items) { ... }'.",
+    //     0,
+    //   );
+    // }
   }
 
   function visitSwitchStatementNode(node: SwitchStatementNode): string {
@@ -143,17 +149,24 @@ export function renderTemplateNodes(
   }
 
   function evalExpression(expression: string) {
+    console.log('evalExpression', expression);
     // const sum = new Function('context', `return (${expression})`);
     const evalFn = new Function(
       'global',
       'local',
-      `with (global) { with (local) { return ${expression} } }`,
+      // `with (global) { with (local) { return ${expression} } }`,
+      `with (global) { return ${expression} }`,
     );
 
-    return evalFn(
+    console.log('>', `with (global) { return ${expression} }`);
+
+    const res = evalFn(
       context.global,
       context.local.reduce(e => ({ ...e }), {}),
     );
+    console.log('res', res);
+
+    return res;
     // return evalWithContext(expression, context.global, ...context.local);
   }
 
