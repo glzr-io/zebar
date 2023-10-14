@@ -13,7 +13,7 @@ export enum TokenizeStateType {
 export interface InExpressionState {
   type: TokenizeStateType.IN_EXPRESSION;
   token?: Token;
-  closeSymbol: string;
+  closeRegex: RegExp;
   ignoreSymbol: string | null;
 }
 
@@ -116,19 +116,20 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   function tokenizeStatementArgs() {
+    // if (scanner.scan(/\)?|\s+/)) {
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within statement args.
-    } else if (scanner.scan(/{/)) {
-      pushToken(TokenType.OPEN_BLOCK);
-      stateStack.pop();
-      pushState(TokenizeStateType.IN_STATEMENT_BLOCK);
     } else if (scanner.scan(/\(/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
-        closeSymbol: ')',
-        // closeRegex: /.*?(?=\))/
+        closeRegex: /.*?(?=\))/,
         ignoreSymbol: null,
       });
+      // } else if (scanner.scan(/\)?\s*{/)) {
+    } else if (scanner.scan(/\)?\s*{/)) {
+      pushToken(TokenType.OPEN_BLOCK);
+      stateStack.pop();
+      pushState(TokenizeStateType.IN_STATEMENT_BLOCK);
     } else {
       throw new TemplateError('Missing closing {.', scanner.cursor);
     }
@@ -152,7 +153,7 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scan(/.*?/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
-        closeSymbol: '}}',
+        closeRegex: /.*?(?=\s*}})/,
         ignoreSymbol: null,
       });
     } else {
@@ -162,32 +163,12 @@ export function tokenizeTemplate(template: string): Token[] {
 
   function tokenizeExpression() {
     const state = getState() as InExpressionState;
-    const { closeSymbol, ignoreSymbol, token } = state;
+    const { closeRegex, ignoreSymbol, token } = state;
 
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within expression.
-    } else if (
-      !ignoreSymbol &&
-      scanner.scan(new RegExp(`.*?(?=${closeSymbol})`))
-    ) {
-      console.log('aa', template, tokens, state, scanner);
-
-      // if (!token) {
-      //   throw new TemplateError('Missing expression.', scanner.cursor);
-      // }
-
-      const { startIndex, endIndex, substring } = scanner.latestMatch!;
-
-      pushToken({
-        type: TokenType.EXPRESSION,
-        startIndex: token?.startIndex ?? startIndex,
-        endIndex,
-        substring: (token?.substring ?? '') + substring,
-      });
-
-      stateStack.pop();
       // } else if (scanner.scan(new RegExp(`.*?(?='|\`|"|${closeSymbol})/)`))) {
-    } else if (scanner.scan(new RegExp(`.*?(?='|\`|"|${closeSymbol})`))) {
+    } else if (scanner.scan(/.*?('|`|\(|")/)) {
       // Match expression until the close symbol or a string character. Closing
       // symbol should be ignored if wrapped within a string.
       const { startIndex, endIndex, substring } = scanner.latestMatch!;
@@ -222,13 +203,27 @@ export function tokenizeTemplate(template: string): Token[] {
       if (!ignoreSymbol) {
         state.ignoreSymbol = lookaheadChar;
       }
+    } else if (!ignoreSymbol && scanner.scan(closeRegex)) {
+      console.log('aa', template, tokens, state, scanner);
+
+      // if (!token) {
+      //   throw new TemplateError('Missing expression.', scanner.cursor);
+      // }
+
+      const { startIndex, endIndex, substring } = scanner.latestMatch!;
+
+      pushToken({
+        type: TokenType.EXPRESSION,
+        startIndex: token?.startIndex ?? startIndex,
+        endIndex,
+        substring: (token?.substring ?? '') + substring,
+      });
+
+      stateStack.pop();
     } else {
       console.log('err', template, state, scanner);
 
-      throw new TemplateError(
-        `Missing close symbol ${closeSymbol}.`,
-        scanner.cursor,
-      );
+      throw new TemplateError('Missing close symbol.', scanner.cursor);
     }
   }
 
