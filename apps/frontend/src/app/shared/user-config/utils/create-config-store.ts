@@ -13,7 +13,6 @@ import { ProvidersConfigSchema } from '../types/bar/providers-config.model';
 import { useProvider } from '~/shared/providers';
 import { BaseElementConfig } from '../types/bar/base-element-config.model';
 import { formatConfigError } from './format-config-error';
-import { useTemplateEngine } from '../use-template-engine.hook';
 import { BarConfigSchemaP1 } from '../types/bar/bar-config.model';
 import { GroupConfigSchemaP1 } from '../types/bar/group-config.model';
 import { ComponentConfigSchemaP1 } from '../types/bar/component-config.model';
@@ -22,7 +21,7 @@ import { getBarConfigEntries } from './get-bar-configs';
 import { getGroupConfigEntries } from './get-group-configs';
 import { GeneralConfigSchema } from '../types/general-config.model';
 import { useLogger } from '~/shared/logging';
-import { TemplateError } from '~/shared/template-engine';
+import { TemplateError, useTemplateEngine } from '~/shared/template-engine';
 import { TemplatePropertyError } from './template-property-error';
 
 export interface ConfigStore {
@@ -172,7 +171,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
     const newConfigEntries = Object.entries(config).map(([key, value]) => {
       if (typeof value === 'string') {
         try {
-          const rendered = templateEngine.compile(value, variables);
+          const rendered = templateEngine.render(value, variables);
           return [key, rendered];
         } catch (err) {
           // Re-throw error as `TemplatePropertyError`.

@@ -137,7 +137,10 @@ export function tokenizeTemplate(template: string): Token[] {
       stateStack.pop();
       pushState(TokenizeStateType.IN_STATEMENT_BLOCK);
     } else {
-      throw new TemplateError('Missing closing {.', scanner.cursor);
+      throw new TemplateError(
+        'Missing closing { after statement.',
+        scanner.cursor,
+      );
     }
   }
 
@@ -163,7 +166,10 @@ export function tokenizeTemplate(template: string): Token[] {
         activeWrappingSymbol: null,
       });
     } else {
-      throw new TemplateError('Missing closing }}.', scanner.cursor);
+      throw new TemplateError(
+        'Missing closing }} after expression.',
+        scanner.cursor,
+      );
     }
   }
 
@@ -210,7 +216,10 @@ export function tokenizeTemplate(template: string): Token[] {
     } else {
       console.log('err', template, scanner);
 
-      throw new TemplateError('Missing close symbol.', scanner.cursor);
+      throw new TemplateError(
+        'Missing close symbol after expression.',
+        scanner.cursor,
+      );
     }
   }
 
