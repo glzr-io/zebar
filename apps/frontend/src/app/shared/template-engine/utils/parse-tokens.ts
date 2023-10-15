@@ -13,6 +13,7 @@ import {
   ElseBranch,
   DefaultBranch,
 } from '../types';
+import { TemplateError } from './template-error';
 
 export function parseTokens(tokens: Token[]) {
   let cursor = 0;
@@ -37,23 +38,30 @@ export function parseTokens(tokens: Token[]) {
       case TokenType.SWITCH_STATEMENT:
         return parseSwitchStatement(token);
       case TokenType.SWITCH_CASE_STATEMENT:
-        throw new Error(
+        throw new TemplateError(
           'Cannot use a switch case statement without a switch statement.',
+          token.startIndex,
         );
       case TokenType.SWITCH_DEFAULT_STATEMENT:
-        throw new Error(
+        throw new TemplateError(
           'Cannot use a switch default statement without a switch statement.',
+          token.startIndex,
         );
       case TokenType.ELSE_IF_STATEMENT:
-        throw new Error(
+        throw new TemplateError(
           'Cannot use an else if statement without an if statement.',
+          token.startIndex,
         );
       case TokenType.ELSE_STATEMENT:
-        throw new Error(
+        throw new TemplateError(
           'Cannot use an else statement without an if statement.',
+          token.startIndex,
         );
       default:
-        throw new Error(`Unknown token type '${token.type}'.`);
+        throw new TemplateError(
+          `Unknown token type '${token.type}'.`,
+          token.startIndex,
+        );
     }
   }
 
@@ -174,13 +182,16 @@ export function parseTokens(tokens: Token[]) {
   }
 
   function need(tokenType: TokenType): Token {
-    const nextMatching = expect(tokenType);
+    const nextOfType = expect(tokenType);
 
-    if (!nextMatching) {
-      throw new Error(`Expected token type '${tokenType}'.`);
+    if (!nextOfType) {
+      throw new TemplateError(
+        `Expected token type '${tokenType}'.`,
+        tokens[cursor + 1].startIndex,
+      );
     }
 
-    return nextMatching;
+    return nextOfType;
   }
 
   function expect(tokenType: TokenType): Token | null {

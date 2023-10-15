@@ -22,6 +22,8 @@ import { getBarConfigEntries } from './get-bar-configs';
 import { getGroupConfigEntries } from './get-group-configs';
 import { GeneralConfigSchema } from '../types/general-config.model';
 import { useLogger } from '~/shared/logging';
+import { TemplateError } from '~/shared/template-engine';
+import { TemplatePropertyError } from './template-property-error';
 
 export interface ConfigStore {
   value: UserConfig | null;
@@ -169,7 +171,20 @@ export function createConfigStore(configObj: Resource<unknown>) {
   >(config: T, schema: U, variables: Record<string, unknown>): z.infer<U> {
     const newConfigEntries = Object.entries(config).map(([key, value]) => {
       if (typeof value === 'string') {
-        return [key, templateEngine.compile(value, variables)];
+        try {
+          const rendered = templateEngine.compile(value, variables);
+          return [key, rendered];
+        } catch (err) {
+          // Re-throw error as `TemplatePropertyError`.
+          throw err instanceof TemplateError
+            ? new TemplatePropertyError(
+                err.message,
+                key,
+                value,
+                err.templateIndex,
+              )
+            : err;
+        }
       }
 
       return [key, value];

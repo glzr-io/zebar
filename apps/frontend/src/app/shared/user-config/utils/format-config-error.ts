@@ -1,5 +1,7 @@
 import { ZodError } from 'zod';
 
+import { TemplatePropertyError } from './template-property-error';
+
 export function formatConfigError(err: unknown) {
   if (!(err instanceof Error)) {
     return new Error('Problem reading config file.');
@@ -7,11 +9,21 @@ export function formatConfigError(err: unknown) {
 
   if (err instanceof ZodError) {
     const [firstError] = err.errors;
-    const { path, message } = firstError;
+    const { message, path } = firstError;
     const fullPath = path.join('.');
 
     return new Error(
       `Property '${fullPath}' in config isn't valid. Reason: '${message}'.`,
+    );
+  }
+
+  if (err instanceof TemplatePropertyError) {
+    const { message, path, template, templateIndex } = err;
+
+    return new Error(
+      `Property '${path}' in config isn't valid.\n` +
+        `${template.slice(templateIndex - 6, templateIndex)}\n` +
+        `    ^^^ ${message}`,
     );
   }
 
