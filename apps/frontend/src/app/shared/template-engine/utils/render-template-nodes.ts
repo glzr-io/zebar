@@ -35,6 +35,8 @@ export function renderTemplateNodes(
   };
 
   function visitAll(nodes: TemplateNode[]): string {
+    console.log('nodes', nodes);
+
     return nodes.map(node => visitOne(node)).join('');
   }
 
@@ -87,7 +89,7 @@ export function renderTemplateNodes(
           ...(indexVariable ? { [indexVariable]: index } : {}),
         });
 
-        const result = visitAll(el);
+        const result = visitAll(node.children);
         context.local.pop();
 
         return result;
@@ -122,7 +124,7 @@ export function renderTemplateNodes(
       indexVariable,
       iterable: evalExpression(iterable) as any[],
     };
-    console.log('d');
+    console.log('d', x);
     return x;
     // } catch (e) {
     //   throw new TemplateError(
@@ -154,15 +156,19 @@ export function renderTemplateNodes(
     const evalFn = new Function(
       'global',
       'local',
-      // `with (global) { with (local) { return ${expression} } }`,
-      `with (global) { return ${expression} }`,
+      `with (global) { with (local) { return ${expression} } }`,
+      // `with (global) { return ${expression} }`,
     );
 
     console.log('>', `with (global) { return ${expression} }`);
+    console.log(
+      '>>',
+      context.local.reduce((acc, e) => ({ ...acc, ...e }), { people: ['bob'] }),
+    );
 
     const res = evalFn(
       context.global,
-      context.local.reduce(e => ({ ...e }), {}),
+      context.local.reduce((acc, e) => ({ ...acc, ...e }), { people: ['bob'] }),
     );
     console.log('res', res);
 
