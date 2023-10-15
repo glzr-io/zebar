@@ -1,4 +1,3 @@
-import { evalWithContext } from '~/shared/utils';
 import {
   ForStatementNode,
   IfStatementNode,
@@ -8,7 +7,6 @@ import {
   TemplateNodeType,
   TextNode,
 } from '../types';
-import { TemplateError } from './template-error';
 
 export interface RenderContext {
   global: Record<string, unknown>;

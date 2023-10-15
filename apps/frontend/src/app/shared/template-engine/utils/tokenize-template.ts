@@ -35,11 +35,10 @@ export function tokenizeTemplate(template: string): Token[] {
         ? typeOrToken
         : { type: typeOrToken, ...scanner.latestMatch! };
 
-    if (!token.substring) {
-      throw new TemplateError('Cannot push an empty token.', scanner.cursor);
+    // Skip pushing empty tokens.
+    if (token.substring) {
+      tokens.push(token);
     }
-
-    tokens.push(token);
   }
 
   // Push a tokenize state.
@@ -110,7 +109,14 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scanUntil(/.*?(?={{|@|})/)) {
       // Search until a close block, the start of a statement, or the start of
       // an interpolation tag.
-      pushToken(TokenType.TEXT);
+      const latestMatch = scanner.latestMatch!;
+
+      // Push text token with indentation removed.
+      pushToken({
+        type: TokenType.TEXT,
+        ...latestMatch,
+        substring: latestMatch.substring.replace(/\n\s*/g, ''),
+      });
     } else {
       throw new TemplateError('No valid tokens found.', scanner.cursor);
     }
@@ -220,7 +226,7 @@ export function tokenizeTemplate(template: string): Token[] {
 
     // Otherwise, set/clear wrapping symbol depending on whether the inverse
     // symbol matches.
-    return matched === inverse ? current : null;
+    return matched === inverse ? null : current;
   }
 
   return tokens;
