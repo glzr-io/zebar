@@ -14,7 +14,7 @@ export interface InExpressionState {
   type: TokenizeStateType.IN_EXPRESSION;
   token?: Token;
   closeRegex: RegExp;
-  ignoreSymbol: string | null;
+  activeWrappingSymbol: string | null;
 }
 
 export type TokenizeState = { type: TokenizeStateType } | InExpressionState;
@@ -34,8 +34,6 @@ export function tokenizeTemplate(template: string): Token[] {
       typeof typeOrToken === 'object'
         ? typeOrToken
         : { type: typeOrToken, ...scanner.latestMatch! };
-
-    console.log('token', token, tokens, scanner);
 
     if (!token.substring) {
       throw new TemplateError('Cannot push an empty token.', scanner.cursor);
@@ -123,7 +121,7 @@ export function tokenizeTemplate(template: string): Token[] {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
         closeRegex: /.*?(?=\))/,
-        ignoreSymbol: null,
+        activeWrappingSymbol: null,
       });
     } else if (scanner.scan(/{/)) {
       pushToken(TokenType.OPEN_BLOCK);
@@ -153,7 +151,7 @@ export function tokenizeTemplate(template: string): Token[] {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
         closeRegex: /.*?(?=\s*}})/,
-        ignoreSymbol: null,
+        activeWrappingSymbol: null,
       });
     } else {
       throw new TemplateError('Missing closing }}.', scanner.cursor);
@@ -162,65 +160,52 @@ export function tokenizeTemplate(template: string): Token[] {
 
   function tokenizeExpression() {
     const state = getState() as InExpressionState;
-    const { closeRegex, ignoreSymbol, token } = state;
 
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within expression.
-      // } else if (scanner.scan(new RegExp(`.*?(?='|\`|"|${closeSymbol})/)`))) {
     } else if (scanner.scan(/.*?('|`|\(|")/)) {
-      // Match expression until the close symbol or a string character. Closing
+      // Match expression until a string or opening parenthesis. Closing
       // symbol should be ignored if wrapped within a string.
       const { startIndex, endIndex, substring } = scanner.latestMatch!;
 
-      console.log('>', template, scanner.latestMatch);
+      // Get last character of scanned string (either (, ', ", or `).
+      const matchedSymbol = substring[substring.length - 1];
+      const isOpeningSymbol = matchedSymbol !== ')';
 
-      // Update expression token.
-      state.token = {
-        type: TokenType.EXPRESSION,
-        startIndex: token?.startIndex ?? startIndex,
-        endIndex,
-        substring: (token?.substring ?? '') + substring,
-      };
+      const inverseSymbol =
+        state.activeWrappingSymbol === '(' ? ')' : state.activeWrappingSymbol;
 
-      const lookaheadChar = substring[substring.length - 1];
+      // Set active wrapping symbol to the matched symbol.
+      const activeWrappingSymbol =
+        (isOpeningSymbol && !state.activeWrappingSymbol) ||
+        matchedSymbol !== inverseSymbol
+          ? matchedSymbol
+          : null;
 
-      if (
-        lookaheadChar !== "'" &&
-        lookaheadChar !== '`' &&
-        lookaheadChar !== '"'
-      ) {
-        state.ignoreSymbol = null;
-        return;
-      }
-
-      // Clear ignore symbol.
-      if (ignoreSymbol && ignoreSymbol === lookaheadChar) {
-        state.ignoreSymbol = null;
-      }
-
-      // Set ignore symbol to the current string character.
-      if (!ignoreSymbol) {
-        state.ignoreSymbol = lookaheadChar;
-      }
-    } else if (!ignoreSymbol && scanner.scan(closeRegex)) {
-      console.log('aa', template, tokens, state, scanner);
-
-      // if (!token) {
-      //   throw new TemplateError('Missing expression.', scanner.cursor);
-      // }
-
+      updateLatestState({
+        type: TokenizeStateType.IN_EXPRESSION,
+        closeRegex: state.closeRegex,
+        activeWrappingSymbol,
+        token: {
+          type: TokenType.EXPRESSION,
+          startIndex: state.token?.startIndex ?? startIndex,
+          endIndex,
+          substring: (state.token?.substring ?? '') + substring,
+        },
+      });
+    } else if (!state.activeWrappingSymbol && scanner.scan(state.closeRegex)) {
       const { startIndex, endIndex, substring } = scanner.latestMatch!;
 
       pushToken({
         type: TokenType.EXPRESSION,
-        startIndex: token?.startIndex ?? startIndex,
+        startIndex: state.token?.startIndex ?? startIndex,
         endIndex,
-        substring: (token?.substring ?? '') + substring,
+        substring: (state.token?.substring ?? '') + substring,
       });
 
       stateStack.pop();
     } else {
-      console.log('err', template, state, scanner);
+      console.log('err', template, scanner);
 
       throw new TemplateError('Missing close symbol.', scanner.cursor);
     }
