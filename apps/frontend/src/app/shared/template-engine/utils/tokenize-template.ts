@@ -116,17 +116,16 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   function tokenizeStatementArgs() {
-    // if (scanner.scan(/\)?|\s+/)) {
-    if (scanner.scan(/\s+/)) {
-      // Ignore whitespace within statement args.
+    if (scanner.scan(/\)?\s+/)) {
+      // Ignore whitespace within args, and closing parenthesis after
+      // statement args.
     } else if (scanner.scan(/\(/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
         closeRegex: /.*?(?=\))/,
         ignoreSymbol: null,
       });
-      // } else if (scanner.scan(/\)?\s*{/)) {
-    } else if (scanner.scan(/\)?\s*{/)) {
+    } else if (scanner.scan(/{/)) {
       pushToken(TokenType.OPEN_BLOCK);
       stateStack.pop();
       pushState(TokenizeStateType.IN_STATEMENT_BLOCK);
