@@ -13,7 +13,7 @@ export function formatConfigError(err: unknown) {
     const fullPath = path.join('.');
 
     return new Error(
-      `Property '${fullPath}' in config isn't valid. Reason: '${message}'.`,
+      `Property '${fullPath}' in config isn't valid.\n` + `⚠️ ${message}`,
     );
   }
 
@@ -21,9 +21,10 @@ export function formatConfigError(err: unknown) {
     const { message, path, template, templateIndex } = err;
 
     return new Error(
-      `Property '${path}' in config isn't valid.\n` +
-        `${template.slice(templateIndex - 6, templateIndex)}\n` +
-        `    ^^^ ${message}`,
+      `Property '${path}' in config isn't valid.\n\n` +
+        'Syntax error at:\n' +
+        `...${template.slice(templateIndex - 30, templateIndex)} << \n\n` +
+        `⚠️ ${message}`,
     );
   }
 
