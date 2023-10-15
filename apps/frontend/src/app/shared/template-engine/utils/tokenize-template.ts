@@ -50,8 +50,11 @@ export function tokenizeTemplate(template: string): Token[] {
     stateStack.push(state);
   }
 
-  function updateLatestState(state: TokenizeState) {
-    stateStack[stateStack.length - 1] = state;
+  function updateLatestState(state: Partial<TokenizeState>) {
+    stateStack[stateStack.length - 1] = {
+      ...stateStack[stateStack.length - 1],
+      ...state,
+    };
   }
 
   // Get current tokenize state.
@@ -163,28 +166,22 @@ export function tokenizeTemplate(template: string): Token[] {
 
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within expression.
-    } else if (scanner.scan(/.*?('|`|\(|")/)) {
+    } else if (scanner.scan(/.*?('|`|\(|\)|")/)) {
       // Match expression until a string or opening parenthesis. Closing
       // symbol should be ignored if wrapped within a string.
       const { startIndex, endIndex, substring } = scanner.latestMatch!;
 
+      console.log('aaa', scanner);
+
       // Get last character of scanned string (either (, ', ", or `).
       const matchedSymbol = substring[substring.length - 1];
-      const isOpeningSymbol = matchedSymbol !== ')';
 
-      const inverseSymbol =
-        state.activeWrappingSymbol === '(' ? ')' : state.activeWrappingSymbol;
-
-      // Set active wrapping symbol to the matched symbol.
-      const activeWrappingSymbol =
-        (isOpeningSymbol && !state.activeWrappingSymbol) ||
-        matchedSymbol !== inverseSymbol
-          ? matchedSymbol
-          : null;
+      const activeWrappingSymbol = getActiveWrappingSymbol(
+        state.activeWrappingSymbol,
+        matchedSymbol,
+      );
 
       updateLatestState({
-        type: TokenizeStateType.IN_EXPRESSION,
-        closeRegex: state.closeRegex,
         activeWrappingSymbol,
         token: {
           type: TokenType.EXPRESSION,
@@ -209,6 +206,21 @@ export function tokenizeTemplate(template: string): Token[] {
 
       throw new TemplateError('Missing close symbol.', scanner.cursor);
     }
+  }
+
+  function getActiveWrappingSymbol(current: string | null, matched: string) {
+    const isOpeningSymbol = matched !== ')';
+
+    // Set active wrapping symbol to the matched symbol.
+    if (!current && isOpeningSymbol) {
+      return matched;
+    }
+
+    const inverse = current === '(' ? ')' : current;
+
+    // Otherwise, set/clear wrapping symbol depending on whether the inverse
+    // symbol matches.
+    return matched === inverse ? current : null;
   }
 
   return tokens;
