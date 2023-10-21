@@ -24,7 +24,6 @@ importers:
       '@types/node': 18.15.12
       axios: 1.4.0
       glazewm: 1.1.1
-      liquidjs: 10.9.2
       sass: '1.63.6 '
       solid-js: 1.7.3
       typescript: 5.0.4
@@ -37,7 +36,6 @@ importers:
       '@tauri-apps/api': 1.4.0
       axios: 1.4.0
       glazewm: 1.1.1
-      liquidjs: 10.9.2
       solid-js: 1.7.3
       yaml: 2.3.1
       zod: 3.22.2
@@ -946,11 +944,6 @@ packages:
       delayed-stream: 1.0.0
     dev: false
 
-  /commander/10.0.1:
-    resolution: {integrity: sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==}
-    engines: {node: '>=14'}
-    dev: false
-
   /commander/8.3.0:
     resolution: {integrity: sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==}
     engines: {node: '>= 12'}
@@ -1191,14 +1184,6 @@ packages:
     optionalDependencies:
       graceful-fs: 4.2.11
     dev: true
-
-  /liquidjs/10.9.2:
-    resolution: {integrity: sha512-ygPCgYyiFKQNyRi/CK3s3U5RimosBtrIq7TaMYK5ek93mUl9CZ6xxqw2T+1G4kVc9dAmwI71bWLQNKRToV8SsQ==}
-    engines: {node: '>=14'}
-    hasBin: true
-    dependencies:
-      commander: 10.0.1
-    dev: false
 
   /lodash.debounce/4.0.8:
     resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
