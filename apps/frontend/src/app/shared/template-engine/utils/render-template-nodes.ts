@@ -7,6 +7,7 @@ import {
   TemplateNodeType,
   TextNode,
 } from '../types';
+import { TemplateError } from './template-error';
 
 export interface RenderContext {
   global: Record<string, unknown>;
@@ -96,40 +97,34 @@ export function renderTemplateNodes(
   }
 
   function parseForExpression(expression: string) {
-    // try {
-    const expressionMatch = expression.match(FOR_LOOP_EXPRESSION_PATTERN);
-    const [_, loopVariableExpression, iterable] = expressionMatch ?? [];
+    try {
+      const expressionMatch = expression.match(FOR_LOOP_EXPRESSION_PATTERN);
+      const [_, loopVariableExpression, iterable] = expressionMatch ?? [];
 
-    console.log('a', loopVariableExpression, iterable, expressionMatch);
+      if (!loopVariableExpression || !iterable) {
+        throw new Error();
+      }
 
-    if (!loopVariableExpression || !iterable) {
-      throw new Error();
+      const loopVariableMatch = loopVariableExpression.match(
+        FOR_LOOP_VARIABLE_PATTERN,
+      );
+      const [__, loopVariable, indexVariable] = loopVariableMatch ?? [];
+
+      if (!loopVariable) {
+        throw new Error();
+      }
+
+      return {
+        loopVariable,
+        indexVariable,
+        iterable: evalExpression(iterable) as unknown[],
+      };
+    } catch (err) {
+      throw new TemplateError(
+        "@for loop doesn't have a valid expression. Must be in the format '@for (item of items) { ... }'.",
+        0,
+      );
     }
-
-    console.log('b');
-    const loopVariableMatch = loopVariableExpression.match(
-      FOR_LOOP_VARIABLE_PATTERN,
-    );
-    const [__, loopVariable, indexVariable] = loopVariableMatch ?? [];
-
-    if (!loopVariable) {
-      throw new Error();
-    }
-
-    console.log('c', loopVariable, indexVariable);
-    const x = {
-      loopVariable,
-      indexVariable,
-      iterable: evalExpression(iterable) as any[],
-    };
-    console.log('d', x);
-    return x;
-    // } catch (e) {
-    //   throw new TemplateError(
-    //     "@for loop doesn't have a valid expression. Must be in the format '@for (item of items) { ... }'.",
-    //     0,
-    //   );
-    // }
   }
 
   function visitSwitchStatementNode(node: SwitchStatementNode): string {
@@ -149,29 +144,16 @@ export function renderTemplateNodes(
   }
 
   function evalExpression(expression: string) {
-    console.log('evalExpression', expression);
-    // const sum = new Function('context', `return (${expression})`);
     const evalFn = new Function(
       'global',
       'local',
       `with (global) { with (local) { return ${expression} } }`,
-      // `with (global) { return ${expression} }`,
     );
 
-    console.log('>', `with (global) { return ${expression} }`);
-    console.log(
-      '>>',
-      context.local.reduce((acc, e) => ({ ...acc, ...e }), { people: ['bob'] }),
-    );
-
-    const res = evalFn(
+    return evalFn(
       context.global,
-      context.local.reduce((acc, e) => ({ ...acc, ...e }), { people: ['bob'] }),
+      context.local.reduce((acc, e) => ({ ...acc, ...e }), {}),
     );
-    console.log('res', res);
-
-    return res;
-    // return evalWithContext(expression, context.global, ...context.local);
   }
 
   return visitAll(nodes);
