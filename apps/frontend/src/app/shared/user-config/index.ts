@@ -17,7 +17,7 @@ export * from './types/bar/provider-config.model';
 export * from './types/bar/providers-config.model';
 export * from './types/shared/boolean-like.model';
 export * from './types/shared/with-dynamic-key';
-export * from './types/general-config.model';
+export * from './types/global-config.model';
 export * from './types/user-config.model';
 export * from './utils/create-config-store';
 export * from './utils/format-config-error';

@@ -1,10 +1,11 @@
 # Thanks for trying out Zanbar :)
-# Yaml is white-space sensitive BTW (always use 2 spaces).
+# Yaml is white-space sensitive BTW (use 2 spaces to indent).
 
 ##
-# Docs regarding general: https://some-future-docs-link.com
+# Settings to apply to all windows, popups, and desktop widgets.
+# Docs regarding global: https://some-future-docs-link.com
 ##
-general:
+global:
   # CSS/SCSS to apply to the root document (ie. the <html> element).
   root_styles: |
     --some-var: blue;

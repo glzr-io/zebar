@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 import { BarConfigSchema } from './bar/bar-config.model';
-import { GeneralConfigSchema } from './general-config.model';
+import { GlobalConfigSchema } from './global-config.model';
 import { withDynamicKey } from './shared/with-dynamic-key';
 import { Prettify } from '~/shared/utils';
 
 export const UserConfigP1Schema = z.object({
-  general: GeneralConfigSchema,
+  global: GlobalConfigSchema,
 });
 
 export type UserConfigP1 = Prettify<z.infer<typeof UserConfigP1Schema>>;

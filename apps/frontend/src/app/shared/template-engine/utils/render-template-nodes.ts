@@ -34,8 +34,6 @@ export function renderTemplateNodes(
   };
 
   function visitAll(nodes: TemplateNode[]): string {
-    console.log('nodes', nodes);
-
     return nodes.map(node => visitOne(node)).join('');
   }
 
