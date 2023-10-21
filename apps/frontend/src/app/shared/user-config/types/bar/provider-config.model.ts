@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { ActiveWindowProviderConfigSchema } from './providers/active-window-provider-config.model';
 import { BatteryProviderConfigSchema } from './providers/battery-provider-config.model';
 import { CpuProviderConfigSchema } from './providers/cpu-provider-config.model';
-import { CustomProviderConfigSchema } from './providers/custom-provider-config.model';
 import { DateTimeProviderConfigSchema } from './providers/date-time-provider-config.model';
 import { GlazewmProviderConfigSchema } from './providers/glazewm-provider-config.model';
 import { IpProviderConfigSchema } from './providers/ip-provider-config.model';
@@ -17,7 +16,6 @@ export const ProviderConfigSchema = z.union([
   ActiveWindowProviderConfigSchema,
   BatteryProviderConfigSchema,
   CpuProviderConfigSchema,
-  CustomProviderConfigSchema,
   DateTimeProviderConfigSchema,
   GlazewmProviderConfigSchema,
   IpProviderConfigSchema,
