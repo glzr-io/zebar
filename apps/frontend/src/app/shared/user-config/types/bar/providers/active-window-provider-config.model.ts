@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ActiveWindowProviderOptionsSchema = z.object({
   /** Substitution rules for formatting window title. */
-  rewrite_title: z.record(z.string(), z.string()),
+  rewrite_title: z.record(z.string(), z.string()).default({}),
 });
 
 export type ActiveWindowProviderOptions = z.infer<
