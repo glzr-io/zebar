@@ -1,58 +1,67 @@
 import { createStore } from 'solid-js/store';
 import { GwmClient, GwmEventType, Workspace } from 'glazewm';
 
-import { memoize } from '../../utils';
-import { GlazewmProviderConfig } from '../../user-config';
+import { memoize } from '~/shared/utils';
+import {
+  GlazewmProviderOptions,
+  GlazewmProviderOptionsSchema,
+} from '~/shared/user-config';
 import { useCurrentMonitor } from '~/shared/desktop';
 
-export const useGlazewmProvider = memoize((config: GlazewmProviderConfig) => {
-  const currentMonitor = useCurrentMonitor();
+const DEFAULT = GlazewmProviderOptionsSchema.parse({});
 
-  const client = new GwmClient();
+export const useGlazewmProvider = memoize(
+  (options: GlazewmProviderOptions = DEFAULT) => {
+    const currentMonitor = useCurrentMonitor();
 
-  const [glazewmVariables, setGlazewmVariables] = createStore({
-    workspaces: [] as Workspace[],
-    binding_mode: '',
-  });
+    const client = new GwmClient();
 
-  client.onConnect(e => console.log('onOpen', e));
-  client.onMessage(e => console.log('onMessage', e));
-  client.onDisconnect(e => console.log('onClose', e));
-  client.onError(e => console.log('onError', e));
+    const [glazewmVariables, setGlazewmVariables] = createStore({
+      workspaces: [] as Workspace[],
+      binding_mode: '',
+    });
 
-  // Get initial workspaces.
-  refetch();
+    client.onConnect(e => console.log('onOpen', e));
+    client.onMessage(e => console.log('onMessage', e));
+    client.onDisconnect(e => console.log('onClose', e));
+    client.onError(e => console.log('onError', e));
 
-  client.subscribeMany(
-    [GwmEventType.WORKSPACE_ACTIVATED, GwmEventType.WORKSPACE_DEACTIVATED],
-    () => refetch(),
-  );
+    // Get initial workspaces.
+    refetch();
 
-  async function refetch() {
-    const currentPosition = await currentMonitor.getPosition();
-    const monitors = await client.getMonitors();
-
-    // Get GlazeWM monitor that corresponds to the bar's monitor.
-    const monitor = monitors.reduce((a, b) =>
-      getDistance(currentPosition, a) < getDistance(currentPosition, b) ? a : b,
+    client.subscribeMany(
+      [GwmEventType.WORKSPACE_ACTIVATED, GwmEventType.WORKSPACE_DEACTIVATED],
+      () => refetch(),
     );
 
-    setGlazewmVariables({ workspaces: monitor.children });
-  }
+    async function refetch() {
+      const currentPosition = await currentMonitor.getPosition();
+      const monitors = await client.getMonitors();
 
-  function getDistance(
-    pointA: { x: number; y: number },
-    pointB: { x: number; y: number },
-  ) {
-    return Math.sqrt(
-      Math.pow(pointB.x - pointA.x, 2) + Math.pow(pointB.y - pointA.y, 2),
-    );
-  }
+      // Get GlazeWM monitor that corresponds to the bar's monitor.
+      const monitor = monitors.reduce((a, b) =>
+        getDistance(currentPosition, a) < getDistance(currentPosition, b)
+          ? a
+          : b,
+      );
 
-  return {
-    variables: glazewmVariables,
-    commands: {
-      focus_workspace: () => {},
-    },
-  };
-});
+      setGlazewmVariables({ workspaces: monitor.children });
+    }
+
+    function getDistance(
+      pointA: { x: number; y: number },
+      pointB: { x: number; y: number },
+    ) {
+      return Math.sqrt(
+        Math.pow(pointB.x - pointA.x, 2) + Math.pow(pointB.y - pointA.y, 2),
+      );
+    }
+
+    return {
+      variables: glazewmVariables,
+      commands: {
+        focus_workspace: () => {},
+      },
+    };
+  },
+);

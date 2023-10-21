@@ -11,28 +11,28 @@ import { useWeatherProvider } from './weather/use-weather-provider.hook';
 import { ProviderConfig } from '../user-config';
 import { memoize } from '../utils';
 
-export const useProvider = memoize((config: ProviderConfig) => {
-  switch (config.type) {
+export const useProvider = memoize((options: ProviderConfig) => {
+  switch (options.type) {
     case 'active_window':
-      return useActiveWindowProvider(config);
+      return useActiveWindowProvider(options);
     case 'battery':
-      return useBatteryProvider(config);
+      return useBatteryProvider(options);
     case 'cpu':
-      return useCpuProvider(config);
+      return useCpuProvider(options);
     case 'date_time':
-      return useDateTimeProvider(config);
+      return useDateTimeProvider(options);
     case 'glazewm':
-      return useGlazewmProvider(config);
+      return useGlazewmProvider(options);
     case 'ip':
-      return useIpProvider(config);
+      return useIpProvider(options);
     case 'memory':
-      return useMemoryProvider(config);
+      return useMemoryProvider(options);
     case 'network':
-      return useNetworkProvider(config);
+      return useNetworkProvider(options);
     case 'system_tray':
-      return useSystemTrayProvider(config);
+      return useSystemTrayProvider(options);
     case 'weather':
-      return useWeatherProvider(config);
+      return useWeatherProvider(options);
     default:
       throw new Error('Not a supported provider type.');
   }

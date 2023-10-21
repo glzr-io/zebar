@@ -1,11 +1,18 @@
-import { NetworkProviderConfig } from '~/shared/user-config';
-import { memoize } from '../../utils';
+import {
+  NetworkProviderOptions,
+  NetworkProviderOptionsSchema,
+} from '~/shared/user-config';
+import { memoize } from '~/shared/utils';
 
-export const useNetworkProvider = memoize((config: NetworkProviderConfig) => {
-  return {
-    variables: {
-      xx: '',
-    },
-    commands: {},
-  };
-});
+const DEFAULT = NetworkProviderOptionsSchema.parse({});
+
+export const useNetworkProvider = memoize(
+  (options: NetworkProviderOptions = DEFAULT) => {
+    return {
+      variables: {
+        xx: '',
+      },
+      commands: {},
+    };
+  },
+);

@@ -5,7 +5,7 @@ import { memoize } from '../utils';
 
 // TODO: How to track user-defined variables (and functions)?
 // TODO: Should `VariableConfig` also be passed in?
-export const useTrackedVariables = memoize((config: ProviderConfig) => {
+export const useTrackedVariables = memoize((options: ProviderConfig) => {
   const [trackedVariables, setTrackedVariables] = createSignal([]);
 
   // Is it possible to just equality match on variable/provider config?

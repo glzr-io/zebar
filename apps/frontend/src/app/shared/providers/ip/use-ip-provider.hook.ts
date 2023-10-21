@@ -2,11 +2,16 @@ import axios from 'axios';
 import { onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { memoize } from '../../utils';
-import { IpProviderConfig } from '../../user-config';
+import { memoize } from '~/shared/utils';
+import {
+  IpProviderOptions,
+  IpProviderOptionsSchema,
+} from '~/shared/user-config';
 import { IpInfoApiResponse } from './ip-info-api-response.model';
 
-export const useIpProvider = memoize((config: IpProviderConfig) => {
+const DEFAULT = IpProviderOptionsSchema.parse({});
+
+export const useIpProvider = memoize((options: IpProviderOptions = DEFAULT) => {
   const [ipVariables, setIpVariables] = createStore({
     ip_address: '',
     city: '',
@@ -18,7 +23,7 @@ export const useIpProvider = memoize((config: IpProviderConfig) => {
   });
 
   refresh();
-  const interval = setInterval(() => refresh(), 60 * 1000);
+  const interval = setInterval(() => refresh(), options.refresh_interval_ms);
   onCleanup(() => clearInterval(interval));
 
   async function refresh() {

@@ -1,8 +1,13 @@
-import { SystemTrayProviderConfig } from '~/shared/user-config';
-import { memoize } from '../../utils';
+import {
+  SystemTrayProviderOptions,
+  SystemTrayProviderOptionsSchema,
+} from '~/shared/user-config';
+import { memoize } from '~/shared/utils';
+
+const DEFAULT = SystemTrayProviderOptionsSchema.parse({});
 
 export const useSystemTrayProvider = memoize(
-  (config: SystemTrayProviderConfig) => {
+  (options: SystemTrayProviderOptions = DEFAULT) => {
     return {
       variables: {
         xx: '',
