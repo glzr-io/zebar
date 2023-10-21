@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { BooleanLikeSchema } from './shared/boolean-like.model';
 
-export const GeneralConfigSchema = z
+export const GlobalConfigSchema = z
   .object({
     enable_devtools: BooleanLikeSchema.optional(),
     root_styles: z.string().optional(),
@@ -11,4 +11,4 @@ export const GeneralConfigSchema = z
   })
   .partial();
 
-export type GeneralConfig = z.infer<typeof GeneralConfigSchema>;
+export type GlobalConfig = z.infer<typeof GlobalConfigSchema>;

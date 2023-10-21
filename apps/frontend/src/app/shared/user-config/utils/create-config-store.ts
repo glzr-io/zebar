@@ -19,10 +19,10 @@ import { ComponentConfigSchemaP1 } from '../types/bar/component-config.model';
 import { useConfigVariables } from '../use-config-variables.hook';
 import { getBarConfigEntries } from './get-bar-configs';
 import { getGroupConfigEntries } from './get-group-configs';
-import { GeneralConfigSchema } from '../types/general-config.model';
 import { useLogger } from '~/shared/logging';
 import { TemplateError, useTemplateEngine } from '~/shared/template-engine';
 import { TemplatePropertyError } from './template-property-error';
+import { GlobalConfigSchema } from '../types/global-config.model';
 
 export interface ConfigStore {
   value: UserConfig | null;
@@ -65,15 +65,9 @@ export function createConfigStore(configObj: Resource<unknown>) {
       env: configVariables()!,
     }));
 
-    // Update general config.
-    createComputed(() => {
-      const parsedConfig = parseConfig(
-        configObj.general,
-        GeneralConfigSchema.strip(),
-        rootVariables(),
-      );
-
-      setConfig('value', { general: parsedConfig });
+    // Update global config.
+    setConfig('value', {
+      global: parseConfig(configObj.global, GlobalConfigSchema.strip(), {}),
     });
 
     // Update bar configs.

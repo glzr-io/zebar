@@ -28,7 +28,7 @@ export const useStyleBuilder = memoize(() => {
         .map(component => scopeWith(`#${component.id}`, component?.styles));
 
       const styles = [
-        scopeWith(':root', userConfig.general.root_styles),
+        scopeWith(':root', userConfig.global.root_styles),
         scopeWith(`#${barConfig.id}`, barConfig.styles),
         ...groupStyles,
         ...componentStyles,

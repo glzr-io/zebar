@@ -17,10 +17,6 @@ export const useTemplateEngine = memoize(() => {
     const parsed = parseTokens(tokens);
     setCache(template, parseTokens(tokens));
 
-    // TODO: Remove logs.
-    console.log('tokenized', tokens, template);
-    console.log('parsed', parsed, template);
-
     return renderTemplateNodes(parsed, context);
   }
 
