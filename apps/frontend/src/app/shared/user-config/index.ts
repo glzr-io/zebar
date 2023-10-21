@@ -25,5 +25,4 @@ export * from './utils/get-bar-configs';
 export * from './utils/get-group-configs';
 export * from './use-config-variables.hook';
 export * from './use-user-config.hook';
-export * from './use-template-engine.hook';
 export * from './use-style-builder.hook';
