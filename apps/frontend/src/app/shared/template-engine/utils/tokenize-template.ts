@@ -82,7 +82,9 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   function tokenizeDefault() {
-    if (scanner.scan(/@if/)) {
+    if (scanner.scan(/\s+/)) {
+      // Ignore whitespace between tokens.
+    } else if (scanner.scan(/@if/)) {
       pushToken(TokenType.IF_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
     } else if (scanner.scan(/@else\s+if/)) {
@@ -178,15 +180,16 @@ export function tokenizeTemplate(template: string): Token[] {
 
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within expression.
-    } else if (scanner.scan(/.*?('|`|\(|\)|")/)) {
+    } else if (
+      scanner.scan(/.*?('|`|\(|")\s*/) ||
+      (state.activeWrappingSymbol && scanner.scan(/.*?(\))\s*/))
+    ) {
       // Match expression until a string or opening parenthesis. Closing
       // symbol should be ignored if wrapped within a string.
       const { startIndex, endIndex, substring } = scanner.latestMatch!;
 
-      console.log('aaa', scanner);
-
-      // Get last character of scanned string (either (, ', ", or `).
-      const matchedSymbol = substring[substring.length - 1];
+      // Get last character of scanned string (either (, ), ', ", or `).
+      const matchedSymbol = substring.trimEnd().slice(-1);
 
       const activeWrappingSymbol = getActiveWrappingSymbol(
         state.activeWrappingSymbol,
@@ -214,8 +217,6 @@ export function tokenizeTemplate(template: string): Token[] {
 
       stateStack.pop();
     } else {
-      console.log('err', template, scanner);
-
       throw new TemplateError(
         'Missing close symbol after expression.',
         scanner.cursor,
