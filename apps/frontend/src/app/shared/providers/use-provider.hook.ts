@@ -34,6 +34,6 @@ export const useProvider = memoize((config: ProviderConfig) => {
     case 'weather':
       return useWeatherProvider(config);
     default:
-      throw new Error(`Not a supported provider type '${config.type}'.`);
+      throw new Error('Not a supported provider type.');
   }
 });
