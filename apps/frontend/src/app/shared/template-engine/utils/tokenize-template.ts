@@ -108,7 +108,7 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scan(/{{/)) {
       pushToken(TokenType.OPEN_INTERPOLATION);
       pushState(TokenizeStateType.IN_INTERPOLATION);
-    } else if (scanner.scanUntil(/.*?(?={{|@|})/)) {
+    } else if (scanner.scanUntil(/.+?(?={{|@|})/)) {
       // Search until a close block, the start of a statement, or the start of
       // an interpolation tag.
       const latestMatch = scanner.latestMatch!;
@@ -117,6 +117,7 @@ export function tokenizeTemplate(template: string): Token[] {
       pushToken({
         type: TokenType.TEXT,
         ...latestMatch,
+        // TODO: This doesn't seem like a good way to handle new-lines.
         substring: latestMatch.substring.replace(/\n\s*/g, ''),
       });
     } else {
@@ -131,7 +132,7 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scan(/\(/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
-        closeRegex: /.*?(?=\))/,
+        closeRegex: /.+?(?=\))/,
         activeWrappingSymbol: null,
       });
     } else if (scanner.scan(/{/)) {
@@ -164,7 +165,7 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scan(/.*?/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
-        closeRegex: /.*?(?=\s*}})/,
+        closeRegex: /.+?(?=}})/,
         activeWrappingSymbol: null,
       });
     } else {
@@ -180,39 +181,51 @@ export function tokenizeTemplate(template: string): Token[] {
 
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within expression.
-    } else if (
-      scanner.scan(/.*?('|`|\(|")\s*/) ||
-      (state.activeWrappingSymbol && scanner.scan(/.*?(\))\s*/))
-    ) {
-      // Match expression until a string or opening parenthesis. Closing
-      // symbol should be ignored if wrapped within a string.
+    } else if (scanner.scan(state.closeRegex)) {
       const { startIndex, endIndex, substring } = scanner.latestMatch!;
 
-      // Get last character of scanned string (either (, ), ', ", or `).
-      const matchedSymbol = substring.trimEnd().slice(-1);
+      // String scanner for finding wrapping symbols within the matched
+      // substring. The closing symbol should be ignored if wrapped within an
+      // unclosed string or parenthesis.
+      const subScanner = createStringScanner(substring);
+      let activeWrappingSymbol = state.activeWrappingSymbol;
 
-      const activeWrappingSymbol = getActiveWrappingSymbol(
-        state.activeWrappingSymbol,
-        matchedSymbol,
-      );
+      while (!subScanner.isEmpty) {
+        const symbolMatch = subScanner.scan(/.+?('|`|\(|\)|")/);
 
-      updateLatestState({
-        activeWrappingSymbol,
-        token: {
-          type: TokenType.EXPRESSION,
-          startIndex: state.token?.startIndex ?? startIndex,
-          endIndex,
-          substring: (state.token?.substring ?? '') + substring,
-        },
-      });
-    } else if (!state.activeWrappingSymbol && scanner.scan(state.closeRegex)) {
-      const { startIndex, endIndex, substring } = scanner.latestMatch!;
+        if (!symbolMatch) {
+          break;
+        }
+
+        // Get last character of scanned string (either (, ), ', ", or `).
+        const foundSymbol = symbolMatch.substring.trimEnd().slice(-1);
+
+        activeWrappingSymbol = getActiveWrappingSymbol(
+          activeWrappingSymbol,
+          foundSymbol,
+        );
+      }
+
+      // If there's an active wrapping symbol, update the token created thus
+      // far, and continue scanning.
+      if (activeWrappingSymbol) {
+        updateLatestState({
+          activeWrappingSymbol,
+          token: {
+            type: TokenType.EXPRESSION,
+            startIndex: state.token?.startIndex ?? startIndex,
+            endIndex,
+            substring: (state.token?.substring ?? '') + substring,
+          },
+        });
+        return;
+      }
 
       pushToken({
         type: TokenType.EXPRESSION,
         startIndex: state.token?.startIndex ?? startIndex,
         endIndex,
-        substring: (state.token?.substring ?? '') + substring,
+        substring: (state.token?.substring ?? '') + substring.trimEnd(),
       });
 
       stateStack.pop();
