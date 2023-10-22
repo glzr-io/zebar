@@ -46,6 +46,23 @@ bar/default:
     styles: |
       display: flex;
     components:
+      - providers: ['glazewm']
+        template: |
+          @for (workspace of glazewm.workspaces) {
+            @if (workspace.state == 'focused') {
+              <button class="focused-workspace">
+                {{ workspace.name }}
+              </button>
+            } @else if (workspace.state == 'active') {
+              <button class="active-workspace">
+                {{ workspace.name }}
+              </button>
+            } @else {
+              <button class="normal-workspace">
+                {{ workspace.name }}
+              </button>
+            }
+          }
       - providers: ['date_time']
         template: |
           {{ date_time.hours }}:{{ date_time.minutes }}
