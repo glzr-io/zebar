@@ -51,11 +51,11 @@
       {
         "fullscreen": false,
         "resizable": false,
-        "transparent": true,
+        "transparent": false,
         "decorations": false,
         "title": "Zanbar",
-        "width": 1,
-        "height": 1
+        "width": 500,
+        "height": 500
       }
     ],
     "macOSPrivateApi": true
