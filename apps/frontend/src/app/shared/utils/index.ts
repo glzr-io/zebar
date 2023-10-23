@@ -8,5 +8,4 @@ export * from './create-string-scanner';
 export * from './is-defined';
 export * from './is-object';
 export * from './memoize';
-export * from './mount';
 export * from './resolved';
