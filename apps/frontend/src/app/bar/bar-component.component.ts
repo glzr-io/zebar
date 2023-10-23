@@ -1,11 +1,8 @@
-import { createMemo } from 'solid-js';
+import { createEffect, createMemo, onCleanup, onMount } from 'solid-js';
 
 import { ComponentConfig, GroupConfig } from '~/shared/user-config';
-import {
-  createTemplateElement,
-  glazewmWorkspacesTemplate,
-  weatherTemplate,
-} from '~/shared/templates';
+import { glazewmWorkspacesTemplate, weatherTemplate } from '~/shared/templates';
+import { useLogger } from '~/shared/logging';
 
 export interface BarComponentProps {
   config: ComponentConfig;
@@ -13,6 +10,12 @@ export interface BarComponentProps {
 }
 
 export function BarComponent(props: BarComponentProps) {
+  const logger = useLogger(`#${props.config.id}`);
+
+  // Create element with ID.
+  const element = document.createElement('div');
+  element.id = props.config.id;
+
   const template = createMemo(() => {
     switch (props.config.template) {
       case 'template.glazewm_workspaces':
@@ -39,9 +42,24 @@ export function BarComponent(props: BarComponentProps) {
       }, {});
   });
 
-  return createTemplateElement({
-    id: props.config.id,
-    className: props.config.class_name,
-    template,
+  // Update the HTML element when the template changes.
+  createEffect(() => {
+    const newElement = createRootElement();
+    newElement.innerHTML = template();
+
+    const oldElement = document.getElementById(props.config.id);
+    oldElement!.replaceWith(newElement);
   });
+
+  onMount(() => logger.debug('Mounted'));
+  onCleanup(() => logger.debug('Cleanup'));
+
+  function createRootElement() {
+    const element = document.createElement('div');
+    element.id = props.config.id;
+    element.className = props.config.class_name;
+    return element;
+  }
+
+  return element;
 }
