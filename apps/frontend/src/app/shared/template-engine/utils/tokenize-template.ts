@@ -191,7 +191,7 @@ export function tokenizeTemplate(template: string): Token[] {
       let activeWrappingSymbol = state.activeWrappingSymbol;
 
       while (!subScanner.isEmpty) {
-        const symbolMatch = subScanner.scan(/.+?('|`|\(|\)|")/);
+        const symbolMatch = subScanner.scan(/.*?('|`|\(|\)|")/);
 
         if (!symbolMatch) {
           break;
