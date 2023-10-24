@@ -1,5 +1,5 @@
 {
-  "name": "@zanbar/desktop",
+  "name": "@zebar/desktop",
   "version": "0.0.0",
   "scripts": {
     "dev": "npm run tauri dev -- -- -- sub1 sub2",

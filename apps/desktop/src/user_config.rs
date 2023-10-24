@@ -3,7 +3,7 @@ use std::{fs, io::Read, path::PathBuf};
 use anyhow::{Context, Result};
 use tauri::{api::path::home_dir, AppHandle};
 
-/// Reads the config file at `/.glazer/zanbar.yaml` in the user's home
+/// Reads the config file at `/.glazer/zebar.yaml` in the user's home
 /// directory.
 pub fn read_file(
   config_path_override: Option<&str>,
@@ -12,7 +12,7 @@ pub fn read_file(
   let default_config_path = home_dir()
     .context("Unable to get home directory.")?
     .join(".glazer")
-    .join("zanbar.yaml");
+    .join("zebar.yaml");
 
   let config_path = match config_path_override {
     Some(val) => PathBuf::from(val),
