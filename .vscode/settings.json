@@ -1,4 +1,4 @@
 {
-  "rust-analyzer.linkedProjects": ["apps/desktop/Cargo.toml"],
+  "rust-analyzer.linkedProjects": ["packages/desktop/Cargo.toml"],
   "cssModules.camelCase": true
 }

@@ -21,7 +21,7 @@
         }
       },
       "options": {
-        "cwd": "${workspaceRoot}/apps/client"
+        "cwd": "${workspaceRoot}/packages/client"
       }
     },
     {
@@ -30,7 +30,7 @@
       "command": "pnpm",
       "args": ["build"],
       "options": {
-        "cwd": "${workspaceRoot}/apps/client"
+        "cwd": "${workspaceRoot}/packages/client"
       }
     }
   ]
