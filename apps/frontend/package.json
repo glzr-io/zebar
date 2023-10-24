@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npm run wait:client-api && vite --mode development",
     "build": "vite build --mode production",
-    "wait:client-api": "wait-on ../client-api/dist/index.d.mts"
+    "wait:client-api": "wait-on ../client-api/dist/index.d.ts"
   },
   "dependencies": {
     "solid-js": "1.7.3",

@@ -1,19 +1,11 @@
 {
   "name": "zebar",
   "version": "0.0.0",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
-    }
-  },
+  "main": "dist/index.js",
+  "types": "dist/index.js",
   "scripts": {
-    "dev": "npm run build -- --watch src",
-    "build": "tsup src/index.ts --format cjs,esm --dts --keep-names --loader \".html=text\"",
+    "dev": "tsc -w",
+    "build": "tsc",
     "tsup": "tsup"
   },
   "dependencies": {
