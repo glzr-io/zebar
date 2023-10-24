@@ -8,7 +8,7 @@
       "cargo": {
         "args": [
           "build",
-          "--manifest-path=./apps/desktop/Cargo.toml",
+          "--manifest-path=./packages/desktop/Cargo.toml",
           "--no-default-features"
         ]
       },
@@ -23,7 +23,7 @@
         "args": [
           "build",
           "--release",
-          "--manifest-path=./apps/desktop/Cargo.toml"
+          "--manifest-path=./packages/desktop/Cargo.toml"
         ]
       },
       // Task for the `beforeBuildCommand`, if used.
