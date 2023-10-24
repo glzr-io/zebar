@@ -2,7 +2,7 @@
   "$schema": "node_modules/@tauri-apps/cli/schema.json",
   "build": {
     "devPath": "http://localhost:4200",
-    "distDir": "../frontend/dist"
+    "distDir": "../client/dist"
   },
   "package": {
     "productName": "tauri",
@@ -34,7 +34,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "glazer.zanbar",
+      "identifier": "glazer.zebar",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -53,7 +53,7 @@
         "resizable": false,
         "transparent": false,
         "decorations": false,
-        "title": "Zanbar",
+        "title": "Zebar",
         "width": 500,
         "height": 500
       }
