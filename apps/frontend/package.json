@@ -3,23 +3,20 @@
   "version": "0.0.0",
   "description": "",
   "scripts": {
-    "dev": "vite --mode development",
-    "build": "vite build --mode production"
+    "dev": "npm run wait:client-api && vite --mode development",
+    "build": "vite build --mode production",
+    "wait:client-api": "wait-on ../client-api/dist/index.d.ts"
   },
   "dependencies": {
-    "@tauri-apps/api": "1.4.0",
-    "axios": "1.4.0",
-    "glazewm": "1.1.1",
     "solid-js": "1.7.3",
-    "yaml": "2.3.1",
-    "zod": "3.22.2"
+    "zebar": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "18.15.12",
-    "sass": "1.63.6 ",
     "typescript": "5.0.4",
     "vite": "4.3.0",
     "vite-plugin-checker": "0.6.2",
-    "vite-plugin-solid": "2.7.0"
+    "vite-plugin-solid": "2.7.0",
+    "wait-on": "7.0.1"
   }
 }

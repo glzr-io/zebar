@@ -1,7 +1,7 @@
 import { For } from 'solid-js';
+import { BarConfig, getGroupConfigs } from 'zebar';
 
 import { BarGroup } from './bar-group.component';
-import { BarConfig, getGroupConfigs } from '~/shared/user-config';
 
 export interface BarProps {
   config: BarConfig;
