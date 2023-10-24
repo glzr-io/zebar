@@ -1,8 +1,7 @@
 import { Show, createEffect, on } from 'solid-js';
+import { useCurrentWindow, useStyleBuilder, useUserConfig } from 'zebar';
 
 import { Bar } from './bar/bar.component';
-import { useStyleBuilder, useUserConfig } from './shared/user-config';
-import { useCurrentWindow } from './shared/desktop';
 
 export function App() {
   const userConfig = useUserConfig();
