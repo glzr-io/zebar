@@ -1,8 +1,11 @@
 import { createEffect, createMemo, onCleanup, onMount } from 'solid-js';
-
-import { ComponentConfig, GroupConfig } from '~/shared/user-config';
-import { glazewmWorkspacesTemplate, weatherTemplate } from '~/shared/templates';
-import { useLogger } from '~/shared/logging';
+import {
+  ComponentConfig,
+  GroupConfig,
+  useLogger,
+  glazewmWorkspacesTemplate,
+  weatherTemplate,
+} from 'zebar';
 
 export interface BarComponentProps {
   config: ComponentConfig;
@@ -19,9 +22,9 @@ export function BarComponent(props: BarComponentProps) {
   const template = createMemo(() => {
     switch (props.config.template) {
       case 'template.glazewm_workspaces':
-        return glazewmWorkspacesTemplate;
+        return '';
       case 'template.weather':
-        return weatherTemplate;
+        return '';
       default:
         return props.config.template;
     }
