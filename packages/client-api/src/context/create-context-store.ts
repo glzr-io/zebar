@@ -1,9 +1,11 @@
-import { createComputed, createMemo } from 'solid-js';
+import { batch, createComputed, createMemo } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import {
   BarConfigSchemaP1,
   BaseElementConfig,
+  ComponentConfig,
+  GroupConfig,
   ProvidersConfigSchema,
   UserConfig,
   getBarConfigEntries,
@@ -20,15 +22,15 @@ export function createContextStore(
     {} as ElementContext,
   );
 
-  createComputed(createContextTree);
+  const rootVariables = createMemo(() => ({ env: configVariables()! }));
+
+  createComputed(() => {
+    batch(() => createContextTree());
+  });
 
   function createContextTree() {
     const windowId = 'bar';
     const windowConfig = config[`bar/${windowId}`];
-
-    const rootVariables = createMemo(() => ({
-      env: configVariables()!,
-    }));
 
     const windowVariables = createMemo(() => ({
       ...rootVariables(),
@@ -48,18 +50,50 @@ export function createContextStore(
 
   function createElementContext(
     config: BaseElementConfig,
-    parentContext: ElementContext,
+    parentContext?: ElementContext,
   ): ElementContext {
     const id = parentContext ? `${parentContext.id}-${config.id}` : config.id;
+    const path = getStorePath(config, parentContext) as any;
 
-    return {
+    const elementContext = {
       id,
       parent: parentContext,
-      children: '',
-      rawConfig: '',
+      children: [],
+      rawConfig: config,
       parsedConfig: '',
       data: '',
     };
+
+    setContextTree(...path, elementContext);
+
+    const childConfigs = getChildConfigs(config);
+
+    for (const childConfig of childConfigs) {
+      createElementContext(childConfig, elementContext);
+    }
+  }
+
+  function getStorePath(
+    config: BaseElementConfig,
+    parentContext?: ElementContext,
+  ): string[] {
+    const path = [config.id];
+    let ancestorContext = parentContext;
+
+    while (ancestorContext) {
+      path.unshift('children');
+      path.unshift(ancestorContext.id);
+    }
+
+    return path;
+  }
+
+  function getChildConfigs(config: BaseElementConfig) {
+    return Object.entries(config).filter(
+      ([key, value]) =>
+        key.startsWith('component/') || key.startsWith('group/'),
+      // TODO: Get rid of this type coercion.
+    ) as any as [`component/${string}`, (ComponentConfig | GroupConfig)[]];
   }
 
   // TODO: Get variables from `variables` config as well.
