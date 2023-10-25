@@ -8,7 +8,6 @@ import {
   GroupConfig,
   ProvidersConfigSchema,
   UserConfig,
-  getBarConfigEntries,
 } from '~/user-config';
 import { createProvider } from './providers';
 import { parseConfigSection } from '~/user-config/parse-config-section';
@@ -32,14 +31,17 @@ export function createContextStore(
     const windowId = 'bar';
     const windowConfig = config[`bar/${windowId}`];
 
-    createElementContext(windowConfig);
+    createElementContext(windowId, windowConfig);
   }
 
   function createElementContext(
+    id: string,
     config: BaseElementConfig,
     parentContext?: ElementContext,
   ) {
-    const id = parentContext ? `${parentContext.id}-${config.id}` : config.id;
+    const compoundId = parentContext
+      ? `${parentContext.id}-${config.id}`
+      : config.id;
     const path = getStorePath(config, parentContext) as any;
 
     const contextData = createMemo(() => ({
@@ -50,13 +52,13 @@ export function createContextStore(
 
     createComputed(() => {
       const parsedConfig = parseConfigSection(
-        { ...config, id },
+        { ...config, compoundId },
         BarConfigSchemaP1.strip(),
         contextData(),
       );
 
       const elementContext = {
-        id,
+        id: compoundId,
         parent: parentContext,
         children: [],
         rawConfig: config,
@@ -64,12 +66,16 @@ export function createContextStore(
         data: contextData,
       };
 
+      // @ts-ignore
       setContextTree(...path, elementContext);
 
       const childConfigs = getChildConfigs(config);
 
-      for (const [_, childConfig] of childConfigs) {
-        createElementContext(childConfig, elementContext);
+      for (const [key, childConfig] of childConfigs) {
+        const keyId = key.split('/')[1];
+        const childId = parentContext ? `${parentContext.id}-${keyId}` : keyId;
+
+        createElementContext(childId, childConfig, elementContext);
       }
     });
   }

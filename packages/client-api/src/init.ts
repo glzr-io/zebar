@@ -1,14 +1,22 @@
 import { createEffect } from 'solid-js';
 
 import { setWindowPosition, setWindowStyles } from './desktop';
-import { GlobalConfigSchema, buildStyles } from './user-config';
+import {
+  GlobalConfigSchema,
+  buildStyles,
+  getConfigVariables,
+  getUserConfig,
+} from './user-config';
 import { parseConfigSection } from './user-config/parse-config-section';
+import { createContextStore } from './context';
 
 export async function initAsync() {
-  const rawConfig = await readConfig();
-  const config = createConfigStore(rawConfig);
+  // const rawConfig = await readConfig();
+  // const config = createConfigStore(rawConfig);
+  const config = getUserConfig();
+  const configVariables = getConfigVariables();
 
-  const context = createContextStore(config);
+  const context = createContextStore(config, configVariables);
 
   const globalConfig = parseConfigSection(
     rawConfig.global,
