@@ -32,45 +32,46 @@ export function createContextStore(
     const windowId = 'bar';
     const windowConfig = config[`bar/${windowId}`];
 
-    const windowVariables = createMemo(() => ({
-      ...rootVariables(),
-      ...getElementVariables(windowConfig),
-    }));
-
-    createComputed(() => {
-      const parsedConfig = parseConfigSection(
-        { ...windowConfig, id: windowId },
-        BarConfigSchemaP1.strip(),
-        windowVariables(),
-      );
-
-      setContextTree(windowId, parsedConfig);
-    });
+    createElementContext(windowConfig);
   }
 
   function createElementContext(
     config: BaseElementConfig,
     parentContext?: ElementContext,
-  ): ElementContext {
+  ) {
     const id = parentContext ? `${parentContext.id}-${config.id}` : config.id;
     const path = getStorePath(config, parentContext) as any;
 
-    const elementContext = {
-      id,
-      parent: parentContext,
-      children: [],
-      rawConfig: config,
-      parsedConfig: '',
-      data: '',
-    };
+    const contextData = createMemo(() => ({
+      ...rootVariables(),
+      ...getElementVariables(config),
+      // TODO: getAncestorVariables()
+    }));
 
-    setContextTree(...path, elementContext);
+    createComputed(() => {
+      const parsedConfig = parseConfigSection(
+        { ...config, id },
+        BarConfigSchemaP1.strip(),
+        contextData(),
+      );
 
-    const childConfigs = getChildConfigs(config);
+      const elementContext = {
+        id,
+        parent: parentContext,
+        children: [],
+        rawConfig: config,
+        parsedConfig,
+        data: contextData,
+      };
 
-    for (const childConfig of childConfigs) {
-      createElementContext(childConfig, elementContext);
-    }
+      setContextTree(...path, elementContext);
+
+      const childConfigs = getChildConfigs(config);
+
+      for (const [_, childConfig] of childConfigs) {
+        createElementContext(childConfig, elementContext);
+      }
+    });
   }
 
   function getStorePath(
@@ -93,7 +94,7 @@ export function createContextStore(
       ([key, value]) =>
         key.startsWith('component/') || key.startsWith('group/'),
       // TODO: Get rid of this type coercion.
-    ) as any as [`component/${string}`, (ComponentConfig | GroupConfig)[]];
+    ) as any as [`component/${string}`, ComponentConfig | GroupConfig][];
   }
 
   // TODO: Get variables from `variables` config as well.
