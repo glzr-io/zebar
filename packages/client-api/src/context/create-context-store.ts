@@ -12,16 +12,17 @@ import {
 import { createProvider } from './providers';
 import { parseConfigSection } from '~/user-config/parse-config-section';
 import { ElementContext } from './element-context.model';
+import { ElementType } from './element-type.model';
 
 export function createContextStore(
   config: UserConfig,
-  configVariables: () => Record<string, unknown>,
+  configVariables: Record<string, unknown>,
 ) {
   const [contextTree, setContextTree] = createStore<ElementContext>(
     {} as ElementContext,
   );
 
-  const rootVariables = createMemo(() => ({ env: configVariables()! }));
+  const rootVariables = { env: configVariables };
 
   createComputed(() => {
     batch(() => createContextTree());
@@ -39,33 +40,30 @@ export function createContextStore(
     config: BaseElementConfig,
     parentContext?: ElementContext,
   ) {
-    const compoundId = parentContext
-      ? `${parentContext.id}-${config.id}`
-      : config.id;
-    const path = getStorePath(config, parentContext) as any;
-
     const contextData = createMemo(() => ({
-      ...rootVariables(),
+      ...rootVariables,
       ...getElementVariables(config),
       // TODO: getAncestorVariables()
     }));
 
     createComputed(() => {
       const parsedConfig = parseConfigSection(
-        { ...config, compoundId },
+        { ...config, id },
         BarConfigSchemaP1.strip(),
         contextData(),
       );
 
       const elementContext = {
-        id: compoundId,
+        id,
         parent: parentContext,
         children: [],
         rawConfig: config,
         parsedConfig,
         data: contextData,
+        type: ElementType.WINDOW,
       };
 
+      const path = getStorePath(config, parentContext) as any;
       // @ts-ignore
       setContextTree(...path, elementContext);
 
@@ -73,7 +71,7 @@ export function createContextStore(
 
       for (const [key, childConfig] of childConfigs) {
         const keyId = key.split('/')[1];
-        const childId = parentContext ? `${parentContext.id}-${keyId}` : keyId;
+        const childId = parentContext ? `${id}-${keyId}` : keyId;
 
         createElementContext(childId, childConfig, elementContext);
       }

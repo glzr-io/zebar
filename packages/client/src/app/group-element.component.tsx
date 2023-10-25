@@ -12,7 +12,7 @@ export function GroupElement(props: GroupElementProps) {
 
   return (
     <div id={config.id} class={config.class_name}>
-      <For each={props.context.getChildren()}>
+      <For each={props.context.children}>
         {childContext =>
           childContext.type === ElementType.GROUP ? (
             <GroupElement context={childContext} />

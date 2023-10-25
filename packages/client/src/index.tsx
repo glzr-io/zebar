@@ -13,5 +13,5 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 }
 
 initAsync().then(context => {
-  render(() => <WindowElement context />, root!);
+  render(() => <WindowElement context={context.store} />, root!);
 });

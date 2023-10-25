@@ -32,3 +32,16 @@ export const getUserConfig = memoize(() => {
     reload,
   };
 });
+
+export async function readUserConfig() {
+  try {
+    const configStr = await readConfigFile();
+    const configObj = parse(configStr) as unknown;
+
+    logger.debug(`Read config:`, configObj);
+
+    return configObj;
+  } catch (err) {
+    throw formatConfigError(err);
+  }
+}
