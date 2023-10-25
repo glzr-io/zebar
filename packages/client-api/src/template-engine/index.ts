@@ -1,3 +1,3 @@
 export * from './types';
 export * from './utils';
-export * from './use-template-engine.hook';
+export * from './create-template-engine';

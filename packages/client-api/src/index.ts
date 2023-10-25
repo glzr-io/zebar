@@ -1,6 +1,5 @@
 export * from './desktop';
-export * from './logging';
-export * from './providers';
+export * from './context/providers';
 export * from './template-engine';
 export * from './templates';
 export * from './user-config';

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { GroupConfigSchema } from './group-config.model';
 import { BaseElementConfigSchema } from './base-element-config.model';
 import { withDynamicKey } from '../shared/with-dynamic-key';
-import { Prettify } from '../../../utils';
+import { Prettify } from '~/utils';
 import { BooleanLikeSchema } from '../shared/boolean-like.model';
 
 export const BarConfigSchemaP1 = BaseElementConfigSchema.extend({

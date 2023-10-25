@@ -1,4 +1,4 @@
-import { createStringScanner } from '../../utils';
+import { createStringScanner } from '~/utils';
 import { Token, TokenType } from '../types';
 import { TemplateError } from './template-error';
 

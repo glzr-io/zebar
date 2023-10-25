@@ -10,7 +10,7 @@ import { MemoryProviderConfigSchema } from './providers/memory-provider-config.m
 import { NetworkProviderConfigSchema } from './providers/network-provider-config.model';
 import { SystemTrayProviderConfigSchema } from './providers/system-tray-provider-config.model';
 import { WeatherProviderConfigSchema } from './providers/weather-provider-config.model';
-import { Prettify } from '../../../utils';
+import { Prettify } from '~/utils';
 
 export const ProviderConfigSchema = z.union([
   ActiveWindowProviderConfigSchema,

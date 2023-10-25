@@ -10,28 +10,28 @@ import { z } from 'zod';
 
 import { UserConfig } from '../types/user-config.model';
 import { ProvidersConfigSchema } from '../types/bar/providers-config.model';
-import { useProvider } from '../../providers';
+import { createProvider } from '~/context/providers';
 import { BaseElementConfig } from '../types/bar/base-element-config.model';
 import { formatConfigError } from './format-config-error';
 import { BarConfigSchemaP1 } from '../types/bar/bar-config.model';
 import { GroupConfigSchemaP1 } from '../types/bar/group-config.model';
 import { ComponentConfigSchemaP1 } from '../types/bar/component-config.model';
-import { useConfigVariables } from '../use-config-variables.hook';
+import { getConfigVariables } from '../get-config-variables';
 import { getBarConfigEntries } from './get-bar-configs';
 import { getGroupConfigEntries } from './get-group-configs';
-import { useLogger } from '../../logging';
-import { TemplateError, useTemplateEngine } from '../../template-engine';
+import { TemplateError, useTemplateEngine } from '~/template-engine';
 import { TemplatePropertyError } from './template-property-error';
 import { GlobalConfigSchema } from '../types/global-config.model';
+import { createLogger } from '~/utils';
 
 export interface ConfigStore {
   value: UserConfig | null;
 }
 
 export function createConfigStore(configObj: Resource<unknown>) {
-  const logger = useLogger('createConfigStore');
+  const logger = createLogger('createConfigStore');
   const templateEngine = useTemplateEngine();
-  const configVariables = useConfigVariables();
+  const configVariables = getConfigVariables();
 
   const [config, setConfig] = createStore<ConfigStore>({
     value: null,
@@ -152,7 +152,7 @@ export function createConfigStore(configObj: Resource<unknown>) {
     return providerConfigs.reduce(
       (acc, config) => ({
         ...acc,
-        [config.type]: useProvider(config).variables,
+        [config.type]: createProvider(config).variables,
       }),
       {},
     );

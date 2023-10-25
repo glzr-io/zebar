@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { ProviderConfigSchema } from './provider-config.model';
-import { Prettify } from '../../../utils';
+import { Prettify } from '~/utils';
 
 export const ProvidersConfigSchema = z
   .array(
