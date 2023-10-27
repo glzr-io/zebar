@@ -1,4 +1,10 @@
-import { Accessor, batch, createComputed, createMemo } from 'solid-js';
+import {
+  Accessor,
+  createComputed,
+  createEffect,
+  createMemo,
+  createRoot,
+} from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import {
@@ -12,11 +18,12 @@ import {
   TemplateConfigSchemaP1,
   GroupConfigSchemaP1,
   UserConfig,
+  formatConfigError,
 } from '~/user-config';
+import { createTemplateEngine } from '~/template-engine';
 import { createProvider } from './providers';
 import { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
-import { createTemplateEngine } from '..';
 
 type ContextStorePath =
   | []
@@ -43,8 +50,21 @@ export function createContextStore(
 
   const rootVariables = createMemo(() => ({ env: configVariables }));
 
-  createComputed(() => {
-    batch(() => createContextTree());
+  createEffect(() => {
+    let dispose: () => void;
+
+    createRoot(dispose => {
+      dispose = dispose;
+
+      try {
+        createContextTree();
+      } catch (err) {
+        dispose();
+        throw formatConfigError(err);
+      }
+    });
+
+    return () => dispose();
   });
 
   function createContextTree() {
@@ -86,25 +106,14 @@ export function createContextStore(
         contextData(),
       );
 
-      batch(() => {
-        //@ts-ignore - TODO
-        setContextTree(...path, () => ({
-          id,
-          children: [],
-          rawConfig: config,
-          parsedConfig,
-          data: contextData(),
-          type,
-        }));
-
-        console.log('set 2');
-        if (parentPath) {
-          //@ts-ignore - TODO
-          setContextTree(...parentPath, () => ({
-            parsedConfig: { [configKey]: parsedConfig },
-          }));
-        }
-        console.log('set 3');
+      // @ts-ignore - TODO
+      setContextTree(...path, {
+        id,
+        children: [],
+        rawConfig: config,
+        parsedConfig,
+        data: contextData(),
+        type,
       });
     });
 
@@ -134,6 +143,7 @@ export function createContextStore(
     }
   }
 
+  // TODO: Validate in P1 schemas that `template/` and `group/` keys exist.
   function getSchemaForElement(type: ElementType) {
     switch (type) {
       case ElementType.WINDOW:
