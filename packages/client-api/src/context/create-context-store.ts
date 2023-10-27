@@ -1,104 +1,158 @@
-import { batch, createComputed, createMemo } from 'solid-js';
+import { Accessor, batch, createComputed, createMemo } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import {
-  BarConfigSchemaP1,
+  WindowConfigSchemaP1,
   BaseElementConfig,
-  ComponentConfig,
+  TemplateConfig,
   GroupConfig,
   ProvidersConfigSchema,
+  parseConfigSection,
+  ConfigStore,
+  TemplateConfigSchemaP1,
+  GroupConfigSchemaP1,
   UserConfig,
 } from '~/user-config';
 import { createProvider } from './providers';
-import { parseConfigSection } from '~/user-config/parse-config-section';
 import { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
+import { createTemplateEngine } from '..';
+
+type ContextStorePath =
+  | []
+  | ['children', number]
+  | ['children', number, 'children', number];
+
+interface CreateElementContextArgs {
+  config: BaseElementConfig;
+  configKey: string;
+  path: ContextStorePath;
+  parentPath?: ContextStorePath;
+  ancestorContexts: Accessor<Record<string, unknown>>[];
+}
 
 export function createContextStore(
-  config: UserConfig,
+  config: ConfigStore,
   configVariables: Record<string, unknown>,
 ) {
+  const templateEngine = createTemplateEngine();
+
   const [contextTree, setContextTree] = createStore<ElementContext>(
     {} as ElementContext,
   );
 
-  const rootVariables = { env: configVariables };
+  const rootVariables = createMemo(() => ({ env: configVariables }));
 
   createComputed(() => {
     batch(() => createContextTree());
   });
 
   function createContextTree() {
-    const windowId = 'bar';
-    const windowConfig = config[`bar/${windowId}`];
+    // TODO: Get window to open from launch args.
+    const configKey = 'window/bar';
+    const windowConfig = (config.store as UserConfig)[configKey];
 
-    createElementContext(windowId, windowConfig);
-  }
-
-  function createElementContext(
-    id: string,
-    config: BaseElementConfig,
-    parentContext?: ElementContext,
-  ) {
-    const contextData = createMemo(() => ({
-      ...rootVariables,
-      ...getElementVariables(config),
-      // TODO: getAncestorVariables()
-    }));
-
-    createComputed(() => {
-      const parsedConfig = parseConfigSection(
-        { ...config, id },
-        BarConfigSchemaP1.strip(),
-        contextData(),
-      );
-
-      const elementContext = {
-        id,
-        parent: parentContext,
-        children: [],
-        rawConfig: config,
-        parsedConfig,
-        data: contextData,
-        type: ElementType.WINDOW,
-      };
-
-      const path = getStorePath(config, parentContext) as any;
-      // @ts-ignore
-      setContextTree(...path, elementContext);
-
-      const childConfigs = getChildConfigs(config);
-
-      for (const [key, childConfig] of childConfigs) {
-        const keyId = key.split('/')[1];
-        const childId = parentContext ? `${id}-${keyId}` : keyId;
-
-        createElementContext(childId, childConfig, elementContext);
-      }
+    createElementContext({
+      config: windowConfig,
+      configKey,
+      path: [],
+      ancestorContexts: [rootVariables],
     });
   }
 
-  function getStorePath(
-    config: BaseElementConfig,
-    parentContext?: ElementContext,
-  ): string[] {
-    const path = [config.id];
-    let ancestorContext = parentContext;
+  function createElementContext(args: CreateElementContextArgs) {
+    const { config, configKey, path, parentPath, ancestorContexts } = args;
 
-    while (ancestorContext) {
-      path.unshift('children');
-      path.unshift(ancestorContext.id);
+    const [typeString, id] = configKey.split('/');
+    const type = getElementType(typeString);
+
+    const contextData = createMemo(() => {
+      const ancestorContext = ancestorContexts.reduce(
+        (acc, context) => ({ ...acc, ...context() }),
+        {},
+      );
+
+      return {
+        ...ancestorContext,
+        ...getElementVariables(config),
+      };
+    });
+
+    createComputed(() => {
+      const parsedConfig = parseConfigSection(
+        templateEngine,
+        { ...config, id },
+        getSchemaForElement(type),
+        contextData(),
+      );
+
+      batch(() => {
+        //@ts-ignore - TODO
+        setContextTree(...path, () => ({
+          id,
+          children: [],
+          rawConfig: config,
+          parsedConfig,
+          data: contextData(),
+          type,
+        }));
+
+        console.log('set 2');
+        if (parentPath) {
+          //@ts-ignore - TODO
+          setContextTree(...parentPath, () => ({
+            parsedConfig: { [configKey]: parsedConfig },
+          }));
+        }
+        console.log('set 3');
+      });
+    });
+
+    for (const [index, entry] of getChildConfigs(config).entries()) {
+      const [configKey, childConfig] = entry;
+
+      createElementContext({
+        config: childConfig,
+        configKey,
+        path: [...path, 'children', index] as ContextStorePath,
+        parentPath: path,
+        ancestorContexts: [rootVariables],
+      });
     }
+  }
 
-    return path;
+  function getElementType(type: string) {
+    switch (type) {
+      case 'window':
+        return ElementType.WINDOW;
+      case 'group':
+        return ElementType.GROUP;
+      case 'template':
+        return ElementType.TEMPLATE;
+      default:
+        throw new Error(`Unrecognized element type '${type}'.`);
+    }
+  }
+
+  function getSchemaForElement(type: ElementType) {
+    switch (type) {
+      case ElementType.WINDOW:
+        return WindowConfigSchemaP1.strip();
+      case ElementType.GROUP:
+        return GroupConfigSchemaP1.strip();
+      case ElementType.TEMPLATE:
+        return TemplateConfigSchemaP1.strip();
+    }
   }
 
   function getChildConfigs(config: BaseElementConfig) {
     return Object.entries(config).filter(
-      ([key, value]) =>
-        key.startsWith('component/') || key.startsWith('group/'),
+      ([key, value]) => key.startsWith('template/') || key.startsWith('group/'),
       // TODO: Get rid of this type coercion.
-    ) as any as [`component/${string}`, ComponentConfig | GroupConfig][];
+    ) as any as [
+      `template/${string}` | `group/${string}`,
+      TemplateConfig | GroupConfig,
+    ][];
   }
 
   // TODO: Get variables from `variables` config as well.
@@ -110,13 +164,19 @@ export function createContextStore(
     return providerConfigs.reduce(
       (acc, config) => ({
         ...acc,
+        // TODO: Remove `variables` and `commands` properties on providers.
         [config.type]: createProvider(config).variables,
       }),
       {},
     );
   }
 
+  async function reload() {
+    await config.reload();
+  }
+
   return {
     store: contextTree,
+    reload,
   };
 }

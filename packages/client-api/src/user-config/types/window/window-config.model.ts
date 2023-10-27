@@ -6,7 +6,7 @@ import { withDynamicKey } from '../shared/with-dynamic-key';
 import { Prettify } from '~/utils';
 import { BooleanLikeSchema } from '../shared/boolean-like.model';
 
-export const BarConfigSchemaP1 = BaseElementConfigSchema.extend({
+export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
   class_name: z.string().default('bar'),
   position_x: z.coerce.number(),
   position_y: z.coerce.number(),
@@ -17,12 +17,12 @@ export const BarConfigSchemaP1 = BaseElementConfigSchema.extend({
   resizable: BooleanLikeSchema.optional(),
 });
 
-export type BarConfigP1 = Prettify<z.infer<typeof BarConfigSchemaP1>>;
+export type WindowConfigP1 = Prettify<z.infer<typeof WindowConfigSchemaP1>>;
 
 // Add `group/**` keys to schema.
-export const BarConfigSchema = withDynamicKey(BarConfigSchemaP1, {
+export const WindowConfigSchema = withDynamicKey(WindowConfigSchemaP1, {
   isKey: (key: string): key is `group/${string}` => key.startsWith('group/'),
   schema: GroupConfigSchema,
 });
 
-export type BarConfig = Prettify<z.infer<typeof BarConfigSchema>>;
+export type WindowConfig = Prettify<z.infer<typeof WindowConfigSchema>>;

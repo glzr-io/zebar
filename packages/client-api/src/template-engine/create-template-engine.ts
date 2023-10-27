@@ -1,10 +1,10 @@
 import { createStore, reconcile } from 'solid-js/store';
 
-import { getRandomWithoutCollision, memoize } from '~/utils';
+import { getRandomWithoutCollision } from '~/utils';
 import { TemplateNode } from './types';
 import { renderTemplateNodes, tokenizeTemplate, parseTokens } from './utils';
 
-export const createTemplateEngine = memoize(() => {
+export function createTemplateEngine() {
   const [cache, setCache] = createStore<Record<string, TemplateNode[]>>({});
 
   // Store map of available functions on the window. This makes them
@@ -54,4 +54,4 @@ export const createTemplateEngine = memoize(() => {
     render,
     clearCache,
   };
-});
+}

@@ -9,7 +9,12 @@ const logger = createLogger('parse-config-section');
 export function parseConfigSection<
   T extends Record<string, unknown>,
   U extends z.AnyZodObject,
->(config: T, schema: U, contextData: Record<string, unknown>): z.infer<U> {
+>(
+  templateEngine: any,
+  config: T,
+  schema: U,
+  contextData: Record<string, unknown>,
+): z.infer<U> {
   const newConfigEntries = Object.entries(config).map(([key, value]) => {
     if (typeof value === 'string') {
       try {
@@ -31,8 +36,8 @@ export function parseConfigSection<
     return [key, value];
   });
 
+  // TODO: Add logging for updated config here.
   const newConfig = Object.fromEntries(newConfigEntries);
-  logger.debug('Config updated:', newConfig);
 
   return schema.parse(newConfig);
 }

@@ -14,6 +14,7 @@ export function TemplateElement(props: TemplateElementProps) {
   element.id = config.id;
 
   const template = createMemo(() => {
+    //@ts-ignore - TODO
     switch (config.template) {
       // TODO
       case 'template.glazewm_workspaces':
@@ -21,6 +22,7 @@ export function TemplateElement(props: TemplateElementProps) {
       case 'template.weather':
         return '';
       default:
+        //@ts-ignore - TODO
         return config.template;
     }
   });
@@ -35,6 +37,7 @@ export function TemplateElement(props: TemplateElementProps) {
 
         return {
           ...acc,
+          //@ts-ignore - TODO
           [slotName]: config[key as 'slot' | `slot/${string}`],
         };
       }, {});

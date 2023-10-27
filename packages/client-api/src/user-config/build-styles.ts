@@ -2,8 +2,8 @@ import { compileString } from 'sass';
 
 import { createLogger } from '~/utils';
 import { GlobalConfig } from './types/global-config.model';
-import { BarConfig } from './types/bar/bar-config.model';
-import { BaseElementConfig } from './types/bar/base-element-config.model';
+import { WindowConfig } from './types/window/window-config.model';
+import { BaseElementConfig } from './types/window/base-element-config.model';
 
 const logger = createLogger('build-styles');
 
@@ -13,7 +13,7 @@ const logger = createLogger('build-styles');
  */
 export function buildStyles(
   globalConfig: GlobalConfig,
-  windowConfig: BarConfig,
+  windowConfig: WindowConfig,
 ) {
   const styles = [scopeWith(':root', globalConfig.root_styles)];
 
@@ -27,9 +27,9 @@ export function buildStyles(
       styles.push(scopeWith(`#${elementConfig.id}`, elementConfig.styles));
     }
 
-    // TODO: How to get children? Filter by `group/` and `component/` keys?
-    const children = elementConfig.children;
-    queue.concat(children);
+    // TODO: How to get children? Filter by `group/` and `template/` keys?
+    // const children = elementConfig.children;
+    // queue.concat(children);
   }
 
   // Compile SCSS into CSS.

@@ -1,29 +1,21 @@
 import { createEffect } from 'solid-js';
 
-import { setWindowPosition, setWindowStyles } from './desktop';
-import {
-  GlobalConfigSchema,
-  UserConfig,
-  buildStyles,
-  getConfigVariables,
-  readUserConfig,
-} from './user-config';
-import { parseConfigSection } from './user-config/parse-config-section';
+import { getConfigVariables, createConfigStore } from './user-config';
 import { createContextStore } from './context';
 
 export async function initAsync() {
   // const rawConfig = await readConfig();
   // const config = createConfigStore(rawConfig);
-  const config = (await readUserConfig()) as UserConfig;
+  const config = await createConfigStore();
   const configVariables = await getConfigVariables();
 
   const context = createContextStore(config, configVariables);
 
-  const globalConfig = parseConfigSection(
-    config.global,
-    GlobalConfigSchema.strip(),
-    {},
-  );
+  // const globalConfig = parseConfigSection(
+  //   config.global,
+  //   GlobalConfigSchema.strip(),
+  //   {},
+  // );
 
   // Dynamically create <style> tag and append it to <head>.
   createEffect(async () => {
