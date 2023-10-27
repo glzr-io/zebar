@@ -7,15 +7,26 @@ export interface TemplateElementProps {
 
 export function TemplateElement(props: TemplateElementProps) {
   const config = props.context.parsedConfig;
-  const logger = createLogger(`#${config.id}`);
+  const logger = createLogger(`#${props.context.parsedConfig.id}`);
+  console.log('template context', props.context);
+
+  createEffect(() => console.log('config changed', config));
 
   // Create element with ID.
   const element = document.createElement('div');
-  element.id = config.id;
+  element.id = props.context.parsedConfig.id;
 
   const template = createMemo(() => {
+    //@ts-ignore
+    console.log(
+      'template changed',
+      config,
+      //@ts-ignore
+      props.context.parsedConfig.template,
+    );
+
     //@ts-ignore - TODO
-    switch (config.template) {
+    switch (props.context.parsedConfig.template) {
       // TODO
       case 'template.glazewm_workspaces':
         return '';
@@ -23,7 +34,7 @@ export function TemplateElement(props: TemplateElementProps) {
         return '';
       default:
         //@ts-ignore - TODO
-        return config.template;
+        return props.context.parsedConfig.template;
     }
   });
 
@@ -48,7 +59,7 @@ export function TemplateElement(props: TemplateElementProps) {
     const newElement = createRootElement();
     newElement.innerHTML = template();
 
-    const oldElement = document.getElementById(config.id);
+    const oldElement = document.getElementById(props.context.parsedConfig.id);
     oldElement!.replaceWith(newElement);
   });
 
@@ -57,8 +68,8 @@ export function TemplateElement(props: TemplateElementProps) {
 
   function createRootElement() {
     const element = document.createElement('div');
-    element.id = config.id;
-    element.className = config.class_name;
+    element.id = props.context.parsedConfig.id;
+    element.className = props.context.parsedConfig.class_name;
     return element;
   }
 

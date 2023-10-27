@@ -5,7 +5,7 @@ import {
   createMemo,
   createRoot,
 } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import { createStore, unwrap } from 'solid-js/store';
 
 import {
   WindowConfigSchemaP1,
@@ -49,22 +49,29 @@ export function createContextStore(
   );
 
   const rootVariables = createMemo(() => ({ env: configVariables }));
+  // createContextTree();
 
-  createEffect(() => {
-    let dispose: () => void;
+  // createComputed(() => {
+  //   createContextTree();
+  // });
 
-    createRoot(dispose => {
-      dispose = dispose;
+  createComputed(() => {
+    console.log('>>> createComputed');
 
-      try {
-        createContextTree();
-      } catch (err) {
-        dispose();
-        throw formatConfigError(err);
-      }
-    });
+    // let dispose: () => void;
 
-    return () => dispose();
+    // createRoot(dispose => {
+    //   dispose = dispose;
+
+    try {
+      createContextTree();
+    } catch (err) {
+      // dispose();
+      throw formatConfigError(err);
+    }
+    // });
+
+    // return () => dispose();
   });
 
   function createContextTree() {
@@ -105,6 +112,7 @@ export function createContextStore(
         getSchemaForElement(type),
         contextData(),
       );
+      console.log('parsed', parsedConfig, contextData());
 
       // @ts-ignore - TODO
       setContextTree(...path, {
@@ -175,7 +183,7 @@ export function createContextStore(
       (acc, config) => ({
         ...acc,
         // TODO: Remove `variables` and `commands` properties on providers.
-        [config.type]: createProvider(config).variables,
+        [config.type]: unwrap(createProvider(config).variables),
       }),
       {},
     );

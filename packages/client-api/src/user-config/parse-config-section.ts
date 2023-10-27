@@ -38,6 +38,7 @@ export function parseConfigSection<
 
   // TODO: Add logging for updated config here.
   const newConfig = Object.fromEntries(newConfigEntries);
+  // console.log('Config updated:', newConfig);
 
   return schema.parse(newConfig);
 }
