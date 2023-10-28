@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { BaseElementConfigSchema } from './base-element-config.model';
-import { withDynamicKey } from '../shared/with-dynamic-key';
+import { withDynamicKey } from '../shared';
 
 export const TemplateConfigSchemaP1 = BaseElementConfigSchema.extend({
   class_name: z.string().default('template'),

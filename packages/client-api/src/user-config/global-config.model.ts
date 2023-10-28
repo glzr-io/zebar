@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { BooleanLikeSchema } from './shared/boolean-like.model';
+import { BooleanLikeSchema } from './shared';
 
 export const GlobalConfigSchema = z
   .object({

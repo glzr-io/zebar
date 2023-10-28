@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { WindowConfigSchema } from './window/window-config.model';
+import { WindowConfigSchema } from './window';
 import { GlobalConfigSchema } from './global-config.model';
-import { withDynamicKey } from './shared/with-dynamic-key';
+import { withDynamicKey } from './shared';
 import { Prettify } from '~/utils';
 
 export const UserConfigP1Schema = z.object({

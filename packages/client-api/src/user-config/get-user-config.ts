@@ -1,7 +1,7 @@
 import { createResource } from 'solid-js';
 import { parse } from 'yaml';
 
-import { formatConfigError } from './utils/format-config-error';
+import { formatConfigError } from './shared';
 import { createLogger } from '~/utils';
 import { readConfigFile } from '~/desktop';
 

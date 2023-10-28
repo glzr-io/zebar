@@ -2,9 +2,8 @@ import { z } from 'zod';
 
 import { GroupConfigSchema } from './group-config.model';
 import { BaseElementConfigSchema } from './base-element-config.model';
-import { withDynamicKey } from '../shared/with-dynamic-key';
 import { Prettify } from '~/utils';
-import { BooleanLikeSchema } from '../shared/boolean-like.model';
+import { BooleanLikeSchema, withDynamicKey } from '../shared';
 
 export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
   class_name: z.string().default('bar'),

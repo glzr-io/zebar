@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { TemplateError } from '~/template-engine';
 import { createLogger } from '~/utils';
-import { TemplatePropertyError } from './utils/template-property-error';
+import { TemplatePropertyError } from './shared';
 
 const logger = createLogger('parse-config-section');
 

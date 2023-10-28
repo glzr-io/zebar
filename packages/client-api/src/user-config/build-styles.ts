@@ -2,7 +2,7 @@ import { compileString } from 'sass';
 
 import { ElementContext } from '~/context';
 import { createLogger } from '~/utils';
-import { GlobalConfig } from './types/global-config.model';
+import { GlobalConfig } from './global-config.model';
 
 const logger = createLogger('build-styles');
 
