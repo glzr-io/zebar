@@ -18,7 +18,7 @@
     "lib": ["es2020", "dom"],
     "strict": true,
     "strictPropertyInitialization": false,
-    "target": "es2020",
+    "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "node"
   },
