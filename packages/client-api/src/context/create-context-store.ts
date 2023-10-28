@@ -1,14 +1,13 @@
 import {
   Accessor,
   Resource,
-  ResourceReturn,
   createComputed,
   createEffect,
   createMemo,
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { TemplateEngine, createTemplateEngine } from '~/template-engine';
+import { TemplateEngine } from '~/template-engine';
 import {
   WindowConfigSchemaP1,
   BaseElementConfig,
@@ -23,9 +22,11 @@ import {
   ConfigVariables,
 } from '~/user-config';
 import { createProvider } from './providers';
-import { ElementContext } from './element-context.model';
-import { ElementType } from './element-type.model';
+import { ElementContext } from './shared/element-context.model';
+import { ElementType } from './shared/element-type.model';
 
+// Context store path can actually be infinite depending on the number of child
+// elements in the user's config.
 type ContextStorePath =
   | []
   | ['children', number]
@@ -35,8 +36,7 @@ interface CreateElementContextArgs {
   config: BaseElementConfig;
   configKey: string;
   path: ContextStorePath;
-  parentPath?: ContextStorePath;
-  ancestorContexts: Accessor<Record<string, unknown>>[];
+  ancestorData: Accessor<Record<string, unknown>>[];
 }
 
 export interface ContextStore {
@@ -77,27 +77,27 @@ export function createContextStore(
       config: windowConfig,
       configKey,
       path: [],
-      ancestorContexts: [rootVariables],
+      ancestorData: [rootVariables],
     });
   }
 
   function createElementContext(args: CreateElementContextArgs) {
-    const { config, configKey, path, parentPath, ancestorContexts } = args;
+    const { config, configKey, path, ancestorData } = args;
 
     const [typeString, id] = configKey.split('/');
     const type = getElementType(typeString);
 
-    const elementContext = createMemo(() => getElementVariables(config));
+    const elementData = createMemo(() => getElementData(config));
 
-    const mergedContext = createMemo(() => {
-      const ancestorContext = ancestorContexts.reduce(
-        (acc, context) => ({ ...acc, ...context() }),
+    const mergedData = createMemo(() => {
+      const mergedAncestorData = ancestorData.reduce(
+        (acc, data) => ({ ...acc, ...data() }),
         {},
       );
 
       return {
-        ...ancestorContext,
-        ...elementContext(),
+        ...mergedAncestorData,
+        ...elementData(),
       };
     });
 
@@ -106,7 +106,7 @@ export function createContextStore(
         templateEngine,
         { ...config, id },
         getSchemaForElement(type),
-        mergedContext(),
+        mergedData(),
       );
 
       // @ts-ignore - TODO
@@ -115,7 +115,7 @@ export function createContextStore(
         children: [],
         rawConfig: config,
         parsedConfig,
-        data: mergedContext(),
+        data: mergedData(),
         type,
       });
     });
@@ -127,8 +127,7 @@ export function createContextStore(
         config: childConfig,
         configKey,
         path: [...path, 'children', index] as ContextStorePath,
-        parentPath: path,
-        ancestorContexts: [...ancestorContexts, elementContext],
+        ancestorData: [...ancestorData, elementData],
       });
     }
   }
@@ -160,7 +159,7 @@ export function createContextStore(
 
   function getChildConfigs(config: BaseElementConfig) {
     return Object.entries(config).filter(
-      ([key, value]) => key.startsWith('template/') || key.startsWith('group/'),
+      ([key]) => key.startsWith('template/') || key.startsWith('group/'),
       // TODO: Get rid of this type coercion.
     ) as any as [
       `template/${string}` | `group/${string}`,
@@ -169,7 +168,7 @@ export function createContextStore(
   }
 
   // TODO: Get variables from `variables` config as well.
-  function getElementVariables(config: BaseElementConfig) {
+  function getElementData(config: BaseElementConfig) {
     const providerConfigs = ProvidersConfigSchema.parse(
       config?.providers ?? [],
     );
