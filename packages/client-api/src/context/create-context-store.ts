@@ -1,5 +1,6 @@
 import {
   Accessor,
+  Resource,
   createComputed,
   createEffect,
   createMemo,
@@ -38,17 +39,32 @@ interface CreateElementContextArgs {
   ancestorContexts: Accessor<Record<string, unknown>>[];
 }
 
-export function createContextStore(
-  config: ConfigStore,
-  configVariables: Record<string, unknown>,
-) {
+export interface ContextStore {
+  value: ElementContext | null;
+  hasInitialized: boolean;
+}
+
+export function createContextStore(config: {
+  value: Resource<unknown>;
+  reload: (info?: unknown) => unknown;
+}) {
   const templateEngine = createTemplateEngine();
 
-  const [contextTree, setContextTree] = createStore<ElementContext>(
-    {} as ElementContext,
-  );
+  const [contextTree, setContextTree] = createStore<ContextStore>({
+    value: null,
+    hasInitialized: false,
+  });
 
-  const rootVariables = createMemo(() => ({ env: configVariables }));
+  // const rootVariables = createMemo(() => ({ env: configVariables }));
+  // TODO: Avoid hardcoding.
+  const rootVariables = createMemo(() => ({
+    env: {
+      screen_x: '0',
+      screen_y: '0',
+      screen_width: '1920',
+      screen_height: '1080',
+    },
+  }));
   // createContextTree();
 
   // createComputed(() => {
@@ -65,6 +81,7 @@ export function createContextStore(
 
     try {
       createContextTree();
+      setContextTree({ hasInitialized: true });
     } catch (err) {
       // dispose();
       throw formatConfigError(err);
@@ -75,9 +92,13 @@ export function createContextStore(
   });
 
   function createContextTree() {
+    if (!config.value()) {
+      return;
+    }
+
     // TODO: Get window to open from launch args.
     const configKey = 'window/bar';
-    const windowConfig = (config.store as UserConfig)[configKey];
+    const windowConfig = (config.value() as UserConfig)[configKey];
 
     createElementContext({
       config: windowConfig,
@@ -115,7 +136,7 @@ export function createContextStore(
       console.log('parsed', parsedConfig, contextData());
 
       // @ts-ignore - TODO
-      setContextTree(...path, {
+      setContextTree('value', ...path, {
         id,
         children: [],
         rawConfig: config,

@@ -11,7 +11,7 @@ const logger = createLogger('get-user-config');
  * Get user config as parsed YAML.
  */
 export const getUserConfig = memoize(() => {
-  const [config, { refetch: reload }] = createResource(readUserConfig);
+  const [value, { refetch: reload }] = createResource(readUserConfig);
 
   // Read and parse the config as YAML.
   async function readUserConfig() {
@@ -28,7 +28,7 @@ export const getUserConfig = memoize(() => {
   }
 
   return {
-    config,
+    value,
     reload,
   };
 });
