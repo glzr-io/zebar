@@ -29,17 +29,13 @@ export const createWeatherProvider = memoize(
 
     createEffect(
       on(
-        () => !ipProvider.variables.is_loading,
+        () => !ipProvider.is_loading,
         () => refresh(),
       ),
     );
 
     async function refresh() {
-      const {
-        is_loading: isIpLoading,
-        latitude,
-        longitude,
-      } = ipProvider.variables;
+      const { is_loading: isIpLoading, latitude, longitude } = ipProvider;
 
       if (isIpLoading) {
         return;
@@ -105,10 +101,28 @@ export const createWeatherProvider = memoize(
     }
 
     return {
-      variables: weatherVariables,
-      commands: {
-        refresh,
+      get is_day_time() {
+        return weatherVariables.is_day_time;
       },
+      get status() {
+        return weatherVariables.status;
+      },
+      get celsius_temp() {
+        return weatherVariables.celsius_temp;
+      },
+      get fahrenheit_temp() {
+        return weatherVariables.fahrenheit_temp;
+      },
+      get wind_speed() {
+        return weatherVariables.wind_speed;
+      },
+      get is_loading() {
+        return weatherVariables.is_loading;
+      },
+      get is_refreshing() {
+        return weatherVariables.is_refreshing;
+      },
+      refresh,
     };
   },
 );

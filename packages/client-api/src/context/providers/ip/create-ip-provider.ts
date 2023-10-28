@@ -42,10 +42,28 @@ export const createIpProvider = memoize(
     }
 
     return {
-      variables: ipVariables,
-      commands: {
-        refresh,
+      get ip_address() {
+        return ipVariables.ip_address;
       },
+      get city() {
+        return ipVariables.city;
+      },
+      get country() {
+        return ipVariables.country;
+      },
+      get latitude() {
+        return ipVariables.latitude;
+      },
+      get longitude() {
+        return ipVariables.longitude;
+      },
+      get is_loading() {
+        return ipVariables.is_loading;
+      },
+      get is_refreshing() {
+        return ipVariables.is_refreshing;
+      },
+      refresh,
     };
   },
 );

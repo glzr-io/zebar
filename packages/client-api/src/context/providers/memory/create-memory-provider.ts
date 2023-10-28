@@ -9,10 +9,7 @@ const DEFAULT = MemoryProviderOptionsSchema.parse({});
 export const createMemoryProvider = memoize(
   (options: MemoryProviderOptions = DEFAULT) => {
     return {
-      variables: {
-        usage: 0,
-      },
-      commands: {},
+      usage: 0,
     };
   },
 );

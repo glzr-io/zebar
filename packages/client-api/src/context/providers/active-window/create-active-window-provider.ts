@@ -9,10 +9,7 @@ const DEFAULT = ActiveWindowProviderOptionsSchema.parse({});
 export const createActiveWindowProvider = memoize(
   (options: ActiveWindowProviderOptions = DEFAULT) => {
     return {
-      variables: {
-        title: '',
-      },
-      commands: {},
+      title: '',
     };
   },
 );

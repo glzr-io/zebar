@@ -32,8 +32,15 @@ export const createDateTimeProvider = memoize(
     }
 
     return {
-      variables: store,
-      commands: {},
+      get now() {
+        return store.now;
+      },
+      get minutes() {
+        return store.minutes;
+      },
+      get hours() {
+        return store.hours;
+      },
     };
   },
 );

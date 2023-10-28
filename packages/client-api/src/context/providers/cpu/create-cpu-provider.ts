@@ -6,12 +6,9 @@ const DEFAULT = CpuProviderOptionsSchema.parse({});
 export const createCpuProvider = memoize(
   (options: CpuProviderOptions = DEFAULT) => {
     return {
-      variables: {
-        usage: 0,
-        temp: 0,
-        frequency: 0,
-      },
-      commands: {},
+      usage: 0,
+      temp: 0,
+      frequency: 0,
     };
   },
 );

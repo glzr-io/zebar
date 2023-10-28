@@ -95,14 +95,10 @@ export function createContextStore(
         {},
       );
 
-      const mergedContext = {
+      return {
         ...ancestorContext,
         ...elementContext(),
       };
-
-      // TODO: Removing this console log removes reactivity.
-      console.log('Context updated', mergedContext);
-      return mergedContext;
     });
 
     createComputed(() => {
@@ -181,8 +177,7 @@ export function createContextStore(
     return providerConfigs.reduce(
       (acc, config) => ({
         ...acc,
-        // TODO: Remove `variables` and `commands` properties on providers.
-        [config.type]: createProvider(config).variables,
+        [config.type]: createProvider(config),
       }),
       {},
     );

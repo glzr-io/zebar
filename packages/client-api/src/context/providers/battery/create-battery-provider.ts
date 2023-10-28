@@ -9,12 +9,9 @@ const DEFAULT = BatteryProviderOptionsSchema.parse({});
 export const createBatteryProvider = memoize(
   (options: BatteryProviderOptions = DEFAULT) => {
     return {
-      variables: {
-        percent: '',
-        is_charging: true,
-        has_battery: true,
-      },
-      commands: {},
+      percent: '',
+      is_charging: true,
+      has_battery: true,
     };
   },
 );

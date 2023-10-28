@@ -9,10 +9,7 @@ const DEFAULT = NetworkProviderOptionsSchema.parse({});
 export const createNetworkProvider = memoize(
   (options: NetworkProviderOptions = DEFAULT) => {
     return {
-      variables: {
-        xx: '',
-      },
-      commands: {},
+      xx: '',
     };
   },
 );

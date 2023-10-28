@@ -56,10 +56,13 @@ export const createGlazewmProvider = memoize(
     }
 
     return {
-      variables: glazewmVariables,
-      commands: {
-        focus_workspace: () => {},
+      get workspaces() {
+        return glazewmVariables.workspaces;
       },
+      get binding_mode() {
+        return glazewmVariables.binding_mode;
+      },
+      focus_workspace: () => {},
     };
   },
 );
