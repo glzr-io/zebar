@@ -1,24 +1,40 @@
 {
   "name": "zebar",
   "version": "0.0.0",
-  "main": "dist/index.js",
-  "types": "dist/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "tsc -w",
-    "build": "tsc",
-    "tsup": "tsup"
+    "dev": "npm run build -- --watch src",
+    "build": "tsup"
   },
   "dependencies": {
     "@tauri-apps/api": "1.4.0",
     "axios": "1.4.0",
     "glazewm": "1.1.1",
-    "solid-js": "1.7.3",
+    "solid-js": "1.8.4",
     "yaml": "2.3.1",
     "zod": "3.22.2"
   },
   "devDependencies": {
     "sass": "1.69.4",
     "tsup": "7.2.0",
+    "tsup-preset-solid": "2.1.0",
     "typescript": "5.0.4"
-  }
+  },
+  "module": "./dist/index.js",
+  "browser": {},
+  "exports": {
+    "development": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/dev.js"
+      }
+    },
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "typesVersions": {},
+  "type": "module"
 }

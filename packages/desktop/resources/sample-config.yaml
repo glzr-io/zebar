@@ -15,9 +15,9 @@ global:
   load_scripts: []
 
 ##
-# Docs regarding bar: https://some-future-docs-link.com
+# Docs regarding window: https://some-future-docs-link.com
 ##
-bar/default:
+window/bar:
   # Width of the bar in physical pixels.
   width: '{{ env.screen_width }}'
   # Height of the bar in physical pixels.
@@ -45,34 +45,37 @@ bar/default:
   group/left:
     styles: |
       display: flex;
-    components:
-      - providers: ['glazewm']
-        template: |
-          @for (workspace of glazewm.workspaces) {
-            @if (workspace.state == 'focused') {
-              <button class="focused-workspace">
-                {{ workspace.name }}
-              </button>
-            } @else if (workspace.state == 'active') {
-              <button class="active-workspace">
-                {{ workspace.name }}
-              </button>
-            } @else {
-              <button class="normal-workspace">
-                {{ workspace.name }}
-              </button>
-            }
+    template/glazewm:
+      providers: ['glazewm']
+      template: |
+        @for (workspace of glazewm.workspaces) {
+          @if (workspace.state == 'focused') {
+            <button class="focused-workspace">
+              {{ workspace.name }}
+            </button>
+          } @else if (workspace.state == 'active') {
+            <button class="active-workspace">
+              {{ workspace.name }}
+            </button>
+          } @else {
+            <button class="normal-workspace">
+              {{ workspace.name }}
+            </button>
           }
-      - providers: ['date_time']
-        template: |
-          {{ date_time.hours }}:{{ date_time.minutes }}
+        }
+    template/clock:
+      providers: ['date_time']
+      template: |
+        {{ date_time.hours }}:{{ date_time.minutes }}
+
   group/center:
-    components:
-      - providers: ['ip']
-        template: |
-          {{ ip.ip_address }}
+    template/ip:
+      providers: ['ip']
+      template: |
+        {{ ip.ip_address }}
+
   group/right:
-    components:
-      - providers: ['weather']
-        template: |
-          {{ weather.status }} {{weather.celsius_temp}}
+    template/weather:
+      providers: ['weather']
+      template: |
+        {{ weather.status }} {{weather.celsius_temp}}

@@ -1,3 +1,3 @@
-export * from './use-desktop-commands.hook';
-export * from './use-current-monitor.hook';
-export * from './use-current-window.hook';
+export * from './desktop-commands';
+export * from './current-monitor';
+export * from './current-window';
