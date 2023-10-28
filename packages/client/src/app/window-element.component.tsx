@@ -4,19 +4,16 @@ import { ElementContext, ElementType, init } from 'zebar';
 import { TemplateElement } from './template-element.component';
 import { GroupElement } from './group-element.component';
 
-export interface WindowElementProps {
-  // context: {
-  //   store: ElementContext<unknown>;
-  // };
-}
-
-export function WindowElement(props: WindowElementProps) {
+export function WindowElement() {
   const [context, setContext] = createSignal<ElementContext | null>(null);
 
   init(context => setContext(context));
 
   return (
-    <div>
+    <div
+      id={context()?.parsedConfig.id}
+      class={context()?.parsedConfig.class_name}
+    >
       <For each={context()?.children ?? []}>
         {childContext =>
           childContext.type === ElementType.GROUP ? (

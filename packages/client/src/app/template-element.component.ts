@@ -8,23 +8,12 @@ export interface TemplateElementProps {
 export function TemplateElement(props: TemplateElementProps) {
   const config = props.context.parsedConfig;
   const logger = createLogger(`#${props.context.parsedConfig.id}`);
-  // console.log('template context', props.context);
-
-  // createEffect(() => console.log('config changed', config));
 
   // Create element with ID.
   const element = document.createElement('div');
   element.id = props.context.parsedConfig.id;
 
   const template = createMemo(() => {
-    //@ts-ignore
-    // console.log(
-    //   'template changed',
-    //   config,
-    //   //@ts-ignore
-    //   props.context.parsedConfig.template,
-    // );
-
     //@ts-ignore - TODO
     switch (props.context.parsedConfig.template) {
       // TODO

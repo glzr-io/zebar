@@ -1,5 +1,6 @@
 import {
   Accessor,
+  Resource,
   ResourceReturn,
   createComputed,
   createEffect,
@@ -7,7 +8,7 @@ import {
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { createTemplateEngine } from '~/template-engine';
+import { TemplateEngine, createTemplateEngine } from '~/template-engine';
 import {
   WindowConfigSchemaP1,
   BaseElementConfig,
@@ -44,14 +45,10 @@ export interface ContextStore {
 }
 
 export function createContextStore(
-  configResource: ResourceReturn<unknown, unknown>,
-  configVariablesResource: ResourceReturn<ConfigVariables, unknown>,
+  config: Resource<unknown>,
+  configVariables: Resource<ConfigVariables>,
+  templateEngine: TemplateEngine,
 ) {
-  const [config, { refetch: reloadConfig }] = configResource;
-  const [configVariables] = configVariablesResource;
-
-  const templateEngine = createTemplateEngine();
-
   const [contextTree, setContextTree] = createStore<ContextStore>({
     value: null,
     hasInitialized: false,
@@ -191,12 +188,7 @@ export function createContextStore(
     );
   }
 
-  async function reload() {
-    reloadConfig();
-  }
-
   return {
     store: contextTree,
-    reload,
   };
 }

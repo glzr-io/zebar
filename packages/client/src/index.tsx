@@ -11,12 +11,4 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error('Root element not found.');
 }
 
-// createRoot(() => {
-//   initAsync().then(context => {
-//     render(() => <WindowElement context={context} />, root!);
-//   });
-// });
-
-// createRoot(() => {
 render(() => <WindowElement />, root!);
-// });
