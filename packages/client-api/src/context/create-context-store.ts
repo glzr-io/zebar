@@ -71,7 +71,7 @@ export function createContextStore(config: {
   //   createContextTree();
   // });
 
-  createComputed(() => {
+  createEffect(() => {
     console.log('>>> createComputed');
 
     // let dispose: () => void;
@@ -120,10 +120,13 @@ export function createContextStore(config: {
         {},
       );
 
-      return {
+      const c = {
         ...ancestorContext,
         ...getElementVariables(config),
       };
+      console.log('context', c);
+
+      return c;
     });
 
     createComputed(() => {
@@ -133,7 +136,6 @@ export function createContextStore(config: {
         getSchemaForElement(type),
         contextData(),
       );
-      console.log('parsed', parsedConfig, contextData());
 
       // @ts-ignore - TODO
       setContextTree('value', ...path, {
@@ -154,7 +156,7 @@ export function createContextStore(config: {
         configKey,
         path: [...path, 'children', index] as ContextStorePath,
         parentPath: path,
-        ancestorContexts: [rootVariables],
+        ancestorContexts: [...ancestorContexts, contextData],
       });
     }
   }
@@ -204,7 +206,7 @@ export function createContextStore(config: {
       (acc, config) => ({
         ...acc,
         // TODO: Remove `variables` and `commands` properties on providers.
-        [config.type]: unwrap(createProvider(config).variables),
+        [config.type]: createProvider(config).variables,
       }),
       {},
     );

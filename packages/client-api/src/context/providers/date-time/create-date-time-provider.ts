@@ -17,6 +17,7 @@ export const createDateTimeProvider = memoize(
       hours: 0,
     });
 
+    refresh();
     const interval = setInterval(() => refresh(), options.refresh_interval_ms);
     onCleanup(() => clearInterval(interval));
 

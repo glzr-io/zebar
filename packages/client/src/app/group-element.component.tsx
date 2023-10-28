@@ -9,9 +9,9 @@ export interface GroupElementProps {
 
 export function GroupElement(props: GroupElementProps) {
   const config = props.context.parsedConfig;
-  console.log('group context', props.context);
+  // console.log('group context', props.context);
 
-  createEffect(() => console.log('config changed', config));
+  // createEffect(() => console.log('config changed', config));
 
   return (
     <div id={config.id} class={config.class_name}>
