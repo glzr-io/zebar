@@ -5,7 +5,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "npm run build -- --watch src",
-    "build": "tsup"
+    "build": "tsup",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@tauri-apps/api": "1.4.0",
