@@ -6,8 +6,8 @@ import {
   TemplateNode,
   TemplateNodeType,
   TextNode,
-} from '../types';
-import { TemplateError } from './template-error';
+} from '../token-parsing';
+import { TemplateError } from '../shared';
 
 export interface RenderTransforms {
   transformExpression?: (expression: unknown) => unknown;

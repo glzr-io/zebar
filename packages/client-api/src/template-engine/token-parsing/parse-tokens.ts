@@ -1,19 +1,20 @@
+import { TemplateError } from '../shared';
+import { Token, TokenType } from '../tokenizing';
+import { ForStatementNode } from './for-statement-node';
 import {
-  TemplateNode,
-  TokenType,
-  TextNode,
-  TemplateNodeType,
-  InterpolationNode,
   IfStatementNode,
   IfBranch,
-  ForStatementNode,
+  ElseBranch,
+} from './if-statement-node.model';
+import { InterpolationNode } from './interpolation-node.model';
+import {
   SwitchStatementNode,
   CaseBranch,
-  Token,
-  ElseBranch,
   DefaultBranch,
-} from '../types';
-import { TemplateError } from './template-error';
+} from './switch-statement-node.model';
+import { TemplateNodeType } from './template-node-type.model';
+import { TemplateNode } from './template-node.model';
+import { TextNode } from './text-node.model';
 
 export function parseTokens(tokens: Token[]) {
   let cursor = 0;

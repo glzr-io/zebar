@@ -1,8 +1,9 @@
 import { createStore, reconcile } from 'solid-js/store';
 
 import { getRandomWithoutCollision } from '~/utils';
-import { TemplateNode } from './types';
-import { renderTemplateNodes, tokenizeTemplate, parseTokens } from './utils';
+import { TemplateNode, parseTokens } from './token-parsing';
+import { renderTemplateNodes } from './rendering';
+import { tokenizeTemplate } from './tokenizing';
 
 export interface TemplateEngine {
   render: (template: string, context: Record<string, unknown>) => string;

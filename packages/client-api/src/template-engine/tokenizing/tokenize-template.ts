@@ -1,6 +1,7 @@
 import { createStringScanner } from '~/utils';
-import { Token, TokenType } from '../types';
-import { TemplateError } from './template-error';
+import { Token } from './token.model';
+import { TokenType } from './token-type.model';
+import { TemplateError } from '../shared';
 
 export enum TokenizeStateType {
   DEFAULT,
