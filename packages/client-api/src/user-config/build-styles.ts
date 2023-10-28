@@ -1,9 +1,8 @@
 import { compileString } from 'sass';
 
+import { ElementContext } from '~/context';
 import { createLogger } from '~/utils';
 import { GlobalConfig } from './types/global-config.model';
-import { WindowConfig } from './types/window/window-config.model';
-import { BaseElementConfig } from './types/window/base-element-config.model';
 
 const logger = createLogger('build-styles');
 
@@ -13,23 +12,23 @@ const logger = createLogger('build-styles');
  */
 export function buildStyles(
   globalConfig: GlobalConfig,
-  windowConfig: WindowConfig,
+  windowContext: ElementContext,
 ) {
   const styles = [scopeWith(':root', globalConfig.root_styles)];
 
-  // Queue of elements to traverse.
-  const queue: BaseElementConfig[] = [windowConfig];
+  // Queue of element contexts to traverse.
+  const queue = [windowContext];
 
   while (queue.length) {
-    const elementConfig = queue.shift()!;
+    const elementContext = queue.shift()!;
+    const elementStyles = elementContext.parsedConfig.styles;
 
-    if (elementConfig.styles) {
-      styles.push(scopeWith(`#${elementConfig.id}`, elementConfig.styles));
+    if (elementStyles) {
+      styles.push(scopeWith(`#${elementContext.id}`, elementStyles));
     }
 
-    // TODO: How to get children? Filter by `group/` and `template/` keys?
-    // const children = elementConfig.children;
-    // queue.concat(children);
+    const children = elementContext.children;
+    queue.concat(children);
   }
 
   // Compile SCSS into CSS.

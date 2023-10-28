@@ -1,26 +1,13 @@
-import { createEffect, getOwner, runWithOwner } from 'solid-js';
+import { createEffect } from 'solid-js';
 
-import {
-  getConfigVariables,
-  createConfigStore,
-  getUserConfig,
-} from './user-config';
+import { getConfigVariables, getUserConfig } from './user-config';
 import { createContextStore } from './context';
-function later(delay: number) {
-  return new Promise(function (resolve) {
-    setTimeout(resolve, delay);
-  });
-}
 
-// TODO: Change to `init` with callback.
 export function init(callback: (context: any) => void) {
-  // runWithOwner(owner, () => {
-  // const rawConfig = await readConfig();
-  // const config = createConfigStore(rawConfig);
   const config = getUserConfig();
-  // const configVariables = await getConfigVariables();
+  const configVariables = getConfigVariables();
 
-  const context = createContextStore(config);
+  const context = createContextStore(config, configVariables);
 
   // const globalConfig = parseConfigSection(
   //   config.global,

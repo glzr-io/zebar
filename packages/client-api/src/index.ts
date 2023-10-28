@@ -1,7 +1,3 @@
-export * from './desktop';
-export * from './context';
-export * from './template-engine';
-export * from './templates';
-export * from './user-config';
-export * from './utils';
-export * from './init';
+export { type ElementContext, ElementType } from './context';
+export { createLogger } from './utils';
+export { init } from './init';

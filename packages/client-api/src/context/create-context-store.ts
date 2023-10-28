@@ -1,13 +1,13 @@
 import {
   Accessor,
-  Resource,
+  ResourceReturn,
   createComputed,
   createEffect,
   createMemo,
-  createRoot,
 } from 'solid-js';
-import { createStore, unwrap } from 'solid-js/store';
+import { createStore } from 'solid-js/store';
 
+import { createTemplateEngine } from '~/template-engine';
 import {
   WindowConfigSchemaP1,
   BaseElementConfig,
@@ -15,13 +15,12 @@ import {
   GroupConfig,
   ProvidersConfigSchema,
   parseConfigSection,
-  ConfigStore,
   TemplateConfigSchemaP1,
   GroupConfigSchemaP1,
   UserConfig,
   formatConfigError,
+  ConfigVariables,
 } from '~/user-config';
-import { createTemplateEngine } from '~/template-engine';
 import { createProvider } from './providers';
 import { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
@@ -44,10 +43,13 @@ export interface ContextStore {
   hasInitialized: boolean;
 }
 
-export function createContextStore(config: {
-  value: Resource<unknown>;
-  reload: (info?: unknown) => unknown;
-}) {
+export function createContextStore(
+  configResource: ResourceReturn<unknown, unknown>,
+  configVariablesResource: ResourceReturn<ConfigVariables, unknown>,
+) {
+  const [config, { refetch: reloadConfig }] = configResource;
+  const [configVariables] = configVariablesResource;
+
   const templateEngine = createTemplateEngine();
 
   const [contextTree, setContextTree] = createStore<ContextStore>({
@@ -55,50 +57,24 @@ export function createContextStore(config: {
     hasInitialized: false,
   });
 
-  // const rootVariables = createMemo(() => ({ env: configVariables }));
-  // TODO: Avoid hardcoding.
-  const rootVariables = createMemo(() => ({
-    env: {
-      screen_x: '0',
-      screen_y: '0',
-      screen_width: '1920',
-      screen_height: '1080',
-    },
-  }));
-  // createContextTree();
+  const rootVariables = createMemo(() => ({ env: configVariables() }));
 
-  // createComputed(() => {
-  //   createContextTree();
-  // });
-
+  // Initialize context tree when config and config variables are ready.
   createEffect(() => {
-    console.log('>>> createComputed');
-
-    // let dispose: () => void;
-
-    // createRoot(dispose => {
-    //   dispose = dispose;
-
-    try {
-      createContextTree();
-      setContextTree({ hasInitialized: true });
-    } catch (err) {
-      // dispose();
-      throw formatConfigError(err);
+    if (config() && configVariables()) {
+      try {
+        createContextTree();
+        setContextTree({ hasInitialized: true });
+      } catch (err) {
+        throw formatConfigError(err);
+      }
     }
-    // });
-
-    // return () => dispose();
   });
 
   function createContextTree() {
-    if (!config.value()) {
-      return;
-    }
-
     // TODO: Get window to open from launch args.
     const configKey = 'window/bar';
-    const windowConfig = (config.value() as UserConfig)[configKey];
+    const windowConfig = (config() as UserConfig)[configKey];
 
     createElementContext({
       config: windowConfig,
@@ -114,19 +90,22 @@ export function createContextStore(config: {
     const [typeString, id] = configKey.split('/');
     const type = getElementType(typeString);
 
-    const contextData = createMemo(() => {
+    const elementContext = createMemo(() => getElementVariables(config));
+
+    const mergedContext = createMemo(() => {
       const ancestorContext = ancestorContexts.reduce(
         (acc, context) => ({ ...acc, ...context() }),
         {},
       );
 
-      const c = {
+      const mergedContext = {
         ...ancestorContext,
-        ...getElementVariables(config),
+        ...elementContext(),
       };
-      console.log('context', c);
 
-      return c;
+      // TODO: Removing this console log removes reactivity.
+      console.log('Context updated', mergedContext);
+      return mergedContext;
     });
 
     createComputed(() => {
@@ -134,7 +113,7 @@ export function createContextStore(config: {
         templateEngine,
         { ...config, id },
         getSchemaForElement(type),
-        contextData(),
+        mergedContext(),
       );
 
       // @ts-ignore - TODO
@@ -143,7 +122,7 @@ export function createContextStore(config: {
         children: [],
         rawConfig: config,
         parsedConfig,
-        data: contextData(),
+        data: mergedContext(),
         type,
       });
     });
@@ -156,7 +135,7 @@ export function createContextStore(config: {
         configKey,
         path: [...path, 'children', index] as ContextStorePath,
         parentPath: path,
-        ancestorContexts: [...ancestorContexts, contextData],
+        ancestorContexts: [...ancestorContexts, elementContext],
       });
     }
   }
@@ -213,7 +192,7 @@ export function createContextStore(config: {
   }
 
   async function reload() {
-    await config.reload();
+    reloadConfig();
   }
 
   return {

@@ -4,7 +4,12 @@ import { getRandomWithoutCollision } from '~/utils';
 import { TemplateNode } from './types';
 import { renderTemplateNodes, tokenizeTemplate, parseTokens } from './utils';
 
-export function createTemplateEngine() {
+export interface TemplateEngine {
+  render: (template: string, context: Record<string, unknown>) => string;
+  clearCache: () => void;
+}
+
+export function createTemplateEngine(): TemplateEngine {
   const [cache, setCache] = createStore<Record<string, TemplateNode[]>>({});
 
   // Store map of available functions on the window. This makes them

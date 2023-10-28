@@ -23,7 +23,6 @@ export * from './utils/get-bar-configs';
 export * from './utils/get-template-configs';
 export * from './utils/get-group-configs';
 export * from './build-styles';
-export * from './create-config-store';
 export * from './get-config-variables';
 export * from './get-user-config';
 export * from './parse-config-section';
