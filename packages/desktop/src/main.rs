@@ -1,10 +1,9 @@
 // Prevents additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use sysinfo::{NetworkExt, Networks, ProcessExt, System, SystemExt};
 use tauri::{AppHandle, Manager};
 
-mod provider_init;
+mod providers;
 mod user_config;
 mod utils;
 
@@ -24,66 +23,6 @@ fn read_config_file(
 }
 
 #[tauri::command]
-fn test() -> Result<String, String> {
-  // Please note that we use "new_all" to ensure that all list of
-  // components, network interfaces, disks and users are already
-  // filled!
-  let mut sys = System::new_all();
-
-  // First we update all information of our `System` struct.
-  sys.refresh_all();
-
-  println!("=> system:");
-  // RAM and swap information:
-  println!("total memory: {} bytes", sys.total_memory());
-  println!("used memory : {} bytes", sys.used_memory());
-  println!("total swap  : {} bytes", sys.total_swap());
-  println!("used swap   : {} bytes", sys.used_swap());
-
-  // Display system information:
-  // sys.ho
-  println!("System name:             {:?}", sys.name());
-  println!("System kernel version:   {:?}", sys.kernel_version());
-  println!("System OS version:       {:?}", sys.os_version());
-  println!("System host name:        {:?}", sys.host_name());
-
-  // Number of CPUs:
-  println!("NB CPUs: {}", sys.cpus().len());
-
-  // Display processes ID, name na disk usage:
-  // for (pid, process) in sys.processes() {
-  //   println!("[{pid}] {} {:?}", process.name(), process.disk_usage());
-  // }
-
-  // We display all disks' information:
-  println!("=> disks:");
-  // let mut disks = Disks::new();
-  // We refresh the disk list.
-  for disk in sys.disks() {
-    println!("{disk:?}");
-  }
-
-  // We refresh the network interface list.
-  println!("=> networks:");
-  for (interface_name, data) in sys.networks() {
-    println!(
-      "{interface_name}: {}/{} B",
-      data.received(),
-      data.transmitted()
-    );
-  }
-
-  // Components temperature:
-  // We refresh the component list.
-  println!("=> components:");
-  for component in sys.components() {
-    println!("{component:?}");
-  }
-
-  Ok("aaaa".into())
-}
-
-#[tauri::command]
 fn listen_provider() {
   //
   // Have a provider "manager/scheduler"?
@@ -91,7 +30,16 @@ fn listen_provider() {
   //   if initializing directly, how to
 }
 
+struct AsyncProcInputTx {
+  inner: Mutex<mpsc::Sender<String>>,
+}
+
 fn main() {
+  tracing_subscriber::fmt::init();
+
+  let (async_proc_input_tx, async_proc_input_rx) = mpsc::channel(1);
+  let (async_proc_output_tx, mut async_proc_output_rx) = mpsc::channel(1);
+
   tauri::Builder::default()
     .setup(|app| {
       match app.get_cli_matches() {
@@ -103,7 +51,19 @@ fn main() {
       Ok(())
     })
     .setup(|app| {
-      println!("fjdisoafjioda");
+      tauri::async_runtime::spawn(async move {
+        async_process_model(async_proc_input_rx, async_proc_output_tx).await
+      });
+
+      let app_handle = app.handle();
+      tauri::async_runtime::spawn(async move {
+        loop {
+          if let Some(output) = async_proc_output_rx.recv().await {
+            rs2js(output, &app_handle);
+          }
+        }
+      });
+
       Ok(())
     })
     .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
@@ -115,4 +75,36 @@ fn main() {
     .invoke_handler(tauri::generate_handler![read_config_file, test])
     .run(tauri::generate_context!())
     .expect("Error while running Tauri application.");
+}
+
+fn rs2js<R: tauri::Runtime>(message: String, manager: &impl Manager<R>) {
+  info!(?message, "rs2js");
+  manager
+    .emit_all("rs2js", format!("rs: {}", message))
+    .unwrap();
+}
+
+#[tauri::command]
+async fn js2rs(
+  message: String,
+  state: tauri::State<'_, AsyncProcInputTx>,
+) -> Result<(), String> {
+  info!(?message, "js2rs");
+  let async_proc_input_tx = state.inner.lock().await;
+  async_proc_input_tx
+    .send(message)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+async fn async_process_model(
+  mut input_rx: mpsc::Receiver<String>,
+  output_tx: mpsc::Sender<String>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+  while let Some(input) = input_rx.recv().await {
+    let output = input;
+    output_tx.send(output).await?;
+  }
+
+  Ok(())
 }
