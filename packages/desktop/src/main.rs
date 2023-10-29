@@ -5,6 +5,7 @@ use sysinfo::{NetworkExt, Networks, ProcessExt, System, SystemExt};
 use tauri::{AppHandle, Manager};
 
 mod user_config;
+mod utils;
 
 #[derive(Clone, serde::Serialize)]
 struct Payload {
