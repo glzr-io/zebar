@@ -51,6 +51,14 @@ fn main() {
       Ok(())
     })
     .setup(|app| {
+      let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .thread_name("bleep-backend")
+        .build()
+        .unwrap();
+
+      app.manage(runtime);
+
       tauri::async_runtime::spawn(async move {
         async_process_model(async_proc_input_rx, async_proc_output_tx).await
       });
