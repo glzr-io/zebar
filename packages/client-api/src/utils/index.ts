@@ -11,3 +11,4 @@ export * from './is-defined';
 export * from './is-object';
 export * from './memoize';
 export * from './resolved';
+export * from './simple-hash';
