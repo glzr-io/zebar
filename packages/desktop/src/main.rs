@@ -2,7 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use providers::{
-  provider_config::CpuProviderConfig, provider_scheduler::ProviderScheduler,
+  provider_config::ProviderConfig,
+  provider_scheduler::{self, ProviderScheduler},
 };
 use tauri::{AppHandle, Manager, State};
 
@@ -28,7 +29,7 @@ fn read_config_file(
 #[tauri::command()]
 fn listen_provider(
   options_hash: &str,
-  options: CpuProviderConfig,
+  options: ProviderConfig,
   tracked_access: Vec<&str>,
   provider_scheduler: State<ProviderScheduler>,
 ) -> Result<(), String> {
@@ -57,6 +58,7 @@ fn main() {
       };
       Ok(())
     })
+    .setup(provider_scheduler::init)
     // .setup(|app| {
     // let runtime = tokio::runtime::Builder::new_multi_thread()
     //   .enable_all()

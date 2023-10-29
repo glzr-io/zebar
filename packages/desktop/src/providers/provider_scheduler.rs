@@ -1,7 +1,7 @@
 use anyhow::Result;
 use tauri::{Manager, Runtime};
 
-use super::provider_config::CpuProviderConfig;
+use super::provider_config::{CpuProviderConfig, ProviderConfig};
 
 pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
   let handle = app.handle();
@@ -21,10 +21,12 @@ impl ProviderScheduler {
   pub fn register(
     &self,
     options_hash: &str,
-    options: CpuProviderConfig,
+    options: ProviderConfig,
     tracked_access: Vec<&str>,
   ) -> Result<()> {
-    todo!()
-    // match
+    match options {
+      ProviderConfig::Cpu(_) => todo!(),
+      ProviderConfig::Network(_) => todo!(),
+    }
   }
 }
