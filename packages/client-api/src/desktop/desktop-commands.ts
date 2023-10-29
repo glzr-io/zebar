@@ -1,7 +1,7 @@
-import { invoke as tauriInvoke, InvokeArgs } from '@tauri-apps/api/tauri';
+import { InvokeArgs, invoke as tauriInvoke } from '@tauri-apps/api/tauri';
 
 import { createLogger } from '../utils';
-import { ProviderConfig } from '~/user-config';
+import { ProviderOptions, ProviderType } from '~/user-config';
 
 const logger = createLogger('desktop-commands');
 
@@ -13,12 +13,13 @@ export function readConfigFile(): Promise<string> {
 }
 
 // TODO: Add support for only fetching tracked data.
-export function listenProvider(
-  configHash: string,
-  config: ProviderConfig,
-  trackedData: string[],
-): Promise<string> {
-  return invoke<string>('listen_provider');
+export function listenProvider(args: {
+  type: ProviderType;
+  optionsHash: string;
+  options: ProviderOptions;
+  trackedData: string[];
+}): Promise<string> {
+  return invoke<string>('listen_provider', args);
 }
 
 export function unlistenProvider(configHash: string): Promise<string> {
@@ -44,10 +45,6 @@ export async function invoke<T>(
 ): Promise<T> {
   logger.info(`Calling '${command}' with args:`, args ?? {});
 
-  if (!isTauri()) {
-    throw new Error('Cannot invoke a command without attaching to Tauri.');
-  }
-
   try {
     const response = await tauriInvoke<T>(command, args);
     logger.info(`Response for calling '${command}':`, response);
@@ -56,11 +53,4 @@ export async function invoke<T>(
   } catch (err) {
     throw new Error(`Command '${command}' failed: ${err}`);
   }
-}
-
-/**
- * Whether the current window is Tauri-enabled.
- */
-export function isTauri(): boolean {
-  return !!(window && window.__TAURI__);
 }

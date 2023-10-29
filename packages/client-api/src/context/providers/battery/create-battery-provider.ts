@@ -6,7 +6,7 @@ import {
   BatteryProviderOptions,
   BatteryProviderOptionsSchema,
 } from '~/user-config';
-import { memoize } from '~/utils';
+import { memoize, simpleHash } from '~/utils';
 
 const DEFAULT = BatteryProviderOptionsSchema.parse({});
 
@@ -19,14 +19,20 @@ export const createBatteryProvider = memoize(
     });
 
     createEffect(async () => {
-      const configHash = simpleHash(options);
-      await listenProvider(configHash, options, []);
+      const optionsHash = simpleHash(options);
 
-      onProviderEmit<typeof batteryData>(configHash, payload =>
+      await listenProvider({
+        type: 'battery',
+        optionsHash,
+        options,
+        trackedData: [],
+      });
+
+      onProviderEmit<typeof batteryData>(optionsHash, payload =>
         setBatteryData(payload),
       );
 
-      return () => unlistenProvider(configHash);
+      return () => unlistenProvider(optionsHash);
     });
 
     return {
