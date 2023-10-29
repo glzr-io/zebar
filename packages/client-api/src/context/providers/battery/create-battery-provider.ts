@@ -22,10 +22,9 @@ export const createBatteryProvider = memoize(
       const optionsHash = simpleHash(options);
 
       await listenProvider({
-        type: 'battery',
         optionsHash,
         options,
-        trackedData: [],
+        trackedAccess: [],
       });
 
       onProviderEmit<typeof batteryData>(optionsHash, payload =>

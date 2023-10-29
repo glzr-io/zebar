@@ -27,14 +27,15 @@ fn read_config_file(
 }
 
 #[tauri::command()]
-fn listen_provider(
+async fn listen_provider(
   options_hash: &str,
   options: ProviderConfig,
   tracked_access: Vec<&str>,
-  provider_scheduler: State<ProviderScheduler>,
+  provider_scheduler: State<'_, ProviderScheduler>,
 ) -> Result<(), String> {
   provider_scheduler
     .register(options_hash, options, tracked_access)
+    .await
     .map_err(|err| err.to_string())
 }
 

@@ -11,7 +11,8 @@ import {
 } from './user-config';
 import { ElementContext, createContextStore } from './context';
 import { createTemplateEngine } from './template-engine';
-import { setWindowPosition, setWindowStyles, test } from './desktop';
+import { listenProvider, setWindowPosition, setWindowStyles } from './desktop';
+import { simpleHash } from './utils';
 
 export async function initAsync() {
   // TODO: Promisify `init`.
@@ -49,7 +50,14 @@ export function init(callback: (context: ElementContext) => void) {
     }
   });
 
-  test();
+  const options = { type: 'cpu', refresh_interval_ms: 5000 };
+  const optionsHash = simpleHash(options);
+  const promise = listenProvider({
+    optionsHash,
+    options,
+    trackedAccess: [],
+  }).then(aa => console.log('ending listen', aa));
+  console.log('starting listen', promise);
 
   // Set window position based on config values.
   createEffect(async () => {

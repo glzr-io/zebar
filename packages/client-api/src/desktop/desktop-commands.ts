@@ -14,20 +14,15 @@ export function readConfigFile(): Promise<string> {
 
 // TODO: Add support for only fetching tracked data.
 export function listenProvider(args: {
-  type: ProviderType;
   optionsHash: string;
   options: ProviderOptions;
-  trackedData: string[];
+  trackedAccess: string[];
 }): Promise<string> {
   return invoke<string>('listen_provider', args);
 }
 
 export function unlistenProvider(configHash: string): Promise<string> {
   return invoke<string>('unlisten_provider');
-}
-
-export function test(): Promise<string> {
-  return invoke<string>('test');
 }
 
 // TODO: Implement this. Should kill the window and show error dialog. If
