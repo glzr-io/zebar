@@ -1,9 +1,10 @@
 use std::time::Duration;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use anyhow::Result;
 use sysinfo::{System, SystemExt};
 use tauri::{Manager, Runtime};
-use tokio::{task, time};
+use tokio::{sync::mpsc, task, time};
 
 use super::provider_config::ProviderConfig;
 
@@ -11,11 +12,43 @@ pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
   app.manage(ProviderScheduler::new(app.handle()));
   Ok(())
 }
-pub struct ProviderScheduler {}
+
+pub struct CreateProviderArgs {
+  options_hash: String,
+  options: ProviderConfig,
+  tracked_access: Vec<String>,
+}
+
+pub struct ProviderScheduler {
+  input_channel: (Sender<String>, Receiver<String>),
+  output_channel: (Sender<String>, Receiver<String>),
+}
 
 impl ProviderScheduler {
   pub fn new<R: Runtime>(app: tauri::AppHandle<R>) -> ProviderScheduler {
-    ProviderScheduler {}
+    let (input_sender, input_receiver) = mpsc::channel(1);
+    let (output_sender, mut output_receiver) = mpsc::channel(1);
+
+    task::spawn(async move {
+      Self::listen_provider_create(input_receiver, output_sender).await
+    });
+
+    ProviderScheduler {
+      input_channel: mpsc::channel(1),
+      output_channel: mpsc::channel(1),
+    }
+  }
+
+  async fn listen_provider_create(
+    mut input_rx: mpsc::Receiver<String>,
+    output_tx: mpsc::Sender<String>,
+  ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    while let Some(input) = input_rx.recv().await {
+      let output = input;
+      output_tx.send(output).await?;
+    }
+
+    Ok(())
   }
 
   pub async fn register(
