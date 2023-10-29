@@ -4,6 +4,7 @@
 use sysinfo::{NetworkExt, Networks, ProcessExt, System, SystemExt};
 use tauri::{AppHandle, Manager};
 
+mod provider_init;
 mod user_config;
 mod utils;
 
@@ -82,6 +83,14 @@ fn test() -> Result<String, String> {
   Ok("aaaa".into())
 }
 
+#[tauri::command]
+fn listen_provider() {
+  //
+  // Have a provider "manager/scheduler"?
+  // Or initialize provider directly on listen?
+  //   if initializing directly, how to
+}
+
 fn main() {
   tauri::Builder::default()
     .setup(|app| {
@@ -91,6 +100,10 @@ fn main() {
         }
         Err(_) => panic! {"CLI Parsing Error"},
       };
+      Ok(())
+    })
+    .setup(|app| {
+      println!("fjdisoafjioda");
       Ok(())
     })
     .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
