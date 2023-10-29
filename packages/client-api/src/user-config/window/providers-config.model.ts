@@ -1,27 +1,16 @@
 import { z } from 'zod';
 
 import { ProviderConfigSchema } from './provider-config.model';
+import { ProviderTypeSchema } from './provider-type.model';
 import { Prettify } from '~/utils';
 
 export const ProvidersConfigSchema = z
   .array(
     z.union([
       ProviderConfigSchema,
-      z
-        .enum([
-          'active_window',
-          'battery',
-          'cpu',
-          'custom',
-          'date_time',
-          'glazewm',
-          'ip',
-          'memory',
-          'network',
-          'system_tray',
-          'weather',
-        ])
-        .transform(type => ProviderConfigSchema.parse({ type })),
+      ProviderTypeSchema.transform(type =>
+        ProviderConfigSchema.parse({ type }),
+      ),
     ]),
   )
   .default([]);
