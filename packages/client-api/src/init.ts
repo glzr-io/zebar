@@ -11,7 +11,7 @@ import {
 } from './user-config';
 import { ElementContext, createContextStore } from './context';
 import { createTemplateEngine } from './template-engine';
-import { setWindowPosition, setWindowStyles } from './desktop';
+import { setWindowPosition, setWindowStyles, test } from './desktop';
 
 export async function initAsync() {
   // TODO: Promisify `init`.
@@ -48,6 +48,8 @@ export function init(callback: (context: ElementContext) => void) {
       return () => document.head.removeChild(styleElement);
     }
   });
+
+  test();
 
   // Set window position based on config values.
   createEffect(async () => {
