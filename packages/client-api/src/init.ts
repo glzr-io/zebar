@@ -11,7 +11,12 @@ import {
 } from './user-config';
 import { ElementContext, createContextStore } from './context';
 import { createTemplateEngine } from './template-engine';
-import { listenProvider, setWindowPosition, setWindowStyles } from './desktop';
+import {
+  listenProvider,
+  onProviderEmit,
+  setWindowPosition,
+  setWindowStyles,
+} from './desktop';
 import { simpleHash } from './utils';
 
 export async function initAsync() {
@@ -57,6 +62,7 @@ export function init(callback: (context: ElementContext) => void) {
     options,
     trackedAccess: [],
   }).then(aa => console.log('ending listen', aa));
+  onProviderEmit(optionsHash, payload => console.log('provider emit'));
   console.log('starting listen', promise);
 
   // Set window position based on config values.

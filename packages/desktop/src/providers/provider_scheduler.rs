@@ -47,7 +47,9 @@ impl ProviderScheduler {
     while let Some(input) = input_receiver.recv().await {
       match input.options {
         ProviderConfig::Cpu(_) => {
-          let forever = task::spawn(async {
+          let sender = output_sender.clone();
+
+          let forever = task::spawn(async move {
             let mut interval = time::interval(Duration::from_millis(5000));
             let mut sys = System::new_all();
 
@@ -57,14 +59,13 @@ impl ProviderScheduler {
               println!("=> system:");
               println!("total memory: {} bytes", sys.total_memory());
 
-              // output_sender
-              //   .clone()
-              //   .send(format!("total memory: {} bytes", sys.total_memory()))
-              //   .await;
+              _ = sender
+                .send(format!("total memory: {} bytes", sys.total_memory()))
+                .await;
             }
           });
 
-          forever.await;
+          _ = forever.await;
         }
         ProviderConfig::Network(_) => todo!(),
       }
