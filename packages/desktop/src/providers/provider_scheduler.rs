@@ -5,6 +5,7 @@ use anyhow::Result;
 use sysinfo::{System, SystemExt};
 use tauri::{Manager, Runtime};
 use tokio::{sync::mpsc, task, time};
+use tracing::info;
 
 use super::provider_config::ProviderConfig;
 
@@ -14,14 +15,13 @@ pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
 }
 
 pub struct CreateProviderArgs {
-  options_hash: String,
-  options: ProviderConfig,
-  tracked_access: Vec<String>,
+  pub options_hash: String,
+  pub options: ProviderConfig,
+  pub tracked_access: Vec<String>,
 }
 
 pub struct ProviderScheduler {
-  input_channel: (Sender<String>, Receiver<String>),
-  output_channel: (Sender<String>, Receiver<String>),
+  pub input_sender: Sender<CreateProviderArgs>,
 }
 
 impl ProviderScheduler {
@@ -30,25 +30,40 @@ impl ProviderScheduler {
     let (output_sender, mut output_receiver) = mpsc::channel(1);
 
     task::spawn(async move {
-      Self::listen_provider_create(input_receiver, output_sender).await
+      Self::handle_provider_create(input_receiver, output_sender).await
     });
 
-    ProviderScheduler {
-      input_channel: mpsc::channel(1),
-      output_channel: mpsc::channel(1),
-    }
+    task::spawn(async move {
+      Self::handle_provider_emit(&mut output_receiver, &app.app_handle()).await
+    });
+
+    ProviderScheduler { input_sender }
   }
 
-  async fn listen_provider_create(
-    mut input_rx: mpsc::Receiver<String>,
-    output_tx: mpsc::Sender<String>,
+  async fn handle_provider_create(
+    mut input_receiver: mpsc::Receiver<CreateProviderArgs>,
+    output_sender: mpsc::Sender<String>,
   ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    while let Some(input) = input_rx.recv().await {
+    while let Some(input) = input_receiver.recv().await {
       let output = input;
       output_tx.send(output).await?;
     }
 
     Ok(())
+  }
+
+  async fn handle_provider_emit<R: tauri::Runtime>(
+    output_receiver: &mut Receiver<String>,
+    manager: &impl Manager<R>,
+  ) {
+    loop {
+      if let Some(output) = output_receiver.recv().await {
+        info!(?output, "handle_provider_emit");
+        manager
+          .emit_all("rs2js", format!("rs: {}", output))
+          .unwrap();
+      }
+    }
   }
 
   pub async fn register(
@@ -61,7 +76,6 @@ impl ProviderScheduler {
       ProviderConfig::Cpu(_) => {
         let forever = task::spawn(async {
           let mut interval = time::interval(Duration::from_millis(5000));
-
           let mut sys = System::new_all();
 
           loop {

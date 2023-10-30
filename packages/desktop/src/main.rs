@@ -3,7 +3,7 @@
 
 use providers::{
   provider_config::ProviderConfig,
-  provider_scheduler::{self, ProviderScheduler},
+  provider_scheduler::{self, CreateProviderArgs, ProviderScheduler},
 };
 use tauri::{AppHandle, Manager, State};
 
@@ -28,26 +28,26 @@ fn read_config_file(
 
 #[tauri::command()]
 async fn listen_provider(
-  options_hash: &str,
+  options_hash: String,
   options: ProviderConfig,
-  tracked_access: Vec<&str>,
+  tracked_access: Vec<String>,
   provider_scheduler: State<'_, ProviderScheduler>,
 ) -> Result<(), String> {
   provider_scheduler
-    .register(options_hash, options, tracked_access)
+    .input_sender
+    .send(CreateProviderArgs {
+      options_hash,
+      options,
+      tracked_access,
+    })
     .await
     .map_err(|err| err.to_string())
 }
 
-// struct AsyncProcInputTx {
-//   inner: Mutex<mpsc::Sender<String>>,
-// }
-
-fn main() {
+#[tokio::main]
+async fn main() {
+  tauri::async_runtime::set(tokio::runtime::Handle::current());
   tracing_subscriber::fmt::init();
-
-  // let (async_proc_input_tx, async_proc_input_rx) = mpsc::channel(1);
-  // let (async_proc_output_tx, mut async_proc_output_rx) = mpsc::channel(1);
 
   tauri::Builder::default()
     .setup(|app| {
@@ -60,26 +60,6 @@ fn main() {
       Ok(())
     })
     .setup(provider_scheduler::init)
-    // .setup(|app| {
-    // let runtime = tokio::runtime::Builder::new_multi_thread()
-    //   .enable_all()
-    //   .thread_name("bleep-backend")
-    //   .build()
-    //   .unwrap();
-    // app.manage(runtime);
-    // tauri::async_runtime::spawn(async move {
-    //   async_process_model(async_proc_input_rx, async_proc_output_tx).await
-    // });
-    // let app_handle = app.handle();
-    // tauri::async_runtime::spawn(async move {
-    //   loop {
-    //     if let Some(output) = async_proc_output_rx.recv().await {
-    //       rs2js(output, &app_handle);
-    //     }
-    //   }
-    // });
-    // Ok(())
-    // })
     .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
       println!("{}, {argv:?}, {cwd}", app.package_info().name);
       app
@@ -90,35 +70,3 @@ fn main() {
     .run(tauri::generate_context!())
     .expect("Error while running Tauri application.");
 }
-
-// fn rs2js<R: tauri::Runtime>(message: String, manager: &impl Manager<R>) {
-//   info!(?message, "rs2js");
-//   manager
-//     .emit_all("rs2js", format!("rs: {}", message))
-//     .unwrap();
-// }
-
-// #[tauri::command]
-// async fn js2rs(
-//   message: String,
-//   state: tauri::State<'_, AsyncProcInputTx>,
-// ) -> Result<(), String> {
-//   info!(?message, "js2rs");
-//   let async_proc_input_tx = state.inner.lock().await;
-//   async_proc_input_tx
-//     .send(message)
-//     .await
-//     .map_err(|e| e.to_string())
-// }
-
-// async fn async_process_model(
-//   mut input_rx: mpsc::Receiver<String>,
-//   output_tx: mpsc::Sender<String>,
-// ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-//   while let Some(input) = input_rx.recv().await {
-//     let output = input;
-//     output_tx.send(output).await?;
-//   }
-
-//   Ok(())
-// }
