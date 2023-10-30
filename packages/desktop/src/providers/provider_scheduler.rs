@@ -45,8 +45,29 @@ impl ProviderScheduler {
     output_sender: mpsc::Sender<String>,
   ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     while let Some(input) = input_receiver.recv().await {
-      let output = input;
-      output_tx.send(output).await?;
+      match input.options {
+        ProviderConfig::Cpu(_) => {
+          let forever = task::spawn(async {
+            let mut interval = time::interval(Duration::from_millis(5000));
+            let mut sys = System::new_all();
+
+            loop {
+              interval.tick().await;
+              sys.refresh_all();
+              println!("=> system:");
+              println!("total memory: {} bytes", sys.total_memory());
+
+              // output_sender
+              //   .clone()
+              //   .send(format!("total memory: {} bytes", sys.total_memory()))
+              //   .await;
+            }
+          });
+
+          forever.await;
+        }
+        ProviderConfig::Network(_) => todo!(),
+      }
     }
 
     Ok(())
@@ -59,37 +80,8 @@ impl ProviderScheduler {
     loop {
       if let Some(output) = output_receiver.recv().await {
         info!(?output, "handle_provider_emit");
-        manager
-          .emit_all("rs2js", format!("rs: {}", output))
-          .unwrap();
+        manager.emit_all("provider-emit", output).unwrap();
       }
-    }
-  }
-
-  pub async fn register(
-    &self,
-    options_hash: &str,
-    options: ProviderConfig,
-    tracked_access: Vec<&str>,
-  ) -> Result<()> {
-    match options {
-      ProviderConfig::Cpu(_) => {
-        let forever = task::spawn(async {
-          let mut interval = time::interval(Duration::from_millis(5000));
-          let mut sys = System::new_all();
-
-          loop {
-            interval.tick().await;
-            sys.refresh_all();
-            println!("=> system:");
-            println!("total memory: {} bytes", sys.total_memory());
-          }
-        });
-
-        forever.await;
-        Ok(())
-      }
-      ProviderConfig::Network(_) => todo!(),
     }
   }
 }
