@@ -7,34 +7,39 @@ use tokio::{
   time,
 };
 
-use super::provider_config::CpuProviderConfig;
+use super::provider_config::NetworkProviderConfig;
 
-pub struct CpuProvider {
-  pub config: CpuProviderConfig,
+pub struct NetworkProvider {
+  pub config: NetworkProviderConfig,
   abort_handle: Option<AbortHandle>,
 }
 
-impl CpuProvider {
-  pub fn new(config: CpuProviderConfig) -> CpuProvider {
-    CpuProvider {
+impl NetworkProvider {
+  pub fn new(config: NetworkProviderConfig) -> NetworkProvider {
+    NetworkProvider {
       config,
       abort_handle: None,
     }
   }
 
   pub async fn start(&mut self, output_sender: Sender<String>) {
+    let refresh_interval = self.config.refresh_interval_ms;
+
     let forever = task::spawn(async move {
-      let mut interval = time::interval(Duration::from_millis(5000));
+      let mut interval =
+        time::interval(Duration::from_millis(refresh_interval));
       let mut sys = System::new_all();
 
       loop {
         interval.tick().await;
         sys.refresh_all();
-        println!("=> system:");
-        println!("total memory: {} bytes", sys.total_memory());
+        println!("hostname: {}", sys.host_name().unwrap_or("".into()));
 
         _ = output_sender
-          .send(format!("total memory: {} bytes", sys.total_memory()))
+          .send(format!(
+            "hostname: {}",
+            sys.host_name().unwrap_or("".into())
+          ))
           .await;
       }
     });

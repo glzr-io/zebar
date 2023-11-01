@@ -10,11 +10,11 @@ pub enum ProviderConfig {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", rename = "cpu")]
 pub struct CpuProviderConfig {
-  refresh_interval_ms: i32,
+  pub refresh_interval_ms: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", rename = "network")]
 pub struct NetworkProviderConfig {
-  refresh_interval_ms: i32,
+  pub refresh_interval_ms: u64,
 }

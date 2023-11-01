@@ -20,7 +20,7 @@ export function onProviderEmit<T = unknown>(
 
   return listen('provider-emit', (event: Event<ProviderEmitEvent<T>>) => {
     const { payload } = event;
-
+    console.log('provider emit', event);
     if (payload.configHash === configHash) {
       callback(payload as T);
     }

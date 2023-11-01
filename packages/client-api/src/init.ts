@@ -55,15 +55,22 @@ export function init(callback: (context: ElementContext) => void) {
     }
   });
 
-  const options = { type: 'cpu', refresh_interval_ms: 5000 };
-  const optionsHash = simpleHash(options);
-  const promise = listenProvider({
-    optionsHash,
-    options,
+  // const cpuOptions = { type: 'cpu', refresh_interval_ms: 5000 };
+  // const cpuOptionsHash = simpleHash(cpuOptions);
+  // listenProvider({
+  //   optionsHash: cpuOptionsHash,
+  //   options: cpuOptions,
+  //   trackedAccess: [],
+  // }).then(aa => console.log('ending listen', aa));
+
+  const networkOptions = { type: 'network', refresh_interval_ms: 5000 };
+  const networkOptionsHash = simpleHash(networkOptions);
+  listenProvider({
+    optionsHash: networkOptionsHash,
+    options: networkOptions,
     trackedAccess: [],
   }).then(aa => console.log('ending listen', aa));
-  onProviderEmit(optionsHash, payload => console.log('provider emit'));
-  console.log('starting listen', promise);
+  onProviderEmit(networkOptionsHash, payload => console.log('provider emit'));
 
   // Set window position based on config values.
   createEffect(async () => {

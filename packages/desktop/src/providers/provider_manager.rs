@@ -7,7 +7,10 @@ use tauri::{Manager, Runtime};
 use tokio::{sync::mpsc, task, time};
 use tracing::info;
 
-use super::{cpu::CpuProvider, provider_config::ProviderConfig};
+use super::{
+  cpu::CpuProvider, network_provider::NetworkProvider,
+  provider_config::ProviderConfig,
+};
 
 pub struct CreateProviderArgs {
   pub options_hash: String,
@@ -49,10 +52,15 @@ impl ProviderManager {
 
       match input.options {
         ProviderConfig::Cpu(config) => {
+          println!("creating cpu");
           let mut cpu_provider = CpuProvider::new(config);
           cpu_provider.start(sender).await;
         }
-        ProviderConfig::Network(_) => todo!(),
+        ProviderConfig::Network(config) => {
+          println!("creating network");
+          let mut network_provider = NetworkProvider::new(config);
+          network_provider.start(sender).await;
+        }
       }
     }
 
