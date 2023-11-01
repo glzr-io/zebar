@@ -50,18 +50,20 @@ impl ProviderManager {
     while let Some(input) = input_receiver.recv().await {
       let sender = output_sender.clone();
 
-      match input.options {
-        ProviderConfig::Cpu(config) => {
-          println!("creating cpu");
-          let mut cpu_provider = CpuProvider::new(config);
-          cpu_provider.start(sender).await;
+      task::spawn(async move {
+        match input.options {
+          ProviderConfig::Cpu(config) => {
+            println!("creating cpu");
+            let mut cpu_provider = CpuProvider::new(config);
+            cpu_provider.start(sender).await;
+          }
+          ProviderConfig::Network(config) => {
+            println!("creating network");
+            let mut network_provider = NetworkProvider::new(config);
+            network_provider.start(sender).await;
+          }
         }
-        ProviderConfig::Network(config) => {
-          println!("creating network");
-          let mut network_provider = NetworkProvider::new(config);
-          network_provider.start(sender).await;
-        }
-      }
+      });
     }
 
     Ok(())

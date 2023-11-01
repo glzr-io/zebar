@@ -55,13 +55,13 @@ export function init(callback: (context: ElementContext) => void) {
     }
   });
 
-  // const cpuOptions = { type: 'cpu', refresh_interval_ms: 5000 };
-  // const cpuOptionsHash = simpleHash(cpuOptions);
-  // listenProvider({
-  //   optionsHash: cpuOptionsHash,
-  //   options: cpuOptions,
-  //   trackedAccess: [],
-  // }).then(aa => console.log('ending listen', aa));
+  const cpuOptions = { type: 'cpu', refresh_interval_ms: 5000 };
+  const cpuOptionsHash = simpleHash(cpuOptions);
+  listenProvider({
+    optionsHash: cpuOptionsHash,
+    options: cpuOptions,
+    trackedAccess: [],
+  }).then(aa => console.log('ending listen', aa));
 
   const networkOptions = { type: 'network', refresh_interval_ms: 5000 };
   const networkOptionsHash = simpleHash(networkOptions);
