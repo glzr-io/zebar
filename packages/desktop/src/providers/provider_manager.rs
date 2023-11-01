@@ -9,23 +9,23 @@ use tracing::info;
 
 use super::provider_config::ProviderConfig;
 
-pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
-  app.manage(ProviderScheduler::new(app.handle()));
-  Ok(())
-}
-
 pub struct CreateProviderArgs {
   pub options_hash: String,
   pub options: ProviderConfig,
   pub tracked_access: Vec<String>,
 }
 
-pub struct ProviderScheduler {
+pub struct ProviderManager {
   pub input_sender: Sender<CreateProviderArgs>,
 }
 
-impl ProviderScheduler {
-  pub fn new<R: Runtime>(app: tauri::AppHandle<R>) -> ProviderScheduler {
+pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
+  app.manage(ProviderManager::new(app.handle()));
+  Ok(())
+}
+
+impl ProviderManager {
+  pub fn new<R: Runtime>(app: tauri::AppHandle<R>) -> ProviderManager {
     let (input_sender, input_receiver) = mpsc::channel(1);
     let (output_sender, mut output_receiver) = mpsc::channel(1);
 
@@ -37,7 +37,7 @@ impl ProviderScheduler {
       Self::handle_provider_emit(&mut output_receiver, &app.app_handle()).await
     });
 
-    ProviderScheduler { input_sender }
+    ProviderManager { input_sender }
   }
 
   async fn handle_provider_create(

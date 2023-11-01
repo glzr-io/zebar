@@ -3,7 +3,7 @@
 
 use providers::{
   provider_config::ProviderConfig,
-  provider_scheduler::{self, CreateProviderArgs, ProviderScheduler},
+  provider_manager::{self, CreateProviderArgs, ProviderManager},
 };
 use tauri::{AppHandle, Manager, State};
 
@@ -31,9 +31,9 @@ async fn listen_provider(
   options_hash: String,
   options: ProviderConfig,
   tracked_access: Vec<String>,
-  provider_scheduler: State<'_, ProviderScheduler>,
+  provider_manager: State<'_, ProviderManager>,
 ) -> Result<(), String> {
-  provider_scheduler
+  provider_manager
     .input_sender
     .send(CreateProviderArgs {
       options_hash,
@@ -59,7 +59,7 @@ async fn main() {
       };
       Ok(())
     })
-    .setup(provider_scheduler::init)
+    .setup(provider_manager::init)
     .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
       println!("{}, {argv:?}, {cwd}", app.package_info().name);
       app
