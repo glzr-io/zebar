@@ -7,7 +7,7 @@ use tauri::{Manager, Runtime};
 use tokio::{sync::mpsc, task, time};
 use tracing::info;
 
-use super::provider_config::ProviderConfig;
+use super::{cpu::CpuProvider, provider_config::ProviderConfig};
 
 pub struct CreateProviderArgs {
   pub options_hash: String,
@@ -48,24 +48,9 @@ impl ProviderManager {
       let sender = output_sender.clone();
 
       match input.options {
-        ProviderConfig::Cpu(_) => {
-          let forever = task::spawn(async move {
-            let mut interval = time::interval(Duration::from_millis(5000));
-            let mut sys = System::new_all();
-
-            loop {
-              interval.tick().await;
-              sys.refresh_all();
-              println!("=> system:");
-              println!("total memory: {} bytes", sys.total_memory());
-
-              _ = sender
-                .send(format!("total memory: {} bytes", sys.total_memory()))
-                .await;
-            }
-          });
-
-          _ = forever.await;
+        ProviderConfig::Cpu(config) => {
+          let mut cpu_provider = CpuProvider::new(config);
+          cpu_provider.start(sender).await;
         }
         ProviderConfig::Network(_) => todo!(),
       }
