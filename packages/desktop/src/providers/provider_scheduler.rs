@@ -45,10 +45,10 @@ impl ProviderScheduler {
     output_sender: mpsc::Sender<String>,
   ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     while let Some(input) = input_receiver.recv().await {
+      let sender = output_sender.clone();
+
       match input.options {
         ProviderConfig::Cpu(_) => {
-          let sender = output_sender.clone();
-
           let forever = task::spawn(async move {
             let mut interval = time::interval(Duration::from_millis(5000));
             let mut sys = System::new_all();
