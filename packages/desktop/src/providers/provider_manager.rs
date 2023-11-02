@@ -2,8 +2,13 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use tauri::{Manager, Runtime};
-use tokio::sync::{mpsc::Sender, Mutex};
-use tokio::{sync::mpsc, task};
+use tokio::{
+  sync::{
+    mpsc::{self, Receiver, Sender},
+    Mutex,
+  },
+  task,
+};
 use tracing::info;
 
 use crate::providers::provider::Provider;
@@ -21,6 +26,12 @@ pub struct ListenProviderArgs {
 
 pub struct UnlistenProviderArgs {
   pub options_hash: String,
+}
+
+struct ProviderRef {
+  options_hash: String,
+  refresh_rx: Receiver<()>,
+  stop_rx: Receiver<()>,
 }
 
 /// Wrapper around the creation and deletion of providers.
@@ -51,7 +62,7 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
 }
 
 fn handle_provider_listen_input(
-  active_providers: Arc<Mutex<Vec<&dyn Provider>>>,
+  active_providers: Arc<Mutex<Vec<ProviderRef>>>,
   emit_output_tx: Sender<String>,
 ) -> Sender<ListenProviderArgs> {
   let (listen_input_tx, mut listen_input_rx) =
@@ -78,7 +89,7 @@ fn handle_provider_listen_input(
 }
 
 fn handle_provider_unlisten_input(
-  active_providers: Arc<Mutex<Vec<&dyn Provider>>>,
+  active_providers: Arc<Mutex<Vec<ProviderRef>>>,
 ) -> Sender<UnlistenProviderArgs> {
   let (unlisten_input_tx, mut unlisten_input_rx) =
     mpsc::channel::<UnlistenProviderArgs>(1);
