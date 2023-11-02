@@ -39,30 +39,56 @@ pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
   Ok(())
 }
 
+// fn create_manager() -> ProviderManager {
+//   let (input_sender, input_receiver) = mpsc::channel(1);
+//   let (output_sender, mut output_receiver) = mpsc::channel(1);
+
+// }
+
+fn handle_provider_create() -> Sender<String> {}
+
 impl ProviderManager {
   pub fn new<R: Runtime>(app: tauri::AppHandle<R>) -> ProviderManager {
     let (input_sender, input_receiver) = mpsc::channel(1);
     let (output_sender, mut output_receiver) = mpsc::channel(1);
 
-    let manager = ProviderManager {
-      input_sender,
-      active_providers: vec![],
-    };
-
-    task::spawn(async {
-      manager
-        .handle_provider_create(input_receiver, output_sender)
-        .await
+    task::spawn(async move {
+      Self::handle_provider_create(input_receiver, output_sender).await
     });
 
     task::spawn(async move {
-      manager
-        .handle_provider_emit(&mut output_receiver, &app.app_handle())
-        .await
+      Self::handle_provider_emit(&mut output_receiver, &app.app_handle()).await
     });
 
-    manager
+    ProviderManager {
+      input_sender,
+      active_providers: vec![],
+    }
   }
+
+  // pub fn new<R: Runtime>(app: tauri::AppHandle<R>) -> ProviderManager {
+  //   let (input_sender, input_receiver) = mpsc::channel(1);
+  //   let (output_sender, mut output_receiver) = mpsc::channel(1);
+
+  //   let mut manager = ProviderManager {
+  //     input_sender,
+  //     active_providers: vec![],
+  //   };
+
+  //   task::spawn(async {
+  //     manager
+  //       .handle_provider_create(input_receiver, output_sender)
+  //       .await
+  //   });
+
+  //   task::spawn(async move {
+  //     manager
+  //       .handle_provider_emit(&mut output_receiver, &app.app_handle())
+  //       .await
+  //   });
+
+  //   manager
+  // }
 
   // pub fn new() -> ProviderManager {
   //   ProviderManager {
@@ -112,7 +138,7 @@ impl ProviderManager {
       let provider_clone = provider.clone();
 
       task::spawn(async move {
-        let mut provider = provider_clone.lock().await;
+        let provider = provider_clone.lock().await;
         provider.start(sender).await; // Starts a long-running task
       });
 
@@ -121,7 +147,7 @@ impl ProviderManager {
   }
 
   async fn on_delete(&self) {
-    let mut provider = self.active_providers.get(1).unwrap().lock().await;
+    let provider = self.active_providers.get(1).unwrap().lock().await;
     provider.stop();
   }
 

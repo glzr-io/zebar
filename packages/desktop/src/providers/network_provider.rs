@@ -1,9 +1,9 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use sysinfo::{System, SystemExt};
 use tokio::{
-  sync::mpsc::Sender,
+  sync::{mpsc::Sender, Mutex},
   task::{self, AbortHandle},
   time,
 };
@@ -12,21 +12,21 @@ use super::{provider::Provider, provider_config::NetworkProviderConfig};
 
 pub struct NetworkProvider {
   pub config: NetworkProviderConfig,
-  abort_handle: Option<AbortHandle>,
+  abort_handle: Arc<Mutex<Option<AbortHandle>>>,
 }
 
 impl NetworkProvider {
   pub fn new(config: NetworkProviderConfig) -> NetworkProvider {
     NetworkProvider {
       config,
-      abort_handle: None,
+      abort_handle: Arc::new(Mutex::new(None)),
     }
   }
 }
 
 #[async_trait]
 impl Provider for NetworkProvider {
-  async fn start(&mut self, output_sender: Sender<String>) {
+  async fn start(&self, output_sender: Sender<String>) {
     let refresh_interval = self.config.refresh_interval_ms;
 
     let forever = task::spawn(async move {
@@ -47,15 +47,18 @@ impl Provider for NetworkProvider {
           .await;
       }
     });
+    // TODO: Need to manually re-lock?
+    let mut abort_handle = self.abort_handle.lock().await;
+    *abort_handle = Some(forever.abort_handle());
 
-    self.abort_handle = Some(forever.abort_handle());
     _ = forever.await;
   }
 
-  async fn stop(&mut self) {
-    match &self.abort_handle {
-      None => (),
-      Some(handle) => handle.abort(),
+  async fn stop(&self) {
+    let abort_handle = self.abort_handle.lock().await;
+
+    if let Some(handle) = &*abort_handle {
+      handle.abort();
     }
   }
 }
