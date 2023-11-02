@@ -59,22 +59,17 @@ fn handle_provider_listen_input(
 
   task::spawn(async move {
     while let Some(input) = listen_input_rx.recv().await {
-      let provider: Arc<Mutex<dyn Provider + Send + Sync + 'static>> =
-        match input.options {
-          ProviderConfig::Cpu(config) => {
-            Arc::new(Mutex::new(CpuProvider::new(config)))
-          }
-          ProviderConfig::Network(config) => {
-            Arc::new(Mutex::new(NetworkProvider::new(config)))
-          }
-        };
+      let mut provider: Box<dyn Provider + Send> = match input.options {
+        ProviderConfig::Cpu(config) => Box::new(CpuProvider::new(config)),
+        ProviderConfig::Network(config) => {
+          Box::new(NetworkProvider::new(config))
+        }
+      };
 
       let sender = emit_output_tx.clone();
-      let provider_clone = provider.clone();
 
       task::spawn(async move {
-        let provider = provider_clone.lock().await;
-        provider.start(sender).await; // Starts a long-running task
+        provider.start(sender).await;
       });
     }
   });
