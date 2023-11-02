@@ -26,7 +26,7 @@ impl NetworkProvider {
 
 #[async_trait]
 impl Provider for NetworkProvider {
-  async fn start(&mut self, output_sender: Sender<String>) {
+  async fn on_start(&mut self, output_sender: Sender<String>) {
     let refresh_interval = self.config.refresh_interval_ms;
 
     let forever = task::spawn(async move {
@@ -52,7 +52,7 @@ impl Provider for NetworkProvider {
     _ = forever.await;
   }
 
-  async fn stop(&mut self) {
+  async fn on_stop(&mut self) {
     match &self.abort_handle {
       None => (),
       Some(handle) => handle.abort(),

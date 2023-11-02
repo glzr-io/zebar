@@ -83,7 +83,7 @@ fn handle_provider_listen_input(
 
       task::spawn(async move {
         // provider.start(sender).await;
-        provider.start2(sender, refresh_rx, stop_rx).await;
+        provider.start(sender, refresh_rx, stop_rx).await;
       });
 
       active_providers.lock().await.push(ProviderRef {
@@ -105,10 +105,17 @@ fn handle_provider_unlisten_input(
 
   task::spawn(async move {
     while let Some(input) = unlisten_input_rx.recv().await {
-      // let providers = active_providers.lock().await;
-      // let provider = providers
-      //   .iter()
-      //   .find(|&provider| *provider.options_hash == input.options_hash);
+      let providers = active_providers.lock().await;
+
+      // Find provider that matches given config hash.
+      let provider = providers
+        .iter()
+        .find(|&provider| *provider.options_hash == input.options_hash);
+
+      match provider {
+        None => (),
+        Some(found) => _ = found.stop_tx.send(()).await,
+      }
     }
   });
 

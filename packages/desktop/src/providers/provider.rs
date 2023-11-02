@@ -3,21 +3,20 @@ use tokio::sync::mpsc::{Receiver, Sender};
 
 #[async_trait]
 pub trait Provider {
-  // TODO: Rename to `on_start`
-  async fn start(&mut self, output_sender: Sender<String>);
-  async fn start2(
+  async fn on_start(&mut self, output_sender: Sender<String>);
+  async fn on_stop(&mut self);
+
+  async fn start(
     &mut self,
     emit_output_tx: Sender<String>,
     mut refresh_rx: Receiver<()>,
     mut stop_rx: Receiver<()>,
   ) {
     tokio::select! {
-        output = self.start(emit_output_tx) => output,
+        output = self.on_start(emit_output_tx) => output,
         // _ = stop_rx.recv() => ()
-        _ = stop_rx.recv() => self.stop().await
+        _ = stop_rx.recv() => self.on_stop().await
 
     }
   }
-  // TODO: Rename to `on_stop`
-  async fn stop(&mut self);
 }

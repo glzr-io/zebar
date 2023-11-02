@@ -16,6 +16,7 @@ import {
   onProviderEmit,
   setWindowPosition,
   setWindowStyles,
+  unlistenProvider,
 } from './desktop';
 import { simpleHash } from './utils';
 
@@ -71,6 +72,12 @@ export function init(callback: (context: ElementContext) => void) {
     trackedAccess: [],
   });
   onProviderEmit(networkOptionsHash, payload => console.log('provider emit'));
+  setTimeout(() => {
+    console.log('aaa');
+    unlistenProvider(networkOptionsHash);
+
+    console.log('bbb');
+  }, 6000);
 
   // Set window position based on config values.
   createEffect(async () => {

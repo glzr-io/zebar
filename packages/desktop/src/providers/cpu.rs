@@ -26,7 +26,7 @@ impl CpuProvider {
 
 #[async_trait]
 impl Provider for CpuProvider {
-  async fn start(&mut self, output_sender: Sender<String>) {
+  async fn on_start(&mut self, output_sender: Sender<String>) {
     let forever = task::spawn(async move {
       let mut interval = time::interval(Duration::from_millis(5000));
       let mut sys = System::new_all();
@@ -47,7 +47,7 @@ impl Provider for CpuProvider {
     _ = forever.await;
   }
 
-  async fn stop(&mut self) {
+  async fn on_stop(&mut self) {
     match &self.abort_handle {
       None => (),
       Some(handle) => handle.abort(),

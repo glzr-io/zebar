@@ -21,8 +21,8 @@ export function listenProvider(args: {
   return invoke<string>('listen_provider', args);
 }
 
-export function unlistenProvider(configHash: string): Promise<string> {
-  return invoke<string>('unlisten_provider');
+export function unlistenProvider(optionsHash: string): Promise<string> {
+  return invoke<string>('unlisten_provider', { optionsHash });
 }
 
 // TODO: Implement this. Should kill the window and show error dialog. If
