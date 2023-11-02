@@ -3,7 +3,7 @@
 
 use providers::{
   provider_config::ProviderConfig,
-  provider_manager::{self, CreateProviderArgs, ProviderManager},
+  provider_manager::{self, ProviderManager},
 };
 use tauri::{AppHandle, Manager, State};
 
@@ -34,12 +34,18 @@ async fn listen_provider(
   provider_manager: State<'_, ProviderManager>,
 ) -> Result<(), String> {
   provider_manager
-    .input_sender
-    .send(CreateProviderArgs {
-      options_hash,
-      options,
-      tracked_access,
-    })
+    .listen(options_hash, options, tracked_access)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command()]
+async fn unlisten_provider(
+  options_hash: String,
+  provider_manager: State<'_, ProviderManager>,
+) -> Result<(), String> {
+  provider_manager
+    .unlisten(options_hash)
     .await
     .map_err(|err| err.to_string())
 }
@@ -66,7 +72,11 @@ async fn main() {
         .emit_all("single-instance", Payload { args: argv, cwd })
         .unwrap();
     }))
-    .invoke_handler(tauri::generate_handler![read_config_file, listen_provider])
+    .invoke_handler(tauri::generate_handler![
+      read_config_file,
+      listen_provider,
+      unlisten_provider
+    ])
     .run(tauri::generate_context!())
     .expect("Error while running Tauri application.");
 }
