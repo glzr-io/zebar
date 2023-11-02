@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use tauri::{Manager, Runtime};
 use tokio::{
   sync::{
-    mpsc::{self, Receiver, Sender},
+    mpsc::{self, Sender},
     Mutex,
   },
   task,
@@ -28,10 +28,10 @@ pub struct UnlistenProviderArgs {
   pub options_hash: String,
 }
 
-struct ProviderRef {
+pub struct ProviderRef {
   options_hash: String,
-  refresh_rx: Receiver<()>,
-  stop_rx: Receiver<()>,
+  refresh_tx: Sender<()>,
+  stop_tx: Sender<()>,
 }
 
 /// Wrapper around the creation and deletion of providers.
@@ -77,11 +77,20 @@ fn handle_provider_listen_input(
         }
       };
 
+      let (refresh_tx, mut refresh_rx) = mpsc::channel::<()>(1);
+      let (stop_tx, mut stop_rx) = mpsc::channel::<()>(1);
       let sender = emit_output_tx.clone();
 
       task::spawn(async move {
-        provider.start(sender).await;
+        // provider.start(sender).await;
+        provider.start2(sender, refresh_rx, stop_rx).await;
       });
+
+      active_providers.lock().await.push(ProviderRef {
+        options_hash: input.options_hash,
+        refresh_tx,
+        stop_tx,
+      })
     }
   });
 
