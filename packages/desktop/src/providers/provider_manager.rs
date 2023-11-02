@@ -1,11 +1,11 @@
-use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use anyhow::Result;
-use sysinfo::{System, SystemExt};
 use tauri::{Manager, Runtime};
-use tokio::{sync::mpsc, task, time};
+use tokio::{sync::mpsc, task};
 use tracing::info;
+
+use crate::providers::provider::Provider;
 
 use super::{
   cpu::CpuProvider, network_provider::NetworkProvider,
@@ -18,10 +18,13 @@ pub struct CreateProviderArgs {
   pub tracked_access: Vec<String>,
 }
 
+/// Handles the creation and deletion of providers.
 pub struct ProviderManager {
   pub input_sender: Sender<CreateProviderArgs>,
+  active_providers: Vec<Box<dyn Provider + Sync + Send>>,
 }
 
+/// Initializes `ProviderManager` in Tauri state.
 pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
   app.manage(ProviderManager::new(app.handle()));
   Ok(())
@@ -40,7 +43,10 @@ impl ProviderManager {
       Self::handle_provider_emit(&mut output_receiver, &app.app_handle()).await
     });
 
-    ProviderManager { input_sender }
+    ProviderManager {
+      input_sender,
+      active_providers: vec![],
+    }
   }
 
   async fn handle_provider_create(

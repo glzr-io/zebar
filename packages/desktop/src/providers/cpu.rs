@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use async_trait::async_trait;
 use sysinfo::{System, SystemExt};
 use tokio::{
   sync::mpsc::Sender,
@@ -7,7 +8,7 @@ use tokio::{
   time,
 };
 
-use super::provider_config::CpuProviderConfig;
+use super::{provider::Provider, provider_config::CpuProviderConfig};
 
 pub struct CpuProvider {
   pub config: CpuProviderConfig,
@@ -21,8 +22,11 @@ impl CpuProvider {
       abort_handle: None,
     }
   }
+}
 
-  pub async fn start(&mut self, output_sender: Sender<String>) {
+#[async_trait]
+impl Provider for CpuProvider {
+  async fn start(&mut self, output_sender: Sender<String>) {
     let forever = task::spawn(async move {
       let mut interval = time::interval(Duration::from_millis(5000));
       let mut sys = System::new_all();
@@ -43,7 +47,7 @@ impl CpuProvider {
     _ = forever.await;
   }
 
-  pub fn stop(&self) {
+  async fn stop(&mut self) {
     match &self.abort_handle {
       None => (),
       Some(handle) => handle.abort(),

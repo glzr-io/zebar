@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use async_trait::async_trait;
 use sysinfo::{System, SystemExt};
 use tokio::{
   sync::mpsc::Sender,
@@ -7,7 +8,7 @@ use tokio::{
   time,
 };
 
-use super::provider_config::NetworkProviderConfig;
+use super::{provider::Provider, provider_config::NetworkProviderConfig};
 
 pub struct NetworkProvider {
   pub config: NetworkProviderConfig,
@@ -21,8 +22,11 @@ impl NetworkProvider {
       abort_handle: None,
     }
   }
+}
 
-  pub async fn start(&mut self, output_sender: Sender<String>) {
+#[async_trait]
+impl Provider for NetworkProvider {
+  async fn start(&mut self, output_sender: Sender<String>) {
     let refresh_interval = self.config.refresh_interval_ms;
 
     let forever = task::spawn(async move {
@@ -48,7 +52,7 @@ impl NetworkProvider {
     _ = forever.await;
   }
 
-  pub fn stop(&self) {
+  async fn stop(&mut self) {
     match &self.abort_handle {
       None => (),
       Some(handle) => handle.abort(),
