@@ -51,13 +51,14 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
 }
 
 fn handle_provider_listen_input(
-  output_sender: Sender<String>,
+  active_providers: Arc<Mutex<Vec<&dyn Provider>>>,
+  emit_output_tx: Sender<String>,
 ) -> Sender<ListenProviderArgs> {
-  let (input_sender, mut input_receiver) =
+  let (listen_input_tx, mut listen_input_rx) =
     mpsc::channel::<ListenProviderArgs>(1);
 
   task::spawn(async move {
-    while let Some(input) = input_receiver.recv().await {
+    while let Some(input) = listen_input_rx.recv().await {
       let provider: Arc<Mutex<dyn Provider + Send + Sync + 'static>> =
         match input.options {
           ProviderConfig::Cpu(config) => {
@@ -68,7 +69,7 @@ fn handle_provider_listen_input(
           }
         };
 
-      let sender = output_sender.clone();
+      let sender = emit_output_tx.clone();
       let provider_clone = provider.clone();
 
       task::spawn(async move {
@@ -78,24 +79,39 @@ fn handle_provider_listen_input(
     }
   });
 
-  input_sender
+  listen_input_tx
 }
 
-fn handle_provider_unlisten_input() -> Sender<UnlistenProviderArgs> {
-  let (input_sender, input_receiver) = mpsc::channel::<UnlistenProviderArgs>(1);
+fn handle_provider_unlisten_input(
+  active_providers: Arc<Mutex<Vec<&dyn Provider>>>,
+) -> Sender<UnlistenProviderArgs> {
+  let (unlisten_input_tx, mut unlisten_input_rx) =
+    mpsc::channel::<UnlistenProviderArgs>(1);
 
-  // TODO
+  task::spawn(async move {
+    while let Some(input) = unlisten_input_rx.recv().await {
+      // let providers = active_providers.lock().await;
+      // let provider = providers
+      //   .iter()
+      //   .find(|&provider| *provider.options_hash == input.options_hash);
+    }
+  });
 
-  input_sender
+  unlisten_input_tx
 }
 
 impl ProviderManager {
   pub fn new<R: Runtime>(app: tauri::AppHandle<R>) -> ProviderManager {
     let emit_output_tx = handle_provider_emit_output(app.app_handle());
 
-    let active_providers = vec![];
-    let listen_input_tx = handle_provider_listen_input(emit_output_tx);
-    let unlisten_input_tx = handle_provider_unlisten_input();
+    let active_providers = Arc::new(Mutex::new(vec![]));
+    let active_providers_clone = active_providers.clone();
+
+    let listen_input_tx =
+      handle_provider_listen_input(active_providers, emit_output_tx);
+
+    let unlisten_input_tx =
+      handle_provider_unlisten_input(active_providers_clone);
 
     ProviderManager {
       listen_input_tx,
