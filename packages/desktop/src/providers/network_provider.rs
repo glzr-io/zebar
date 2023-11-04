@@ -1,9 +1,9 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use sysinfo::{System, SystemExt};
 use tokio::{
-  sync::mpsc::Sender,
+  sync::{mpsc::Sender, Mutex},
   task::{self, AbortHandle},
   time,
 };
@@ -13,13 +13,18 @@ use super::{provider::Provider, provider_config::NetworkProviderConfig};
 pub struct NetworkProvider {
   pub config: NetworkProviderConfig,
   abort_handle: Option<AbortHandle>,
+  sysinfo: Arc<Mutex<System>>,
 }
 
 impl NetworkProvider {
-  pub fn new(config: NetworkProviderConfig) -> NetworkProvider {
+  pub fn new(
+    config: NetworkProviderConfig,
+    sysinfo: Arc<Mutex<System>>,
+  ) -> NetworkProvider {
     NetworkProvider {
       config,
       abort_handle: None,
+      sysinfo,
     }
   }
 }
@@ -27,22 +32,23 @@ impl NetworkProvider {
 #[async_trait]
 impl Provider for NetworkProvider {
   async fn on_start(&mut self, output_sender: Sender<String>) {
-    let refresh_interval = self.config.refresh_interval_ms;
+    let refresh_interval_ms = self.config.refresh_interval_ms;
+    let sysinfo = self.sysinfo.clone();
 
     let forever = task::spawn(async move {
       let mut interval =
-        time::interval(Duration::from_millis(refresh_interval));
-      let mut sys = System::new_all();
+        time::interval(Duration::from_millis(refresh_interval_ms));
 
       loop {
         interval.tick().await;
-        sys.refresh_all();
-        println!("hostname: {}", sys.host_name().unwrap_or("".into()));
+        let mut sysinfo = sysinfo.lock().await;
+        sysinfo.refresh_all();
+        println!("hostname: {}", sysinfo.host_name().unwrap_or("".into()));
 
         _ = output_sender
           .send(format!(
             "hostname: {}",
-            sys.host_name().unwrap_or("".into())
+            sysinfo.host_name().unwrap_or("".into())
           ))
           .await;
       }
@@ -52,10 +58,13 @@ impl Provider for NetworkProvider {
     _ = forever.await;
   }
 
+  async fn on_refresh(&mut self) {
+    // TODO
+  }
+
   async fn on_stop(&mut self) {
-    match &self.abort_handle {
-      None => (),
-      Some(handle) => handle.abort(),
+    if let Some(handle) = &self.abort_handle {
+      handle.abort();
     }
   }
 }

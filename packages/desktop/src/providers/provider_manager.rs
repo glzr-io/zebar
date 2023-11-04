@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use sysinfo::{System, SystemExt};
 use tauri::{Manager, Runtime};
 use tokio::{
   sync::{
@@ -68,25 +69,40 @@ fn handle_provider_listen_input(
   let (listen_input_tx, mut listen_input_rx) =
     mpsc::channel::<ListenProviderArgs>(1);
 
+  let sysinfo = Arc::new(Mutex::new(System::new_all()));
+
   task::spawn(async move {
     while let Some(input) = listen_input_rx.recv().await {
+      let mut providers = active_providers.lock().await;
+
+      // Find provider that matches given options hash.
+      let found_provider = providers
+        .iter()
+        .find(|&provider| *provider.options_hash == input.options_hash);
+
+      if let Some(found) = found_provider {
+        _ = found.refresh_tx.send(()).await;
+        continue;
+      };
+
       let mut provider: Box<dyn Provider + Send> = match input.options {
-        ProviderConfig::Cpu(config) => Box::new(CpuProvider::new(config)),
+        ProviderConfig::Cpu(config) => {
+          Box::new(CpuProvider::new(config, sysinfo.clone()))
+        }
         ProviderConfig::Network(config) => {
-          Box::new(NetworkProvider::new(config))
+          Box::new(NetworkProvider::new(config, sysinfo.clone()))
         }
       };
 
-      let (refresh_tx, mut refresh_rx) = mpsc::channel::<()>(1);
-      let (stop_tx, mut stop_rx) = mpsc::channel::<()>(1);
+      let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
+      let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
       let sender = emit_output_tx.clone();
 
       task::spawn(async move {
-        // provider.start(sender).await;
         provider.start(sender, refresh_rx, stop_rx).await;
       });
 
-      active_providers.lock().await.push(ProviderRef {
+      providers.push(ProviderRef {
         options_hash: input.options_hash,
         refresh_tx,
         stop_tx,
@@ -107,12 +123,12 @@ fn handle_provider_unlisten_input(
     while let Some(input) = unlisten_input_rx.recv().await {
       let providers = active_providers.lock().await;
 
-      // Find provider that matches given config hash.
-      let provider = providers
+      // Find provider that matches given options hash.
+      let found_provider = providers
         .iter()
         .find(|&provider| *provider.options_hash == input.options_hash);
 
-      match provider {
+      match found_provider {
         None => (),
         Some(found) => _ = found.stop_tx.send(()).await,
       }

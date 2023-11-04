@@ -1,9 +1,9 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use sysinfo::{System, SystemExt};
 use tokio::{
-  sync::mpsc::Sender,
+  sync::{mpsc::Sender, Mutex},
   task::{self, AbortHandle},
   time,
 };
@@ -13,13 +13,18 @@ use super::{provider::Provider, provider_config::CpuProviderConfig};
 pub struct CpuProvider {
   pub config: CpuProviderConfig,
   abort_handle: Option<AbortHandle>,
+  sysinfo: Arc<Mutex<System>>,
 }
 
 impl CpuProvider {
-  pub fn new(config: CpuProviderConfig) -> CpuProvider {
+  pub fn new(
+    config: CpuProviderConfig,
+    sysinfo: Arc<Mutex<System>>,
+  ) -> CpuProvider {
     CpuProvider {
       config,
       abort_handle: None,
+      sysinfo,
     }
   }
 }
@@ -27,18 +32,22 @@ impl CpuProvider {
 #[async_trait]
 impl Provider for CpuProvider {
   async fn on_start(&mut self, output_sender: Sender<String>) {
+    let refresh_interval_ms = self.config.refresh_interval_ms;
+    let sysinfo = self.sysinfo.clone();
+
     let forever = task::spawn(async move {
-      let mut interval = time::interval(Duration::from_millis(5000));
-      let mut sys = System::new_all();
+      let mut interval =
+        time::interval(Duration::from_millis(refresh_interval_ms));
 
       loop {
         interval.tick().await;
-        sys.refresh_all();
+        let mut sysinfo = sysinfo.lock().await;
+        sysinfo.refresh_all();
         println!("=> system:");
-        println!("total memory: {} bytes", sys.total_memory());
+        println!("total memory: {} bytes", sysinfo.total_memory());
 
         _ = output_sender
-          .send(format!("total memory: {} bytes", sys.total_memory()))
+          .send(format!("total memory: {} bytes", sysinfo.total_memory()))
           .await;
       }
     });
@@ -47,10 +56,13 @@ impl Provider for CpuProvider {
     _ = forever.await;
   }
 
+  async fn on_refresh(&mut self) {
+    // TODO
+  }
+
   async fn on_stop(&mut self) {
-    match &self.abort_handle {
-      None => (),
-      Some(handle) => handle.abort(),
+    if let Some(handle) = &self.abort_handle {
+      handle.abort();
     }
   }
 }
