@@ -58,8 +58,7 @@ impl Provider for NetworkProvider {
     _ = forever.await;
   }
 
-  async fn on_refresh(&mut self) {
-    // TODO
+  async fn on_refresh(&mut self, emit_output_tx: Sender<String>) {
   }
 
   async fn on_stop(&mut self) {

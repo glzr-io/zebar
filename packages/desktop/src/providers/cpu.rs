@@ -31,7 +31,7 @@ impl CpuProvider {
 
 #[async_trait]
 impl Provider for CpuProvider {
-  async fn on_start(&mut self, output_sender: Sender<String>) {
+  async fn on_start(&mut self, emit_output_tx: Sender<String>) {
     let refresh_interval_ms = self.config.refresh_interval_ms;
     let sysinfo = self.sysinfo.clone();
 
@@ -46,7 +46,7 @@ impl Provider for CpuProvider {
         println!("=> system:");
         println!("total memory: {} bytes", sysinfo.total_memory());
 
-        _ = output_sender
+        _ = emit_output_tx
           .send(format!("total memory: {} bytes", sysinfo.total_memory()))
           .await;
       }
@@ -56,7 +56,7 @@ impl Provider for CpuProvider {
     _ = forever.await;
   }
 
-  async fn on_refresh(&mut self) {
+  async fn on_refresh(&mut self, emit_output_tx: Sender<String>) {
     // TODO
   }
 
