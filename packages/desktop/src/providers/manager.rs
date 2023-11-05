@@ -28,6 +28,7 @@ pub struct UnlistenProviderArgs {
   pub options_hash: String,
 }
 
+/// Reference to a currently active provider.
 pub struct ProviderRef {
   options_hash: String,
   refresh_tx: Sender<()>,
@@ -46,6 +47,7 @@ pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
   Ok(())
 }
 
+/// Create a channel for outputting provider variables to client.
 fn handle_provider_emit_output<R: tauri::Runtime>(
   manager: (impl Manager<R> + Sync + Send + 'static),
 ) -> Sender<String> {
@@ -61,6 +63,7 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
   output_sender
 }
 
+/// Create a channel for handling provider listen commands from client.
 fn handle_provider_listen_input(
   active_providers: Arc<Mutex<Vec<ProviderRef>>>,
   emit_output_tx: Sender<String>,
@@ -79,12 +82,15 @@ fn handle_provider_listen_input(
         .iter()
         .find(|&provider| *provider.options_hash == input.options_hash);
 
+      // If a provider with the given config already exists, refresh it and
+      // return early.
       if let Some(found) = found_provider {
         _ = found.refresh_tx.send(()).await;
         continue;
       };
 
-      let mut provider: Box<dyn Provider + Send> = match input.options {
+      // Otherwise, spawn a new provider.
+      let mut new_provider: Box<dyn Provider + Send> = match input.options {
         ProviderConfig::Cpu(config) => {
           Box::new(CpuProvider::new(config, sysinfo.clone()))
         }
@@ -98,7 +104,7 @@ fn handle_provider_listen_input(
       let sender = emit_output_tx.clone();
 
       task::spawn(async move {
-        provider.start(sender, refresh_rx, stop_rx).await;
+        new_provider.start(sender, refresh_rx, stop_rx).await;
       });
 
       providers.push(ProviderRef {
@@ -112,6 +118,7 @@ fn handle_provider_listen_input(
   listen_input_tx
 }
 
+/// Create a channel for handling provider unlisten commands from client.
 fn handle_provider_unlisten_input(
   active_providers: Arc<Mutex<Vec<ProviderRef>>>,
 ) -> Sender<UnlistenProviderArgs> {
@@ -120,17 +127,16 @@ fn handle_provider_unlisten_input(
 
   task::spawn(async move {
     while let Some(input) = unlisten_input_rx.recv().await {
-      let providers = active_providers.lock().await;
-
       // Find provider that matches given options hash.
+      let providers = active_providers.lock().await;
       let found_provider = providers
         .iter()
         .find(|&provider| *provider.options_hash == input.options_hash);
 
-      match found_provider {
-        None => (),
-        Some(found) => _ = found.stop_tx.send(()).await,
-      }
+      // Stop the given provider. This triggers any necessary cleanup.
+      if let Some(found) = found_provider {
+        _ = found.stop_tx.send(()).await;
+      };
     }
   });
 
