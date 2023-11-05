@@ -1,16 +1,16 @@
 use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-use sysinfo::{System, SystemExt};
+use sysinfo::System;
 use tokio::{
   sync::{mpsc::Sender, Mutex},
   task::{self, AbortHandle},
   time,
 };
 
-use crate::providers::provider::Provider;
+use crate::providers::{provider::Provider, variables::ProviderVariables};
 
-use super::CpuProviderConfig;
+use super::{CpuProviderConfig, CpuVariables};
 
 pub struct CpuProvider {
   pub config: CpuProviderConfig,
@@ -32,19 +32,19 @@ impl CpuProvider {
 
   async fn refresh_and_emit(
     sysinfo: &Mutex<System>,
-    emit_output_tx: &Sender<String>,
+    emit_output_tx: &Sender<ProviderVariables>,
   ) {
     let sysinfo = sysinfo.lock().await;
 
     _ = emit_output_tx
-      .send(format!("total memory: {}", sysinfo.total_memory()))
+      .send(ProviderVariables::Cpu(CpuVariables { usage: 1 }))
       .await;
   }
 }
 
 #[async_trait]
 impl Provider for CpuProvider {
-  async fn on_start(&mut self, emit_output_tx: Sender<String>) {
+  async fn on_start(&mut self, emit_output_tx: Sender<ProviderVariables>) {
     let refresh_interval_ms = self.config.refresh_interval_ms;
     let sysinfo = self.sysinfo.clone();
 
@@ -64,7 +64,7 @@ impl Provider for CpuProvider {
     _ = forever.await;
   }
 
-  async fn on_refresh(&mut self, emit_output_tx: Sender<String>) {
+  async fn on_refresh(&mut self, emit_output_tx: Sender<ProviderVariables>) {
     Self::refresh_and_emit(&self.sysinfo, &emit_output_tx).await;
   }
 

@@ -1,15 +1,17 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc::{Receiver, Sender};
 
+use super::variables::ProviderVariables;
+
 #[async_trait]
 pub trait Provider {
-  async fn on_start(&mut self, emit_output_tx: Sender<String>);
-  async fn on_refresh(&mut self, emit_output_tx: Sender<String>);
+  async fn on_start(&mut self, emit_output_tx: Sender<ProviderVariables>);
+  async fn on_refresh(&mut self, emit_output_tx: Sender<ProviderVariables>);
   async fn on_stop(&mut self);
 
   async fn start(
     &mut self,
-    emit_output_tx: Sender<String>,
+    emit_output_tx: Sender<ProviderVariables>,
     mut refresh_rx: Receiver<()>,
     mut stop_rx: Receiver<()>,
   ) {

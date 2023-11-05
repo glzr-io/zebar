@@ -16,6 +16,7 @@ use crate::providers::provider::Provider;
 
 use super::{
   config::ProviderConfig, cpu::CpuProvider, network::NetworkProvider,
+  variables::ProviderVariables,
 };
 
 pub struct ListenProviderArgs {
@@ -50,7 +51,7 @@ pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
 /// Create a channel for outputting provider variables to client.
 fn handle_provider_emit_output<R: tauri::Runtime>(
   manager: (impl Manager<R> + Sync + Send + 'static),
-) -> Sender<String> {
+) -> Sender<ProviderVariables> {
   let (output_sender, mut output_receiver) = mpsc::channel(1);
 
   task::spawn(async move {
@@ -66,7 +67,7 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
 /// Create a channel for handling provider listen commands from client.
 fn handle_provider_listen_input(
   active_providers: Arc<Mutex<Vec<ProviderRef>>>,
-  emit_output_tx: Sender<String>,
+  emit_output_tx: Sender<ProviderVariables>,
 ) -> Sender<ListenProviderArgs> {
   let (listen_input_tx, mut listen_input_rx) =
     mpsc::channel::<ListenProviderArgs>(1);

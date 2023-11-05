@@ -8,7 +8,9 @@ use tokio::{
   time,
 };
 
-use crate::providers::provider::Provider;
+use crate::providers::{
+  network::NetworkVariables, provider::Provider, variables::ProviderVariables,
+};
 
 use super::NetworkProviderConfig;
 
@@ -32,7 +34,7 @@ impl NetworkProvider {
 
   async fn refresh_and_emit(
     sysinfo: &Mutex<System>,
-    emit_output_tx: &Sender<String>,
+    emit_output_tx: &Sender<ProviderVariables>,
   ) {
     let sysinfo = sysinfo.lock().await;
     println!("hostname: {}", sysinfo.host_name().unwrap_or("".into()));
@@ -47,17 +49,14 @@ impl NetworkProvider {
     }
 
     _ = emit_output_tx
-      .send(format!(
-        "hostname: {}",
-        sysinfo.host_name().unwrap_or("".into())
-      ))
+      .send(ProviderVariables::Network(NetworkVariables { usage: 1 }))
       .await;
   }
 }
 
 #[async_trait]
 impl Provider for NetworkProvider {
-  async fn on_start(&mut self, emit_output_tx: Sender<String>) {
+  async fn on_start(&mut self, emit_output_tx: Sender<ProviderVariables>) {
     let refresh_interval_ms = self.config.refresh_interval_ms;
     let sysinfo = self.sysinfo.clone();
 
@@ -77,7 +76,7 @@ impl Provider for NetworkProvider {
     _ = forever.await;
   }
 
-  async fn on_refresh(&mut self, emit_output_tx: Sender<String>) {
+  async fn on_refresh(&mut self, emit_output_tx: Sender<ProviderVariables>) {
     Self::refresh_and_emit(&self.sysinfo, &emit_output_tx).await;
   }
 

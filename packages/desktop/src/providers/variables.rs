@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{cpu::CpuVariables, network::NetworkVariables};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ProviderVariables {
   Cpu(CpuVariables),
   Network(NetworkVariables),
