@@ -8,9 +8,9 @@ use tokio::{
   time,
 };
 
-use crate::providers::{
-  provider::Provider, provider_config::NetworkProviderConfig,
-};
+use crate::providers::provider::Provider;
+
+use super::NetworkProviderConfig;
 
 pub struct NetworkProvider {
   pub config: NetworkProviderConfig,

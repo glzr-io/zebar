@@ -1,3 +1,5 @@
+mod config;
 mod provider;
 
-pub use provider::CpuProvider;
+pub use config::*;
+pub use provider::*;
