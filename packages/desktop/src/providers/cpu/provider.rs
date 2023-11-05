@@ -8,7 +8,9 @@ use tokio::{
   time,
 };
 
-use super::{provider::Provider, provider_config::CpuProviderConfig};
+use crate::providers::{
+  provider::Provider, provider_config::CpuProviderConfig,
+};
 
 pub struct CpuProvider {
   pub config: CpuProviderConfig,
