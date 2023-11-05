@@ -9,7 +9,6 @@ use tauri::{AppHandle, Manager, State};
 
 mod providers;
 mod user_config;
-mod utils;
 
 #[derive(Clone, serde::Serialize)]
 struct Payload {
