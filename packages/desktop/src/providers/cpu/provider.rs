@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-use sysinfo::System;
+use sysinfo::{CpuExt, RefreshKind, System, SystemExt};
 use tokio::{
   sync::{mpsc::Sender, Mutex},
   task::{self, AbortHandle},
@@ -34,10 +34,20 @@ impl CpuProvider {
     sysinfo: &Mutex<System>,
     emit_output_tx: &Sender<ProviderVariables>,
   ) {
-    let sysinfo = sysinfo.lock().await;
+    let mut sysinfo = sysinfo.lock().await;
+    sysinfo.refresh_cpu();
 
     _ = emit_output_tx
-      .send(ProviderVariables::Cpu(CpuVariables { usage: 1 }))
+      .send(ProviderVariables::Cpu(CpuVariables {
+        usage: sysinfo.global_cpu_info().cpu_usage(),
+        frequency: sysinfo.global_cpu_info().frequency(),
+        logical_core_count: sysinfo.cpus().len(),
+        physical_core_count: sysinfo
+          .physical_core_count()
+          .unwrap_or(sysinfo.cpus().len()),
+        brand: sysinfo.global_cpu_info().brand().into(),
+        vendor_id: sysinfo.global_cpu_info().vendor_id().into(),
+      }))
       .await;
   }
 }
