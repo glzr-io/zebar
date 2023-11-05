@@ -27,6 +27,17 @@ impl CpuProvider {
       sysinfo,
     }
   }
+
+  async fn refresh_and_emit(
+    sysinfo: &Mutex<System>,
+    emit_output_tx: &Sender<String>,
+  ) {
+    let sysinfo = sysinfo.lock().await;
+
+    _ = emit_output_tx
+      .send(format!("total memory: {}", sysinfo.total_memory()))
+      .await;
+  }
 }
 
 #[async_trait]
@@ -39,16 +50,11 @@ impl Provider for CpuProvider {
       let mut interval =
         time::interval(Duration::from_millis(refresh_interval_ms));
 
+      Self::refresh_and_emit(&sysinfo, &emit_output_tx).await;
+
       loop {
         interval.tick().await;
-        let mut sysinfo = sysinfo.lock().await;
-        sysinfo.refresh_all();
-        println!("=> system:");
-        println!("total memory: {} bytes", sysinfo.total_memory());
-
-        _ = emit_output_tx
-          .send(format!("total memory: {} bytes", sysinfo.total_memory()))
-          .await;
+        Self::refresh_and_emit(&sysinfo, &emit_output_tx).await;
       }
     });
 
@@ -57,7 +63,7 @@ impl Provider for CpuProvider {
   }
 
   async fn on_refresh(&mut self, emit_output_tx: Sender<String>) {
-    // TODO
+    Self::refresh_and_emit(&self.sysinfo, &emit_output_tx).await;
   }
 
   async fn on_stop(&mut self) {

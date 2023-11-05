@@ -34,6 +34,15 @@ impl NetworkProvider {
   ) {
     let sysinfo = sysinfo.lock().await;
     println!("hostname: {}", sysinfo.host_name().unwrap_or("".into()));
+    // sysinfo.networks().into_iter().map(|e|e.1.)
+
+    // Network interfaces name, data received and data transmitted:
+    let networks = sysinfo.networks();
+    println!("=> networks:");
+    for (interface_name, data) in networks {
+      println!("{}", interface_name);
+      println!("{:#?}", data);
+    }
 
     _ = emit_output_tx
       .send(format!(
