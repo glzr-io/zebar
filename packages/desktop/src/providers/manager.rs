@@ -15,7 +15,7 @@ use tracing::info;
 use crate::providers::provider::Provider;
 
 use super::{
-  cpu::CpuProvider, network::NetworkProvider, provider_config::ProviderConfig,
+  config::ProviderConfig, cpu::CpuProvider, network::NetworkProvider,
 };
 
 pub struct ListenProviderArgs {

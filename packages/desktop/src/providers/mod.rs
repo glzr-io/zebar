@@ -1,5 +1,5 @@
-mod cpu;
-mod network;
+pub mod config;
+pub mod cpu;
+pub mod manager;
+pub mod network;
 pub mod provider;
-pub mod provider_config;
-pub mod provider_manager;

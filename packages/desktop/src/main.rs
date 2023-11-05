@@ -1,10 +1,7 @@
 // Prevents additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use providers::{
-  provider_config::ProviderConfig,
-  provider_manager::{self, ProviderManager},
-};
+use providers::{config::ProviderConfig, manager::ProviderManager};
 use tauri::{AppHandle, Manager, State};
 
 mod providers;
@@ -64,7 +61,7 @@ async fn main() {
       };
       Ok(())
     })
-    .setup(provider_manager::init)
+    .setup(providers::manager::init)
     .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
       println!("{}, {argv:?}, {cwd}", app.package_info().name);
       app
