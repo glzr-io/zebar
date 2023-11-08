@@ -1,17 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-use super::{cpu::CpuVariables, network::NetworkVariables};
+use super::{
+  battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
+  memory::MemoryVariables, network::NetworkVariables,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ProviderVariables {
+  Battery(BatteryVariables),
   Cpu(CpuVariables),
+  Host(HostVariables),
+  Memory(MemoryVariables),
   Network(NetworkVariables),
 }
-
-// #[derive(Serialize, Deserialize, Debug)]
-// pub struct HostProviderData {
-//   pub host_name: String,
-// }
 
 // #[derive(Serialize, Deserialize, Debug)]
 // pub struct BatteryProviderData {

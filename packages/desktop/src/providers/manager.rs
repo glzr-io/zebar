@@ -15,7 +15,8 @@ use tracing::info;
 use crate::providers::provider::Provider;
 
 use super::{
-  config::ProviderConfig, cpu::CpuProvider, network::NetworkProvider,
+  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
+  host::HostProvider, memory::MemoryProvider, network::NetworkProvider,
   variables::ProviderVariables,
 };
 
@@ -92,8 +93,17 @@ fn handle_provider_listen_input(
 
       // Otherwise, spawn a new provider.
       let mut new_provider: Box<dyn Provider + Send> = match input.options {
+        ProviderConfig::Battery(config) => {
+          Box::new(BatteryProvider::new(config, sysinfo.clone()))
+        }
         ProviderConfig::Cpu(config) => {
           Box::new(CpuProvider::new(config, sysinfo.clone()))
+        }
+        ProviderConfig::Host(config) => {
+          Box::new(HostProvider::new(config, sysinfo.clone()))
+        }
+        ProviderConfig::Memory(config) => {
+          Box::new(MemoryProvider::new(config, sysinfo.clone()))
         }
         ProviderConfig::Network(config) => {
           Box::new(NetworkProvider::new(config, sysinfo.clone()))

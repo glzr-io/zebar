@@ -78,6 +78,20 @@ export function init(callback: (context: ElementContext) => void) {
 
     console.log('bbb');
   }, 6000);
+  const batteryOptions = { type: 'battery', refresh_interval_ms: 5000 };
+  const batteryOptionsHash = simpleHash(batteryOptions);
+  listenProvider({
+    optionsHash: batteryOptionsHash,
+    options: batteryOptions,
+    trackedAccess: [],
+  });
+  const hostOptions = { type: 'host', refresh_interval_ms: 5000 };
+  const hostOptionsHash = simpleHash(hostOptions);
+  listenProvider({
+    optionsHash: hostOptionsHash,
+    options: hostOptions,
+    trackedAccess: [],
+  });
 
   // Set window position based on config values.
   createEffect(async () => {
