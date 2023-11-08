@@ -34,12 +34,12 @@ impl BatteryProvider {
 }
 
 #[async_trait]
-impl RefreshableProvider<System> for BatteryProvider {
+impl RefreshableProvider<String> for BatteryProvider {
   fn refresh_interval_ms(&self) -> u64 {
     self.config.refresh_interval_ms
   }
 
-  fn state(&self) -> Mutex<System> {
+  fn state(&self) -> Mutex<String> {
     self.sysinfo.clone()
   }
 
@@ -52,8 +52,8 @@ impl RefreshableProvider<System> for BatteryProvider {
   }
 
   async fn refresh_and_emit(
-    sysinfo: &Mutex<T>,
     emit_output_tx: &Sender<ProviderVariables>,
+    sysinfo: &Mutex<String>,
   ) {
     let manager = Manager::new().unwrap();
 
