@@ -11,7 +11,6 @@ use tokio::{
   },
   task,
 };
-use tracing::info;
 
 use crate::providers::provider::Provider;
 
