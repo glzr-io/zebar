@@ -26,8 +26,8 @@ export const createWeatherProvider = memoize(
           'https://api.open-meteo.com/v1/forecast',
           {
             params: {
-              latitude: options.latitude ?? ipProvider.latitude,
-              longitude: options.longitude ?? ipProvider.longitude,
+              latitude: options.latitude ?? ipProvider.approx_latitude,
+              longitude: options.longitude ?? ipProvider.approx_longitude,
               temperature_unit: 'celsius',
               current_weather: true,
               daily: 'sunset,sunrise',

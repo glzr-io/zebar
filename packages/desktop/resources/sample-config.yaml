@@ -72,7 +72,7 @@ window/bar:
     template/ip:
       providers: ['ip']
       template: |
-        {{ ip.ip_address }}
+        {{ ip.address }}
 
   group/right:
     template/weather:

@@ -13,9 +13,14 @@ const DEFAULT = BatteryProviderOptionsSchema.parse({});
 export const createBatteryProvider = memoize(
   (options: BatteryProviderOptions = DEFAULT) => {
     const [batteryData, setBatteryData] = createStore({
-      percent: '',
-      is_charging: true,
-      has_battery: true,
+      charge_percent: 0,
+      health_percent: 0,
+      state: 0,
+      time_till_full: 0,
+      time_till_empty: 0,
+      power_consumption: 0,
+      voltage: 0,
+      cycle_count: 0,
     });
 
     createEffect(async () => {
@@ -35,14 +40,29 @@ export const createBatteryProvider = memoize(
     });
 
     return {
-      get percent() {
-        return batteryData.percent;
+      get charge_percent() {
+        return batteryData.charge_percent;
       },
-      get is_charging() {
-        return batteryData.is_charging;
+      get health_percent() {
+        return batteryData.health_percent;
       },
-      get has_battery() {
-        return batteryData.has_battery;
+      get state() {
+        return batteryData.state;
+      },
+      get time_till_full() {
+        return batteryData.time_till_full;
+      },
+      get time_till_empty() {
+        return batteryData.time_till_empty;
+      },
+      get power_consumption() {
+        return batteryData.power_consumption;
+      },
+      get voltage() {
+        return batteryData.voltage;
+      },
+      get cycle_count() {
+        return batteryData.cycle_count;
       },
     };
   },

@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(tag = "type", rename = "battery")]
 pub struct BatteryProviderConfig {
   pub refresh_interval_ms: u64,

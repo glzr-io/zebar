@@ -35,7 +35,11 @@ export const createWeatherProvider = memoize(
     );
 
     async function refresh() {
-      const { is_loading: isIpLoading, latitude, longitude } = ipProvider;
+      const {
+        is_loading: isIpLoading,
+        approx_latitude: latitude,
+        approx_longitude: longitude,
+      } = ipProvider;
 
       if (isIpLoading) {
         return;

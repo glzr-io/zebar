@@ -11,13 +11,13 @@ const DEFAULT = IpProviderOptionsSchema.parse({});
 export const createIpProvider = memoize(
   (options: IpProviderOptions = DEFAULT) => {
     const [ipVariables, setIpVariables] = createStore({
-      ip_address: '',
-      city: '',
-      country: '',
-      latitude: '',
-      longitude: '',
       is_loading: true,
-      is_refreshing: false,
+      is_refreshing: true,
+      address: '',
+      approx_city: '',
+      approx_country: '',
+      approx_latitude: '',
+      approx_longitude: '',
     });
 
     refresh();
@@ -25,43 +25,45 @@ export const createIpProvider = memoize(
     onCleanup(() => clearInterval(interval));
 
     async function refresh() {
+      setIpVariables({ is_refreshing: true });
+
       // Use https://ipinfo.io as provider for IP-related info.
       const { data } = await axios.get<IpInfoApiResponse>(
         'https://ipinfo.io/json',
       );
 
       setIpVariables({
-        ip_address: data.ip,
-        city: data.city,
-        country: data.country,
-        latitude: data.loc.split(',')[0],
-        longitude: data.loc.split(',')[1],
         is_loading: false,
         is_refreshing: false,
+        address: data.ip,
+        approx_city: data.city,
+        approx_country: data.country,
+        approx_latitude: data.loc.split(',')[0],
+        approx_longitude: data.loc.split(',')[1],
       });
     }
 
     return {
-      get ip_address() {
-        return ipVariables.ip_address;
-      },
-      get city() {
-        return ipVariables.city;
-      },
-      get country() {
-        return ipVariables.country;
-      },
-      get latitude() {
-        return ipVariables.latitude;
-      },
-      get longitude() {
-        return ipVariables.longitude;
-      },
       get is_loading() {
         return ipVariables.is_loading;
       },
       get is_refreshing() {
         return ipVariables.is_refreshing;
+      },
+      get address() {
+        return ipVariables.address;
+      },
+      get approx_city() {
+        return ipVariables.approx_city;
+      },
+      get approx_country() {
+        return ipVariables.approx_country;
+      },
+      get approx_latitude() {
+        return ipVariables.approx_latitude;
+      },
+      get approx_longitude() {
+        return ipVariables.approx_longitude;
       },
       refresh,
     };

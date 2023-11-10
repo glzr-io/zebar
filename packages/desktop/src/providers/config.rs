@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
@@ -6,7 +6,7 @@ use super::{
   network::NetworkProviderConfig,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ProviderConfig {
   Battery(BatteryProviderConfig),

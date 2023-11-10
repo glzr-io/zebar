@@ -1,6 +1,16 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct NetworkVariables {
-  pub usage: u64,
+  pub interfaces: Vec<NetworkInterface>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct NetworkInterface {
+  pub name: String,
+  pub mac_address: String,
+  pub transmitted: u64,
+  pub total_transmitted: u64,
+  pub received: u64,
+  pub total_received: u64,
 }

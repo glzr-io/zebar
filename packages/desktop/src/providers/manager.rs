@@ -37,6 +37,11 @@ pub struct ProviderRef {
   stop_tx: Sender<()>,
 }
 
+pub struct ProviderOutput {
+  options_hash: String,
+  variables: ProviderVariables,
+}
+
 /// Wrapper around the creation and deletion of providers.
 pub struct ProviderManager {
   listen_input_tx: Sender<ListenProviderArgs>,
@@ -58,6 +63,7 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
   task::spawn(async move {
     while let Some(output) = output_receiver.recv().await {
       info!(?output, "handle_provider_emit");
+      // TODO: Error handling.
       manager.emit_all("provider-emit", output).unwrap();
     }
   });
@@ -94,7 +100,7 @@ fn handle_provider_listen_input(
       // Otherwise, spawn a new provider.
       let mut new_provider: Box<dyn Provider + Send> = match input.options {
         ProviderConfig::Battery(config) => {
-          Box::new(BatteryProvider::new(config, sysinfo.clone()))
+          Box::new(BatteryProvider::new(config))
         }
         ProviderConfig::Cpu(config) => {
           Box::new(CpuProvider::new(config, sysinfo.clone()))
@@ -112,10 +118,12 @@ fn handle_provider_listen_input(
 
       let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
       let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
-      let sender = emit_output_tx.clone();
+      let emit_output_tx = emit_output_tx.clone();
 
       task::spawn(async move {
-        new_provider.start(sender, refresh_rx, stop_rx).await;
+        new_provider
+          .start(emit_output_tx, refresh_rx, stop_rx)
+          .await;
       });
 
       providers.push(ProviderRef {
@@ -139,14 +147,16 @@ fn handle_provider_unlisten_input(
   task::spawn(async move {
     while let Some(input) = unlisten_input_rx.recv().await {
       // Find provider that matches given options hash.
-      let providers = active_providers.lock().await;
-      let found_provider = providers
+      let mut providers = active_providers.lock().await;
+      let found_index = providers
         .iter()
-        .find(|&provider| *provider.options_hash == input.options_hash);
+        .position(|provider| provider.options_hash == input.options_hash);
 
       // Stop the given provider. This triggers any necessary cleanup.
-      if let Some(found) = found_provider {
-        _ = found.stop_tx.send(()).await;
+      if let Some(found_index) = found_index {
+        let provider = providers.get(found_index).unwrap();
+        _ = provider.stop_tx.send(()).await;
+        providers.remove(found_index);
       };
     }
   });
