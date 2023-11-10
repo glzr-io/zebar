@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use serde::Serialize;
 use sysinfo::{System, SystemExt};
 use tauri::{Manager, Runtime};
 use tokio::{
@@ -37,9 +38,10 @@ pub struct ProviderRef {
   stop_tx: Sender<()>,
 }
 
+#[derive(Serialize, Debug, Clone)]
 pub struct ProviderOutput {
-  options_hash: String,
-  variables: ProviderVariables,
+  pub options_hash: String,
+  pub variables: ProviderVariables,
 }
 
 /// Wrapper around the creation and deletion of providers.
@@ -57,12 +59,12 @@ pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
 /// Create a channel for outputting provider variables to client.
 fn handle_provider_emit_output<R: tauri::Runtime>(
   manager: (impl Manager<R> + Sync + Send + 'static),
-) -> Sender<ProviderVariables> {
+) -> Sender<ProviderOutput> {
   let (output_sender, mut output_receiver) = mpsc::channel(1);
 
   task::spawn(async move {
     while let Some(output) = output_receiver.recv().await {
-      info!(?output, "handle_provider_emit");
+      // info!(?output, "handle_provider_emit");
       // TODO: Error handling.
       manager.emit_all("provider-emit", output).unwrap();
     }
@@ -74,7 +76,7 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
 /// Create a channel for handling provider listen commands from client.
 fn handle_provider_listen_input(
   active_providers: Arc<Mutex<Vec<ProviderRef>>>,
-  emit_output_tx: Sender<ProviderVariables>,
+  emit_output_tx: Sender<ProviderOutput>,
 ) -> Sender<ListenProviderArgs> {
   let (listen_input_tx, mut listen_input_rx) =
     mpsc::channel::<ListenProviderArgs>(1);
@@ -119,15 +121,16 @@ fn handle_provider_listen_input(
       let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
       let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
       let emit_output_tx = emit_output_tx.clone();
+      let options_hash = input.options_hash.clone();
 
       task::spawn(async move {
         new_provider
-          .start(emit_output_tx, refresh_rx, stop_rx)
+          .start(input.options_hash, emit_output_tx, refresh_rx, stop_rx)
           .await;
       });
 
       providers.push(ProviderRef {
-        options_hash: input.options_hash,
+        options_hash,
         refresh_tx,
         stop_tx,
       })

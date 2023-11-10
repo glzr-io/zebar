@@ -72,12 +72,6 @@ export function init(callback: (context: ElementContext) => void) {
     trackedAccess: [],
   });
   onProviderEmit(networkOptionsHash, payload => console.log('provider emit'));
-  setTimeout(() => {
-    console.log('aaa');
-    unlistenProvider(networkOptionsHash);
-
-    console.log('bbb');
-  }, 6000);
   const batteryOptions = { type: 'battery', refresh_interval_ms: 5000 };
   const batteryOptionsHash = simpleHash(batteryOptions);
   listenProvider({
@@ -92,6 +86,13 @@ export function init(callback: (context: ElementContext) => void) {
     options: hostOptions,
     trackedAccess: [],
   });
+  setTimeout(() => {
+    console.log('aaa');
+    unlistenProvider(hostOptionsHash);
+    unlistenProvider(networkOptionsHash);
+
+    console.log('bbb');
+  }, 6000);
 
   // Set window position based on config values.
   createEffect(async () => {
