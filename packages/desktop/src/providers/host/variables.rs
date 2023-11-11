@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct HostVariables {
   pub hostname: Option<String>,
   pub os_name: Option<String>,

@@ -6,6 +6,7 @@ use super::{
 };
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(untagged)]
 pub enum ProviderVariables {
   Battery(BatteryVariables),
   Cpu(CpuVariables),

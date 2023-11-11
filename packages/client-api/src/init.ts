@@ -11,14 +11,7 @@ import {
 } from './user-config';
 import { ElementContext, createContextStore } from './context';
 import { createTemplateEngine } from './template-engine';
-import {
-  listenProvider,
-  onProviderEmit,
-  setWindowPosition,
-  setWindowStyles,
-  unlistenProvider,
-} from './desktop';
-import { simpleHash } from './utils';
+import { setWindowPosition, setWindowStyles } from './desktop';
 
 export async function initAsync() {
   // TODO: Promisify `init`.
@@ -55,44 +48,6 @@ export function init(callback: (context: ElementContext) => void) {
       return () => document.head.removeChild(styleElement);
     }
   });
-
-  const cpuOptions = { type: 'cpu', refresh_interval_ms: 5000 };
-  const cpuOptionsHash = simpleHash(cpuOptions);
-  listenProvider({
-    optionsHash: cpuOptionsHash,
-    options: cpuOptions,
-    trackedAccess: [],
-  });
-
-  const networkOptions = { type: 'network', refresh_interval_ms: 5000 };
-  const networkOptionsHash = simpleHash(networkOptions);
-  listenProvider({
-    optionsHash: networkOptionsHash,
-    options: networkOptions,
-    trackedAccess: [],
-  });
-  onProviderEmit(networkOptionsHash, payload => console.log('provider emit'));
-  const batteryOptions = { type: 'battery', refresh_interval_ms: 5000 };
-  const batteryOptionsHash = simpleHash(batteryOptions);
-  listenProvider({
-    optionsHash: batteryOptionsHash,
-    options: batteryOptions,
-    trackedAccess: [],
-  });
-  const hostOptions = { type: 'host', refresh_interval_ms: 5000 };
-  const hostOptionsHash = simpleHash(hostOptions);
-  listenProvider({
-    optionsHash: hostOptionsHash,
-    options: hostOptions,
-    trackedAccess: [],
-  });
-  setTimeout(() => {
-    console.log('aaa');
-    unlistenProvider(hostOptionsHash);
-    unlistenProvider(networkOptionsHash);
-
-    console.log('bbb');
-  }, 6000);
 
   // Set window position based on config values.
   createEffect(async () => {

@@ -1,11 +1,13 @@
 use serde::Serialize;
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkVariables {
   pub interfaces: Vec<NetworkInterface>,
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkInterface {
   pub name: String,
   pub mac_address: String,

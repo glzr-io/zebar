@@ -10,21 +10,41 @@ import { memoize, simpleHash } from '~/utils';
 
 const DEFAULT = BatteryProviderOptionsSchema.parse({});
 
+export interface BatteryVariables {
+  chargePercent: number;
+  cycleCount: number;
+  healthPercent: number;
+  powerConsumption: number;
+  state: 'discharging' | 'charging';
+  timeTillEmpty: number | null;
+  timeTillFull: number | null;
+  voltage: number | null;
+}
+
+export interface BatteryProvider extends BatteryVariables {
+  refresh: () => void;
+}
+
 export const createBatteryProvider = memoize(
   (options: BatteryProviderOptions = DEFAULT) => {
-    const [batteryData, setBatteryData] = createStore({
-      charge_percent: 0,
-      health_percent: 0,
-      state: 0,
-      time_till_full: 0,
-      time_till_empty: 0,
-      power_consumption: 0,
-      voltage: 0,
-      cycle_count: 0,
-    });
+    const [batteryVariables, setBatteryVariables] =
+      createStore<BatteryVariables>({
+        chargePercent: 0,
+        cycleCount: 0,
+        healthPercent: 0,
+        powerConsumption: 0,
+        state: 'discharging',
+        timeTillEmpty: null,
+        timeTillFull: null,
+        voltage: null,
+      });
 
     createEffect(async () => {
       const optionsHash = simpleHash(options);
+
+      onProviderEmit<typeof batteryVariables>(optionsHash, payload =>
+        setBatteryVariables(payload),
+      );
 
       await listenProvider({
         optionsHash,
@@ -32,37 +52,33 @@ export const createBatteryProvider = memoize(
         trackedAccess: [],
       });
 
-      onProviderEmit<typeof batteryData>(optionsHash, payload =>
-        setBatteryData(payload),
-      );
-
       return () => unlistenProvider(optionsHash);
     });
 
     return {
-      get charge_percent() {
-        return batteryData.charge_percent;
+      get chargePercent() {
+        return batteryVariables.chargePercent;
       },
-      get health_percent() {
-        return batteryData.health_percent;
+      get cycleCount() {
+        return batteryVariables.cycleCount;
+      },
+      get healthPercent() {
+        return batteryVariables.healthPercent;
+      },
+      get powerConsumption() {
+        return batteryVariables.powerConsumption;
       },
       get state() {
-        return batteryData.state;
+        return batteryVariables.state;
       },
-      get time_till_full() {
-        return batteryData.time_till_full;
+      get timeTillEmpty() {
+        return batteryVariables.timeTillEmpty;
       },
-      get time_till_empty() {
-        return batteryData.time_till_empty;
-      },
-      get power_consumption() {
-        return batteryData.power_consumption;
+      get timeTillFull() {
+        return batteryVariables.timeTillFull;
       },
       get voltage() {
-        return batteryData.voltage;
-      },
-      get cycle_count() {
-        return batteryData.cycle_count;
+        return batteryVariables.voltage;
       },
     };
   },

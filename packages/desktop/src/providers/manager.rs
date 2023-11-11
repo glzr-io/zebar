@@ -39,6 +39,7 @@ pub struct ProviderRef {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderOutput {
   pub options_hash: String,
   pub variables: ProviderVariables,

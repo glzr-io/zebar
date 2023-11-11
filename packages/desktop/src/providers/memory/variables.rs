@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct MemoryVariables {
   pub free_memory: u64,
   pub used_memory: u64,
