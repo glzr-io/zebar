@@ -7,10 +7,7 @@ use starship_battery::{
   },
   Manager,
 };
-use tokio::{
-  sync::{mpsc::Sender, Mutex},
-  task::AbortHandle,
-};
+use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
@@ -81,14 +78,10 @@ impl IntervalProvider for BatteryProvider {
     self.abort_handle = Some(abort_handle)
   }
 
-  async fn refresh_and_emit(
-    emit_output_tx: &Sender<ProviderVariables>,
+  async fn get_refreshed_variables(
     battery_manager: &Mutex<Manager>,
-  ) {
+  ) -> ProviderVariables {
     let battery_manager = &*battery_manager.lock().await;
-    let variables =
-      ProviderVariables::Battery(Self::get_variables(battery_manager));
-
-    _ = emit_output_tx.send(variables);
+    ProviderVariables::Battery(Self::get_variables(battery_manager))
   }
 }

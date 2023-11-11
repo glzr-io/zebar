@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use sysinfo::{System, SystemExt};
-use tokio::{
-  sync::{mpsc::Sender, Mutex},
-  task::AbortHandle,
-};
+use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
@@ -52,22 +49,19 @@ impl IntervalProvider for MemoryProvider {
     self.abort_handle = Some(abort_handle)
   }
 
-  async fn refresh_and_emit(
-    emit_output_tx: &Sender<ProviderVariables>,
+  async fn get_refreshed_variables(
     sysinfo: &Mutex<System>,
-  ) {
+  ) -> ProviderVariables {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_memory();
 
-    _ = emit_output_tx
-      .send(ProviderVariables::Memory(MemoryVariables {
-        free_memory: sysinfo.free_memory(),
-        used_memory: sysinfo.used_memory(),
-        total_memory: sysinfo.total_memory(),
-        free_swap: sysinfo.free_swap(),
-        used_swap: sysinfo.used_swap(),
-        total_swap: sysinfo.total_swap(),
-      }))
-      .await;
+    ProviderVariables::Memory(MemoryVariables {
+      free_memory: sysinfo.free_memory(),
+      used_memory: sysinfo.used_memory(),
+      total_memory: sysinfo.total_memory(),
+      free_swap: sysinfo.free_swap(),
+      used_swap: sysinfo.used_swap(),
+      total_swap: sysinfo.total_swap(),
+    })
   }
 }

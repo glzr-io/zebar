@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use sysinfo::{NetworkExt, System, SystemExt};
-use tokio::{
-  sync::{mpsc::Sender, Mutex},
-  task::AbortHandle,
-};
+use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
   interval_provider::IntervalProvider,
@@ -54,10 +51,9 @@ impl IntervalProvider for NetworkProvider {
     self.abort_handle = Some(abort_handle)
   }
 
-  async fn refresh_and_emit(
-    emit_output_tx: &Sender<ProviderVariables>,
+  async fn get_refreshed_variables(
     sysinfo: &Mutex<System>,
-  ) {
+  ) -> ProviderVariables {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_networks();
 
@@ -74,8 +70,6 @@ impl IntervalProvider for NetworkProvider {
       });
     }
 
-    _ = emit_output_tx
-      .send(ProviderVariables::Network(NetworkVariables { interfaces }))
-      .await;
+    ProviderVariables::Network(NetworkVariables { interfaces })
   }
 }

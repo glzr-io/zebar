@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use sysinfo::{CpuExt, System, SystemExt};
-use tokio::{
-  sync::{mpsc::Sender, Mutex},
-  task::AbortHandle,
-};
+use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
@@ -52,24 +49,21 @@ impl IntervalProvider for CpuProvider {
     self.abort_handle = Some(abort_handle)
   }
 
-  async fn refresh_and_emit(
-    emit_output_tx: &Sender<ProviderVariables>,
+  async fn get_refreshed_variables(
     sysinfo: &Mutex<System>,
-  ) {
+  ) -> ProviderVariables {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_cpu();
 
-    _ = emit_output_tx
-      .send(ProviderVariables::Cpu(CpuVariables {
-        usage: sysinfo.global_cpu_info().cpu_usage(),
-        frequency: sysinfo.global_cpu_info().frequency(),
-        logical_core_count: sysinfo.cpus().len(),
-        physical_core_count: sysinfo
-          .physical_core_count()
-          .unwrap_or(sysinfo.cpus().len()),
-        brand: sysinfo.global_cpu_info().brand().into(),
-        vendor: sysinfo.global_cpu_info().vendor_id().into(),
-      }))
-      .await;
+    ProviderVariables::Cpu(CpuVariables {
+      usage: sysinfo.global_cpu_info().cpu_usage(),
+      frequency: sysinfo.global_cpu_info().frequency(),
+      logical_core_count: sysinfo.cpus().len(),
+      physical_core_count: sysinfo
+        .physical_core_count()
+        .unwrap_or(sysinfo.cpus().len()),
+      brand: sysinfo.global_cpu_info().brand().into(),
+      vendor: sysinfo.global_cpu_info().vendor_id().into(),
+    })
   }
 }

@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use sysinfo::{System, SystemExt};
-use tokio::{
-  sync::{mpsc::Sender, Mutex},
-  task::AbortHandle,
-};
+use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
@@ -52,21 +49,18 @@ impl IntervalProvider for HostProvider {
     self.abort_handle = Some(abort_handle)
   }
 
-  async fn refresh_and_emit(
-    emit_output_tx: &Sender<ProviderVariables>,
+  async fn get_refreshed_variables(
     sysinfo: &Mutex<System>,
-  ) {
+  ) -> ProviderVariables {
     let sysinfo = sysinfo.lock().await;
 
-    _ = emit_output_tx
-      .send(ProviderVariables::Host(HostVariables {
-        hostname: sysinfo.host_name(),
-        os_name: sysinfo.name(),
-        os_version: sysinfo.os_version(),
-        friendly_os_version: sysinfo.long_os_version(),
-        boot_time: sysinfo.boot_time() * 1000,
-        uptime: sysinfo.uptime() * 1000,
-      }))
-      .await;
+    ProviderVariables::Host(HostVariables {
+      hostname: sysinfo.host_name(),
+      os_name: sysinfo.name(),
+      os_version: sysinfo.os_version(),
+      friendly_os_version: sysinfo.long_os_version(),
+      boot_time: sysinfo.boot_time() * 1000,
+      uptime: sysinfo.uptime() * 1000,
+    })
   }
 }

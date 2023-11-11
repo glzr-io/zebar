@@ -11,6 +11,7 @@ use tokio::{
   },
   task,
 };
+use tracing::info;
 
 use crate::providers::provider::Provider;
 
@@ -59,11 +60,11 @@ pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
 fn handle_provider_emit_output<R: tauri::Runtime>(
   manager: (impl Manager<R> + Sync + Send + 'static),
 ) -> Sender<ProviderOutput> {
-  let (output_sender, mut output_receiver) = mpsc::channel(1);
+  let (output_sender, mut output_receiver) = mpsc::channel::<ProviderOutput>(1);
 
   task::spawn(async move {
     while let Some(output) = output_receiver.recv().await {
-      // info!(?output, "handle_provider_emit");
+      info!("Emitting for provider: {}", output.options_hash);
       // TODO: Error handling.
       manager.emit_all("provider-emit", output).unwrap();
     }
