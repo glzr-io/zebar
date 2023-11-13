@@ -62,7 +62,6 @@ impl IntervalProvider for CpuProvider {
       physical_core_count: sysinfo
         .physical_core_count()
         .unwrap_or(sysinfo.cpus().len()),
-      brand: sysinfo.global_cpu_info().brand().into(),
       vendor: sysinfo.global_cpu_info().vendor_id().into(),
     })
   }

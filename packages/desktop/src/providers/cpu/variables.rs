@@ -7,6 +7,5 @@ pub struct CpuVariables {
   pub usage: f32,
   pub logical_core_count: usize,
   pub physical_core_count: usize,
-  pub brand: String,
   pub vendor: String,
 }

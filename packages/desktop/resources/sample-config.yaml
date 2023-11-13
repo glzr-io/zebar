@@ -78,4 +78,4 @@ window/bar:
     template/weather:
       providers: ['weather']
       template: |
-        {{ weather.status }} {{weather.celsius_temp}}
+        {{ weather.status }} {{weather.celsiusTemp}}

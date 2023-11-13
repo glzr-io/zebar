@@ -21,10 +21,6 @@ export interface BatteryVariables {
   voltage: number | null;
 }
 
-export interface BatteryProvider extends BatteryVariables {
-  refresh: () => void;
-}
-
 export const createBatteryProvider = memoize(
   (options: BatteryProviderOptions = DEFAULT) => {
     const [batteryVariables, setBatteryVariables] =
@@ -42,7 +38,7 @@ export const createBatteryProvider = memoize(
     createEffect(async () => {
       const optionsHash = simpleHash(options);
 
-      onProviderEmit<typeof batteryVariables>(optionsHash, payload =>
+      onProviderEmit<BatteryVariables>(optionsHash, payload =>
         setBatteryVariables(payload),
       );
 

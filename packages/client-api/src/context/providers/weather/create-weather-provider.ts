@@ -13,32 +13,41 @@ import { OpenMeteoApiResponse } from './open-meteo-api-response.model';
 
 const DEFAULT = WeatherProviderOptionsSchema.parse({});
 
+export interface WeatherVariables {
+  isLoading: boolean;
+  isDaytime: boolean;
+  status: WeatherStatus;
+  celsiusTemp: number;
+  fahrenheitTemp: number;
+  windSpeed: number;
+}
+
 export const createWeatherProvider = memoize(
   (options: WeatherProviderOptions = DEFAULT) => {
     const ipProvider = createIpProvider();
 
-    const [weatherVariables, setWeatherVariables] = createStore({
-      is_day_time: true,
-      status: WeatherStatus.CLEAR_DAY,
-      celsius_temp: 0,
-      fahrenheit_temp: 0,
-      wind_speed: 0,
-      is_loading: true,
-      is_refreshing: false,
-    });
+    const [weatherVariables, setWeatherVariables] =
+      createStore<WeatherVariables>({
+        isDaytime: true,
+        status: WeatherStatus.CLEAR_DAY,
+        celsiusTemp: 0,
+        fahrenheitTemp: 0,
+        windSpeed: 0,
+        isLoading: true,
+      });
 
     createEffect(
       on(
-        () => !ipProvider.is_loading,
+        () => !ipProvider.isLoading,
         () => refresh(),
       ),
     );
 
     async function refresh() {
       const {
-        is_loading: isIpLoading,
-        approx_latitude: latitude,
-        approx_longitude: longitude,
+        isLoading: isIpLoading,
+        approxLatitude: latitude,
+        approxLongitude: longitude,
       } = ipProvider;
 
       if (isIpLoading) {
@@ -65,13 +74,12 @@ export const createWeatherProvider = memoize(
       const isDaytime = currentWeather.is_day === 1;
 
       setWeatherVariables({
-        is_day_time: isDaytime,
+        isDaytime,
         status: getWeatherStatus(currentWeather.weathercode, isDaytime),
-        celsius_temp: currentWeather.temperature,
-        fahrenheit_temp: celsiusToFahrenheit(currentWeather.temperature),
-        wind_speed: currentWeather.windspeed,
-        is_loading: false,
-        is_refreshing: false,
+        celsiusTemp: currentWeather.temperature,
+        fahrenheitTemp: celsiusToFahrenheit(currentWeather.temperature),
+        windSpeed: currentWeather.windspeed,
+        isLoading: false,
       });
     }
 
@@ -105,26 +113,23 @@ export const createWeatherProvider = memoize(
     }
 
     return {
-      get is_day_time() {
-        return weatherVariables.is_day_time;
+      get isDaytime() {
+        return weatherVariables.isDaytime;
       },
       get status() {
         return weatherVariables.status;
       },
-      get celsius_temp() {
-        return weatherVariables.celsius_temp;
+      get celsiusTemp() {
+        return weatherVariables.celsiusTemp;
       },
-      get fahrenheit_temp() {
-        return weatherVariables.fahrenheit_temp;
+      get fahrenheitTemp() {
+        return weatherVariables.fahrenheitTemp;
       },
-      get wind_speed() {
-        return weatherVariables.wind_speed;
+      get windSpeed() {
+        return weatherVariables.windSpeed;
       },
-      get is_loading() {
-        return weatherVariables.is_loading;
-      },
-      get is_refreshing() {
-        return weatherVariables.is_refreshing;
+      get isLoading() {
+        return weatherVariables.isLoading;
       },
       refresh,
     };
