@@ -2,15 +2,10 @@ import { onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { memoize } from '~/utils';
-import {
-  DateTimeProviderOptions,
-  DateTimeProviderOptionsSchema,
-} from '~/user-config';
-
-const DEFAULT = DateTimeProviderOptionsSchema.parse({});
+import { DateTimeProviderConfig } from '~/user-config';
 
 export const createDateTimeProvider = memoize(
-  (options: DateTimeProviderOptions = DEFAULT) => {
+  (config: DateTimeProviderConfig) => {
     const [store, setStore] = createStore({
       now: 0,
       minutes: 0,
@@ -18,7 +13,7 @@ export const createDateTimeProvider = memoize(
     });
 
     refresh();
-    const interval = setInterval(() => refresh(), options.refresh_interval_ms);
+    const interval = setInterval(() => refresh(), config.refresh_interval_ms);
     onCleanup(() => clearInterval(interval));
 
     function refresh() {

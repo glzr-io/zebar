@@ -1,15 +1,8 @@
 import { z } from 'zod';
 
-export const BatteryProviderOptionsSchema = z.object({
-  refresh_interval_ms: z.coerce.number().default(60 * 1000),
-});
-
-export type BatteryProviderOptions = z.infer<
-  typeof BatteryProviderOptionsSchema
->;
-
-export const BatteryProviderConfigSchema = BatteryProviderOptionsSchema.extend({
+export const BatteryProviderConfigSchema = z.object({
   type: z.literal('battery'),
+  refresh_interval_ms: z.coerce.number().default(60 * 1000),
 });
 
 export type BatteryProviderConfig = z.infer<typeof BatteryProviderConfigSchema>;

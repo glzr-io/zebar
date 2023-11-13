@@ -1,13 +1,9 @@
-import {
-  ActiveWindowProviderOptions,
-  ActiveWindowProviderOptionsSchema,
-} from '~/user-config';
+import { ActiveWindowProviderConfig } from '~/user-config';
 import { memoize } from '~/utils';
 
-const DEFAULT = ActiveWindowProviderOptionsSchema.parse({});
-
+// TODO: Implement provider.
 export const createActiveWindowProvider = memoize(
-  (options: ActiveWindowProviderOptions = DEFAULT) => {
+  (config: ActiveWindowProviderConfig) => {
     return {
       title: '',
     };

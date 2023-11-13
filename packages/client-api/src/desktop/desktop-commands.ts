@@ -1,7 +1,7 @@
 import { InvokeArgs, invoke as tauriInvoke } from '@tauri-apps/api/tauri';
 
 import { createLogger } from '../utils';
-import { ProviderOptions, ProviderType } from '~/user-config';
+import { ProviderConfig } from '~/user-config';
 
 const logger = createLogger('desktop-commands');
 
@@ -14,15 +14,15 @@ export function readConfigFile(): Promise<string> {
 
 // TODO: Add support for only fetching tracked data.
 export function listenProvider(args: {
-  optionsHash: string;
-  options: ProviderOptions;
+  configHash: string;
+  config: ProviderConfig;
   trackedAccess: string[];
 }): Promise<string> {
   return invoke<string>('listen_provider', args);
 }
 
-export function unlistenProvider(optionsHash: string): Promise<string> {
-  return invoke<string>('unlisten_provider', { optionsHash });
+export function unlistenProvider(configHash: string): Promise<string> {
+  return invoke<string>('unlisten_provider', { configHash });
 }
 
 // TODO: Implement this. Should kill the window and show error dialog. If

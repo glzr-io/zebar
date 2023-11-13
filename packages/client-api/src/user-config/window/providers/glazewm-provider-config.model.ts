@@ -1,12 +1,6 @@
 import { z } from 'zod';
 
-export const GlazewmProviderOptionsSchema = z.object({});
-
-export type GlazewmProviderOptions = z.infer<
-  typeof GlazewmProviderOptionsSchema
->;
-
-export const GlazewmProviderConfigSchema = GlazewmProviderOptionsSchema.extend({
+export const GlazewmProviderConfigSchema = z.object({
   type: z.literal('glazewm'),
 });
 

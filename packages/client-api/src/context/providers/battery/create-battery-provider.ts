@@ -2,13 +2,8 @@ import { createEffect } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { listenProvider, onProviderEmit, unlistenProvider } from '~/desktop';
-import {
-  BatteryProviderOptions,
-  BatteryProviderOptionsSchema,
-} from '~/user-config';
+import { BatteryProviderConfig } from '~/user-config';
 import { memoize, simpleHash } from '~/utils';
-
-const DEFAULT = BatteryProviderOptionsSchema.parse({});
 
 export interface BatteryVariables {
   isLoading: boolean;
@@ -23,7 +18,7 @@ export interface BatteryVariables {
 }
 
 export const createBatteryProvider = memoize(
-  (options: BatteryProviderOptions = DEFAULT) => {
+  (config: BatteryProviderConfig) => {
     const [batteryVariables, setBatteryVariables] =
       createStore<BatteryVariables>({
         isLoading: true,
@@ -38,19 +33,19 @@ export const createBatteryProvider = memoize(
       });
 
     createEffect(async () => {
-      const optionsHash = simpleHash(options);
+      const configHash = simpleHash(config);
 
-      onProviderEmit<BatteryVariables>(optionsHash, payload =>
+      onProviderEmit<BatteryVariables>(configHash, payload =>
         setBatteryVariables({ ...payload, isLoading: false }),
       );
 
       await listenProvider({
-        optionsHash,
-        options,
+        configHash,
+        config,
         trackedAccess: [],
       });
 
-      return () => unlistenProvider(optionsHash);
+      return () => unlistenProvider(configHash);
     });
 
     return {

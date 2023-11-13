@@ -5,7 +5,7 @@ import { createLogger } from '../utils';
 const logger = createLogger('desktop-events');
 
 export interface ProviderEmitEvent<T = unknown> {
-  optionsHash: string;
+  configHash: string;
   variables: T;
 }
 
@@ -19,10 +19,8 @@ export function onProviderEmit<T = unknown>(
   logger.debug(`Listening to provider with config: ${configHash}.`);
 
   return listen('provider-emit', (event: Event<ProviderEmitEvent<T>>) => {
-    const { payload } = event;
-    console.log('provider emit', event);
-    if (payload.optionsHash === configHash) {
-      callback(payload.variables as T);
+    if (event.payload.configHash === configHash) {
+      callback(event.payload.variables as T);
     }
   });
 }
