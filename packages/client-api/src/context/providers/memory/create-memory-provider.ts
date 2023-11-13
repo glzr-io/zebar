@@ -49,6 +49,9 @@ export const createMemoryProvider = memoize(
     });
 
     return {
+      get isLoading() {
+        return memoryVariables.isLoading;
+      },
       get freeMemory() {
         return memoryVariables.freeMemory;
       },
