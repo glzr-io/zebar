@@ -3,6 +3,7 @@ import { createBatteryProvider } from './battery/create-battery-provider';
 import { createCpuProvider } from './cpu/create-cpu-provider';
 import { createDateTimeProvider } from './date-time/create-date-time-provider';
 import { createGlazewmProvider } from './glazewm/create-glazewm-provider';
+import { createHostProvider } from './host/create-host-provider';
 import { createIpProvider } from './ip/create-ip-provider';
 import { createMemoryProvider } from './memory/create-memory-provider';
 import { createNetworkProvider } from './network/create-network-provider';
@@ -23,6 +24,8 @@ export const createProvider = memoize((config: ProviderConfig) => {
       return createDateTimeProvider(config);
     case 'glazewm':
       return createGlazewmProvider(config);
+    case 'host':
+      return createHostProvider(config);
     case 'ip':
       return createIpProvider(config);
     case 'memory':

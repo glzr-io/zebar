@@ -8,16 +8,24 @@ import { IpInfoApiResponse } from './ip-info-api-response.model';
 
 const DEFAULT = IpProviderOptionsSchema.parse({});
 
+export interface IpVariables {
+  isLoading: boolean;
+  address: string;
+  approxCity: string;
+  approxCountry: string;
+  approxLatitude: string;
+  approxLongitude: string;
+}
+
 export const createIpProvider = memoize(
   (options: IpProviderOptions = DEFAULT) => {
-    const [ipVariables, setIpVariables] = createStore({
-      ip_address: '',
-      city: '',
-      country: '',
-      latitude: '',
-      longitude: '',
-      is_loading: true,
-      is_refreshing: false,
+    const [ipVariables, setIpVariables] = createStore<IpVariables>({
+      isLoading: true,
+      address: '',
+      approxCity: '',
+      approxCountry: '',
+      approxLatitude: '',
+      approxLongitude: '',
     });
 
     refresh();
@@ -31,37 +39,33 @@ export const createIpProvider = memoize(
       );
 
       setIpVariables({
-        ip_address: data.ip,
-        city: data.city,
-        country: data.country,
-        latitude: data.loc.split(',')[0],
-        longitude: data.loc.split(',')[1],
-        is_loading: false,
-        is_refreshing: false,
+        isLoading: false,
+        address: data.ip,
+        approxCity: data.city,
+        approxCountry: data.country,
+        approxLatitude: data.loc.split(',')[0],
+        approxLongitude: data.loc.split(',')[1],
       });
     }
 
     return {
-      get ip_address() {
-        return ipVariables.ip_address;
+      get isLoading() {
+        return ipVariables.isLoading;
       },
-      get city() {
-        return ipVariables.city;
+      get address() {
+        return ipVariables.address;
       },
-      get country() {
-        return ipVariables.country;
+      get approxCity() {
+        return ipVariables.approxCity;
       },
-      get latitude() {
-        return ipVariables.latitude;
+      get approxCountry() {
+        return ipVariables.approxCountry;
       },
-      get longitude() {
-        return ipVariables.longitude;
+      get approxLatitude() {
+        return ipVariables.approxLatitude;
       },
-      get is_loading() {
-        return ipVariables.is_loading;
-      },
-      get is_refreshing() {
-        return ipVariables.is_refreshing;
+      get approxLongitude() {
+        return ipVariables.approxLongitude;
       },
       refresh,
     };

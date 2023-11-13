@@ -72,10 +72,10 @@ window/bar:
     template/ip:
       providers: ['ip']
       template: |
-        {{ ip.ip_address }}
+        {{ ip.address }}
 
   group/right:
     template/weather:
       providers: ['weather']
       template: |
-        {{ weather.status }} {{weather.celsius_temp}}
+        {{ weather.status }} {{weather.celsiusTemp}}
