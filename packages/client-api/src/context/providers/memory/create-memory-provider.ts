@@ -11,6 +11,7 @@ import { memoize, simpleHash } from '~/utils';
 const DEFAULT = MemoryProviderOptionsSchema.parse({});
 
 export interface MemoryVariables {
+  isLoading: boolean;
   freeMemory: number;
   usedMemory: number;
   totalMemory: number;
@@ -22,6 +23,7 @@ export interface MemoryVariables {
 export const createMemoryProvider = memoize(
   (options: MemoryProviderOptions = DEFAULT) => {
     const [memoryVariables, setMemoryVariables] = createStore<MemoryVariables>({
+      isLoading: true,
       freeMemory: 0,
       usedMemory: 0,
       totalMemory: 0,
@@ -34,7 +36,7 @@ export const createMemoryProvider = memoize(
       const optionsHash = simpleHash(options);
 
       onProviderEmit<MemoryVariables>(optionsHash, payload =>
-        setMemoryVariables(payload),
+        setMemoryVariables({ ...payload, isLoading: false }),
       );
 
       await listenProvider({

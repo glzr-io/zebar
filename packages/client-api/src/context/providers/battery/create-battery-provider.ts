@@ -11,6 +11,7 @@ import { memoize, simpleHash } from '~/utils';
 const DEFAULT = BatteryProviderOptionsSchema.parse({});
 
 export interface BatteryVariables {
+  isLoading: boolean;
   chargePercent: number;
   cycleCount: number;
   healthPercent: number;
@@ -25,6 +26,7 @@ export const createBatteryProvider = memoize(
   (options: BatteryProviderOptions = DEFAULT) => {
     const [batteryVariables, setBatteryVariables] =
       createStore<BatteryVariables>({
+        isLoading: true,
         chargePercent: 0,
         cycleCount: 0,
         healthPercent: 0,
@@ -39,7 +41,7 @@ export const createBatteryProvider = memoize(
       const optionsHash = simpleHash(options);
 
       onProviderEmit<BatteryVariables>(optionsHash, payload =>
-        setBatteryVariables(payload),
+        setBatteryVariables({ ...payload, isLoading: false }),
       );
 
       await listenProvider({

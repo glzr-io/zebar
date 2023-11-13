@@ -11,6 +11,7 @@ import { memoize, simpleHash } from '~/utils';
 const DEFAULT = NetworkProviderOptionsSchema.parse({});
 
 export interface NetworkVariables {
+  isLoading: boolean;
   interfaces: NetworkInterface[];
 }
 
@@ -27,6 +28,7 @@ export const createNetworkProvider = memoize(
   (options: NetworkProviderOptions = DEFAULT) => {
     const [networkVariables, setNetworkVariables] =
       createStore<NetworkVariables>({
+        isLoading: true,
         interfaces: [],
       });
 
@@ -34,7 +36,7 @@ export const createNetworkProvider = memoize(
       const optionsHash = simpleHash(options);
 
       onProviderEmit<NetworkVariables>(optionsHash, payload =>
-        setNetworkVariables(payload),
+        setNetworkVariables({ ...payload, isLoading: false }),
       );
 
       await listenProvider({

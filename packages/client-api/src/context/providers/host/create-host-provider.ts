@@ -8,6 +8,7 @@ import { memoize, simpleHash } from '~/utils';
 const DEFAULT = HostProviderOptionsSchema.parse({});
 
 export interface HostVariables {
+  isLoading: boolean;
   hostname: string | null;
   osName: string | null;
   osVersion: string | null;
@@ -19,6 +20,7 @@ export interface HostVariables {
 export const createHostProvider = memoize(
   (options: HostProviderOptions = DEFAULT) => {
     const [hostVariables, setHostVariables] = createStore<HostVariables>({
+      isLoading: true,
       hostname: null,
       osName: null,
       osVersion: null,
@@ -31,7 +33,7 @@ export const createHostProvider = memoize(
       const optionsHash = simpleHash(options);
 
       onProviderEmit<HostVariables>(optionsHash, payload =>
-        setHostVariables(payload),
+        setHostVariables({ ...payload, isLoading: false }),
       );
 
       await listenProvider({

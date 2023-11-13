@@ -8,6 +8,7 @@ import { memoize, simpleHash } from '~/utils';
 const DEFAULT = CpuProviderOptionsSchema.parse({});
 
 export interface CpuVariables {
+  isLoading: boolean;
   frequency: number;
   usage: number;
   logicalCoreCount: number;
@@ -18,6 +19,7 @@ export interface CpuVariables {
 export const createCpuProvider = memoize(
   (options: CpuProviderOptions = DEFAULT) => {
     const [cpuVariables, setCpuVariables] = createStore<CpuVariables>({
+      isLoading: true,
       frequency: 0,
       usage: 0,
       logicalCoreCount: 0,
@@ -29,7 +31,7 @@ export const createCpuProvider = memoize(
       const optionsHash = simpleHash(options);
 
       onProviderEmit<CpuVariables>(optionsHash, payload =>
-        setCpuVariables(payload),
+        setCpuVariables({ ...payload, isLoading: false }),
       );
 
       await listenProvider({
