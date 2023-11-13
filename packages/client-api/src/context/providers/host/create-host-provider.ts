@@ -46,6 +46,9 @@ export const createHostProvider = memoize(
     });
 
     return {
+      get isLoading() {
+        return hostVariables.isLoading;
+      },
       get hostname() {
         return hostVariables.hostname;
       },

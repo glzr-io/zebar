@@ -54,6 +54,9 @@ export const createBatteryProvider = memoize(
     });
 
     return {
+      get isLoading() {
+        return batteryVariables.isLoading;
+      },
       get chargePercent() {
         return batteryVariables.chargePercent;
       },

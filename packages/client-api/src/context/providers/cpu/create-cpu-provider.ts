@@ -44,6 +44,9 @@ export const createCpuProvider = memoize(
     });
 
     return {
+      get isLoading() {
+        return cpuVariables.isLoading;
+      },
       get frequency() {
         return cpuVariables.frequency;
       },
