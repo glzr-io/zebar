@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const WeatherProviderOptionsSchema = z.object({
+export const WeatherProviderConfigSchema = z.object({
+  type: z.literal('weather'),
+
   /**
    * Latitude to retrieve weather for. If not provided, latitude is instead
    * estimated based on public IP.
@@ -15,14 +17,6 @@ export const WeatherProviderOptionsSchema = z.object({
 
   /* How often this component refreshes in milliseconds. */
   refresh_interval_ms: z.coerce.number().default(60 * 60 * 1000),
-});
-
-export type WeatherProviderOptions = z.infer<
-  typeof WeatherProviderOptionsSchema
->;
-
-export const WeatherProviderConfigSchema = WeatherProviderOptionsSchema.extend({
-  type: z.literal('weather'),
 });
 
 export type WeatherProviderConfig = z.infer<typeof WeatherProviderConfigSchema>;

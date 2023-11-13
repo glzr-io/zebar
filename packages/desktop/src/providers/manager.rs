@@ -22,18 +22,18 @@ use super::{
 };
 
 pub struct ListenProviderArgs {
-  pub options_hash: String,
-  pub options: ProviderConfig,
+  pub config_hash: String,
+  pub config: ProviderConfig,
   pub tracked_access: Vec<String>,
 }
 
 pub struct UnlistenProviderArgs {
-  pub options_hash: String,
+  pub config_hash: String,
 }
 
 /// Reference to a currently active provider.
 pub struct ProviderRef {
-  options_hash: String,
+  config_hash: String,
   refresh_tx: Sender<()>,
   stop_tx: Sender<()>,
 }
@@ -41,7 +41,7 @@ pub struct ProviderRef {
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderOutput {
-  pub options_hash: String,
+  pub config_hash: String,
   pub variables: ProviderVariables,
 }
 
@@ -65,7 +65,7 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
 
   task::spawn(async move {
     while let Some(output) = output_receiver.recv().await {
-      info!("Emitting for provider: {}", output.options_hash);
+      info!("Emitting for provider: {}", output.config_hash);
       // TODO: Error handling.
       manager.emit_all("provider-emit", output).unwrap();
     }
@@ -88,10 +88,10 @@ fn handle_provider_listen_input(
     while let Some(input) = listen_input_rx.recv().await {
       let mut providers = active_providers.lock().await;
 
-      // Find provider that matches given options hash.
+      // Find provider that matches given config hash.
       let found_provider = providers
         .iter()
-        .find(|&provider| *provider.options_hash == input.options_hash);
+        .find(|&provider| *provider.config_hash == input.config_hash);
 
       // If a provider with the given config already exists, refresh it and
       // return early.
@@ -101,7 +101,7 @@ fn handle_provider_listen_input(
       };
 
       // Otherwise, spawn a new provider.
-      let mut new_provider: Box<dyn Provider + Send> = match input.options {
+      let mut new_provider: Box<dyn Provider + Send> = match input.config {
         ProviderConfig::Battery(config) => {
           Box::new(BatteryProvider::new(config))
         }
@@ -122,16 +122,16 @@ fn handle_provider_listen_input(
       let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
       let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
       let emit_output_tx = emit_output_tx.clone();
-      let options_hash = input.options_hash.clone();
+      let config_hash = input.config_hash.clone();
 
       task::spawn(async move {
         new_provider
-          .start(input.options_hash, emit_output_tx, refresh_rx, stop_rx)
+          .start(input.config_hash, emit_output_tx, refresh_rx, stop_rx)
           .await;
       });
 
       providers.push(ProviderRef {
-        options_hash,
+        config_hash,
         refresh_tx,
         stop_tx,
       })
@@ -150,11 +150,11 @@ fn handle_provider_unlisten_input(
 
   task::spawn(async move {
     while let Some(input) = unlisten_input_rx.recv().await {
-      // Find provider that matches given options hash.
+      // Find provider that matches given config hash.
       let mut providers = active_providers.lock().await;
       let found_index = providers
         .iter()
-        .position(|provider| provider.options_hash == input.options_hash);
+        .position(|provider| provider.config_hash == input.config_hash);
 
       // Stop the given provider. This triggers any necessary cleanup.
       if let Some(found_index) = found_index {
@@ -190,15 +190,15 @@ impl ProviderManager {
   /// Create a provider with the given config.
   pub async fn listen(
     &self,
-    options_hash: String,
-    options: ProviderConfig,
+    config_hash: String,
+    config: ProviderConfig,
     tracked_access: Vec<String>,
   ) -> Result<()> {
     self
       .listen_input_tx
       .send(ListenProviderArgs {
-        options_hash,
-        options,
+        config_hash,
+        config,
         tracked_access,
       })
       .await
@@ -206,10 +206,10 @@ impl ProviderManager {
   }
 
   /// Destroy and clean up a provider with the given config.
-  pub async fn unlisten(&self, options_hash: String) -> Result<()> {
+  pub async fn unlisten(&self, config_hash: String) -> Result<()> {
     self
       .unlisten_input_tx
-      .send(UnlistenProviderArgs { options_hash })
+      .send(UnlistenProviderArgs { config_hash })
       .await
       .context("error msg")
   }

@@ -24,24 +24,24 @@ fn read_config_file(
 
 #[tauri::command()]
 async fn listen_provider(
-  options_hash: String,
-  options: ProviderConfig,
+  config_hash: String,
+  config: ProviderConfig,
   tracked_access: Vec<String>,
   provider_manager: State<'_, ProviderManager>,
 ) -> Result<(), String> {
   provider_manager
-    .listen(options_hash, options, tracked_access)
+    .listen(config_hash, config, tracked_access)
     .await
     .map_err(|err| err.to_string())
 }
 
 #[tauri::command()]
 async fn unlisten_provider(
-  options_hash: String,
+  config_hash: String,
   provider_manager: State<'_, ProviderManager>,
 ) -> Result<(), String> {
   provider_manager
-    .unlisten(options_hash)
+    .unlisten(config_hash)
     .await
     .map_err(|err| err.to_string())
 }

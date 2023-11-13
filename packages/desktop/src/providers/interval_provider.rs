@@ -32,7 +32,7 @@ pub trait IntervalProvider {
 impl<T: IntervalProvider + Send> Provider for T {
   async fn on_start(
     &mut self,
-    options_hash: String,
+    config_hash: String,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
     let refresh_interval_ms = self.refresh_interval_ms();
@@ -44,7 +44,7 @@ impl<T: IntervalProvider + Send> Provider for T {
 
       _ = emit_output_tx
         .send(ProviderOutput {
-          options_hash: options_hash.clone(),
+          config_hash: config_hash.clone(),
           variables: T::get_refreshed_variables(&state).await,
         })
         .await;
@@ -54,7 +54,7 @@ impl<T: IntervalProvider + Send> Provider for T {
 
         _ = emit_output_tx
           .send(ProviderOutput {
-            options_hash: options_hash.clone(),
+            config_hash: config_hash.clone(),
             variables: T::get_refreshed_variables(&state).await,
           })
           .await;
@@ -67,12 +67,12 @@ impl<T: IntervalProvider + Send> Provider for T {
 
   async fn on_refresh(
     &mut self,
-    options_hash: String,
+    config_hash: String,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
     _ = emit_output_tx
       .send(ProviderOutput {
-        options_hash,
+        config_hash,
         variables: T::get_refreshed_variables(&self.state()).await,
       })
       .await;

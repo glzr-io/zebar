@@ -1,13 +1,8 @@
 import { z } from 'zod';
 
-export const IpProviderOptionsSchema = z.object({
-  refresh_interval_ms: z.coerce.number().default(60 * 1000),
-});
-
-export type IpProviderOptions = z.infer<typeof IpProviderOptionsSchema>;
-
-export const IpProviderConfigSchema = IpProviderOptionsSchema.extend({
+export const IpProviderConfigSchema = z.object({
   type: z.literal('ip'),
+  refresh_interval_ms: z.coerce.number().default(60 * 1000),
 });
 
 export type IpProviderConfig = z.infer<typeof IpProviderConfigSchema>;

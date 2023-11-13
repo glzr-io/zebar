@@ -3,15 +3,10 @@ import { createEffect, on } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { memoize } from '~/utils';
-import {
-  WeatherProviderOptions,
-  WeatherProviderOptionsSchema,
-} from '~/user-config';
+import { WeatherProviderConfig } from '~/user-config';
 import { createIpProvider } from '../ip/create-ip-provider';
 import { WeatherStatus } from './weather-status.enum';
 import { OpenMeteoApiResponse } from './open-meteo-api-response.model';
-
-const DEFAULT = WeatherProviderOptionsSchema.parse({});
 
 export interface WeatherVariables {
   isLoading: boolean;
@@ -23,8 +18,11 @@ export interface WeatherVariables {
 }
 
 export const createWeatherProvider = memoize(
-  (options: WeatherProviderOptions = DEFAULT) => {
-    const ipProvider = createIpProvider();
+  (config: WeatherProviderConfig) => {
+    const ipProvider = createIpProvider({
+      type: 'ip',
+      refresh_interval_ms: 60 * 1000,
+    });
 
     const [weatherVariables, setWeatherVariables] =
       createStore<WeatherVariables>({
@@ -60,8 +58,8 @@ export const createWeatherProvider = memoize(
         'https://api.open-meteo.com/v1/forecast',
         {
           params: {
-            latitude: options.latitude ?? latitude,
-            longitude: options.longitude ?? longitude,
+            latitude: config.latitude ?? latitude,
+            longitude: config.longitude ?? longitude,
             temperature_unit: 'celsius',
             current_weather: true,
             daily: 'sunset,sunrise',

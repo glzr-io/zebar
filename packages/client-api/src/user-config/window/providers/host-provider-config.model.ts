@@ -1,13 +1,8 @@
 import { z } from 'zod';
 
-export const HostProviderOptionsSchema = z.object({
-  refresh_interval_ms: z.coerce.number().default(5 * 1000),
-});
-
-export type HostProviderOptions = z.infer<typeof HostProviderOptionsSchema>;
-
-export const HostProviderConfigSchema = HostProviderOptionsSchema.extend({
+export const HostProviderConfigSchema = z.object({
   type: z.literal('host'),
+  refresh_interval_ms: z.coerce.number().default(60 * 1000),
 });
 
 export type HostProviderConfig = z.infer<typeof HostProviderConfigSchema>;

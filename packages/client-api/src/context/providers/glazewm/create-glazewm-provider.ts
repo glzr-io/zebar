@@ -2,16 +2,11 @@ import { createStore } from 'solid-js/store';
 import { GwmClient, GwmEventType, Workspace } from 'glazewm';
 
 import { memoize } from '~/utils';
-import {
-  GlazewmProviderOptions,
-  GlazewmProviderOptionsSchema,
-} from '~/user-config';
+import { GlazewmProviderConfig } from '~/user-config';
 import { getMonitorPosition } from '~/desktop';
 
-const DEFAULT = GlazewmProviderOptionsSchema.parse({});
-
 export const createGlazewmProvider = memoize(
-  (options: GlazewmProviderOptions = DEFAULT) => {
+  (config: GlazewmProviderConfig) => {
     const client = new GwmClient();
 
     const [glazewmVariables, setGlazewmVariables] = createStore({
