@@ -3,6 +3,7 @@
 
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_cli::CliExt;
 
 mod providers;
 mod user_config;
@@ -52,22 +53,20 @@ async fn main() {
   tracing_subscriber::fmt::init();
 
   tauri::Builder::default()
+    .plugin(tauri_plugin_cli::init())
     .setup(|app| {
-      match app.get_cli_matches() {
-        Ok(matches) => {
-          println!("{:?}", matches);
-        }
-        Err(_) => panic! {"CLI Parsing Error"},
-      };
+      let _cli_matches = app.cli().matches()?;
       Ok(())
     })
-    .setup(providers::manager::init)
     .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
       println!("{}, {argv:?}, {cwd}", app.package_info().name);
       app
-        .emit_all("single-instance", Payload { args: argv, cwd })
+        .emit("single-instance", Payload { args: argv, cwd })
         .unwrap();
     }))
+    .setup(providers::manager::init)
+    .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_http::init())
     .invoke_handler(tauri::generate_handler![
       read_config_file,
       listen_provider,

@@ -1,7 +1,7 @@
-use std::{fs, io::Read, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
-use tauri::{api::path::home_dir, AppHandle};
+use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 /// Reads the config file at `/.glazer/zebar.yaml` in the user's home
 /// directory.
@@ -9,10 +9,10 @@ pub fn read_file(
   config_path_override: Option<&str>,
   app_handle: AppHandle,
 ) -> Result<String> {
-  let default_config_path = home_dir()
-    .context("Unable to get home directory.")?
-    .join(".glazer")
-    .join("zebar.yaml");
+  let default_config_path = app_handle
+    .path()
+    .resolve(".glazer/zebar.yaml", BaseDirectory::Home)
+    .context("Unable to get home directory.")?;
 
   let config_path = match config_path_override {
     Some(val) => PathBuf::from(val),
@@ -32,17 +32,13 @@ fn create_from_sample(
   config_path: &PathBuf,
   app_handle: AppHandle,
 ) -> Result<String> {
-  let sample_path = app_handle
-    .path_resolver()
-    .resolve_resource("resources/sample-config.yaml")
+  let sample_config = app_handle
+    .asset_resolver()
+    .get("resources/sample-config.yaml".to_owned())
     .context("Failed to resolve sample config.")?;
 
-  let mut sample_file =
-    fs::File::open(&sample_path).context("Unable to read sample config.")?;
-
   // Read the contents of the sample config.
-  let mut config_string = String::new();
-  sample_file.read_to_string(&mut config_string)?;
+  // let config_string = String::from_utf8_lossy(&sample_path.bytes);
 
   let parent_dir = config_path.parent().context("Invalid config directory.")?;
 
@@ -51,8 +47,9 @@ fn create_from_sample(
     format!("Unable to create directory {}.", &config_path.display())
   })?;
 
-  fs::write(&config_path, &config_string)
+  // fs::write(&config_path, &config_string)
+  fs::write(&config_path, &sample_config.bytes)
     .context("Unable to write config file.")?;
 
-  Ok(config_string)
+  Ok(String::from_utf8_lossy(&sample_config.bytes).to_string())
 }
