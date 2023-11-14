@@ -1,7 +1,7 @@
 import { createActiveWindowProvider } from './active-window/create-active-window-provider';
 import { createBatteryProvider } from './battery/create-battery-provider';
 import { createCpuProvider } from './cpu/create-cpu-provider';
-import { createDateTimeProvider } from './date-time/create-date-time-provider';
+import { createDateProvider } from './date/create-date-provider';
 import { createGlazewmProvider } from './glazewm/create-glazewm-provider';
 import { createHostProvider } from './host/create-host-provider';
 import { createIpProvider } from './ip/create-ip-provider';
@@ -20,8 +20,8 @@ export const createProvider = memoize((config: ProviderConfig) => {
       return createBatteryProvider(config);
     case 'cpu':
       return createCpuProvider(config);
-    case 'date_time':
-      return createDateTimeProvider(config);
+    case 'date':
+      return createDateProvider(config);
     case 'glazewm':
       return createGlazewmProvider(config);
     case 'host':

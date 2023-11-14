@@ -4,7 +4,7 @@ export const ProviderTypeSchema = z.enum([
   'active_window',
   'battery',
   'cpu',
-  'date_time',
+  'date',
   'glazewm',
   'host',
   'ip',
