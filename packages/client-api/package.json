@@ -9,7 +9,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@tauri-apps/api": "1.5.1",
+    "@tauri-apps/api": "^2.0.0-alpha.11",
+    "@tauri-apps/plugin-window": "2.0.0-alpha.1",
+    "@tauri-apps/plugin-shell": "^2.0.0-alpha.3",
     "axios": "1.4.0",
     "glazewm": "1.1.1",
     "luxon": "3.4.4",

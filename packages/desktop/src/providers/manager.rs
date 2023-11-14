@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 use anyhow::{Context, Result};
 use serde::Serialize;
 use sysinfo::{System, SystemExt};
-use tauri::{Manager, Runtime};
+use tauri::{App, AppHandle, Manager, Runtime};
 use tokio::{
   sync::{
     mpsc::{self, Sender},
@@ -52,14 +52,15 @@ pub struct ProviderManager {
 }
 
 /// Initializes `ProviderManager` in Tauri state.
-pub fn init<R: Runtime>(app: &mut tauri::App<R>) -> tauri::plugin::Result<()> {
-  app.manage(ProviderManager::new(app.handle()));
+pub fn init<R: Runtime>(app: &mut App<R>) -> Result<(), Box<dyn Error>> {
+  app.manage(ProviderManager::new(app.handle().clone()));
   Ok(())
 }
 
 /// Create a channel for outputting provider variables to client.
-fn handle_provider_emit_output<R: tauri::Runtime>(
-  manager: (impl Manager<R> + Sync + Send + 'static),
+fn handle_provider_emit_output<R: Runtime>(
+  // app_handle: &AppHandle<R>,
+  app_handle: (impl Manager<R> + Sync + Send + 'static),
 ) -> Sender<ProviderOutput> {
   let (output_sender, mut output_receiver) = mpsc::channel::<ProviderOutput>(1);
 
@@ -67,7 +68,7 @@ fn handle_provider_emit_output<R: tauri::Runtime>(
     while let Some(output) = output_receiver.recv().await {
       info!("Emitting for provider: {}", output.config_hash);
       // TODO: Error handling.
-      manager.emit_all("provider-emit", output).unwrap();
+      app_handle.emit("provider-emit", output).unwrap();
     }
   });
 
@@ -169,8 +170,8 @@ fn handle_provider_unlisten_input(
 }
 
 impl ProviderManager {
-  pub fn new<R: Runtime>(app: tauri::AppHandle<R>) -> ProviderManager {
-    let emit_output_tx = handle_provider_emit_output(app.app_handle());
+  pub fn new<R: Runtime>(app_handle: AppHandle<R>) -> ProviderManager {
+    let emit_output_tx = handle_provider_emit_output(app_handle);
 
     let active_providers = Arc::new(Mutex::new(vec![]));
     let active_providers_clone = active_providers.clone();
