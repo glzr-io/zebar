@@ -22,7 +22,7 @@ mod user_config;
 #[derive(Clone, Debug)]
 struct CreateWindowArgs {
   window_id: String,
-  args: Option<Vec<String>>,
+  args: HashMap<String, String>,
   env: HashMap<String, String>,
 }
 
@@ -80,7 +80,7 @@ async fn main() {
 
           let create_args = CreateWindowArgs {
             window_id,
-            args,
+            args: args.unwrap_or(vec![]).into_iter().collect(),
             env: env::vars().collect(),
           };
 
