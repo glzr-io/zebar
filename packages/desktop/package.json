@@ -2,9 +2,18 @@
   "name": "@zebar/desktop",
   "version": "0.0.0",
   "scripts": {
-    "dev": "npm run tauri dev -- -- -- sub1 sub2",
+    "dev3": "npm run tauri dev -- -- -- open window/bar",
+    "dev2": "npm run tauri dev -- -- -- monitors",
     "build": "npm run tauri build",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "monitors": "cargo run --no-default-features --quiet -- monitors",
+    "monitors2": "/Applications/tauri.app/Contents/MacOS/tauri monitors",
+    "dev": "npm run -s monitors | awk '{print \"cargo run open window/bar --args \" $0}' | sh",
+    "dev2": "npm run -s monitors | xargs -I {} cargo run open window/bar --args {}",
+    "dev:WORKING": "cargo run open window/bar --args MONITOR_NAME=Monitor\\ #41038 MONITOR_X=0 MONITOR_Y=0 MONITOR_WIDTH=3024 MONITOR_HEIGHT=1964",
+    "dev8": "npm run -s monitors | sed 's/\\\\ /\\\\\\ /g' | xargs -I {} npm run tauri dev -- -- -- open window/bar --args {}",
+    "dev7": "npm run -s monitors | sed 's/\"/\\\"/g' | xargs -I {} npm run tauri dev -- -- -- open window/bar --args {}",
+    "dev6": "npm run -s monitors | awk '{print \"npm run tauri dev -- -- -- open window/bar --args \" $0}' | sh"
   },
   "dependencies": {},
   "devDependencies": {
