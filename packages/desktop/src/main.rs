@@ -1,5 +1,6 @@
 // Prevents additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![feature(unix_sigpipe)]
 
 use std::{
   collections::HashMap,
@@ -8,7 +9,7 @@ use std::{
 
 use clap::Parser;
 use cli::{Cli, CliCommand};
-use monitors::output_monitors;
+use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use tauri::{AppHandle, RunEvent, State, WindowBuilder, WindowUrl};
 use tokio::{sync::mpsc, task};
@@ -60,6 +61,7 @@ async fn unlisten_provider(
 }
 
 #[tokio::main]
+#[unix_sigpipe = "sig_dfl"]
 async fn main() {
   tauri::async_runtime::set(tokio::runtime::Handle::current());
   tracing_subscriber::fmt::init();
@@ -71,9 +73,10 @@ async fn main() {
       // Since most Tauri plugins and setup is not needed for the `monitors`
       // CLI command, the setup is conditional based on the CLI command.
       match cli.command {
-        CliCommand::Monitors => {
-          output_monitors(app)?;
-          std::process::exit(0);
+        CliCommand::Monitors { print0 } => {
+          let monitors_str = get_monitors_str(app, print0);
+          cli::print_and_exit(monitors_str);
+          Ok(())
         }
         CliCommand::Open { window_id, args } => {
           let (tx, mut rx) = mpsc::unbounded_channel();
@@ -136,8 +139,8 @@ async fn main() {
     .build(tauri::generate_context!())
     .expect("Error while building Tauri application");
 
-  app.run(|_app_handle, _event| {
-    if let RunEvent::ExitRequested { api, .. } = &_event {
+  app.run(|_, event| {
+    if let RunEvent::ExitRequested { api, .. } = &event {
       // Keep the message loop running even if all windows are closed.
       api.prevent_exit();
     }
