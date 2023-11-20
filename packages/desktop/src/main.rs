@@ -5,12 +5,14 @@
 use std::{
   collections::HashMap,
   env::{self},
+  time::Duration,
 };
 
 use clap::Parser;
 use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
+use serde_json::json;
 use tauri::{AppHandle, RunEvent, State, WindowBuilder, WindowUrl};
 use tokio::{sync::mpsc, task};
 use tracing::info;
@@ -101,6 +103,11 @@ async fn main() {
           app.handle().plugin(tauri_plugin_http::init())?;
 
           providers::manager::init(app)?;
+          use std::time::Instant;
+          let now = Instant::now();
+          let x = app.available_monitors();
+          let elapsed = now.elapsed();
+          println!("Elapsed: {:.2?}", elapsed);
 
           let app_handle = app.handle().clone();
 
@@ -113,7 +120,7 @@ async fn main() {
                 create_args.window_id, create_args.args
               );
 
-              _ = WindowBuilder::new(
+              let window = WindowBuilder::new(
                 &app_handle,
                 &create_args.window_id,
                 WindowUrl::default(),
@@ -122,8 +129,37 @@ async fn main() {
               .inner_size(500., 500.)
               .decorations(false)
               .resizable(false)
+              .initialization_script(&format!(
+                "window.__ZEBAR_INITIAL_STATE='{}'",
+                json!({
+                  "currentMonitor": ""
+                })
+              ))
               .build()
               .unwrap();
+
+              println!("sleeping");
+              tokio::time::sleep(Duration::from_millis(10000)).await;
+              // let x = window.current_monitor().unwrap().unwrap().position().x;
+
+              use std::time::Instant;
+              let now = Instant::now();
+              let x = window.inner_position().unwrap();
+              let xx = window.outer_position().unwrap();
+              let xxx = window.scale_factor().unwrap();
+              let xxxx = window.outer_size().unwrap();
+              // println!("{:?}", x);
+              let elapsed = now.elapsed();
+              println!("Elapsed: {:.2?}", elapsed);
+              _ = window.eval(&format!(
+                "console.log(Date.now());window.__ZEBAR_INITIAL_STATE='{}'",
+                json!({
+                  "currentMonitor": 1,
+                })
+              ));
+
+              // let elapsed = now.elapsed();
+              // println!("Elapsed: {:.2?}", elapsed);
             }
           });
 
