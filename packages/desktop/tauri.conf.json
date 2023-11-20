@@ -9,16 +9,6 @@
     "version": "0.0.0"
   },
   "plugins": {
-    "cli": {
-      "description": "Command example `sub1 sub2`",
-      "subcommands": {
-        "sub1": {
-          "subcommands": {
-            "sub2": {}
-          }
-        }
-      }
-    },
     "shell": {
       "open": true
     }
@@ -34,25 +24,12 @@
         "icons/icon.ico"
       ],
       "identifier": "glazer.zebar",
-      "resources": [
-        "resources/*"
-      ],
+      "resources": ["resources/*"],
       "targets": "all"
     },
     "macOSPrivateApi": true,
     "security": {
       "csp": null
-    },
-    "windows": [
-      {
-        "decorations": false,
-        "fullscreen": false,
-        "height": 500,
-        "resizable": false,
-        "title": "Zebar",
-        "transparent": false,
-        "width": 500
-      }
-    ]
+    }
   }
 }

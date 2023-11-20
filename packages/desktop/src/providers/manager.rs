@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -52,7 +52,7 @@ pub struct ProviderManager {
 }
 
 /// Initializes `ProviderManager` in Tauri state.
-pub fn init<R: Runtime>(app: &mut App<R>) -> Result<(), Box<dyn Error>> {
+pub fn init<R: Runtime>(app: &mut App<R>) -> Result<()> {
   app.manage(ProviderManager::new(app.handle().clone()));
   Ok(())
 }
