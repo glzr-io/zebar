@@ -15,8 +15,8 @@ tauri-build = { version = "2.0.0-alpha.11", features = [] }
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.74"
+clap = { version = "4.4.8", features = ["derive"] }
 tauri = { version = "2.0.0-alpha.17", features = ["macos-private-api"] }
-tauri-plugin-cli = "2.0.0-alpha.4"
 tauri-plugin-http = "2.0.0-alpha.5"
 tauri-plugin-shell = "2.0.0-alpha.4"
 tauri-plugin-single-instance = "2.0.0-alpha.4"

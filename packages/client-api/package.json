@@ -29,12 +29,6 @@
   "module": "./dist/index.js",
   "browser": {},
   "exports": {
-    "development": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/dev.js"
-      }
-    },
     "import": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"

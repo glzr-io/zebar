@@ -28,6 +28,7 @@ pub fn read_file(
   }
 }
 
+/// Initialize config at the given path from the sample config resource.
 fn create_from_sample(
   config_path: &PathBuf,
   app_handle: AppHandle,
@@ -35,21 +36,48 @@ fn create_from_sample(
   let sample_config = app_handle
     .asset_resolver()
     .get("resources/sample-config.yaml".to_owned())
-    .context("Failed to resolve sample config.")?;
-
-  // Read the contents of the sample config.
-  // let config_string = String::from_utf8_lossy(&sample_path.bytes);
-
-  let parent_dir = config_path.parent().context("Invalid config directory.")?;
+    .context("Unable to resolve sample config.")?;
 
   // Create the containing directory for the config file.
+  let parent_dir = config_path.parent().context("Invalid config directory.")?;
   std::fs::create_dir_all(&parent_dir).with_context(|| {
     format!("Unable to create directory {}.", &config_path.display())
   })?;
 
-  // fs::write(&config_path, &config_string)
   fs::write(&config_path, &sample_config.bytes)
     .context("Unable to write config file.")?;
 
-  Ok(String::from_utf8_lossy(&sample_config.bytes).to_string())
+  let config_string = String::from_utf8_lossy(&sample_config.bytes).to_string();
+  Ok(config_string)
+}
+
+pub fn open_config_dir(app_handle: AppHandle) -> Result<()> {
+  let config_dir_path = app_handle
+    .path()
+    .resolve(".glazer", BaseDirectory::Home)
+    .context("Unable to get home directory.")?;
+
+  #[cfg(target_os = "windows")]
+  {
+    std::process::Command::new("explorer")
+      .arg(config_dir_path)
+      .spawn()?;
+  }
+
+  #[cfg(target_os = "macos")]
+  {
+    std::process::Command::new("open")
+      .arg(config_dir_path)
+      .arg("-R")
+      .spawn()?;
+  }
+
+  #[cfg(target_os = "linux")]
+  {
+    std::process::Command::new("xdg-open")
+      .arg(config_dir_path)
+      .spawn()?;
+  }
+
+  Ok(())
 }
