@@ -9,26 +9,6 @@
     "version": "0.0.0"
   },
   "plugins": {
-    "cli": {
-      "description": "Command example `sub1 sub2`",
-      "subcommands": {
-        "open": {
-          "args": [
-            {
-              "name": "window-name",
-              "index": 1,
-              "takesValue": true
-            },
-            {
-              "name": "args",
-              "takesValue": true,
-              "multiple": true
-            }
-          ]
-        },
-        "monitors": {}
-      }
-    },
     "shell": {
       "open": true
     }
