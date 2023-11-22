@@ -12,7 +12,7 @@ use clap::Parser;
 use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
-use serde_json::json;
+use serde::Serialize;
 use tauri::{
   AppHandle, Monitor, RunEvent, State, Window, WindowBuilder, WindowUrl,
 };
@@ -119,6 +119,7 @@ async fn main() {
 
               let window = WindowBuilder::new(
                 &app_handle,
+                // TODO: Add count to window label.
                 &create_args.window_id,
                 WindowUrl::default(),
               )
@@ -129,9 +130,15 @@ async fn main() {
               .build()
               .unwrap();
 
+              let initial_state =
+                get_initial_state(&app_handle, &window).unwrap();
+
+              let initial_state_str =
+                serde_json::to_string(&initial_state).unwrap();
+
               _ = window.eval(&format!(
                 "window.__ZEBAR_INIT_STATE='{}'",
-                get_initial_state(&app_handle, &window)
+                initial_state_str,
               ));
             }
           });
@@ -156,6 +163,7 @@ async fn main() {
   })
 }
 
+#[derive(Serialize)]
 struct InitialState {
   current_window: WindowInfo,
   current_monitor: Option<MonitorInfo>,
@@ -163,6 +171,7 @@ struct InitialState {
   monitors: Vec<MonitorInfo>,
 }
 
+#[derive(Serialize)]
 struct MonitorInfo {
   name: String,
   x: i32,
@@ -172,6 +181,7 @@ struct MonitorInfo {
   scale_factor: f64,
 }
 
+#[derive(Serialize)]
 struct WindowInfo {
   x: i32,
   y: i32,
@@ -180,7 +190,7 @@ struct WindowInfo {
   scale_factor: f64,
 }
 
-pub fn get_initial_state(
+fn get_initial_state(
   app_handle: &AppHandle,
   window: &Window,
 ) -> Result<InitialState> {
@@ -195,7 +205,11 @@ pub fn get_initial_state(
     y: window_position.y,
   };
 
-  let monitors = app_handle.available_monitors()?;
+  let monitors = app_handle
+    .available_monitors()?
+    .iter()
+    .map(|monitor| to_monitor_info(&monitor))
+    .collect();
 
   let primary_monitor = app_handle
     .primary_monitor()?
@@ -203,8 +217,6 @@ pub fn get_initial_state(
 
   let current_monitor = window
     .current_monitor()?
-    .or(primary_monitor)
-    .or(monitors.first().cloned())
     .map(|monitor| to_monitor_info(&monitor));
 
   Ok(InitialState {
