@@ -16,7 +16,7 @@ export const useTemplateEngine = memoize(() => {
   // Store map of available functions on the window. This makes them
   // available at runtime.
   const contextFunctions: Record<string, Function> = {};
-  window.__ZEBAR_FUNCTIONS__ = contextFunctions;
+  window.__ZEBAR_FNS = contextFunctions;
 
   function render(template: string, context: Record<string, unknown>) {
     if (cache[template]) {

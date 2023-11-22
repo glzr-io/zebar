@@ -5,15 +5,17 @@
 use std::{
   collections::HashMap,
   env::{self},
-  time::Duration,
 };
 
+use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde_json::json;
-use tauri::{AppHandle, RunEvent, State, WindowBuilder, WindowUrl};
+use tauri::{
+  AppHandle, Monitor, RunEvent, State, Window, WindowBuilder, WindowUrl,
+};
 use tokio::{sync::mpsc, task};
 use tracing::info;
 
@@ -103,11 +105,6 @@ async fn main() {
           app.handle().plugin(tauri_plugin_http::init())?;
 
           providers::manager::init(app)?;
-          use std::time::Instant;
-          let now = Instant::now();
-          let x = app.available_monitors();
-          let elapsed = now.elapsed();
-          println!("Elapsed: {:.2?}", elapsed);
 
           let app_handle = app.handle().clone();
 
@@ -129,37 +126,13 @@ async fn main() {
               .inner_size(500., 500.)
               .decorations(false)
               .resizable(false)
-              .initialization_script(&format!(
-                "window.__ZEBAR_INITIAL_STATE='{}'",
-                json!({
-                  "currentMonitor": ""
-                })
-              ))
               .build()
               .unwrap();
 
-              println!("sleeping");
-              tokio::time::sleep(Duration::from_millis(10000)).await;
-              // let x = window.current_monitor().unwrap().unwrap().position().x;
-
-              use std::time::Instant;
-              let now = Instant::now();
-              let x = window.inner_position().unwrap();
-              let xx = window.outer_position().unwrap();
-              let xxx = window.scale_factor().unwrap();
-              let xxxx = window.outer_size().unwrap();
-              // println!("{:?}", x);
-              let elapsed = now.elapsed();
-              println!("Elapsed: {:.2?}", elapsed);
               _ = window.eval(&format!(
-                "console.log(Date.now());window.__ZEBAR_INITIAL_STATE='{}'",
-                json!({
-                  "currentMonitor": 1,
-                })
+                "window.__ZEBAR_INIT_STATE='{}'",
+                get_initial_state(&app_handle, &window)
               ));
-
-              // let elapsed = now.elapsed();
-              // println!("Elapsed: {:.2?}", elapsed);
             }
           });
 
@@ -181,4 +154,77 @@ async fn main() {
       api.prevent_exit();
     }
   })
+}
+
+struct InitialState {
+  current_window: WindowInfo,
+  current_monitor: Option<MonitorInfo>,
+  primary_monitor: Option<MonitorInfo>,
+  monitors: Vec<MonitorInfo>,
+}
+
+struct MonitorInfo {
+  name: String,
+  x: i32,
+  y: i32,
+  width: u32,
+  height: u32,
+  scale_factor: f64,
+}
+
+struct WindowInfo {
+  x: i32,
+  y: i32,
+  width: u32,
+  height: u32,
+  scale_factor: f64,
+}
+
+pub fn get_initial_state(
+  app_handle: &AppHandle,
+  window: &Window,
+) -> Result<InitialState> {
+  let window_position = window.outer_position()?;
+  let window_size = window.outer_size()?;
+
+  let current_window = WindowInfo {
+    scale_factor: window.scale_factor()?,
+    width: window_size.width,
+    height: window_size.height,
+    x: window_position.x,
+    y: window_position.y,
+  };
+
+  let monitors = app_handle.available_monitors()?;
+
+  let primary_monitor = app_handle
+    .primary_monitor()?
+    .map(|monitor| to_monitor_info(&monitor));
+
+  let current_monitor = window
+    .current_monitor()?
+    .or(primary_monitor)
+    .or(monitors.first().cloned())
+    .map(|monitor| to_monitor_info(&monitor));
+
+  Ok(InitialState {
+    current_window,
+    current_monitor,
+    primary_monitor,
+    monitors,
+  })
+}
+
+fn to_monitor_info(monitor: &Monitor) -> MonitorInfo {
+  let monitor_position = monitor.position();
+  let monitor_size = monitor.size();
+
+  MonitorInfo {
+    name: monitor.name().unwrap_or(&"".to_owned()).to_string(),
+    scale_factor: monitor.scale_factor(),
+    width: monitor_size.width,
+    height: monitor_size.height,
+    x: monitor_position.x,
+    y: monitor_position.y,
+  }
 }
