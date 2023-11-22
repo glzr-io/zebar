@@ -117,19 +117,117 @@ export function createContextStore(
         parsedConfig,
         data: mergedData(),
         type,
+        getChild: function (id: string) {
+          const children = getChildConfigs(config);
+
+          const [configKey, childConfig] = children.find(
+            ([key]) => key === id,
+          )!;
+
+          const index = children.findIndex(([key]) => key === id)!;
+
+          const childContext = getChildContext({
+            config: childConfig,
+            configKey,
+            path: [...path, 'children', index] as ContextStorePath,
+            ancestorData: [...ancestorData, elementData],
+          });
+          console.log(
+            'childContext',
+            childContext,
+            children,
+            configKey,
+            childConfig,
+            index,
+          );
+          return childContext;
+        },
       });
     });
 
-    for (const [index, entry] of getChildConfigs(config).entries()) {
-      const [configKey, childConfig] = entry;
+    // for (const [index, entry] of getChildConfigs(config).entries()) {
+    //   const [configKey, childConfig] = entry;
 
-      createElementContext({
-        config: childConfig,
-        configKey,
-        path: [...path, 'children', index] as ContextStorePath,
-        ancestorData: [...ancestorData, elementData],
+    //   createElementContext({
+    //     config: childConfig,
+    //     configKey,
+    //     path: [...path, 'children', index] as ContextStorePath,
+    //     ancestorData: [...ancestorData, elementData],
+    //   });
+    // }
+  }
+
+  function getChildContext(args: CreateElementContextArgs) {
+    const { config, configKey, path, ancestorData } = args;
+
+    const [typeString, id] = configKey.split('/');
+    const type = getElementType(typeString);
+
+    const elementData = createMemo(() => getElementData(config));
+
+    const mergedData = createMemo(() => {
+      const mergedAncestorData = ancestorData.reduce(
+        (acc, data) => ({ ...acc, ...data() }),
+        {},
+      );
+
+      return {
+        ...mergedAncestorData,
+        ...elementData(),
+      };
+    });
+
+    const [childContext, setChildContext] = createStore<ElementContext>(
+      {} as ElementContext,
+    );
+
+    createComputed(() => {
+      const parsedConfig = parseConfigSection(
+        templateEngine,
+        { ...config, id },
+        getSchemaForElement(type),
+        mergedData(),
+      );
+
+      setChildContext({
+        id,
+        children: [],
+        rawConfig: config,
+        parsedConfig,
+        data: mergedData(),
+        type,
+        getChild: function (id: string) {
+          const children = getChildConfigs(config);
+
+          console.log('children1', children, id);
+
+          const [configKey, childConfig] = children.find(
+            ([key]) => key === id,
+          )!;
+
+          console.log('children2', children);
+          const index = children.findIndex(([key]) => key === id)!;
+
+          const childContext = getChildContext({
+            config: childConfig,
+            configKey,
+            path: [...path, 'children', index] as ContextStorePath,
+            ancestorData: [...ancestorData, elementData],
+          });
+          console.log(
+            'childContext',
+            childContext,
+            children,
+            configKey,
+            childConfig,
+            index,
+          );
+          return childContext;
+        },
       });
-    }
+    });
+
+    return childContext;
   }
 
   function getElementType(type: string) {

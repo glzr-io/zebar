@@ -1,4 +1,4 @@
-import { For, Show, createSignal } from 'solid-js';
+import { For, Show, Suspense, createSignal } from 'solid-js';
 import { ElementContext, ElementType, init } from 'zebar';
 
 import { TemplateElement } from './template-element.component';
@@ -16,15 +16,13 @@ export function WindowElement() {
           id={context().parsedConfig.id}
           class={context().parsedConfig.class_name}
         >
-          <For each={context().children ?? []}>
-            {childContext =>
-              childContext.type === ElementType.GROUP ? (
-                <GroupElement context={childContext} />
-              ) : (
-                <TemplateElement context={childContext} />
-              )
-            }
-          </For>
+          <Suspense fallback={<p>meepleft</p>}>
+            <GroupElement context={context().getChild('group/left')} />
+          </Suspense>
+
+          <Suspense fallback={<p>meep</p>}>
+            <GroupElement context={context().getChild('group/right')} />
+          </Suspense>
         </div>
       )}
     </Show>

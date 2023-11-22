@@ -9,4 +9,5 @@ export interface ElementContext<T = unknown> {
   parsedConfig: BaseElementConfig;
   type: ElementType;
   data: T;
+  getChild: (id: string) => ElementContext;
 }
