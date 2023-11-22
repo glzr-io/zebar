@@ -9,6 +9,7 @@ export const ProviderTypeSchema = z.enum([
   'host',
   'ip',
   'memory',
+  'monitors',
   'network',
   'self',
   'system_tray',
