@@ -10,6 +10,7 @@ export const ProviderTypeSchema = z.enum([
   'ip',
   'memory',
   'network',
+  'self',
   'system_tray',
   'weather',
 ]);

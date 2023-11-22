@@ -172,6 +172,7 @@ async fn main() {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct InitialState {
   current_window: WindowInfo,
   current_monitor: Option<MonitorInfo>,
@@ -180,6 +181,7 @@ struct InitialState {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct MonitorInfo {
   name: String,
   x: i32,
@@ -190,6 +192,7 @@ struct MonitorInfo {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct WindowInfo {
   x: i32,
   y: i32,
