@@ -5,6 +5,7 @@
 use std::{
   collections::HashMap,
   env::{self},
+  sync::Arc,
 };
 
 use anyhow::Result;
@@ -16,7 +17,10 @@ use serde::Serialize;
 use tauri::{
   AppHandle, Monitor, RunEvent, State, Window, WindowBuilder, WindowUrl,
 };
-use tokio::{sync::mpsc, task};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task,
+};
 use tracing::info;
 
 mod cli;
@@ -111,16 +115,20 @@ async fn main() {
           // Handle creation of new windows (both from the initial and
           // subsequent instances of the application)
           _ = task::spawn(async move {
+            let window_count = Arc::new(Mutex::new(0));
+
             while let Some(create_args) = rx.recv().await {
+              let mut window_count = window_count.lock().await;
+              *window_count += 1;
+
               info!(
-                "Creating window '{}' with args: {:#?}",
-                create_args.window_id, create_args.args
+                "Creating window #{} '{}' with args: {:#?}",
+                window_count, create_args.window_id, create_args.args
               );
 
               let window = WindowBuilder::new(
                 &app_handle,
-                // TODO: Add count to window label.
-                &create_args.window_id,
+                format!("{}-{}", &create_args.window_id, window_count),
                 WindowUrl::default(),
               )
               .title(format!("Zebar - {}", create_args.window_id))
@@ -194,36 +202,34 @@ fn get_initial_state(
   app_handle: &AppHandle,
   window: &Window,
 ) -> Result<InitialState> {
-  let window_position = window.outer_position()?;
-  let window_size = window.outer_size()?;
-
-  let current_window = WindowInfo {
-    scale_factor: window.scale_factor()?,
-    width: window_size.width,
-    height: window_size.height,
-    x: window_position.x,
-    y: window_position.y,
-  };
-
   let monitors = app_handle
     .available_monitors()?
     .iter()
     .map(|monitor| to_monitor_info(&monitor))
     .collect();
 
-  let primary_monitor = app_handle
-    .primary_monitor()?
-    .map(|monitor| to_monitor_info(&monitor));
-
-  let current_monitor = window
-    .current_monitor()?
-    .map(|monitor| to_monitor_info(&monitor));
-
   Ok(InitialState {
-    current_window,
-    current_monitor,
-    primary_monitor,
+    current_window: to_window_info(&window)?,
+    current_monitor: window
+      .current_monitor()?
+      .map(|monitor| to_monitor_info(&monitor)),
+    primary_monitor: app_handle
+      .primary_monitor()?
+      .map(|monitor| to_monitor_info(&monitor)),
     monitors,
+  })
+}
+
+fn to_window_info(window: &Window) -> Result<WindowInfo> {
+  let window_position = window.outer_position()?;
+  let window_size = window.outer_size()?;
+
+  Ok(WindowInfo {
+    scale_factor: window.scale_factor()?,
+    width: window_size.width,
+    height: window_size.height,
+    x: window_position.x,
+    y: window_position.y,
   })
 }
 
