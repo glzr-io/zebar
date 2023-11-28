@@ -42,6 +42,7 @@ export function createElementContext(args: CreateElementContextArgs) {
 
   const type = getElementType();
   const childConfigs = getChildConfigs();
+  const childIds = childConfigs.map(([_, value]) => value.id);
 
   createComputed(() => {
     const parsedConfig = parseConfigSection(
@@ -126,6 +127,7 @@ export function createElementContext(args: CreateElementContextArgs) {
     get type() {
       return elementContext.type;
     },
+    childIds,
     getChild: function (id: string) {
       const foundConfig = childConfigs.find(([key]) => key === id);
 
