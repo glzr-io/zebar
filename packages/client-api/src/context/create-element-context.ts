@@ -12,6 +12,7 @@ import {
   GroupConfigSchemaP1,
   WindowConfig,
 } from '~/user-config';
+import { useTemplateEngine } from '~/template-engine';
 import { createProvider } from './providers';
 import { ElementContext, ElementType } from './shared';
 

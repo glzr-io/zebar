@@ -10,7 +10,7 @@ import {
   parseConfigSection,
 } from './user-config';
 import { ElementContext, createElementContext } from './context';
-import { createTemplateEngine } from './template-engine';
+import { useTemplateEngine } from './template-engine';
 import { setWindowPosition, setWindowStyles } from './desktop';
 
 export async function initAsync() {
@@ -20,7 +20,7 @@ export async function initAsync() {
 export function init(callback: (context: ElementContext) => void) {
   const [config] = getUserConfig();
   const [configVariables] = getConfigVariables();
-  const templateEngine = createTemplateEngine();
+  const templateEngine = useTemplateEngine();
 
   // TODO: Get window to open from launch args.
   const configKey = 'window/bar';
@@ -35,15 +35,13 @@ export function init(callback: (context: ElementContext) => void) {
     ancestorVariables: [rootVariables],
   });
 
-  const [globalConfig] = createResource(
-    () => config(),
-    config =>
-      parseConfigSection(
-        templateEngine,
-        (config as UserConfig).global,
-        GlobalConfigSchema.strip(),
-        {},
-      ),
+  const [globalConfig] = createResource(config, config =>
+    parseConfigSection(
+      templateEngine,
+      (config as UserConfig).global,
+      GlobalConfigSchema.strip(),
+      {},
+    ),
   );
 
   // Dynamically create <style> tag and append it to <head>.
