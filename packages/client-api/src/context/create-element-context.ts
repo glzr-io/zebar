@@ -22,9 +22,11 @@ export interface CreateElementContextArgs {
   ancestorVariables?: Accessor<Record<string, unknown>>[];
 }
 
-export function createElementContext(args: CreateElementContextArgs) {
+export function createElementContext(
+  args: CreateElementContextArgs,
+): ElementContext {
   const templateEngine = useTemplateEngine();
-  const [elementContext, setElementContext] = createStore({} as ElementContext);
+  const [elementContext, setElementContext] = createStore(getStoreValue());
 
   const elementVariables = createMemo(() => getElementVariables(args.config));
 
@@ -61,6 +63,26 @@ export function createElementContext(args: CreateElementContextArgs) {
     });
   });
 
+  /**
+   * Get updated store value.
+   */
+  function getStoreValue() {
+    const parsedConfig = parseConfigSection(
+      templateEngine,
+      { ...args.config, id: args.id },
+      getSchemaForElement(type),
+      mergedVariables(),
+    );
+
+    return {
+      id: args.id,
+      rawConfig: args.config,
+      parsedConfig,
+      data: mergedVariables(),
+      type,
+    };
+  }
+
   function getElementType() {
     const [type] = args.id.split('/');
 
@@ -84,6 +106,9 @@ export function createElementContext(args: CreateElementContextArgs) {
     }
   }
 
+  /**
+   * Get child element configs.
+   */
   function getChildConfigs() {
     return Object.entries(args.config).filter(
       (
@@ -95,6 +120,25 @@ export function createElementContext(args: CreateElementContextArgs) {
         return key.startsWith('group/') || key.startsWith('template/');
       },
     );
+  }
+
+  /**
+   * Create element context for a child.
+   */
+  function createChildContext(id: string) {
+    const foundConfig = childConfigs.find(([key]) => key === id);
+
+    if (!foundConfig) {
+      return null;
+    }
+
+    const [configKey, childConfig] = foundConfig;
+
+    return createElementContext({
+      config: childConfig,
+      id: configKey,
+      ancestorVariables: [...(args.ancestorVariables ?? []), elementVariables],
+    });
   }
 
   function getElementVariables(config: BaseElementConfig) {
@@ -128,23 +172,6 @@ export function createElementContext(args: CreateElementContextArgs) {
       return elementContext.type;
     },
     childIds,
-    getChild: function (id: string) {
-      const foundConfig = childConfigs.find(([key]) => key === id);
-
-      if (!foundConfig) {
-        return null;
-      }
-
-      const [configKey, childConfig] = foundConfig;
-
-      return createElementContext({
-        config: childConfig,
-        id: configKey,
-        ancestorVariables: [
-          ...(args.ancestorVariables ?? []),
-          elementVariables,
-        ],
-      });
-    },
+    getChild: createChildContext,
   };
 }

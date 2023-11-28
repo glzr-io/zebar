@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource } from 'solid-js';
+import { createEffect, createResource } from 'solid-js';
 
 import {
   GlobalConfigSchema,
@@ -12,6 +12,7 @@ import {
 import { ElementContext, createElementContext } from './context';
 import { useTemplateEngine } from './template-engine';
 import { setWindowPosition, setWindowStyles } from './desktop';
+import { createDeepSignal, resolved } from './utils';
 
 export async function initAsync() {
   // TODO: Promisify `init`.
@@ -27,13 +28,22 @@ export function init(callback: (context: ElementContext) => void) {
   const windowConfig = (config() as UserConfig)[configKey];
 
   // TODO: Remove this.
-  const rootVariables = createMemo(() => ({ env: configVariables() }));
+  const [rootVariables] = createResource(configVariables, configVariables => ({
+    env: configVariables,
+  }));
 
-  const context = createElementContext({
-    id: configKey,
-    config: windowConfig,
-    ancestorVariables: [rootVariables],
-  });
+  const [windowContext] = createResource(
+    () => resolved([config(), rootVariables()]),
+    ([_, rootVariables]) =>
+      createElementContext({
+        id: configKey,
+        config: windowConfig,
+        ancestorVariables: [() => rootVariables],
+      }),
+    {
+      storage: createDeepSignal,
+    },
+  );
 
   const [globalConfig] = createResource(config, config =>
     parseConfigSection(
@@ -46,12 +56,12 @@ export function init(callback: (context: ElementContext) => void) {
 
   // Dynamically create <style> tag and append it to <head>.
   createEffect(async () => {
-    if (globalConfig() && context.store.hasInitialized) {
+    if (globalConfig() && windowContext()) {
       const styleElement = document.createElement('style');
       document.head.appendChild(styleElement);
       styleElement.innerHTML = await buildStyles(
         globalConfig()!,
-        context.store.value!,
+        windowContext()!,
       );
 
       return () => document.head.removeChild(styleElement);
@@ -60,8 +70,8 @@ export function init(callback: (context: ElementContext) => void) {
 
   // Set window position based on config values.
   createEffect(async () => {
-    if (globalConfig() && context.store.hasInitialized) {
-      const windowConfig = context.store.value!.parsedConfig as WindowConfig;
+    if (globalConfig() && windowContext()) {
+      const windowConfig = windowContext()!.parsedConfig as WindowConfig;
 
       await setWindowPosition({
         x: windowConfig.position_x,
@@ -79,9 +89,10 @@ export function init(callback: (context: ElementContext) => void) {
   });
 
   // Invoke callback passed to `init`.
+  // TODO: This shouldn't be called multiple times.
   createEffect(() => {
-    if (context.store.hasInitialized) {
-      callback(context.store.value!);
+    if (windowContext()) {
+      callback(windowContext()!);
     }
   });
 }

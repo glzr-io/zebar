@@ -7,5 +7,6 @@ export interface ElementContext<T = unknown> {
   parsedConfig: BaseElementConfig;
   type: ElementType;
   data: T;
-  getChild: (id: string) => ElementContext;
+  childIds: string[];
+  getChild: (id: string) => ElementContext | null;
 }

@@ -7,7 +7,11 @@ import { GroupElement } from './group-element.component';
 export function WindowElement() {
   const [context, setContext] = createSignal<ElementContext | null>(null);
 
-  init(context => setContext(context));
+  init(context => {
+    console.log('>>', context);
+
+    setContext(context);
+  });
 
   return (
     <Show when={context()}>
@@ -16,13 +20,17 @@ export function WindowElement() {
           id={context().parsedConfig.id}
           class={context().parsedConfig.class_name}
         >
-          <Suspense fallback={<p>meepleft</p>}>
-            <GroupElement context={context().getChild('group/left')} />
-          </Suspense>
-
-          <Suspense fallback={<p>meep</p>}>
-            <GroupElement context={context().getChild('group/right')} />
-          </Suspense>
+          <For each={context().childIds}>
+            {childId => (
+              <Suspense fallback={<p>meepleft</p>}>
+                {context().getChild(childId)!.type === ElementType.GROUP ? (
+                  <GroupElement context={context().getChild(childId)!} />
+                ) : (
+                  <TemplateElement context={context().getChild(childId)!} />
+                )}
+              </Suspense>
+            )}
+          </For>
         </div>
       )}
     </Show>
