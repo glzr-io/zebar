@@ -1,4 +1,4 @@
-import { createEffect, createResource } from 'solid-js';
+import { createEffect, createMemo, createResource } from 'solid-js';
 
 import {
   GlobalConfigSchema,
@@ -9,7 +9,7 @@ import {
   getUserConfig,
   parseConfigSection,
 } from './user-config';
-import { ElementContext, createContextStore } from './context';
+import { ElementContext, createElementContext } from './context';
 import { createTemplateEngine } from './template-engine';
 import { setWindowPosition, setWindowStyles } from './desktop';
 
@@ -22,7 +22,18 @@ export function init(callback: (context: ElementContext) => void) {
   const [configVariables] = getConfigVariables();
   const templateEngine = createTemplateEngine();
 
-  const context = createContextStore(config, configVariables, templateEngine);
+  // TODO: Get window to open from launch args.
+  const configKey = 'window/bar';
+  const windowConfig = (config() as UserConfig)[configKey];
+
+  // TODO: Remove this.
+  const rootVariables = createMemo(() => ({ env: configVariables() }));
+
+  const context = createElementContext({
+    id: configKey,
+    config: windowConfig,
+    ancestorVariables: [rootVariables],
+  });
 
   const [globalConfig] = createResource(
     () => config(),

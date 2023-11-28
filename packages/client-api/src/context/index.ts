@@ -1,4 +1,3 @@
-export * from './create-context-store';
-export * from './shared/element-context.model';
-export * from './shared/element-type.model';
+export * from './shared';
 export * from './providers';
+export * from './create-element-context';
