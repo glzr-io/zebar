@@ -19,23 +19,24 @@ export function buildStyles(
   // Queue of element contexts to traverse.
   const queue = [windowContext];
 
-  while (queue.length) {
-    const elementContext = queue.shift()!;
-    const elementStyles = elementContext.parsedConfig.styles;
+  // while (queue.length) {
+  //   const elementContext = queue.shift()!;
+  //   const elementStyles = elementContext.parsedConfig.styles;
 
-    if (elementStyles) {
-      styles.push(scopeWith(`#${elementContext.id}`, elementStyles));
-    }
+  //   if (elementStyles) {
+  //     styles.push(scopeWith(`#${elementContext.id}`, elementStyles));
+  //   }
 
-    const children = elementContext.children;
-    queue.concat(children);
-  }
+  //   // const children = elementContext.children;
+  //   // queue.concat(children);
+  // }
 
   // Compile SCSS into CSS.
-  const { css } = compileString(styles.join(''));
-  logger.debug('Compiled SCSS into CSS:', css);
+  // const { css } = compileString(styles.join(''));
+  // logger.debug('Compiled SCSS into CSS:', css);
 
-  return css;
+  // return css;
+  return '';
 }
 
 /**

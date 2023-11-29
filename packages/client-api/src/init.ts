@@ -23,10 +23,6 @@ export function init(callback: (context: ElementContext) => void) {
   const [configVariables] = getConfigVariables();
   const templateEngine = useTemplateEngine();
 
-  // TODO: Get window to open from launch args.
-  const configKey = 'window/bar';
-  const windowConfig = (config() as UserConfig)[configKey];
-
   // TODO: Remove this.
   const [rootVariables] = createResource(configVariables, configVariables => ({
     env: configVariables,
@@ -34,12 +30,17 @@ export function init(callback: (context: ElementContext) => void) {
 
   const [windowContext] = createResource(
     () => resolved([config(), rootVariables()]),
-    ([_, rootVariables]) =>
-      createElementContext({
+    ([config, rootVariables]) => {
+      // TODO: Get window to open from launch args.
+      const configKey = 'window/bar';
+      const windowConfig = (config as UserConfig)[configKey];
+
+      return createElementContext({
         id: configKey,
         config: windowConfig,
         ancestorVariables: [() => rootVariables],
-      }),
+      });
+    },
     {
       storage: createDeepSignal,
     },
@@ -88,11 +89,13 @@ export function init(callback: (context: ElementContext) => void) {
     }
   });
 
+  let hasRunCallback = false;
+
   // Invoke callback passed to `init`.
-  // TODO: This shouldn't be called multiple times.
   createEffect(() => {
-    if (windowContext()) {
+    if (!hasRunCallback && windowContext()) {
       callback(windowContext()!);
+      hasRunCallback = true;
     }
   });
 }

@@ -3,7 +3,6 @@ import { createStore } from 'solid-js/store';
 
 import {
   WindowConfigSchemaP1,
-  BaseElementConfig,
   TemplateConfig,
   GroupConfig,
   ProvidersConfigSchema,
@@ -26,9 +25,8 @@ export function createElementContext(
   args: CreateElementContextArgs,
 ): ElementContext {
   const templateEngine = useTemplateEngine();
-  const [elementContext, setElementContext] = createStore(getStoreValue());
 
-  const elementVariables = createMemo(() => getElementVariables(args.config));
+  const elementVariables = createMemo(getProviderVariables);
 
   const mergedVariables = createMemo(() => {
     const mergedAncestorVariables = (args.ancestorVariables ?? []).reduce(
@@ -44,24 +42,12 @@ export function createElementContext(
 
   const type = getElementType();
   const childConfigs = getChildConfigs();
-  const childIds = childConfigs.map(([_, value]) => value.id);
+  const childIds = childConfigs.map(([key]) => key);
 
-  createComputed(() => {
-    const parsedConfig = parseConfigSection(
-      templateEngine,
-      { ...args.config, id: args.id },
-      getSchemaForElement(type),
-      mergedVariables(),
-    );
+  const [elementContext, setElementContext] = createStore(getStoreValue());
 
-    setElementContext({
-      id: args.id,
-      rawConfig: args.config,
-      parsedConfig,
-      data: mergedVariables(),
-      type,
-    });
-  });
+  // Update the store on changes to any provider variables.
+  createComputed(() => setElementContext(getStoreValue()));
 
   /**
    * Get updated store value.
@@ -87,7 +73,7 @@ export function createElementContext(
     const [type] = args.id.split('/');
 
     // TODO: Validate in P1 schema instead.
-    if (!['window', 'group', 'template'].includes(type)) {
+    if (!Object.values(ElementType).includes(type as ElementType)) {
       throw new Error(`Unrecognized element type '${type}'.`);
     }
 
@@ -141,9 +127,9 @@ export function createElementContext(
     });
   }
 
-  function getElementVariables(config: BaseElementConfig) {
+  function getProviderVariables() {
     const providerConfigs = ProvidersConfigSchema.parse(
-      config?.providers ?? [],
+      args.config?.providers ?? [],
     );
 
     return providerConfigs.reduce(
