@@ -6,7 +6,7 @@ import {
   WindowConfig,
   buildStyles,
   getConfigVariables,
-  getUserConfig,
+  useUserConfig,
   parseConfigSection,
 } from './user-config';
 import { ElementContext, createElementContext } from './context';
@@ -19,7 +19,7 @@ export async function initAsync() {
 }
 
 export function init(callback: (context: ElementContext) => void) {
-  const [config] = getUserConfig();
+  const config = useUserConfig();
   const [configVariables] = getConfigVariables();
   const templateEngine = useTemplateEngine();
 
