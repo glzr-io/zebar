@@ -15,10 +15,10 @@ export function GroupElement(props: GroupElementProps) {
       <For each={props.context.childIds}>
         {childId => (
           <Suspense fallback={<p>meepleft</p>}>
-            {props.context.getChild(childId)!.type === ElementType.GROUP ? (
-              <GroupElement context={props.context.getChild(childId)!} />
+            {props.context.initChild(childId)!.type === ElementType.GROUP ? (
+              <GroupElement context={props.context.initChild(childId)!} />
             ) : (
-              <TemplateElement context={props.context.getChild(childId)!} />
+              <TemplateElement context={props.context.initChild(childId)!} />
             )}
           </Suspense>
         )}

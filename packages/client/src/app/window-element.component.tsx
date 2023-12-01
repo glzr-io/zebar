@@ -1,5 +1,5 @@
 import { For, Show, Suspense, createSignal } from 'solid-js';
-import { ElementContext, ElementType, init } from 'zebar';
+import { ElementContext, ElementType, initWindow } from 'zebar';
 
 import { TemplateElement } from './template-element.component';
 import { GroupElement } from './group-element.component';
@@ -7,7 +7,7 @@ import { GroupElement } from './group-element.component';
 export function WindowElement() {
   const [context, setContext] = createSignal<ElementContext | null>(null);
 
-  init(context => {
+  initWindow((context: any) => {
     console.log('>>', context);
 
     setContext(context);
@@ -23,10 +23,10 @@ export function WindowElement() {
           <For each={context().childIds}>
             {childId => (
               <Suspense fallback={<p>meepleft</p>}>
-                {context().getChild(childId)!.type === ElementType.GROUP ? (
-                  <GroupElement context={context().getChild(childId)!} />
+                {context().initChild(childId)!.type === ElementType.GROUP ? (
+                  <GroupElement context={context().initChild(childId)!} />
                 ) : (
-                  <TemplateElement context={context().getChild(childId)!} />
+                  <TemplateElement context={context().initChild(childId)!} />
                 )}
               </Suspense>
             )}
