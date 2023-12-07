@@ -1,7 +1,11 @@
 import { Accessor } from 'solid-js';
 
 import { WindowConfig, GroupConfig, TemplateConfig } from './user-config';
-import { ElementType, getElementVariables } from './context';
+import {
+  ElementType,
+  getParsedElementConfig,
+  getElementVariables,
+} from './context';
 
 export interface InitElementArgs {
   id: string;
@@ -15,7 +19,17 @@ export function initElement(args: InitElementArgs) {
   const childConfigs = getChildConfigs(args.config);
   const childIds = childConfigs.map(([key]) => key);
 
-  const { element, merged } = getElementVariables(args.config);
+  const { element, merged } = getElementVariables(
+    args.config,
+    args.ancestorVariables,
+  );
+
+  const parsedConfig = getParsedElementConfig({
+    id: args.id,
+    type,
+    config: args.config,
+    variables: merged,
+  });
 
   return {
     id: args.id,
@@ -24,8 +38,8 @@ export function initElement(args: InitElementArgs) {
     variables: merged,
     type,
     childIds,
-    initChild: () => {
-      const foundConfig = childConfigs.find(([key]) => key === args.id);
+    initChild: (id: string) => {
+      const foundConfig = childConfigs.find(([key]) => key === id);
 
       if (!foundConfig) {
         return null;
