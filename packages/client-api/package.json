@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "npm run build -- --watch src",
     "build": "tsup",
+    "lint": "eslint .",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
