@@ -5,18 +5,12 @@ module.exports = {
     '@vercel/style-guide/eslint/node',
     '@vercel/style-guide/eslint/typescript',
     '@vercel/style-guide/eslint/browser',
-    // 'prettier',
   ].map(require.resolve),
-  parserOptions: {
-    project: `${__dirname}/tsconfig.json`,
-  },
-  globals: {
-    JSX: true,
-  },
   settings: {
     'import/resolver': {
       typescript: {
-        project: `${__dirname}/tsconfig.json`,
+        project: ['packages/**/tsconfig.json'],
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
       },
     },
   },
