@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{fs, io::Read, path::PathBuf};
 
 use anyhow::{Context, Result};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
@@ -33,21 +33,28 @@ fn create_from_sample(
   config_path: &PathBuf,
   app_handle: AppHandle,
 ) -> Result<String> {
-  let sample_config = app_handle
-    .asset_resolver()
-    .get("resources/sample-config.yaml".to_owned())
-    .context("Unable to resolve sample config.")?;
+  let sample_path = app_handle
+    .path()
+    .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
+    .context("Unable to resolve sample config path.")?;
+
+  let mut sample_file =
+    fs::File::open(&sample_path).context("Unable to read sample config.")?;
+
+  // Read the contents of the sample config.
+  let mut config_string = String::new();
+  sample_file.read_to_string(&mut config_string)?;
+
+  let parent_dir = config_path.parent().context("Invalid config directory.")?;
 
   // Create the containing directory for the config file.
-  let parent_dir = config_path.parent().context("Invalid config directory.")?;
   std::fs::create_dir_all(&parent_dir).with_context(|| {
     format!("Unable to create directory {}.", &config_path.display())
   })?;
 
-  fs::write(&config_path, &sample_config.bytes)
+  fs::write(&config_path, &config_string)
     .context("Unable to write config file.")?;
 
-  let config_string = String::from_utf8_lossy(&sample_config.bytes).to_string();
   Ok(config_string)
 }
 
