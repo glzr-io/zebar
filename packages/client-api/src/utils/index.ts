@@ -12,3 +12,4 @@ export * from './is-object';
 export * from './memoize';
 export * from './resolved';
 export * from './simple-hash';
+export * from './to-css-selector';

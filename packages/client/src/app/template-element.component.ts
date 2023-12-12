@@ -1,5 +1,5 @@
 import { createEffect, createMemo, onCleanup, onMount } from 'solid-js';
-import { ElementContext, createLogger } from 'zebar';
+import { ElementContext, createLogger, toCssSelector } from 'zebar';
 
 export interface TemplateElementProps {
   context: ElementContext;
@@ -11,7 +11,8 @@ export function TemplateElement(props: TemplateElementProps) {
 
   // Create element with ID.
   const element = document.createElement('div');
-  element.id = props.context.parsedConfig.id;
+  const idSelector = toCssSelector(props.context.parsedConfig.id);
+  element.id = idSelector;
 
   const template = createMemo(() => {
     //@ts-ignore - TODO
@@ -48,7 +49,7 @@ export function TemplateElement(props: TemplateElementProps) {
     const newElement = createRootElement();
     newElement.innerHTML = template();
 
-    const oldElement = document.getElementById(props.context.parsedConfig.id);
+    const oldElement = document.getElementById(idSelector);
     oldElement!.replaceWith(newElement);
   });
 
@@ -57,7 +58,7 @@ export function TemplateElement(props: TemplateElementProps) {
 
   function createRootElement() {
     const element = document.createElement('div');
-    element.id = props.context.parsedConfig.id;
+    element.id = idSelector;
     element.className = props.context.parsedConfig.class_name;
     return element;
   }
