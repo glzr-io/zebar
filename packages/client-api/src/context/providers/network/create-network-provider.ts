@@ -1,9 +1,6 @@
-import { createEffect } from 'solid-js';
-import { createStore } from 'solid-js/store';
-
-import { onProviderEmit, listenProvider, unlistenProvider } from '~/desktop';
 import { NetworkProviderConfig } from '~/user-config';
-import { memoize, simpleHash } from '~/utils';
+import { memoize } from '~/utils';
+import { createProviderListener } from '../create-provider-listener';
 
 export interface NetworkVariables {
   isLoading: boolean;
@@ -21,34 +18,17 @@ export interface NetworkInterface {
 
 export const createNetworkProvider = memoize(
   (config: NetworkProviderConfig) => {
-    const [networkVariables, setNetworkVariables] =
-      createStore<NetworkVariables>({
-        isLoading: true,
-        interfaces: [],
-      });
-
-    createEffect(async () => {
-      const configHash = simpleHash(config);
-
-      onProviderEmit<NetworkVariables>(configHash, payload =>
-        setNetworkVariables({ ...payload, isLoading: false }),
-      );
-
-      await listenProvider({
-        configHash: configHash,
-        config: config,
-        trackedAccess: [],
-      });
-
-      return () => unlistenProvider(configHash);
-    });
+    const [networkVariables] = createProviderListener<
+      NetworkProviderConfig,
+      NetworkVariables
+    >(config);
 
     return {
       get isLoading() {
-        return networkVariables.isLoading;
+        return networkVariables()?.isLoading ?? true;
       },
       get interfaces() {
-        return networkVariables.interfaces;
+        return networkVariables()?.interfaces;
       },
     };
   },

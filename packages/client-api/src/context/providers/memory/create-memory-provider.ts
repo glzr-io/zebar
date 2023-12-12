@@ -1,9 +1,6 @@
-import { createEffect } from 'solid-js';
-import { createStore } from 'solid-js/store';
-
-import { onProviderEmit, listenProvider, unlistenProvider } from '~/desktop';
 import { MemoryProviderConfig } from '~/user-config';
-import { memoize, simpleHash } from '~/utils';
+import { memoize } from '~/utils';
+import { createProviderListener } from '../create-provider-listener';
 
 export interface MemoryVariables {
   isLoading: boolean;
@@ -16,53 +13,32 @@ export interface MemoryVariables {
 }
 
 export const createMemoryProvider = memoize((config: MemoryProviderConfig) => {
-  const [memoryVariables, setMemoryVariables] = createStore<MemoryVariables>({
-    isLoading: true,
-    freeMemory: 0,
-    usedMemory: 0,
-    totalMemory: 0,
-    freeSwap: 0,
-    usedSwap: 0,
-    totalSwap: 0,
-  });
-
-  createEffect(async () => {
-    const configHash = simpleHash(config);
-
-    onProviderEmit<MemoryVariables>(configHash, payload =>
-      setMemoryVariables({ ...payload, isLoading: false }),
-    );
-
-    await listenProvider({
-      configHash: configHash,
-      config: config,
-      trackedAccess: [],
-    });
-
-    return () => unlistenProvider(configHash);
-  });
+  const [memoryVariables] = createProviderListener<
+    MemoryProviderConfig,
+    MemoryVariables
+  >(config);
 
   return {
     get isLoading() {
-      return memoryVariables.isLoading;
+      return memoryVariables()?.isLoading ?? true;
     },
     get freeMemory() {
-      return memoryVariables.freeMemory;
+      return memoryVariables()?.freeMemory;
     },
     get usedMemory() {
-      return memoryVariables.usedMemory;
+      return memoryVariables()?.usedMemory;
     },
     get totalMemory() {
-      return memoryVariables.totalMemory;
+      return memoryVariables()?.totalMemory;
     },
     get freeSwap() {
-      return memoryVariables.freeSwap;
+      return memoryVariables()?.freeSwap;
     },
     get usedSwap() {
-      return memoryVariables.usedSwap;
+      return memoryVariables()?.usedSwap;
     },
     get totalSwap() {
-      return memoryVariables.totalSwap;
+      return memoryVariables()?.totalSwap;
     },
   };
 });

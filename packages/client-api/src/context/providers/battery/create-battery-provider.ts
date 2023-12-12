@@ -1,9 +1,6 @@
-import { createEffect } from 'solid-js';
-import { createStore } from 'solid-js/store';
-
-import { listenProvider, onProviderEmit, unlistenProvider } from '~/desktop';
 import { BatteryProviderConfig } from '~/user-config';
-import { memoize, simpleHash } from '~/utils';
+import { memoize } from '~/utils';
+import { createProviderListener } from '../create-provider-listener';
 
 export interface BatteryVariables {
   isLoading: boolean;
@@ -19,62 +16,38 @@ export interface BatteryVariables {
 
 export const createBatteryProvider = memoize(
   (config: BatteryProviderConfig) => {
-    const [batteryVariables, setBatteryVariables] =
-      createStore<BatteryVariables>({
-        isLoading: true,
-        chargePercent: 0,
-        cycleCount: 0,
-        healthPercent: 0,
-        powerConsumption: 0,
-        state: 'discharging',
-        timeTillEmpty: null,
-        timeTillFull: null,
-        voltage: null,
-      });
-
-    createEffect(async () => {
-      const configHash = simpleHash(config);
-
-      onProviderEmit<BatteryVariables>(configHash, payload =>
-        setBatteryVariables({ ...payload, isLoading: false }),
-      );
-
-      await listenProvider({
-        configHash,
-        config,
-        trackedAccess: [],
-      });
-
-      return () => unlistenProvider(configHash);
-    });
+    const [batteryVariables] = createProviderListener<
+      BatteryProviderConfig,
+      BatteryVariables
+    >(config);
 
     return {
       get isLoading() {
-        return batteryVariables.isLoading;
+        return batteryVariables()?.isLoading ?? true;
       },
       get chargePercent() {
-        return batteryVariables.chargePercent;
+        return batteryVariables()?.chargePercent;
       },
       get cycleCount() {
-        return batteryVariables.cycleCount;
+        return batteryVariables()?.cycleCount;
       },
       get healthPercent() {
-        return batteryVariables.healthPercent;
+        return batteryVariables()?.healthPercent;
       },
       get powerConsumption() {
-        return batteryVariables.powerConsumption;
+        return batteryVariables()?.powerConsumption;
       },
       get state() {
-        return batteryVariables.state;
+        return batteryVariables()?.state;
       },
       get timeTillEmpty() {
-        return batteryVariables.timeTillEmpty;
+        return batteryVariables()?.timeTillEmpty;
       },
       get timeTillFull() {
-        return batteryVariables.timeTillFull;
+        return batteryVariables()?.timeTillFull;
       },
       get voltage() {
-        return batteryVariables.voltage;
+        return batteryVariables()?.voltage;
       },
     };
   },
