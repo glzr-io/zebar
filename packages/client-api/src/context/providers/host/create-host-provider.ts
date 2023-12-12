@@ -1,9 +1,6 @@
-import { createEffect } from 'solid-js';
-import { createStore } from 'solid-js/store';
-
-import { onProviderEmit, listenProvider, unlistenProvider } from '~/desktop';
 import { HostProviderConfig } from '~/user-config';
-import { memoize, simpleHash } from '~/utils';
+import { memoize } from '~/utils';
+import { createProviderListener } from '../create-provider-listener';
 
 export interface HostVariables {
   isLoading: boolean;
@@ -16,53 +13,32 @@ export interface HostVariables {
 }
 
 export const createHostProvider = memoize((config: HostProviderConfig) => {
-  const [hostVariables, setHostVariables] = createStore<HostVariables>({
-    isLoading: true,
-    hostname: null,
-    osName: null,
-    osVersion: null,
-    friendlyOsVersion: null,
-    bootTime: 0,
-    uptime: 0,
-  });
-
-  createEffect(async () => {
-    const configHash = simpleHash(config);
-
-    onProviderEmit<HostVariables>(configHash, payload =>
-      setHostVariables({ ...payload, isLoading: false }),
-    );
-
-    await listenProvider({
-      configHash: configHash,
-      config: config,
-      trackedAccess: [],
-    });
-
-    return () => unlistenProvider(configHash);
-  });
+  const [hostVariables] = createProviderListener<
+    HostProviderConfig,
+    HostVariables
+  >(config);
 
   return {
     get isLoading() {
-      return hostVariables.isLoading;
+      return hostVariables()?.isLoading ?? true;
     },
     get hostname() {
-      return hostVariables.hostname;
+      return hostVariables()?.hostname;
     },
     get osName() {
-      return hostVariables.osName;
+      return hostVariables()?.osName;
     },
     get osVersion() {
-      return hostVariables.osVersion;
+      return hostVariables()?.osVersion;
     },
     get friendlyOsVersion() {
-      return hostVariables.friendlyOsVersion;
+      return hostVariables()?.friendlyOsVersion;
     },
     get bootTime() {
-      return hostVariables.bootTime;
+      return hostVariables()?.bootTime;
     },
     get uptime() {
-      return hostVariables.uptime;
+      return hostVariables()?.uptime;
     },
   };
 });

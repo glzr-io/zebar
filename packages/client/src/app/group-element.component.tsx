@@ -1,7 +1,7 @@
-import { For, Suspense } from 'solid-js';
-import { ElementContext, ElementType } from 'zebar';
+import { Index, Suspense } from 'solid-js';
+import { ElementContext, toCssSelector } from 'zebar';
 
-import { TemplateElement } from './template-element.component';
+import { ChildElement } from './child-element.component';
 
 export interface GroupElementProps {
   context: ElementContext;
@@ -11,22 +11,14 @@ export function GroupElement(props: GroupElementProps) {
   const config = props.context.parsedConfig;
 
   return (
-    <div id={config.id} class={config.class_name}>
-      <For each={props.context.childIds}>
+    <div id={toCssSelector(config.id)} class={config.class_name}>
+      <Index each={props.context.childIds}>
         {childId => (
-          <Suspense fallback={<p>meepleft</p>}>
-            {(() => {
-              const child = props.context.initChild(childId)!;
-
-              return child.type === ElementType.GROUP ? (
-                <GroupElement context={child} />
-              ) : (
-                <TemplateElement context={child} />
-              );
-            })()}
+          <Suspense>
+            <ChildElement childId={childId()} context={props.context} />
           </Suspense>
         )}
-      </For>
+      </Index>
     </div>
   );
 }

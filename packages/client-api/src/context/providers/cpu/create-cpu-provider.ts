@@ -1,5 +1,5 @@
+import { UnlistenFn } from '@tauri-apps/api/event';
 import { createEffect, createResource } from 'solid-js';
-import { createStore } from 'solid-js/store';
 
 import { onProviderEmit, listenProvider, unlistenProvider } from '~/desktop';
 import { CpuProviderConfig } from '~/user-config';
@@ -15,27 +15,41 @@ export interface CpuVariables {
 }
 
 export const createCpuProvider = memoize((config: CpuProviderConfig) => {
-  const [cpuVariables] = createResource<CpuVariables>(() => {
+  const configHash = simpleHash(config);
+  const unlistenFns: UnlistenFn[] = [];
+
+  const [cpuVariables, { mutate }] = createResource<CpuVariables>(() => {
     return new Promise(async resolve => {
-      setTimeout(async () => {
-        const configHash = simpleHash(config);
+      const unlisten = await onProviderEmit<CpuVariables>(configHash, payload =>
+        resolve({ ...payload, isLoading: false }),
+      );
 
-        onProviderEmit<CpuVariables>(configHash, payload =>
-          resolve({ ...payload, isLoading: false }),
-        );
+      unlistenFns.push(unlisten);
 
-        await listenProvider({
-          configHash: configHash,
-          config: config,
-          trackedAccess: [],
-        });
-      }, 7000);
+      await listenProvider({
+        configHash: configHash,
+        config: config,
+        trackedAccess: [],
+      });
     });
+  });
+
+  createEffect(async () => {
+    const unlisten = await onProviderEmit<CpuVariables>(configHash, payload =>
+      mutate({ ...payload, isLoading: false }),
+    );
+
+    unlistenFns.push(unlisten);
+
+    return () => {
+      unlistenProvider(configHash);
+      unlistenFns.forEach(unlisten => unlisten());
+    };
   });
 
   return {
     get isLoading() {
-      return cpuVariables()?.isLoading;
+      return cpuVariables()?.isLoading ?? true;
     },
     get frequency() {
       return cpuVariables()?.frequency;

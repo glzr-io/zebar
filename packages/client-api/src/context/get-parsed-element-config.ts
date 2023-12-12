@@ -1,16 +1,16 @@
 import { createComputed } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { useTemplateEngine } from '~/template-engine';
+import { TemplateError, useTemplateEngine } from '~/template-engine';
 
 import {
   TemplateConfig,
   GroupConfig,
   WindowConfig,
-  parseConfigSection,
   GroupConfigSchemaP1,
   TemplateConfigSchemaP1,
   WindowConfigSchemaP1,
+  TemplatePropertyError,
 } from '~/user-config';
 import { ElementType } from './shared';
 
@@ -33,12 +33,36 @@ export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
    * Get updated store value.
    */
   function getParsedConfig() {
-    return parseConfigSection(
-      templateEngine,
-      { ...args.config, id: args.id },
-      getSchemaForElement(args.type),
-      args.variables,
-    );
+    const config = { ...args.config, id: args.id };
+    const schema = getSchemaForElement(args.type);
+
+    const newConfigEntries = Object.entries(config).map(([key, value]) => {
+      // If value is not a string, then it can't contain any templating syntax.
+      if (typeof value !== 'string') {
+        return [key, value];
+      }
+
+      // Run the value through the templating engine.
+      try {
+        const rendered = templateEngine.render(value, args.variables);
+        return [key, rendered];
+      } catch (err) {
+        // Re-throw error as `TemplatePropertyError`.
+        throw err instanceof TemplateError
+          ? new TemplatePropertyError(
+              err.message,
+              key,
+              value,
+              err.templateIndex,
+            )
+          : err;
+      }
+    });
+
+    // TODO: Add logging for updated config here.
+    const newConfig = Object.fromEntries(newConfigEntries);
+
+    return schema.parse(newConfig);
   }
 
   // TODO: Validate in P1 schemas that `template/` and `group/` keys exist.

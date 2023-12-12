@@ -1,11 +1,17 @@
-import { Accessor } from 'solid-js';
+import { Accessor, createEffect } from 'solid-js';
 
-import { WindowConfig, GroupConfig, TemplateConfig } from './user-config';
+import {
+  WindowConfig,
+  GroupConfig,
+  TemplateConfig,
+  useStyleBuilder,
+} from './user-config';
 import {
   ElementType,
   getParsedElementConfig,
   getElementVariables,
 } from './context';
+import { memoize } from './utils';
 
 export interface InitElementArgs {
   id: string;
@@ -13,7 +19,8 @@ export interface InitElementArgs {
   ancestorVariables?: Accessor<Record<string, unknown>>[];
 }
 
-export function initElement(args: InitElementArgs) {
+export const initElement = memoize((args: InitElementArgs) => {
+  const styleBuilder = useStyleBuilder();
   const type = getElementType(args.id);
 
   const childConfigs = getChildConfigs(args.config);
@@ -29,6 +36,12 @@ export function initElement(args: InitElementArgs) {
     type,
     config: args.config,
     variables: merged,
+  });
+
+  createEffect(() => {
+    if (parsedConfig.styles) {
+      styleBuilder.setElementStyles(parsedConfig.id, parsedConfig.styles);
+    }
   });
 
   return {
@@ -54,7 +67,7 @@ export function initElement(args: InitElementArgs) {
       });
     },
   };
-}
+});
 
 /**
  * Get child element configs.
