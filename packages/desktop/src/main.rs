@@ -5,14 +5,22 @@
 use std::{
   collections::HashMap,
   env::{self},
+  sync::Arc,
 };
 
+use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
-use tauri::{AppHandle, RunEvent, State, WindowBuilder, WindowUrl};
-use tokio::{sync::mpsc, task};
+use serde::Serialize;
+use tauri::{
+  AppHandle, Monitor, RunEvent, State, Window, WindowBuilder, WindowUrl,
+};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task,
+};
 use tracing::info;
 
 mod cli;
@@ -107,15 +115,20 @@ async fn main() {
           // Handle creation of new windows (both from the initial and
           // subsequent instances of the application)
           _ = task::spawn(async move {
+            let window_count = Arc::new(Mutex::new(0));
+
             while let Some(create_args) = rx.recv().await {
+              let mut window_count = window_count.lock().await;
+              *window_count += 1;
+
               info!(
-                "Creating window '{}' with args: {:#?}",
-                create_args.window_id, create_args.args
+                "Creating window #{} '{}' with args: {:#?}",
+                window_count, create_args.window_id, create_args.args
               );
 
-              _ = WindowBuilder::new(
+              let window = WindowBuilder::new(
                 &app_handle,
-                &create_args.window_id,
+                format!("{}-{}", &create_args.window_id, window_count),
                 WindowUrl::default(),
               )
               .title(format!("Zebar - {}", create_args.window_id))
@@ -124,6 +137,24 @@ async fn main() {
               .resizable(false)
               .build()
               .unwrap();
+
+              let initial_state = get_initial_state(
+                &app_handle,
+                &window,
+                create_args.args,
+                create_args.env,
+              )
+              .unwrap();
+
+              let initial_state_str =
+                serde_json::to_string(&initial_state).unwrap();
+
+              info!("Window initial state: {}", initial_state_str);
+
+              _ = window.eval(&format!(
+                "window.__ZEBAR_INIT_STATE={}",
+                initial_state_str,
+              ));
             }
           });
 
@@ -145,4 +176,89 @@ async fn main() {
       api.prevent_exit();
     }
   })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InitialState {
+  args: HashMap<String, String>,
+  env: HashMap<String, String>,
+  current_window: WindowInfo,
+  current_monitor: Option<MonitorInfo>,
+  primary_monitor: Option<MonitorInfo>,
+  monitors: Vec<MonitorInfo>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MonitorInfo {
+  name: String,
+  x: i32,
+  y: i32,
+  width: u32,
+  height: u32,
+  scale_factor: f64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowInfo {
+  x: i32,
+  y: i32,
+  width: u32,
+  height: u32,
+  scale_factor: f64,
+}
+
+fn get_initial_state(
+  app_handle: &AppHandle,
+  window: &Window,
+  args: HashMap<String, String>,
+  env: HashMap<String, String>,
+) -> Result<InitialState> {
+  let monitors = app_handle
+    .available_monitors()?
+    .iter()
+    .map(|monitor| to_monitor_info(&monitor))
+    .collect();
+
+  Ok(InitialState {
+    args,
+    env,
+    current_window: to_window_info(&window)?,
+    current_monitor: window
+      .current_monitor()?
+      .map(|monitor| to_monitor_info(&monitor)),
+    primary_monitor: app_handle
+      .primary_monitor()?
+      .map(|monitor| to_monitor_info(&monitor)),
+    monitors,
+  })
+}
+
+fn to_window_info(window: &Window) -> Result<WindowInfo> {
+  let window_position = window.outer_position()?;
+  let window_size = window.outer_size()?;
+
+  Ok(WindowInfo {
+    scale_factor: window.scale_factor()?,
+    width: window_size.width,
+    height: window_size.height,
+    x: window_position.x,
+    y: window_position.y,
+  })
+}
+
+fn to_monitor_info(monitor: &Monitor) -> MonitorInfo {
+  let monitor_position = monitor.position();
+  let monitor_size = monitor.size();
+
+  MonitorInfo {
+    name: monitor.name().unwrap_or(&"".to_owned()).to_string(),
+    scale_factor: monitor.scale_factor(),
+    width: monitor_size.width,
+    height: monitor_size.height,
+    x: monitor_position.x,
+    y: monitor_position.y,
+  }
 }

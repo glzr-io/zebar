@@ -6,6 +6,8 @@ export * from './glazewm-provider-config.model';
 export * from './host-provider-config.model';
 export * from './ip-provider-config.model';
 export * from './memory-provider-config.model';
+export * from './monitors-provider-config.model';
 export * from './network-provider-config.model';
+export * from './self-provider-config.model';
 export * from './system-tray-provider-config.model';
 export * from './weather-provider-config.model';
