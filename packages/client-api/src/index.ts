@@ -1,3 +1,3 @@
 export { type ElementContext, ElementType } from './context';
 export { createLogger, toCssSelector } from './utils';
-export { initWindow } from './init-window';
+export { initWindow, initWindowAsync } from './init-window';

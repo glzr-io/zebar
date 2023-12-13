@@ -8,21 +8,21 @@ import { createLogger } from '~/utils';
 import { getMonitorPosition } from './current-monitor';
 
 export interface WindowPosition {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface WindowStyles {
-  alwaysOnTop?: boolean;
-  showInTaskbar?: boolean;
-  resizable?: boolean;
+  alwaysOnTop: boolean;
+  showInTaskbar: boolean;
+  resizable: boolean;
 }
 
 const logger = createLogger('current-window');
 
-export async function setWindowPosition(position: WindowPosition) {
+export async function setWindowPosition(position: Partial<WindowPosition>) {
   const monitorPosition = await getMonitorPosition();
 
   const parsedPosition = {
@@ -43,7 +43,7 @@ export async function setWindowPosition(position: WindowPosition) {
   );
 }
 
-export async function setWindowStyles(styles: WindowStyles) {
+export async function setWindowStyles(styles: Partial<WindowStyles>) {
   await getCurrentWindow().setAlwaysOnTop(styles.alwaysOnTop ?? true);
   await getCurrentWindow().setSkipTaskbar(!styles.showInTaskbar ?? false);
   await getCurrentWindow().setResizable(styles.resizable ?? false);
