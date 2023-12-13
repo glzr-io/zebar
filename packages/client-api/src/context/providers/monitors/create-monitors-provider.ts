@@ -1,4 +1,3 @@
-import { Suspense } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { MonitorInfo } from '~/desktop';
@@ -12,22 +11,30 @@ export interface MonitorsVariables {
 }
 
 export const createMonitorsProvider = memoize((_: MonitorsProviderConfig) => {
-  const [monitorVariables] = createStore<MonitorsVariables>(
-    getInitialVariables(),
-  );
+  const [monitorVariables] = createStore<MonitorsVariables>(getVariables());
 
-  function getInitialVariables() {
-    const { primaryMonitor, allMonitors } = window.__ZEBAR_INIT_STATE;
+  function getVariables() {
+    const { primaryMonitor, monitors } = window.__ZEBAR_INIT_STATE;
 
-    const secondaryMonitors = allMonitors.filter(
-      monitor => monitor.name !== primaryMonitor.name,
+    const secondaryMonitors = monitors.filter(
+      monitor => !primaryMonitor || isMatch(monitor, primaryMonitor),
     );
 
     return {
       primary: primaryMonitor,
       secondary: secondaryMonitors,
-      all: allMonitors,
+      all: monitors,
     };
+  }
+
+  function isMatch(monitorA: MonitorInfo, monitorB: MonitorInfo) {
+    return (
+      monitorA.name === monitorB.name &&
+      monitorA.x === monitorB.x &&
+      monitorA.y === monitorB.y &&
+      monitorA.width === monitorB.width &&
+      monitorA.height === monitorB.height
+    );
   }
 
   return {

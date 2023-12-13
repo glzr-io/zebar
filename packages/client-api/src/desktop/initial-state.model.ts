@@ -1,4 +1,6 @@
 export interface InitialState {
+  args: Record<string, string>;
+  env: Record<string, string>;
   currentWindow: WindowInfo;
   currentMonitor?: MonitorInfo;
   primaryMonitor?: MonitorInfo;

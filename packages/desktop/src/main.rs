@@ -138,14 +138,21 @@ async fn main() {
               .build()
               .unwrap();
 
-              let initial_state =
-                get_initial_state(&app_handle, &window).unwrap();
+              let initial_state = get_initial_state(
+                &app_handle,
+                &window,
+                create_args.args,
+                create_args.env,
+              )
+              .unwrap();
 
               let initial_state_str =
                 serde_json::to_string(&initial_state).unwrap();
 
+              info!("Window initial state: {}", initial_state_str);
+
               _ = window.eval(&format!(
-                "window.__ZEBAR_INIT_STATE='{}'",
+                "window.__ZEBAR_INIT_STATE={}",
                 initial_state_str,
               ));
             }
@@ -174,6 +181,8 @@ async fn main() {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct InitialState {
+  args: HashMap<String, String>,
+  env: HashMap<String, String>,
   current_window: WindowInfo,
   current_monitor: Option<MonitorInfo>,
   primary_monitor: Option<MonitorInfo>,
@@ -204,6 +213,8 @@ struct WindowInfo {
 fn get_initial_state(
   app_handle: &AppHandle,
   window: &Window,
+  args: HashMap<String, String>,
+  env: HashMap<String, String>,
 ) -> Result<InitialState> {
   let monitors = app_handle
     .available_monitors()?
@@ -212,6 +223,8 @@ fn get_initial_state(
     .collect();
 
   Ok(InitialState {
+    args,
+    env,
     current_window: to_window_info(&window)?,
     current_monitor: window
       .current_monitor()?

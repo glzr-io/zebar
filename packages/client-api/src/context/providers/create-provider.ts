@@ -6,6 +6,7 @@ import { createGlazewmProvider } from './glazewm/create-glazewm-provider';
 import { createHostProvider } from './host/create-host-provider';
 import { createIpProvider } from './ip/create-ip-provider';
 import { createMemoryProvider } from './memory/create-memory-provider';
+import { createMonitorsProvider } from './monitors/create-monitors-provider';
 import { createNetworkProvider } from './network/create-network-provider';
 import { createSelfProvider } from './self/create-self-provider';
 import { createSystemTrayProvider } from './system-tray/create-system-tray-provider';
@@ -31,6 +32,8 @@ export const createProvider = memoize((config: ProviderConfig) => {
       return createIpProvider(config);
     case 'memory':
       return createMemoryProvider(config);
+    case 'monitors':
+      return createMonitorsProvider(config);
     case 'network':
       return createNetworkProvider(config);
     case 'self':

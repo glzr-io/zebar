@@ -1,9 +1,7 @@
-import { InitialState } from './desktop';
-
 interface Window {
   __TAURI__: any;
   __ZEBAR_FNS: Record<string, Function>;
-  __ZEBAR_INIT_STATE: InitialState;
+  __ZEBAR_INIT_STATE: import('./desktop').InitialState;
 }
 
 declare module '*.html' {
