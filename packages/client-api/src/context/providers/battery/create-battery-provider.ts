@@ -1,9 +1,9 @@
+import { Owner } from 'solid-js';
+
 import { BatteryProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface BatteryVariables {
-  isLoading: boolean;
   chargePercent: number;
   cycleCount: number;
   healthPercent: number;
@@ -14,41 +14,39 @@ export interface BatteryVariables {
   voltage: number | null;
 }
 
-export const createBatteryProvider = memoize(
-  (config: BatteryProviderConfig) => {
-    const [batteryVariables] = createProviderListener<
-      BatteryProviderConfig,
-      BatteryVariables
-    >(config);
+export async function createBatteryProvider(
+  config: BatteryProviderConfig,
+  owner: Owner,
+) {
+  const batteryVariables = await createProviderListener<
+    BatteryProviderConfig,
+    BatteryVariables
+  >(config, owner);
 
-    return {
-      get isLoading() {
-        return batteryVariables()?.isLoading ?? true;
-      },
-      get chargePercent() {
-        return batteryVariables()?.chargePercent;
-      },
-      get cycleCount() {
-        return batteryVariables()?.cycleCount;
-      },
-      get healthPercent() {
-        return batteryVariables()?.healthPercent;
-      },
-      get powerConsumption() {
-        return batteryVariables()?.powerConsumption;
-      },
-      get state() {
-        return batteryVariables()?.state;
-      },
-      get timeTillEmpty() {
-        return batteryVariables()?.timeTillEmpty;
-      },
-      get timeTillFull() {
-        return batteryVariables()?.timeTillFull;
-      },
-      get voltage() {
-        return batteryVariables()?.voltage;
-      },
-    };
-  },
-);
+  return {
+    get chargePercent() {
+      return batteryVariables().chargePercent;
+    },
+    get cycleCount() {
+      return batteryVariables().cycleCount;
+    },
+    get healthPercent() {
+      return batteryVariables().healthPercent;
+    },
+    get powerConsumption() {
+      return batteryVariables().powerConsumption;
+    },
+    get state() {
+      return batteryVariables().state;
+    },
+    get timeTillEmpty() {
+      return batteryVariables().timeTillEmpty;
+    },
+    get timeTillFull() {
+      return batteryVariables().timeTillFull;
+    },
+    get voltage() {
+      return batteryVariables().voltage;
+    },
+  };
+}

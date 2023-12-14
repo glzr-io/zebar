@@ -1,3 +1,5 @@
+import { Owner } from 'solid-js';
+
 import { createActiveWindowProvider } from './active-window/create-active-window-provider';
 import { createBatteryProvider } from './battery/create-battery-provider';
 import { createCpuProvider } from './cpu/create-cpu-provider';
@@ -12,37 +14,36 @@ import { createSelfProvider } from './self/create-self-provider';
 import { createSystemTrayProvider } from './system-tray/create-system-tray-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
 import { ProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 
-export const createProvider = memoize((config: ProviderConfig) => {
+export async function createProvider(config: ProviderConfig, owner: Owner) {
   switch (config.type) {
     case 'active_window':
       return createActiveWindowProvider(config);
     case 'battery':
-      return createBatteryProvider(config);
+      return createBatteryProvider(config, owner);
     case 'cpu':
-      return createCpuProvider(config);
+      return createCpuProvider(config, owner);
     case 'date':
-      return createDateProvider(config);
+      return createDateProvider(config, owner);
     case 'glazewm':
-      return createGlazewmProvider(config);
+      return createGlazewmProvider(config, owner);
     case 'host':
-      return createHostProvider(config);
+      return createHostProvider(config, owner);
     case 'ip':
-      return createIpProvider(config);
+      return createIpProvider(config, owner);
     case 'memory':
-      return createMemoryProvider(config);
+      return createMemoryProvider(config, owner);
     case 'monitors':
-      return createMonitorsProvider(config);
+      return createMonitorsProvider(config, owner);
     case 'network':
-      return createNetworkProvider(config);
+      return createNetworkProvider(config, owner);
     case 'self':
-      return createSelfProvider(config);
+      return createSelfProvider(config, owner);
     case 'system_tray':
       return createSystemTrayProvider(config);
     case 'weather':
-      return createWeatherProvider(config);
+      return createWeatherProvider(config, owner);
     default:
       throw new Error('Not a supported provider type.');
   }
-});
+}

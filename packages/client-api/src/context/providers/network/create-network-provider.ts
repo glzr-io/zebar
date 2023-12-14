@@ -1,9 +1,9 @@
+import { Owner } from 'solid-js';
+
 import { NetworkProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface NetworkVariables {
-  isLoading: boolean;
   interfaces: NetworkInterface[];
 }
 
@@ -16,20 +16,18 @@ export interface NetworkInterface {
   totalReceived: number;
 }
 
-export const createNetworkProvider = memoize(
-  (config: NetworkProviderConfig) => {
-    const [networkVariables] = createProviderListener<
-      NetworkProviderConfig,
-      NetworkVariables
-    >(config);
+export async function createNetworkProvider(
+  config: NetworkProviderConfig,
+  owner: Owner,
+) {
+  const networkVariables = await createProviderListener<
+    NetworkProviderConfig,
+    NetworkVariables
+  >(config, owner);
 
-    return {
-      get isLoading() {
-        return networkVariables()?.isLoading ?? true;
-      },
-      get interfaces() {
-        return networkVariables()?.interfaces;
-      },
-    };
-  },
-);
+  return {
+    get interfaces() {
+      return networkVariables().interfaces;
+    },
+  };
+}

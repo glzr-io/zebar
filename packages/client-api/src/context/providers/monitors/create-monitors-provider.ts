@@ -1,8 +1,8 @@
+import { Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { MonitorInfo } from '~/desktop';
 import { MonitorsProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 
 export interface MonitorsVariables {
   primary?: MonitorInfo;
@@ -10,7 +10,10 @@ export interface MonitorsVariables {
   all: MonitorInfo[];
 }
 
-export const createMonitorsProvider = memoize((_: MonitorsProviderConfig) => {
+export async function createMonitorsProvider(
+  _: MonitorsProviderConfig,
+  owner: Owner,
+) {
   const [monitorVariables] = createStore<MonitorsVariables>(getVariables());
 
   function getVariables() {
@@ -48,4 +51,4 @@ export const createMonitorsProvider = memoize((_: MonitorsProviderConfig) => {
       return monitorVariables.all;
     },
   };
-});
+}
