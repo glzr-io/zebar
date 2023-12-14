@@ -54,38 +54,25 @@ export async function initWindowAsync(): Promise<ElementContext> {
 
   // Set window position based on config values.
   runWithOwner(owner, () => {
-    createEffect(async () => {
-      const windowConfig = windowContext.parsedConfig as WindowConfig;
-
-      await setWindowPosition({
-        x: windowConfig.position_x,
-        y: windowConfig.position_y,
-        width: windowConfig.width,
-        height: windowConfig.height,
-      });
-
-      await setWindowStyles({
-        alwaysOnTop: windowConfig.always_on_top,
-        showInTaskbar: windowConfig.show_in_taskbar,
-        resizable: windowConfig.resizable,
-      });
-    });
+    createEffect(() =>
+      redrawWindow(windowContext.parsedConfig as WindowConfig),
+    );
   });
 
   return windowContext;
 }
 
-async function redrawWindow(windowConfig: WindowConfig): Promise<void> {
+async function redrawWindow(config: WindowConfig): Promise<void> {
   await setWindowPosition({
-    x: windowConfig.position_x,
-    y: windowConfig.position_y,
-    width: windowConfig.width,
-    height: windowConfig.height,
+    x: config.position_x,
+    y: config.position_y,
+    width: config.width,
+    height: config.height,
   });
 
   await setWindowStyles({
-    alwaysOnTop: windowConfig.always_on_top,
-    showInTaskbar: windowConfig.show_in_taskbar,
-    resizable: windowConfig.resizable,
+    alwaysOnTop: config.always_on_top,
+    showInTaskbar: config.show_in_taskbar,
+    resizable: config.resizable,
   });
 }

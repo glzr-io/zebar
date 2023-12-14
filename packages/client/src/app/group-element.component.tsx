@@ -1,4 +1,4 @@
-import { Index, Suspense } from 'solid-js';
+import { Index } from 'solid-js';
 import { ElementContext, toCssSelector } from 'zebar';
 
 import { ChildElement } from './child-element.component';
@@ -14,9 +14,7 @@ export function GroupElement(props: GroupElementProps) {
     <div id={toCssSelector(config.id)} class={config.class_name}>
       <Index each={props.context.childIds}>
         {childId => (
-          <Suspense>
-            <ChildElement childId={childId()} parentContext={props.context} />
-          </Suspense>
+          <ChildElement childId={childId()} parentContext={props.context} />
         )}
       </Index>
     </div>

@@ -1,13 +1,11 @@
 import axios from 'axios';
-import { onCleanup } from 'solid-js';
+import { Owner, onCleanup, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { memoize } from '~/utils';
 import { IpProviderConfig } from '~/user-config';
 import { IpInfoApiResponse } from './ip-info-api-response.model';
 
 export interface IpVariables {
-  isLoading: boolean;
   address: string;
   approxCity: string;
   approxCountry: string;
@@ -15,9 +13,8 @@ export interface IpVariables {
   approxLongitude: string;
 }
 
-export const createIpProvider = memoize((config: IpProviderConfig) => {
+export async function createIpProvider(config: IpProviderConfig, owner: Owner) {
   const [ipVariables, setIpVariables] = createStore<IpVariables>({
-    isLoading: true,
     address: '',
     approxCity: '',
     approxCountry: '',
@@ -25,9 +22,9 @@ export const createIpProvider = memoize((config: IpProviderConfig) => {
     approxLongitude: '',
   });
 
-  refresh();
-  const interval = setInterval(() => refresh(), config.refresh_interval_ms);
-  onCleanup(() => clearInterval(interval));
+  await refresh();
+  const interval = setInterval(refresh, config.refresh_interval_ms);
+  runWithOwner(owner, () => onCleanup(() => clearInterval(interval)));
 
   async function refresh() {
     // Use https://ipinfo.io as provider for IP-related info.
@@ -36,7 +33,6 @@ export const createIpProvider = memoize((config: IpProviderConfig) => {
     );
 
     setIpVariables({
-      isLoading: false,
       address: data.ip,
       approxCity: data.city,
       approxCountry: data.country,
@@ -46,9 +42,6 @@ export const createIpProvider = memoize((config: IpProviderConfig) => {
   }
 
   return {
-    get isLoading() {
-      return ipVariables.isLoading;
-    },
     get address() {
       return ipVariables.address;
     },
@@ -66,4 +59,4 @@ export const createIpProvider = memoize((config: IpProviderConfig) => {
     },
     refresh,
   };
-});
+}

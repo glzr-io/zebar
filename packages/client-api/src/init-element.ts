@@ -25,7 +25,7 @@ export async function initElement(
   const childConfigs = getChildConfigs(args.config);
   const childIds = childConfigs.map(([key]) => key);
 
-  const { element, merged } = getElementVariables(
+  const { element, merged } = await getElementVariables(
     args.config,
     args.ancestorVariables,
     args.owner,

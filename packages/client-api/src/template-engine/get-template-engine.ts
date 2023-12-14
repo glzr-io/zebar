@@ -1,6 +1,6 @@
 import { createStore, reconcile } from 'solid-js/store';
 
-import { getRandomWithoutCollision, memoize } from '~/utils';
+import { getRandomWithoutCollision } from '~/utils';
 import { TemplateNode, parseTokens } from './token-parsing';
 import { renderTemplateNodes } from './rendering';
 import { tokenizeTemplate } from './tokenizing';

@@ -2,7 +2,7 @@ import {
   Accessor,
   Owner,
   createComputed,
-  createMemo,
+  createSignal,
   runWithOwner,
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
@@ -15,26 +15,12 @@ import {
 } from '~/user-config';
 import { createProvider } from './providers';
 
-export function getElementVariables(
+export async function getElementVariables(
   config: WindowConfig | GroupConfig | TemplateConfig,
   ancestorVariables: Accessor<Record<string, unknown>>[],
   owner: Owner,
 ) {
-  const elementVariables = runWithOwner(owner, () =>
-    createMemo(() => {
-      const providerConfigs = ProvidersConfigSchema.parse(
-        config?.providers ?? [],
-      );
-
-      return providerConfigs.reduce(
-        (acc, config) => ({
-          ...acc,
-          [config.type]: createProvider(config),
-        }),
-        {},
-      );
-    }),
-  )!;
+  const [elementVariables, _] = createSignal(await getElementVariables());
 
   const [mergedVariables, setMergedVariables] =
     createStore(getMergedVariables());
@@ -45,7 +31,31 @@ export function getElementVariables(
   });
 
   /**
-   * Get updated store value.
+   * Get map of element providers.
+   */
+  async function getElementVariables() {
+    const providerConfigs = ProvidersConfigSchema.parse(
+      config?.providers ?? [],
+    );
+
+    // Create tuple of configs and the created provider.
+    const providers = await Promise.all(
+      providerConfigs.map(
+        async config => [config, await createProvider(config, owner)] as const,
+      ),
+    );
+
+    return providers.reduce(
+      (acc, [config, provider]) => ({
+        ...acc,
+        [config.type]: provider,
+      }),
+      {},
+    );
+  }
+
+  /**
+   * Get map of element providers merged with ancestor providers.
    */
   function getMergedVariables() {
     const mergedAncestorVariables = (ancestorVariables ?? []).reduce(
