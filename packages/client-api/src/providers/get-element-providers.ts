@@ -15,25 +15,25 @@ import {
 } from '~/user-config';
 import { createProvider } from '.';
 
-export async function getElementVariables(
+export async function getElementProviders(
   config: WindowConfig | GroupConfig | TemplateConfig,
-  ancestorVariables: Accessor<Record<string, unknown>>[],
+  ancestorProviders: Accessor<Record<string, unknown>>[],
   owner: Owner,
 ) {
-  const [elementVariables, _] = createSignal(await getElementVariables());
+  const [elementProviders, _] = createSignal(await getElementProviders());
 
-  const [mergedVariables, setMergedVariables] =
-    createStore(getMergedVariables());
+  const [mergedProviders, setMergedProviders] =
+    createStore(getMergedProviders());
 
   // Update the store on changes to any provider variables.
   runWithOwner(owner, () => {
-    createComputed(() => setMergedVariables(getMergedVariables()));
+    createComputed(() => setMergedProviders(getMergedProviders()));
   });
 
   /**
    * Get map of element providers.
    */
-  async function getElementVariables() {
+  async function getElementProviders() {
     const providerConfigs = ProvidersConfigSchema.parse(
       config?.providers ?? [],
     );
@@ -57,20 +57,20 @@ export async function getElementVariables(
   /**
    * Get map of element providers merged with ancestor providers.
    */
-  function getMergedVariables() {
-    const mergedAncestorVariables = (ancestorVariables ?? []).reduce(
+  function getMergedProviders() {
+    const mergedancestorProviders = (ancestorProviders ?? []).reduce(
       (acc, vars) => ({ ...acc, ...vars() }),
       {},
     );
 
     return {
-      ...mergedAncestorVariables,
-      ...elementVariables(),
+      ...mergedancestorProviders,
+      ...elementProviders(),
     };
   }
 
   return {
-    element: elementVariables,
-    merged: mergedVariables,
+    element: elementProviders,
+    merged: mergedProviders,
   };
 }

@@ -40,7 +40,7 @@ export async function initWindowAsync(): Promise<ElementContext> {
   const windowContext = await initElement({
     id: configKey,
     config: (config as UserConfig)[configKey],
-    ancestorVariables: [() => rootVariables],
+    ancestorProviders: [() => rootVariables],
     owner,
   });
 

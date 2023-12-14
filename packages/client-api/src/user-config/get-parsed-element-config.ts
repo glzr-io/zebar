@@ -17,7 +17,7 @@ export interface GetParsedElementConfigArgs {
   id: string;
   type: ElementType;
   config: WindowConfig | GroupConfig | TemplateConfig;
-  variables: Record<string, unknown>;
+  providers: Record<string, unknown>;
   owner: Owner;
 }
 
@@ -46,7 +46,7 @@ export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
 
       // Run the value through the templating engine.
       try {
-        const rendered = templateEngine.render(value, args.variables);
+        const rendered = templateEngine.render(value, args.providers);
         return [key, rendered];
       } catch (err) {
         // Re-throw error as `TemplatePropertyError`.
