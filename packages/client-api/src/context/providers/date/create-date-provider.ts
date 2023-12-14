@@ -1,8 +1,7 @@
 import { DateTime } from 'luxon';
-import { onCleanup } from 'solid-js';
+import { Owner, onCleanup, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { memoize } from '~/utils';
 import { DateProviderConfig } from '~/user-config';
 
 export interface DateVariables {
@@ -25,17 +24,21 @@ export interface DateVariables {
   iso: string;
 }
 
-export const createDateProvider = memoize((config: DateProviderConfig) => {
-  const [dateVariables, setDateVariables] = createStore<DateVariables>(
-    getDateVariables(),
-  );
+export async function createDateProvider(
+  config: DateProviderConfig,
+  owner: Owner,
+) {
+  const [dateVariables, setDateVariables] =
+    createStore<DateVariables>(getDateVariables());
 
   const interval = setInterval(
     () => setDateVariables(getDateVariables()),
     config.refresh_interval_ms,
   );
 
-  onCleanup(() => clearInterval(interval));
+  runWithOwner(owner, () => {
+    onCleanup(() => clearInterval(interval));
+  });
 
   function getDateVariables() {
     const date = new Date();
@@ -69,4 +72,4 @@ export const createDateProvider = memoize((config: DateProviderConfig) => {
     },
     toFormat,
   };
-});
+}

@@ -1,4 +1,4 @@
-import { Index, Show, Suspense, createSignal } from 'solid-js';
+import { Index, Show, createSignal } from 'solid-js';
 import { ElementContext, initWindow, toCssSelector } from 'zebar';
 
 import { ChildElement } from './child-element.component';
@@ -17,9 +17,7 @@ export function WindowElement() {
         >
           <Index each={context().childIds}>
             {childId => (
-              <Suspense>
-                <ChildElement childId={childId()} context={context()} />
-              </Suspense>
+              <ChildElement childId={childId()} parentContext={context()} />
             )}
           </Index>
         </div>

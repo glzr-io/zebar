@@ -1,9 +1,9 @@
+import { Owner } from 'solid-js';
+
 import { HostProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface HostVariables {
-  isLoading: boolean;
   hostname: string | null;
   osName: string | null;
   osVersion: string | null;
@@ -12,33 +12,33 @@ export interface HostVariables {
   uptime: number;
 }
 
-export const createHostProvider = memoize((config: HostProviderConfig) => {
-  const [hostVariables] = createProviderListener<
+export async function createHostProvider(
+  config: HostProviderConfig,
+  owner: Owner,
+) {
+  const hostVariables = await createProviderListener<
     HostProviderConfig,
     HostVariables
-  >(config);
+  >(config, owner);
 
   return {
-    get isLoading() {
-      return hostVariables()?.isLoading ?? true;
-    },
     get hostname() {
-      return hostVariables()?.hostname;
+      return hostVariables().hostname;
     },
     get osName() {
-      return hostVariables()?.osName;
+      return hostVariables().osName;
     },
     get osVersion() {
-      return hostVariables()?.osVersion;
+      return hostVariables().osVersion;
     },
     get friendlyOsVersion() {
-      return hostVariables()?.friendlyOsVersion;
+      return hostVariables().friendlyOsVersion;
     },
     get bootTime() {
-      return hostVariables()?.bootTime;
+      return hostVariables().bootTime;
     },
     get uptime() {
-      return hostVariables()?.uptime;
+      return hostVariables().uptime;
     },
   };
-});
+}

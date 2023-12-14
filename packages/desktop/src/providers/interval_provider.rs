@@ -42,14 +42,8 @@ impl<T: IntervalProvider + Send> Provider for T {
       let mut interval =
         time::interval(Duration::from_millis(refresh_interval_ms));
 
-      _ = emit_output_tx
-        .send(ProviderOutput {
-          config_hash: config_hash.clone(),
-          variables: T::get_refreshed_variables(&state).await,
-        })
-        .await;
-
       loop {
+        // The first tick fires immediately.
         interval.tick().await;
 
         _ = emit_output_tx

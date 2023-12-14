@@ -8,5 +8,5 @@ export interface ElementContext<T = unknown> {
   type: ElementType;
   variables: T;
   childIds: string[];
-  initChild: (id: string) => ElementContext | null;
+  initChild: (id: string) => Promise<ElementContext | null>;
 }

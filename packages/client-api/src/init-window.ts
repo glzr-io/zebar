@@ -1,12 +1,12 @@
-import { createEffect, createResource, createRoot } from 'solid-js';
+import { createEffect, getOwner, runWithOwner } from 'solid-js';
 
 import {
   GlobalConfigSchema,
   UserConfig,
   WindowConfig,
-  useStyleBuilder,
   getConfigVariables,
-  useUserConfig,
+  getUserConfig,
+  getStyleBuilder,
 } from './user-config';
 import { ElementContext } from './context';
 import { setWindowPosition, setWindowStyles } from './desktop';
@@ -25,63 +25,54 @@ export function initWindow(callback: (context: ElementContext) => void) {
  *  * Positioning the window
  *  * Building CSS and appending it to `<head>`
  */
-export function initWindowAsync(): Promise<ElementContext> {
-  return new Promise(resolve => {
-    const config = useUserConfig();
-    const [configVariables] = getConfigVariables();
-    const styleBuilder = useStyleBuilder();
+export async function initWindowAsync(): Promise<ElementContext> {
+  // TODO: Create new root if owner is null.
+  const owner = getOwner()!;
+  const config = await getUserConfig();
+  const configVariables = await getConfigVariables();
+  const styleBuilder = getStyleBuilder(owner);
 
-    // TODO: Remove this.
-    const [rootVariables] = createResource(
-      configVariables,
-      configVariables => ({
-        env: configVariables,
-      }),
+  // TODO: Remove this.
+  const rootVariables = { env: configVariables };
+
+  // TODO: Get window to open from launch args.
+  const configKey = 'window/bar';
+  const windowContext = await initElement({
+    id: configKey,
+    config: (config as UserConfig)[configKey],
+    ancestorVariables: [() => rootVariables],
+    owner,
+  });
+
+  const globalConfig = GlobalConfigSchema.strip().parse(
+    (config as UserConfig).global,
+  );
+
+  if (globalConfig.root_styles) {
+    styleBuilder.setGlobalStyles(globalConfig.root_styles);
+  }
+
+  // Set window position based on config values.
+  runWithOwner(owner, () => {
+    createEffect(() =>
+      redrawWindow(windowContext.parsedConfig as WindowConfig),
     );
+  });
 
-    createEffect(() => {
-      if (config() && configVariables()) {
-        // Creating a new root is necessary, otherwise nested effects are disposed
-        // on reruns of the parent effect.
-        createRoot(() => {
-          // TODO: Get window to open from launch args.
-          const configKey = 'window/bar';
-          const windowContext = initElement({
-            id: configKey,
-            config: (config() as UserConfig)[configKey],
-            ancestorVariables: [() => rootVariables()!],
-          });
+  return windowContext;
+}
 
-          const globalConfig = GlobalConfigSchema.strip().parse(
-            (config() as UserConfig).global,
-          );
+async function redrawWindow(config: WindowConfig): Promise<void> {
+  await setWindowPosition({
+    x: config.position_x,
+    y: config.position_y,
+    width: config.width,
+    height: config.height,
+  });
 
-          if (globalConfig.root_styles) {
-            styleBuilder.setGlobalStyles(globalConfig.root_styles);
-          }
-
-          // Set window position based on config values.
-          createEffect(async () => {
-            const windowConfig = windowContext.parsedConfig as WindowConfig;
-
-            await setWindowPosition({
-              x: windowConfig.position_x,
-              y: windowConfig.position_y,
-              width: windowConfig.width,
-              height: windowConfig.height,
-            });
-
-            await setWindowStyles({
-              alwaysOnTop: windowConfig.always_on_top,
-              showInTaskbar: windowConfig.show_in_taskbar,
-              resizable: windowConfig.resizable,
-            });
-          });
-
-          // Resolve context when ready.
-          resolve(windowContext);
-        });
-      }
-    });
+  await setWindowStyles({
+    alwaysOnTop: config.always_on_top,
+    showInTaskbar: config.show_in_taskbar,
+    resizable: config.resizable,
   });
 }

@@ -1,9 +1,9 @@
+import { Owner } from 'solid-js';
+
 import { MemoryProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface MemoryVariables {
-  isLoading: boolean;
   freeMemory: number;
   usedMemory: number;
   totalMemory: number;
@@ -12,33 +12,33 @@ export interface MemoryVariables {
   totalSwap: number;
 }
 
-export const createMemoryProvider = memoize((config: MemoryProviderConfig) => {
-  const [memoryVariables] = createProviderListener<
+export async function createMemoryProvider(
+  config: MemoryProviderConfig,
+  owner: Owner,
+) {
+  const memoryVariables = await createProviderListener<
     MemoryProviderConfig,
     MemoryVariables
-  >(config);
+  >(config, owner);
 
   return {
-    get isLoading() {
-      return memoryVariables()?.isLoading ?? true;
-    },
     get freeMemory() {
-      return memoryVariables()?.freeMemory;
+      return memoryVariables().freeMemory;
     },
     get usedMemory() {
-      return memoryVariables()?.usedMemory;
+      return memoryVariables().usedMemory;
     },
     get totalMemory() {
-      return memoryVariables()?.totalMemory;
+      return memoryVariables().totalMemory;
     },
     get freeSwap() {
-      return memoryVariables()?.freeSwap;
+      return memoryVariables().freeSwap;
     },
     get usedSwap() {
-      return memoryVariables()?.usedSwap;
+      return memoryVariables().usedSwap;
     },
     get totalSwap() {
-      return memoryVariables()?.totalSwap;
+      return memoryVariables().totalSwap;
     },
   };
-});
+}

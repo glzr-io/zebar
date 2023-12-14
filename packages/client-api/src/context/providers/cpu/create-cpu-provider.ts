@@ -1,9 +1,9 @@
+import { Owner } from 'solid-js';
+
 import { CpuProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface CpuVariables {
-  isLoading: boolean;
   frequency: number;
   usage: number;
   logicalCoreCount: number;
@@ -11,30 +11,30 @@ export interface CpuVariables {
   vendor: string;
 }
 
-export const createCpuProvider = memoize((config: CpuProviderConfig) => {
-  const [cpuVariables] = createProviderListener<
+export async function createCpuProvider(
+  config: CpuProviderConfig,
+  owner: Owner,
+) {
+  const cpuVariables = await createProviderListener<
     CpuProviderConfig,
     CpuVariables
-  >(config);
+  >(config, owner);
 
   return {
-    get isLoading() {
-      return cpuVariables()?.isLoading ?? true;
-    },
     get frequency() {
-      return cpuVariables()?.frequency;
+      return cpuVariables().frequency;
     },
     get usage() {
-      return cpuVariables()?.usage;
+      return cpuVariables().usage;
     },
     get logicalCoreCount() {
-      return cpuVariables()?.logicalCoreCount;
+      return cpuVariables().logicalCoreCount;
     },
     get physicalCoreCount() {
-      return cpuVariables()?.physicalCoreCount;
+      return cpuVariables().physicalCoreCount;
     },
     get vendor() {
-      return cpuVariables()?.vendor;
+      return cpuVariables().vendor;
     },
   };
-});
+}

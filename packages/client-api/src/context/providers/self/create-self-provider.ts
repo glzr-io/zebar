@@ -1,8 +1,8 @@
+import { Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { MonitorInfo, WindowInfo } from '~/desktop';
 import { SelfProviderConfig } from '~/user-config';
-import { memoize } from '~/utils';
 
 export interface SelfVariables {
   args: Record<string, string>;
@@ -11,10 +11,11 @@ export interface SelfVariables {
   currentMonitor?: MonitorInfo;
 }
 
-export const createSelfProvider = memoize((_: SelfProviderConfig) => {
+export async function createSelfProvider(_: SelfProviderConfig, __: Owner) {
   const [selfVariables] = createStore<SelfVariables>(getVariables());
 
   function getVariables() {
+    // TODO: Handle fetching initial state if state on window is not defined.
     const { args, env, currentWindow, currentMonitor } =
       window.__ZEBAR_INIT_STATE;
     return { args, env, currentWindow, currentMonitor };
@@ -34,4 +35,4 @@ export const createSelfProvider = memoize((_: SelfProviderConfig) => {
       return selfVariables.currentMonitor;
     },
   };
-});
+}
