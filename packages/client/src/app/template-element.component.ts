@@ -14,22 +14,9 @@ export function TemplateElement(props: TemplateElementProps) {
   const idSelector = toCssSelector(props.context.parsedConfig.id);
   element.id = idSelector;
 
-  const template = createMemo(() => {
-    //@ts-ignore - TODO
-    switch (props.context.parsedConfig.template) {
-      // TODO
-      case 'template.glazewm_workspaces':
-        return '';
-      case 'template.weather':
-        return '';
-      default:
-        //@ts-ignore - TODO
-        return props.context.parsedConfig.template;
-    }
-  });
-
   // Get a map of slot bindings where the keys are slot names.
   // ie. 'slot' and 'slot/top' -> { default: '...', top: '...' }
+  // TODO: Slots aren't implemented.
   const slots = createMemo(() => {
     return Object.keys(config)
       .filter(key => key === 'slot' || key.startsWith('slot/'))
@@ -38,7 +25,7 @@ export function TemplateElement(props: TemplateElementProps) {
 
         return {
           ...acc,
-          //@ts-ignore - TODO
+          // @ts-ignore - TODO
           [slotName]: config[key as 'slot' | `slot/${string}`],
         };
       }, {});
@@ -47,7 +34,8 @@ export function TemplateElement(props: TemplateElementProps) {
   // Update the HTML element when the template changes.
   createEffect(() => {
     const newElement = createRootElement();
-    newElement.innerHTML = template();
+    // @ts-ignore - TODO
+    newElement.innerHTML = props.context.parsedConfig.template;
 
     const oldElement = document.getElementById(idSelector);
     oldElement!.replaceWith(newElement);
