@@ -6,7 +6,7 @@ export interface ElementContext<T = unknown> {
   rawConfig: unknown;
   parsedConfig: BaseElementConfig;
   type: ElementType;
-  variables: T;
+  providers: T;
   childIds: string[];
   initChild: (id: string) => Promise<ElementContext | null>;
 }

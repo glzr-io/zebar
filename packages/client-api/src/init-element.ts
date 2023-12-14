@@ -7,14 +7,14 @@ import {
   getStyleBuilder,
   getParsedElementConfig,
 } from './user-config';
-import { getElementVariables } from './providers';
+import { getElementProviders } from './providers';
 import { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
 
 export interface InitElementArgs {
   id: string;
   config: WindowConfig | GroupConfig | TemplateConfig;
-  ancestorVariables: Accessor<Record<string, unknown>>[];
+  ancestorProviders: Accessor<Record<string, unknown>>[];
   owner: Owner;
 }
 
@@ -27,9 +27,9 @@ export async function initElement(
   const childConfigs = getChildConfigs(args.config);
   const childIds = childConfigs.map(([key]) => key);
 
-  const { element, merged } = await getElementVariables(
+  const { element, merged } = await getElementProviders(
     args.config,
-    args.ancestorVariables,
+    args.ancestorProviders,
     args.owner,
   );
 
@@ -37,7 +37,7 @@ export async function initElement(
     id: args.id,
     type,
     config: args.config,
-    variables: merged,
+    providers: merged,
     owner: args.owner,
   });
 
@@ -61,7 +61,7 @@ export async function initElement(
     return initElement({
       config: childConfig,
       id: configKey,
-      ancestorVariables: [...(args.ancestorVariables ?? []), element],
+      ancestorProviders: [...(args.ancestorProviders ?? []), element],
       owner: args.owner,
     });
   }
@@ -70,7 +70,7 @@ export async function initElement(
     id: args.id,
     rawConfig: args.config,
     parsedConfig,
-    variables: merged,
+    providers: merged,
     type,
     childIds,
     initChild,
