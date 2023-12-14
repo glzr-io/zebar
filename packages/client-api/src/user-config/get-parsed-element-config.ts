@@ -1,6 +1,7 @@
 import { Owner, createComputed, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
+import { ElementType } from '~/element-type.model';
 import { TemplateError, getTemplateEngine } from '~/template-engine';
 import {
   TemplateConfig,
@@ -11,7 +12,6 @@ import {
   WindowConfigSchemaP1,
   TemplatePropertyError,
 } from '~/user-config';
-import { ElementType } from '../context/shared';
 
 export interface GetParsedElementConfigArgs {
   id: string;

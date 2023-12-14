@@ -7,7 +7,9 @@ import {
   getStyleBuilder,
   getParsedElementConfig,
 } from './user-config';
-import { ElementContext, ElementType, getElementVariables } from './context';
+import { getElementVariables } from './providers';
+import { ElementContext } from './element-context.model';
+import { ElementType } from './element-type.model';
 
 export interface InitElementArgs {
   id: string;

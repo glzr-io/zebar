@@ -13,7 +13,7 @@ import {
   ProvidersConfigSchema,
   WindowConfig,
 } from '~/user-config';
-import { createProvider } from './providers';
+import { createProvider } from '.';
 
 export async function getElementVariables(
   config: WindowConfig | GroupConfig | TemplateConfig,

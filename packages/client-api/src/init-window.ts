@@ -8,9 +8,9 @@ import {
   getUserConfig,
   getStyleBuilder,
 } from './user-config';
-import { ElementContext } from './context';
 import { setWindowPosition, setWindowStyles } from './desktop';
 import { initElement } from './init-element';
+import { ElementContext } from './element-context.model';
 
 export function initWindow(callback: (context: ElementContext) => void) {
   initWindowAsync().then(callback);
