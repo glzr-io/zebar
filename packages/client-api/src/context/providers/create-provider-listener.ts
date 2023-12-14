@@ -4,7 +4,6 @@ import {
   createSignal,
   onCleanup,
   Owner,
-  Resource,
   runWithOwner,
 } from 'solid-js';
 
@@ -13,8 +12,7 @@ import { ProviderConfig } from '~/user-config';
 import { simpleHash } from '~/utils';
 
 /**
- * Utility for creating a {@link Resource} that listens to a provider of a
- * given config type.
+ * Utility for listening to a provider of a given config type.
  */
 export function createProviderListener<TConfig extends ProviderConfig, TVars>(
   config: TConfig,
