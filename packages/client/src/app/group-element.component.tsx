@@ -15,7 +15,7 @@ export function GroupElement(props: GroupElementProps) {
       <Index each={props.context.childIds}>
         {childId => (
           <Suspense>
-            <ChildElement childId={childId()} context={props.context} />
+            <ChildElement childId={childId()} parentContext={props.context} />
           </Suspense>
         )}
       </Index>

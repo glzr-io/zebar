@@ -1,26 +1,25 @@
-import { Accessor, createEffect } from 'solid-js';
+import { Accessor, Owner, createEffect, runWithOwner } from 'solid-js';
 
 import {
   WindowConfig,
   GroupConfig,
   TemplateConfig,
-  useStyleBuilder,
-} from './user-config';
-import {
-  ElementType,
+  getStyleBuilder,
   getParsedElementConfig,
-  getElementVariables,
-} from './context';
-import { memoize } from './utils';
+} from './user-config';
+import { ElementContext, ElementType, getElementVariables } from './context';
 
 export interface InitElementArgs {
   id: string;
   config: WindowConfig | GroupConfig | TemplateConfig;
-  ancestorVariables?: Accessor<Record<string, unknown>>[];
+  ancestorVariables: Accessor<Record<string, unknown>>[];
+  owner: Owner;
 }
 
-export const initElement = memoize((args: InitElementArgs) => {
-  const styleBuilder = useStyleBuilder();
+export async function initElement(
+  args: InitElementArgs,
+): Promise<ElementContext> {
+  const styleBuilder = getStyleBuilder(args.owner);
   const type = getElementType(args.id);
 
   const childConfigs = getChildConfigs(args.config);
@@ -29,6 +28,7 @@ export const initElement = memoize((args: InitElementArgs) => {
   const { element, merged } = getElementVariables(
     args.config,
     args.ancestorVariables,
+    args.owner,
   );
 
   const parsedConfig = getParsedElementConfig({
@@ -36,13 +36,33 @@ export const initElement = memoize((args: InitElementArgs) => {
     type,
     config: args.config,
     variables: merged,
+    owner: args.owner,
   });
 
-  createEffect(() => {
-    if (parsedConfig.styles) {
-      styleBuilder.setElementStyles(parsedConfig.id, parsedConfig.styles);
-    }
+  runWithOwner(args.owner, () => {
+    createEffect(() => {
+      if (parsedConfig.styles) {
+        styleBuilder.setElementStyles(parsedConfig.id, parsedConfig.styles);
+      }
+    });
   });
+
+  async function initChild(id: string) {
+    const foundConfig = childConfigs.find(([key]) => key === id);
+
+    if (!foundConfig) {
+      return null;
+    }
+
+    const [configKey, childConfig] = foundConfig;
+
+    return initElement({
+      config: childConfig,
+      id: configKey,
+      ancestorVariables: [...(args.ancestorVariables ?? []), element],
+      owner: args.owner,
+    });
+  }
 
   return {
     id: args.id,
@@ -51,23 +71,9 @@ export const initElement = memoize((args: InitElementArgs) => {
     variables: merged,
     type,
     childIds,
-    initChild: (id: string) => {
-      const foundConfig = childConfigs.find(([key]) => key === id);
-
-      if (!foundConfig) {
-        return null;
-      }
-
-      const [configKey, childConfig] = foundConfig;
-
-      return initElement({
-        config: childConfig,
-        id: configKey,
-        ancestorVariables: [...(args.ancestorVariables ?? []), element],
-      });
-    },
+    initChild,
   };
-});
+}
 
 /**
  * Get child element configs.

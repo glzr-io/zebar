@@ -1,4 +1,10 @@
-import { Accessor, createComputed, createMemo } from 'solid-js';
+import {
+  Accessor,
+  Owner,
+  createComputed,
+  createMemo,
+  runWithOwner,
+} from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import {
@@ -11,27 +17,32 @@ import { createProvider } from './providers';
 
 export function getElementVariables(
   config: WindowConfig | GroupConfig | TemplateConfig,
-  ancestorVariables?: Accessor<Record<string, unknown>>[],
+  ancestorVariables: Accessor<Record<string, unknown>>[],
+  owner: Owner,
 ) {
-  const elementVariables = createMemo(() => {
-    const providerConfigs = ProvidersConfigSchema.parse(
-      config?.providers ?? [],
-    );
+  const elementVariables = runWithOwner(owner, () =>
+    createMemo(() => {
+      const providerConfigs = ProvidersConfigSchema.parse(
+        config?.providers ?? [],
+      );
 
-    return providerConfigs.reduce(
-      (acc, config) => ({
-        ...acc,
-        [config.type]: createProvider(config),
-      }),
-      {},
-    );
-  });
+      return providerConfigs.reduce(
+        (acc, config) => ({
+          ...acc,
+          [config.type]: createProvider(config),
+        }),
+        {},
+      );
+    }),
+  )!;
 
   const [mergedVariables, setMergedVariables] =
     createStore(getMergedVariables());
 
   // Update the store on changes to any provider variables.
-  createComputed(() => setMergedVariables(getMergedVariables()));
+  runWithOwner(owner, () => {
+    createComputed(() => setMergedVariables(getMergedVariables()));
+  });
 
   /**
    * Get updated store value.

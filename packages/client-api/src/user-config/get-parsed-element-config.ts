@@ -1,8 +1,7 @@
-import { createComputed } from 'solid-js';
+import { Owner, createComputed, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { TemplateError, useTemplateEngine } from '~/template-engine';
-
+import { TemplateError, getTemplateEngine } from '~/template-engine';
 import {
   TemplateConfig,
   GroupConfig,
@@ -12,22 +11,25 @@ import {
   WindowConfigSchemaP1,
   TemplatePropertyError,
 } from '~/user-config';
-import { ElementType } from './shared';
+import { ElementType } from '../context/shared';
 
 export interface GetParsedElementConfigArgs {
   id: string;
   type: ElementType;
   config: WindowConfig | GroupConfig | TemplateConfig;
   variables: Record<string, unknown>;
+  owner: Owner;
 }
 
 export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
-  const templateEngine = useTemplateEngine();
+  const templateEngine = getTemplateEngine();
 
   const [parsedConfig, setParsedConfig] = createStore(getParsedConfig());
 
   // Update the store on changes to any provider variables.
-  createComputed(() => setParsedConfig(getParsedConfig()));
+  runWithOwner(args.owner, () => {
+    createComputed(() => setParsedConfig(getParsedConfig()));
+  });
 
   /**
    * Get updated store value.
@@ -65,17 +67,17 @@ export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
     return schema.parse(newConfig);
   }
 
-  // TODO: Validate in P1 schemas that `template/` and `group/` keys exist.
-  function getSchemaForElement(type: ElementType) {
-    switch (type) {
-      case ElementType.WINDOW:
-        return WindowConfigSchemaP1.strip();
-      case ElementType.GROUP:
-        return GroupConfigSchemaP1.strip();
-      case ElementType.TEMPLATE:
-        return TemplateConfigSchemaP1.strip();
-    }
-  }
-
   return parsedConfig;
+}
+
+// TODO: Validate in P1 schemas that `template/` and `group/` keys exist.
+function getSchemaForElement(type: ElementType) {
+  switch (type) {
+    case ElementType.WINDOW:
+      return WindowConfigSchemaP1.strip();
+    case ElementType.GROUP:
+      return GroupConfigSchemaP1.strip();
+    case ElementType.TEMPLATE:
+      return TemplateConfigSchemaP1.strip();
+  }
 }

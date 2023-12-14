@@ -1,4 +1,4 @@
-import { Match, Switch } from 'solid-js';
+import { Match, Show, Switch, createSignal } from 'solid-js';
 import { ElementContext, ElementType } from 'zebar';
 
 import { TemplateElement } from './template-element.component';
@@ -6,20 +6,28 @@ import { GroupElement } from './group-element.component';
 
 export interface ChildElementProps {
   childId: string;
-  context: ElementContext;
+  parentContext: ElementContext;
 }
 
-export function ChildElement(props: any) {
-  const child = props.context.initChild(props.childId);
+export function ChildElement(props: ChildElementProps) {
+  const [childContext, setChildContext] = createSignal<ElementContext | null>(
+    null,
+  );
+
+  props.parentContext.initChild(props.childId).then(setChildContext);
 
   return (
-    <Switch>
-      <Match when={child.type === ElementType.GROUP}>
-        <GroupElement context={child} />
-      </Match>
-      <Match when={child.type === ElementType.TEMPLATE}>
-        <TemplateElement context={child} />
-      </Match>
-    </Switch>
+    <Show when={childContext()}>
+      {context => (
+        <Switch>
+          <Match when={context().type === ElementType.GROUP}>
+            <GroupElement context={context()} />
+          </Match>
+          <Match when={context().type === ElementType.TEMPLATE}>
+            <TemplateElement context={context()} />
+          </Match>
+        </Switch>
+      )}
+    </Show>
   );
 }

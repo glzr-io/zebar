@@ -18,7 +18,7 @@ export function WindowElement() {
           <Index each={context().childIds}>
             {childId => (
               <Suspense>
-                <ChildElement childId={childId()} context={context()} />
+                <ChildElement childId={childId()} parentContext={context()} />
               </Suspense>
             )}
           </Index>
