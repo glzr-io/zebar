@@ -5,7 +5,6 @@ import {
 } from '@tauri-apps/api/window';
 
 import { createLogger } from '~/utils';
-import { getMonitorPosition } from './current-monitor';
 
 export interface WindowPosition {
   x: number;
@@ -23,28 +22,30 @@ export interface WindowStyles {
 const logger = createLogger('current-window');
 
 export async function setWindowPosition(position: Partial<WindowPosition>) {
-  const monitorPosition = await getMonitorPosition();
+  logger.debug(`Setting window position to:`, position);
 
-  const parsedPosition = {
-    x: position.x ? position.x : monitorPosition.x,
-    y: position.y ? position.y : monitorPosition.y,
-    width: position.width ? position.width : monitorPosition.width,
-    height: position.height ? position.height : 30,
-  };
+  const window = await getCurrentWindow();
 
-  logger.debug(`Setting window position to:`, parsedPosition);
-
-  await getCurrentWindow().setPosition(
-    new PhysicalPosition(parsedPosition.x, parsedPosition.y),
+  // TODO: Avoid setting position if neither x/y are defined.
+  await window.setPosition(
+    new PhysicalPosition(
+      position.x ?? (await window.outerPosition()).x,
+      position.y ?? (await window.outerPosition()).y,
+    ),
   );
 
-  await getCurrentWindow().setSize(
-    new PhysicalSize(parsedPosition.width, parsedPosition.height),
+  // TODO: Avoid setting size if neither width/height are defined.
+  await window.setSize(
+    new PhysicalSize(
+      position.width ?? (await window.outerSize()).width,
+      position.height ?? (await window.outerSize()).height,
+    ),
   );
 }
 
 export async function setWindowStyles(styles: Partial<WindowStyles>) {
-  await getCurrentWindow().setAlwaysOnTop(styles.alwaysOnTop ?? true);
-  await getCurrentWindow().setSkipTaskbar(!styles.showInTaskbar ?? false);
-  await getCurrentWindow().setResizable(styles.resizable ?? false);
+  const window = await getCurrentWindow();
+  window.setAlwaysOnTop(styles.alwaysOnTop ?? true);
+  window.setSkipTaskbar(!styles.showInTaskbar ?? false);
+  window.setResizable(styles.resizable ?? false);
 }

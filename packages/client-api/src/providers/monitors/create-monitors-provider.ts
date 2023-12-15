@@ -1,7 +1,6 @@
 import { Owner } from 'solid-js';
-import { createStore } from 'solid-js/store';
 
-import { MonitorInfo } from '~/desktop';
+import { MonitorInfo, getMonitors } from '~/desktop';
 import { MonitorsProviderConfig } from '~/user-config';
 
 export interface MonitorsVariables {
@@ -12,43 +11,20 @@ export interface MonitorsVariables {
 
 export async function createMonitorsProvider(
   _: MonitorsProviderConfig,
-  owner: Owner,
+  __: Owner,
 ) {
-  const [monitorVariables] = createStore<MonitorsVariables>(getVariables());
-
-  function getVariables() {
-    const { primaryMonitor, monitors } = window.__ZEBAR_INIT_STATE;
-
-    const secondaryMonitors = monitors.filter(
-      monitor => !primaryMonitor || isMatch(monitor, primaryMonitor),
-    );
-
-    return {
-      primary: primaryMonitor,
-      secondary: secondaryMonitors,
-      all: monitors,
-    };
-  }
-
-  function isMatch(monitorA: MonitorInfo, monitorB: MonitorInfo) {
-    return (
-      monitorA.name === monitorB.name &&
-      monitorA.x === monitorB.x &&
-      monitorA.y === monitorB.y &&
-      monitorA.width === monitorB.width &&
-      monitorA.height === monitorB.height
-    );
-  }
+  const { primaryMonitor, secondaryMonitors, allMonitors } =
+    await getMonitors();
 
   return {
     get primary() {
-      return monitorVariables.primary;
+      return primaryMonitor;
     },
     get secondary() {
-      return monitorVariables.secondary;
+      return secondaryMonitors;
     },
     get all() {
-      return monitorVariables.all;
+      return allMonitors;
     },
   };
 }
