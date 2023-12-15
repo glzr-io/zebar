@@ -2,13 +2,14 @@ import { Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { GwmClient, GwmEventType, Workspace } from 'glazewm';
 
+import { getMonitors } from '~/desktop';
 import { GlazewmProviderConfig } from '~/user-config';
-import { getMonitorPosition } from '~/desktop';
 
 export async function createGlazewmProvider(
   _: GlazewmProviderConfig,
   __: Owner,
 ) {
+  const { currentMonitor } = await getMonitors();
   const client = new GwmClient();
 
   const [glazewmVariables, setGlazewmVariables] = createStore({
@@ -30,8 +31,8 @@ export async function createGlazewmProvider(
   );
 
   async function refetch() {
-    const currentPosition = await getMonitorPosition();
     const monitors = await client.getMonitors();
+    const currentPosition = { x: currentMonitor!.x, y: currentMonitor!.y };
 
     // Get GlazeWM monitor that corresponds to the bar's monitor.
     const monitor = monitors.reduce((a, b) =>
