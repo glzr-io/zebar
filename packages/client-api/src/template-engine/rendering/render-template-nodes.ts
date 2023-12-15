@@ -31,7 +31,6 @@ const FOR_LOOP_VARIABLE_PATTERN =
 export function renderTemplateNodes(
   nodes: TemplateNode[],
   globalContext: Record<string, unknown>,
-  transforms?: RenderTransforms,
 ) {
   const context: RenderContext = {
     global: globalContext,
@@ -153,14 +152,10 @@ export function renderTemplateNodes(
       `with (global) { with (local) { return ${expression} } }`,
     );
 
-    const result = evalFn(
+    return evalFn(
       context.global,
       context.local.reduce((acc, e) => ({ ...acc, ...e }), {}),
     );
-
-    return transforms?.transformExpression
-      ? transforms.transformExpression(result)
-      : result;
   }
 
   return visitAll(nodes);
