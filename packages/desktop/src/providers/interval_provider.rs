@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
+use anyhow::Result;
 use async_trait::async_trait;
 use tokio::{
   sync::{mpsc::Sender, Mutex},
@@ -8,7 +9,9 @@ use tokio::{
 };
 
 use super::{
-  manager::ProviderOutput, provider::Provider, variables::ProviderVariables,
+  manager::{ProviderOutput, VariablesResult},
+  provider::Provider,
+  variables::ProviderVariables,
 };
 
 #[async_trait]
@@ -25,7 +28,7 @@ pub trait IntervalProvider {
 
   async fn get_refreshed_variables(
     state: &Mutex<Self::State>,
-  ) -> ProviderVariables;
+  ) -> Result<ProviderVariables>;
 }
 
 #[async_trait]
@@ -49,7 +52,9 @@ impl<T: IntervalProvider + Send> Provider for T {
         _ = emit_output_tx
           .send(ProviderOutput {
             config_hash: config_hash.clone(),
-            variables: T::get_refreshed_variables(&state).await,
+            variables: to_variables_result(
+              T::get_refreshed_variables(&state).await,
+            ),
           })
           .await;
       }
@@ -67,7 +72,9 @@ impl<T: IntervalProvider + Send> Provider for T {
     _ = emit_output_tx
       .send(ProviderOutput {
         config_hash,
-        variables: T::get_refreshed_variables(&self.state()).await,
+        variables: to_variables_result(
+          T::get_refreshed_variables(&self.state()).await,
+        ),
       })
       .await;
   }
@@ -76,5 +83,12 @@ impl<T: IntervalProvider + Send> Provider for T {
     if let Some(handle) = &self.abort_handle() {
       handle.abort();
     }
+  }
+}
+
+fn to_variables_result(result: Result<ProviderVariables>) -> VariablesResult {
+  match result {
+    Ok(variables) => VariablesResult::Data(variables),
+    Err(err) => VariablesResult::Error(err.to_string()),
   }
 }

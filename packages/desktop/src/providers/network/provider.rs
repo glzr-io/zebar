@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use sysinfo::{NetworkExt, System, SystemExt};
 use tokio::{sync::Mutex, task::AbortHandle};
@@ -53,7 +54,7 @@ impl IntervalProvider for NetworkProvider {
 
   async fn get_refreshed_variables(
     sysinfo: &Mutex<System>,
-  ) -> ProviderVariables {
+  ) -> Result<ProviderVariables> {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_networks();
 
@@ -70,6 +71,6 @@ impl IntervalProvider for NetworkProvider {
       });
     }
 
-    ProviderVariables::Network(NetworkVariables { interfaces })
+    Ok(ProviderVariables::Network(NetworkVariables { interfaces }))
   }
 }
