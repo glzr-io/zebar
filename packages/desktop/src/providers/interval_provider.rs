@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use anyhow::Result;
 use async_trait::async_trait;
 use tokio::{
-  sync::{mpsc::Sender, Mutex},
+  sync::mpsc::Sender,
   task::{self, AbortHandle},
   time,
 };
@@ -16,18 +16,18 @@ use super::{
 
 #[async_trait]
 pub trait IntervalProvider {
-  type State: Send + 'static;
+  type State: Sync + Send + 'static;
 
   fn refresh_interval_ms(&self) -> u64;
 
-  fn state(&self) -> Arc<Mutex<Self::State>>;
+  fn state(&self) -> Arc<Self::State>;
 
   fn abort_handle(&self) -> &Option<AbortHandle>;
 
   fn set_abort_handle(&mut self, abort_handle: AbortHandle);
 
   async fn get_refreshed_variables(
-    state: &Mutex<Self::State>,
+    state: &Self::State,
   ) -> Result<ProviderVariables>;
 }
 

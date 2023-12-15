@@ -8,7 +8,7 @@ use starship_battery::{
   },
   Manager,
 };
-use tokio::{sync::Mutex, task::AbortHandle};
+use tokio::task::AbortHandle;
 
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
@@ -19,7 +19,7 @@ use super::{BatteryProviderConfig, BatteryVariables};
 pub struct BatteryProvider {
   pub config: BatteryProviderConfig,
   abort_handle: Option<AbortHandle>,
-  battery_manager: Arc<Mutex<Manager>>,
+  battery_manager: Arc<Manager>,
 }
 
 impl BatteryProvider {
@@ -29,7 +29,7 @@ impl BatteryProvider {
     Ok(BatteryProvider {
       config,
       abort_handle: None,
-      battery_manager: Arc::new(Mutex::new(manager)),
+      battery_manager: Arc::new(manager),
     })
   }
 
@@ -63,7 +63,7 @@ impl IntervalProvider for BatteryProvider {
     self.config.refresh_interval_ms
   }
 
-  fn state(&self) -> Arc<Mutex<Manager>> {
+  fn state(&self) -> Arc<Manager> {
     self.battery_manager.clone()
   }
 
@@ -76,10 +76,10 @@ impl IntervalProvider for BatteryProvider {
   }
 
   async fn get_refreshed_variables(
-    battery_manager: &Mutex<Manager>,
+    battery_manager: &Manager,
   ) -> Result<ProviderVariables> {
     Ok(ProviderVariables::Battery(Self::get_variables(
-      &*battery_manager.lock().await,
+      battery_manager,
     )?))
   }
 }
