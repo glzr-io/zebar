@@ -23,14 +23,14 @@ pub struct BatteryProvider {
 }
 
 impl BatteryProvider {
-  pub fn new(config: BatteryProviderConfig) -> BatteryProvider {
-    let manager = Manager::new().unwrap();
+  pub fn new(config: BatteryProviderConfig) -> Result<BatteryProvider> {
+    let manager = Manager::new()?;
 
-    BatteryProvider {
+    Ok(BatteryProvider {
       config,
       abort_handle: None,
       battery_manager: Arc::new(Mutex::new(manager)),
-    }
+    })
   }
 
   /// Battery manager from `starship_battery` is not thread-safe, so it

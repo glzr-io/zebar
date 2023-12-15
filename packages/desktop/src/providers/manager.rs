@@ -108,18 +108,35 @@ fn handle_provider_listen_input(
         continue;
       };
 
-      // Otherwise, spawn a new provider.
-      let mut new_provider = create_provider(input.config, sysinfo.clone());
-
       let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
       let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
       let emit_output_tx = emit_output_tx.clone();
       let config_hash = input.config_hash.clone();
 
+      // Spawn a new provider.
+      let new_provider = create_provider(input.config, sysinfo.clone());
+
       task::spawn(async move {
-        new_provider
-          .start(input.config_hash, emit_output_tx, refresh_rx, stop_rx)
-          .await;
+        match new_provider {
+          Err(err) => {
+            _ = emit_output_tx
+              .send(ProviderOutput {
+                config_hash: input.config_hash.clone(),
+                variables: VariablesResult::Error(err.to_string()),
+              })
+              .await;
+          }
+          Ok(mut provider) => {
+            provider
+              .start(
+                input.config_hash.clone(),
+                emit_output_tx,
+                refresh_rx,
+                stop_rx,
+              )
+              .await
+          }
+        };
       });
 
       providers.push(ProviderRef {
@@ -136,22 +153,22 @@ fn handle_provider_listen_input(
 fn create_provider(
   config: ProviderConfig,
   sysinfo: Arc<Mutex<System>>,
-) -> Box<dyn Provider + Send> {
-  match config {
-    ProviderConfig::Battery(config) => Box::new(BatteryProvider::new(config)),
-    ProviderConfig::Cpu(config) => {
-      Box::new(CpuProvider::new(config, sysinfo.clone()))
-    }
+) -> Result<Box<dyn Provider + Send>> {
+  let provider: Box<dyn Provider + Send> = match config {
+    ProviderConfig::Battery(config) => Box::new(BatteryProvider::new(config)?),
+    ProviderConfig::Cpu(config) => Box::new(CpuProvider::new(config, sysinfo)),
     ProviderConfig::Host(config) => {
-      Box::new(HostProvider::new(config, sysinfo.clone()))
+      Box::new(HostProvider::new(config, sysinfo))
     }
     ProviderConfig::Memory(config) => {
-      Box::new(MemoryProvider::new(config, sysinfo.clone()))
+      Box::new(MemoryProvider::new(config, sysinfo))
     }
     ProviderConfig::Network(config) => {
-      Box::new(NetworkProvider::new(config, sysinfo.clone()))
+      Box::new(NetworkProvider::new(config, sysinfo))
     }
-  }
+  };
+
+  Ok(provider)
 }
 
 /// Create a channel for handling provider unlisten commands from client.
