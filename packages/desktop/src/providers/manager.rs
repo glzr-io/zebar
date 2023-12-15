@@ -42,7 +42,14 @@ pub struct ProviderRef {
 #[serde(rename_all = "camelCase")]
 pub struct ProviderOutput {
   pub config_hash: String,
-  pub variables: ProviderVariables,
+  pub variables: ProviderVariablesResult,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum ProviderVariablesResult {
+  Data(ProviderVariables),
+  Error(String),
 }
 
 /// Wrapper around the creation and deletion of providers.
@@ -101,31 +108,15 @@ fn handle_provider_listen_input(
         continue;
       };
 
-      // Otherwise, spawn a new provider.
-      let mut new_provider: Box<dyn Provider + Send> = match input.config {
-        ProviderConfig::Battery(config) => {
-          Box::new(BatteryProvider::new(config))
-        }
-        ProviderConfig::Cpu(config) => {
-          Box::new(CpuProvider::new(config, sysinfo.clone()))
-        }
-        ProviderConfig::Host(config) => {
-          Box::new(HostProvider::new(config, sysinfo.clone()))
-        }
-        ProviderConfig::Memory(config) => {
-          Box::new(MemoryProvider::new(config, sysinfo.clone()))
-        }
-        ProviderConfig::Network(config) => {
-          Box::new(NetworkProvider::new(config, sysinfo.clone()))
-        }
-      };
-
       let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
       let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
       let emit_output_tx = emit_output_tx.clone();
       let config_hash = input.config_hash.clone();
 
+      // Otherwise, spawn a new provider.
       task::spawn(async move {
+        let mut new_provider = create_provider(input.config, sysinfo);
+
         new_provider
           .start(input.config_hash, emit_output_tx, refresh_rx, stop_rx)
           .await;
@@ -140,6 +131,27 @@ fn handle_provider_listen_input(
   });
 
   listen_input_tx
+}
+
+fn create_provider(
+  config: ProviderConfig,
+  sysinfo: Arc<Mutex<System>>,
+) -> Box<dyn Provider + Send> {
+  match config {
+    ProviderConfig::Battery(config) => Box::new(BatteryProvider::new(config)),
+    ProviderConfig::Cpu(config) => {
+      Box::new(CpuProvider::new(config, sysinfo.clone()))
+    }
+    ProviderConfig::Host(config) => {
+      Box::new(HostProvider::new(config, sysinfo.clone()))
+    }
+    ProviderConfig::Memory(config) => {
+      Box::new(MemoryProvider::new(config, sysinfo.clone()))
+    }
+    ProviderConfig::Network(config) => {
+      Box::new(NetworkProvider::new(config, sysinfo.clone()))
+    }
+  }
 }
 
 /// Create a channel for handling provider unlisten commands from client.

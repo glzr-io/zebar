@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
+use anyhow::Result;
 use async_trait::async_trait;
 use tokio::{
   sync::{mpsc::Sender, Mutex},
@@ -25,7 +26,7 @@ pub trait IntervalProvider {
 
   async fn get_refreshed_variables(
     state: &Mutex<Self::State>,
-  ) -> ProviderVariables;
+  ) -> Result<ProviderVariables>;
 }
 
 #[async_trait]
