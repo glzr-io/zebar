@@ -1,14 +1,18 @@
 import { createEffect, getOwner, runWithOwner } from 'solid-js';
+import { getCurrent as getCurrentWindow } from '@tauri-apps/api/window';
 
 import {
   GlobalConfigSchema,
   UserConfig,
   WindowConfig,
-  getConfigVariables,
   getUserConfig,
   getStyleBuilder,
 } from './user-config';
-import { setWindowPosition, setWindowStyles } from './desktop';
+import {
+  getOpenWindowArgs,
+  setWindowPosition,
+  setWindowStyles,
+} from './desktop';
 import { initElement } from './init-element';
 import { ElementContext } from './element-context.model';
 
@@ -29,18 +33,24 @@ export async function initWindowAsync(): Promise<ElementContext> {
   // TODO: Create new root if owner is null.
   const owner = getOwner()!;
   const config = await getUserConfig();
-  const configVariables = await getConfigVariables();
   const styleBuilder = getStyleBuilder(owner);
 
-  // TODO: Remove this.
-  const rootVariables = { env: configVariables };
+  const openArgs =
+    window.__ZEBAR_OPEN_ARGS ??
+    (await getOpenWindowArgs(await getCurrentWindow().label));
 
-  // TODO: Get window to open from launch args.
-  const configKey = 'window/bar';
+  const windowConfig = (config as UserConfig)[
+    openArgs.windowId as `window/${string}`
+  ];
+
+  if (!windowConfig) {
+    throw new Error(`Window '${openArgs.windowId}' doesn't exist in config.`);
+  }
+
   const windowContext = await initElement({
-    id: configKey,
-    config: (config as UserConfig)[configKey],
-    ancestorProviders: [() => rootVariables],
+    id: openArgs.windowId,
+    config: windowConfig,
+    ancestorProviders: [],
     owner,
   });
 

@@ -2,6 +2,7 @@ import { InvokeArgs, invoke as tauriInvoke } from '@tauri-apps/api/primitives';
 
 import { createLogger } from '../utils';
 import { ProviderConfig } from '~/user-config';
+import { OpenWindowArgs } from './shared';
 
 const logger = createLogger('desktop-commands');
 
@@ -12,17 +13,26 @@ export function readConfigFile(): Promise<string> {
   return invoke<string>('read_config_file');
 }
 
-// TODO: Add support for only fetching tracked data.
+/**
+ * Get args used to open the window with the {@link windowLabel}.
+ */
+export function getOpenWindowArgs(
+  windowLabel: string,
+): Promise<OpenWindowArgs | null> {
+  return invoke<OpenWindowArgs | null>('get_open_window_args', { windowLabel });
+}
+
+// TODO: Add support for only fetching selected variables.
 export function listenProvider(args: {
   configHash: string;
   config: ProviderConfig;
   trackedAccess: string[];
-}): Promise<string> {
-  return invoke<string>('listen_provider', args);
+}): Promise<void> {
+  return invoke<void>('listen_provider', args);
 }
 
-export function unlistenProvider(configHash: string): Promise<string> {
-  return invoke<string>('unlisten_provider', { configHash });
+export function unlistenProvider(configHash: string): Promise<void> {
+  return invoke<void>('unlisten_provider', { configHash });
 }
 
 // TODO: Implement this. Should kill the window and show error dialog. If
