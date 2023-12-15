@@ -14,9 +14,7 @@ use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
-use tauri::{
-  AppHandle, Monitor, RunEvent, State, Window, WindowBuilder, WindowUrl,
-};
+use tauri::{AppHandle, Manager, RunEvent, State, WindowBuilder, WindowUrl};
 use tokio::{
   sync::{mpsc, Mutex},
   task,
@@ -28,12 +26,15 @@ mod monitors;
 mod providers;
 mod user_config;
 
-#[derive(Clone, Debug)]
-struct CreateWindowArgs {
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+struct OpenWindowArgs {
   window_id: String,
   args: HashMap<String, String>,
   env: HashMap<String, String>,
 }
+
+struct OpenWindowArgsMap(Arc<Mutex<HashMap<String, OpenWindowArgs>>>);
 
 #[tauri::command]
 fn read_config_file(
@@ -42,6 +43,21 @@ fn read_config_file(
 ) -> Result<String, String> {
   user_config::read_file(config_path_override, app_handle)
     .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+async fn get_open_window_args(
+  window_label: String,
+  open_window_args_map: State<'_, OpenWindowArgsMap>,
+) -> Result<Option<OpenWindowArgs>, String> {
+  Ok(
+    open_window_args_map
+      .0
+      .lock()
+      .await
+      .get(&window_label)
+      .map(|open_args| open_args.clone()),
+  )
 }
 
 #[tauri::command]
@@ -89,19 +105,19 @@ async fn main() {
         CliCommand::Open { window_id, args } => {
           let (tx, mut rx) = mpsc::unbounded_channel();
 
-          let create_args = CreateWindowArgs {
+          let open_args = OpenWindowArgs {
             window_id,
             args: args.unwrap_or(vec![]).into_iter().collect(),
             env: env::vars().collect(),
           };
 
-          _ = tx.send(create_args.clone());
+          _ = tx.send(open_args.clone());
 
           // If this is not the first instance of the app, emit the window to
           // create to the original instance and exit immediately.
           app.handle().plugin(tauri_plugin_single_instance::init(
             move |_, _, _| {
-              _ = tx.send(create_args.clone());
+              _ = tx.send(open_args.clone());
             },
           ))?;
 
@@ -110,6 +126,10 @@ async fn main() {
 
           providers::manager::init(app)?;
 
+          let args_map = OpenWindowArgsMap(Default::default());
+          let args_map_ref = args_map.0.clone();
+          app.manage(args_map);
+
           let app_handle = app.handle().clone();
 
           // Handle creation of new windows (both from the initial and
@@ -117,44 +137,40 @@ async fn main() {
           _ = task::spawn(async move {
             let window_count = Arc::new(Mutex::new(0));
 
-            while let Some(create_args) = rx.recv().await {
+            while let Some(open_args) = rx.recv().await {
               let mut window_count = window_count.lock().await;
               *window_count += 1;
 
               info!(
                 "Creating window #{} '{}' with args: {:#?}",
-                window_count, create_args.window_id, create_args.args
+                window_count, open_args.window_id, open_args.args
               );
+
+              // Window label needs to be globally unique. Hence add a prefix
+              // with the window count to handle cases where multiple of the
+              // same window are opened.
+              let window_label =
+                format!("{}-{}", window_count, &open_args.window_id);
 
               let window = WindowBuilder::new(
                 &app_handle,
-                format!("{}-{}", &create_args.window_id, window_count),
+                &window_label,
                 WindowUrl::default(),
               )
-              .title(format!("Zebar - {}", create_args.window_id))
+              .title(format!("Zebar - {}", open_args.window_id))
               .inner_size(500., 500.)
               .decorations(false)
               .resizable(false)
               .build()
               .unwrap();
 
-              let initial_state = get_initial_state(
-                &app_handle,
-                &window,
-                create_args.args,
-                create_args.env,
-              )
-              .unwrap();
-
-              let initial_state_str =
-                serde_json::to_string(&initial_state).unwrap();
-
-              info!("Window initial state: {}", initial_state_str);
-
               _ = window.eval(&format!(
-                "window.__ZEBAR_INIT_STATE={}",
-                initial_state_str,
+                "window.__ZEBAR_OPEN_ARGS={}",
+                serde_json::to_string(&open_args).unwrap()
               ));
+
+              let mut args_map = args_map_ref.lock().await;
+              args_map.insert(window_label, open_args);
             }
           });
 
@@ -164,6 +180,7 @@ async fn main() {
     })
     .invoke_handler(tauri::generate_handler![
       read_config_file,
+      get_open_window_args,
       listen_provider,
       unlisten_provider
     ])
@@ -176,89 +193,4 @@ async fn main() {
       api.prevent_exit();
     }
   })
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct InitialState {
-  args: HashMap<String, String>,
-  env: HashMap<String, String>,
-  current_window: WindowInfo,
-  current_monitor: Option<MonitorInfo>,
-  primary_monitor: Option<MonitorInfo>,
-  monitors: Vec<MonitorInfo>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct MonitorInfo {
-  name: String,
-  x: i32,
-  y: i32,
-  width: u32,
-  height: u32,
-  scale_factor: f64,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct WindowInfo {
-  x: i32,
-  y: i32,
-  width: u32,
-  height: u32,
-  scale_factor: f64,
-}
-
-fn get_initial_state(
-  app_handle: &AppHandle,
-  window: &Window,
-  args: HashMap<String, String>,
-  env: HashMap<String, String>,
-) -> Result<InitialState> {
-  let monitors = app_handle
-    .available_monitors()?
-    .iter()
-    .map(|monitor| to_monitor_info(&monitor))
-    .collect();
-
-  Ok(InitialState {
-    args,
-    env,
-    current_window: to_window_info(&window)?,
-    current_monitor: window
-      .current_monitor()?
-      .map(|monitor| to_monitor_info(&monitor)),
-    primary_monitor: app_handle
-      .primary_monitor()?
-      .map(|monitor| to_monitor_info(&monitor)),
-    monitors,
-  })
-}
-
-fn to_window_info(window: &Window) -> Result<WindowInfo> {
-  let window_position = window.outer_position()?;
-  let window_size = window.outer_size()?;
-
-  Ok(WindowInfo {
-    scale_factor: window.scale_factor()?,
-    width: window_size.width,
-    height: window_size.height,
-    x: window_position.x,
-    y: window_position.y,
-  })
-}
-
-fn to_monitor_info(monitor: &Monitor) -> MonitorInfo {
-  let monitor_position = monitor.position();
-  let monitor_size = monitor.size();
-
-  MonitorInfo {
-    name: monitor.name().unwrap_or(&"".to_owned()).to_string(),
-    scale_factor: monitor.scale_factor(),
-    width: monitor_size.width,
-    height: monitor_size.height,
-    x: monitor_position.x,
-    y: monitor_position.y,
-  }
 }

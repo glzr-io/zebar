@@ -1,4 +1,3 @@
-export * from './get-config-variables';
 export * from './get-parsed-element-config';
 export * from './get-style-builder';
 export * from './get-user-config';

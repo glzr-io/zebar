@@ -11,28 +11,29 @@ global:
     --some-var: blue;
   # Path to CSS or SCSS file(s). Loaded after inline styles.
   load_stylesheets: []
-  # Path to JS file(s). Loaded after mounting bar element.
+  # Path to JS file(s). Loaded after mounting window element.
   load_scripts: []
 
 ##
 # Docs regarding window: https://some-future-docs-link.com
 ##
 window/bar:
-  # Width of the bar in physical pixels.
-  width: '{{ env.screen_width }}'
-  # Height of the bar in physical pixels.
+  providers: ['self']
+  # Width of the window in physical pixels.
+  width: '{{ self.args.MONITOR_WIDTH }}'
+  # Height of the window in physical pixels.
   height: '50'
-  # X-position of the bar in physical pixels.
-  position_x: '{{ env.screen_x }}'
-  # Y-position of the bar in physical pixels.
-  position_y: '{{ env.screen_y }}'
-  # Whether to show the bar above all other windows.
+  # X-position of the window in physical pixels.
+  position_x: '{{ self.args.MONITOR_X }}'
+  # Y-position of the window in physical pixels.
+  position_y: '{{ self.args.MONITOR_Y }}'
+  # Whether to show the window above all others.
   always_on_top: false
-  # Whether the bar should be shown in the taskbar.
+  # Whether the window should be shown in the taskbar.
   show_in_taskbar: false
-  # Whether the bar should have resize handles.
+  # Whether the window should have resize handles.
   resizable: false
-  # CSS/SCSS styles to apply to the bar element.
+  # CSS/SCSS styles to apply to the window element.
   styles: |
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;

@@ -1,24 +1,25 @@
 import { Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
+import { getCurrent as getCurrentWindow } from '@tauri-apps/api/window';
 
-import { MonitorInfo, WindowInfo } from '~/desktop';
+import { getOpenWindowArgs } from '~/desktop';
 import { SelfProviderConfig } from '~/user-config';
 
+// TODO: Add window + monitor.
 export interface SelfVariables {
   args: Record<string, string>;
   env: Record<string, string>;
-  currentWindow: WindowInfo;
-  currentMonitor?: MonitorInfo;
 }
 
 export async function createSelfProvider(_: SelfProviderConfig, __: Owner) {
-  const [selfVariables] = createStore<SelfVariables>(getVariables());
+  const [selfVariables] = createStore<SelfVariables>(await getVariables());
 
-  function getVariables() {
-    // TODO: Handle fetching initial state if state on window is not defined.
-    const { args, env, currentWindow, currentMonitor } =
-      window.__ZEBAR_INIT_STATE;
-    return { args, env, currentWindow, currentMonitor };
+  async function getVariables() {
+    const { args, env } =
+      window.__ZEBAR_OPEN_ARGS ??
+      (await getOpenWindowArgs(await getCurrentWindow().label));
+
+    return { args, env };
   }
 
   return {
@@ -27,12 +28,6 @@ export async function createSelfProvider(_: SelfProviderConfig, __: Owner) {
     },
     get env() {
       return selfVariables.env;
-    },
-    get currentWindow() {
-      return selfVariables.currentWindow;
-    },
-    get currentMonitor() {
-      return selfVariables.currentMonitor;
     },
   };
 }
