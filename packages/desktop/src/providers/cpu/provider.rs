@@ -32,7 +32,7 @@ impl CpuProvider {
 
 #[async_trait]
 impl IntervalProvider for CpuProvider {
-  type State = System;
+  type State = Mutex<System>;
 
   fn refresh_interval_ms(&self) -> u64 {
     self.config.refresh_interval_ms
