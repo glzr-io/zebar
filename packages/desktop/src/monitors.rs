@@ -17,12 +17,13 @@ pub fn get_monitors_str<R: Runtime>(
 
   for monitor in monitors {
     monitors_str += &format!(
-      "MONITOR_NAME=\"{}\" MONITOR_X=\"{}\" MONITOR_Y=\"{}\" MONITOR_WIDTH=\"{}\" MONITOR_HEIGHT=\"{}\"",
+      "MONITOR_NAME=\"{}\" MONITOR_X=\"{}\" MONITOR_Y=\"{}\" MONITOR_WIDTH=\"{}\" MONITOR_HEIGHT=\"{}\" MONITOR_SCALE_FACTOR=\"{}\"",
       monitor.name().context("Unable to read monitor name")?,
       monitor.position().x,
       monitor.position().y,
       monitor.size().width,
-      monitor.size().height
+      monitor.size().height,
+      monitor.scale_factor()
     );
 
     monitors_str += match print0 {
