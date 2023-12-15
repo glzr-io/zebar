@@ -2,7 +2,7 @@ import { listen, Event } from '@tauri-apps/api/event';
 
 export interface ProviderEmitEvent<T = unknown> {
   configHash: string;
-  variables: T;
+  variables: { data: T } | { error: string };
 }
 
 /**
@@ -13,8 +13,17 @@ export function onProviderEmit<T = unknown>(
   callback: (payload: T) => void,
 ) {
   return listen('provider-emit', (event: Event<ProviderEmitEvent<T>>) => {
-    if (event.payload.configHash === configHash) {
-      callback(event.payload.variables as T);
+    // Ignore provider emissions for different configs.
+    if (event.payload.configHash !== configHash) {
+      return;
     }
+
+    const { variables } = event.payload;
+
+    if ('error' in variables) {
+      throw new Error(variables.error);
+    }
+
+    callback(variables.data as T);
   });
 }

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use starship_battery::{
   units::{
@@ -22,39 +23,35 @@ pub struct BatteryProvider {
 }
 
 impl BatteryProvider {
-  pub fn new(config: BatteryProviderConfig) -> BatteryProvider {
-    BatteryProvider {
+  pub fn new(config: BatteryProviderConfig) -> Result<BatteryProvider> {
+    let manager = Manager::new()?;
+
+    Ok(BatteryProvider {
       config,
       abort_handle: None,
-      // TODO: Error handling.
-      battery_manager: Arc::new(Mutex::new(Manager::new().unwrap())),
-    }
+      battery_manager: Arc::new(Mutex::new(manager)),
+    })
   }
 
   /// Battery manager from `starship_battery` is not thread-safe, so it
   /// requires its own non-async function.
-  fn get_variables(manager: &Manager) -> BatteryVariables {
+  fn get_variables(manager: &Manager) -> Result<BatteryVariables> {
     let first_battery = manager
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
-      .unwrap_or(None);
+      .unwrap_or(None)
+      .context("No battery found.");
 
-    // TODO: Error handling.
-    match first_battery {
-      None => BatteryVariables::default(),
-      Some(battery) => BatteryVariables {
-        charge_percent: battery.state_of_charge().get::<percent>(),
-        health_percent: battery.state_of_health().get::<percent>(),
-        state: battery.state().to_string(),
-        time_till_full: battery.time_to_full().map(|time| time.get::<second>()),
-        time_till_empty: battery
-          .time_to_empty()
-          .map(|time| time.get::<second>()),
-        power_consumption: battery.energy_rate().get::<watt>(),
-        voltage: battery.voltage().get::<volt>(),
-        cycle_count: battery.cycle_count(),
-      },
-    }
+    first_battery.map(|battery| BatteryVariables {
+      charge_percent: battery.state_of_charge().get::<percent>(),
+      health_percent: battery.state_of_health().get::<percent>(),
+      state: battery.state().to_string(),
+      time_till_full: battery.time_to_full().map(|time| time.get::<second>()),
+      time_till_empty: battery.time_to_empty().map(|time| time.get::<second>()),
+      power_consumption: battery.energy_rate().get::<watt>(),
+      voltage: battery.voltage().get::<volt>(),
+      cycle_count: battery.cycle_count(),
+    })
   }
 }
 
@@ -80,8 +77,9 @@ impl IntervalProvider for BatteryProvider {
 
   async fn get_refreshed_variables(
     battery_manager: &Mutex<Manager>,
-  ) -> ProviderVariables {
-    let battery_manager = &*battery_manager.lock().await;
-    ProviderVariables::Battery(Self::get_variables(battery_manager))
+  ) -> Result<ProviderVariables> {
+    Ok(ProviderVariables::Battery(Self::get_variables(
+      &*battery_manager.lock().await,
+    )?))
   }
 }
