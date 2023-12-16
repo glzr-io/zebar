@@ -17,8 +17,11 @@ use super::{
 #[async_trait]
 pub trait IntervalProvider {
   type State: Sync + Send + 'static;
+  type Config: Sync + Send + 'static;
 
   fn refresh_interval_ms(&self) -> u64;
+
+  fn config(&self) -> Arc<Self::Config>;
 
   fn state(&self) -> Arc<Self::State>;
 
@@ -27,6 +30,7 @@ pub trait IntervalProvider {
   fn set_abort_handle(&mut self, abort_handle: AbortHandle);
 
   async fn get_refreshed_variables(
+    config: &Self::Config,
     state: &Self::State,
   ) -> Result<ProviderVariables>;
 }
@@ -40,6 +44,7 @@ impl<T: IntervalProvider + Send> Provider for T {
   ) {
     let refresh_interval_ms = self.refresh_interval_ms();
     let state = self.state();
+    let config = self.config();
 
     let forever = task::spawn(async move {
       let mut interval =
@@ -53,7 +58,7 @@ impl<T: IntervalProvider + Send> Provider for T {
           .send(ProviderOutput {
             config_hash: config_hash.clone(),
             variables: to_variables_result(
-              T::get_refreshed_variables(&state).await,
+              T::get_refreshed_variables(&config, &state).await,
             ),
           })
           .await;
@@ -73,7 +78,7 @@ impl<T: IntervalProvider + Send> Provider for T {
       .send(ProviderOutput {
         config_hash,
         variables: to_variables_result(
-          T::get_refreshed_variables(&self.state()).await,
+          T::get_refreshed_variables(&self.config(), &self.state()).await,
         ),
       })
       .await;

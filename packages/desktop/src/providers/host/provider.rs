@@ -12,7 +12,7 @@ use crate::providers::{
 use super::{HostProviderConfig, HostVariables};
 
 pub struct HostProvider {
-  pub config: HostProviderConfig,
+  pub config: Arc<HostProviderConfig>,
   abort_handle: Option<AbortHandle>,
   sysinfo: Arc<Mutex<System>>,
 }
@@ -23,7 +23,7 @@ impl HostProvider {
     sysinfo: Arc<Mutex<System>>,
   ) -> HostProvider {
     HostProvider {
-      config,
+      config: Arc::new(config),
       abort_handle: None,
       sysinfo,
     }
@@ -32,10 +32,15 @@ impl HostProvider {
 
 #[async_trait]
 impl IntervalProvider for HostProvider {
+  type Config = HostProviderConfig;
   type State = Mutex<System>;
 
   fn refresh_interval_ms(&self) -> u64 {
     self.config.refresh_interval_ms
+  }
+
+  fn config(&self) -> Arc<HostProviderConfig> {
+    self.config.clone()
   }
 
   fn state(&self) -> Arc<Mutex<System>> {
@@ -51,6 +56,7 @@ impl IntervalProvider for HostProvider {
   }
 
   async fn get_refreshed_variables(
+    _: &HostProviderConfig,
     sysinfo: &Mutex<System>,
   ) -> Result<ProviderVariables> {
     let sysinfo = sysinfo.lock().await;

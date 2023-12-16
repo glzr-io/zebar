@@ -12,7 +12,7 @@ use crate::providers::{
 use super::{CpuProviderConfig, CpuVariables};
 
 pub struct CpuProvider {
-  pub config: CpuProviderConfig,
+  pub config: Arc<CpuProviderConfig>,
   abort_handle: Option<AbortHandle>,
   sysinfo: Arc<Mutex<System>>,
 }
@@ -23,7 +23,7 @@ impl CpuProvider {
     sysinfo: Arc<Mutex<System>>,
   ) -> CpuProvider {
     CpuProvider {
-      config,
+      config: Arc::new(config),
       abort_handle: None,
       sysinfo,
     }
@@ -32,10 +32,15 @@ impl CpuProvider {
 
 #[async_trait]
 impl IntervalProvider for CpuProvider {
+  type Config = CpuProviderConfig;
   type State = Mutex<System>;
 
   fn refresh_interval_ms(&self) -> u64 {
     self.config.refresh_interval_ms
+  }
+
+  fn config(&self) -> Arc<CpuProviderConfig> {
+    self.config.clone()
   }
 
   fn state(&self) -> Arc<Mutex<System>> {
@@ -51,6 +56,7 @@ impl IntervalProvider for CpuProvider {
   }
 
   async fn get_refreshed_variables(
+    _: &CpuProviderConfig,
     sysinfo: &Mutex<System>,
   ) -> Result<ProviderVariables> {
     let mut sysinfo = sysinfo.lock().await;
