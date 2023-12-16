@@ -37,10 +37,6 @@ impl IntervalProvider for NetworkProvider {
   type Config = NetworkProviderConfig;
   type State = Mutex<System>;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
-  }
-
   fn config(&self) -> Arc<NetworkProviderConfig> {
     self.config.clone()
   }

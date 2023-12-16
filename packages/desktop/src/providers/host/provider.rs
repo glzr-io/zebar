@@ -35,10 +35,6 @@ impl IntervalProvider for HostProvider {
   type Config = HostProviderConfig;
   type State = Mutex<System>;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
-  }
-
   fn config(&self) -> Arc<HostProviderConfig> {
     self.config.clone()
   }

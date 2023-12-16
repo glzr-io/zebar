@@ -14,12 +14,28 @@ use super::{
   variables::ProviderVariables,
 };
 
+/// Require interval providers to have a refresh interval in their config.
+pub trait IntervalConfig {
+  fn refresh_interval_ms(&self) -> u64;
+}
+
+#[macro_export]
+macro_rules! impl_interval_config {
+  ($struct_name:ident) => {
+    use crate::providers::interval_provider::IntervalConfig;
+
+    impl IntervalConfig for $struct_name {
+      fn refresh_interval_ms(&self) -> u64 {
+        self.refresh_interval_ms
+      }
+    }
+  };
+}
+
 #[async_trait]
 pub trait IntervalProvider {
+  type Config: Sync + Send + 'static + IntervalConfig;
   type State: Sync + Send + 'static;
-  type Config: Sync + Send + 'static;
-
-  fn refresh_interval_ms(&self) -> u64;
 
   fn config(&self) -> Arc<Self::Config>;
 
@@ -42,13 +58,12 @@ impl<T: IntervalProvider + Send> Provider for T {
     config_hash: String,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
-    let refresh_interval_ms = self.refresh_interval_ms();
-    let state = self.state();
     let config = self.config();
+    let state = self.state();
 
     let forever = task::spawn(async move {
       let mut interval =
-        time::interval(Duration::from_millis(refresh_interval_ms));
+        time::interval(Duration::from_millis(config.refresh_interval_ms()));
 
       loop {
         // The first tick fires immediately.

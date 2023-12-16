@@ -35,10 +35,6 @@ impl IntervalProvider for CpuProvider {
   type Config = CpuProviderConfig;
   type State = Mutex<System>;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
-  }
-
   fn config(&self) -> Arc<CpuProviderConfig> {
     self.config.clone()
   }

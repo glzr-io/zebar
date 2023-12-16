@@ -60,10 +60,6 @@ impl IntervalProvider for BatteryProvider {
   type Config = BatteryProviderConfig;
   type State = Manager;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
-  }
-
   fn config(&self) -> Arc<BatteryProviderConfig> {
     self.config.clone()
   }

@@ -32,10 +32,6 @@ impl IntervalProvider for WeatherProvider {
   type Config = WeatherProviderConfig;
   type State = Client;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
-  }
-
   fn config(&self) -> Arc<WeatherProviderConfig> {
     self.config.clone()
   }
