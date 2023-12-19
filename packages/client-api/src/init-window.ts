@@ -83,7 +83,7 @@ async function redrawWindow(config: WindowConfig): Promise<void> {
   });
 
   await setWindowStyles({
-    alwaysOnTop: config.always_on_top,
+    zOrder: config.z_order,
     showInTaskbar: config.show_in_taskbar,
     resizable: config.resizable,
   });

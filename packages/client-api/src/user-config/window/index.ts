@@ -6,3 +6,4 @@ export * from './providers';
 export * from './providers-config.model';
 export * from './template-config.model';
 export * from './window-config.model';
+export * from './z-order.model';
