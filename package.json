@@ -9,7 +9,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev --continue",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md,html,json,js,yaml,scss}\" --ignore-path .gitignore"
+    "format": "prettier --write \"**/*.{ts,tsx,md,html,json,js,yaml,scss}\" && turbo run format"
   },
   "devDependencies": {
     "prettier": "3.1.1",
