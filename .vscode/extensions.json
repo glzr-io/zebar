@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "esbenp.prettier-vscode",
-    "rust-lang.rust-analyzer",
-    "clinyong.vscode-css-modules"
+    "rust-lang.rust-analyzer"
   ]
 }
