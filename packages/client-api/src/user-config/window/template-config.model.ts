@@ -10,9 +10,13 @@ export const TemplateConfigSchemaP1 = BaseElementConfigSchema.extend({
 });
 
 // Add `slot/**` keys to schema.
-export const TemplateConfigSchema = withDynamicKey(TemplateConfigSchemaP1, {
-  isKey: (key: string): key is `slot/${string}` => key.startsWith('slot/'),
-  schema: z.string(),
-});
+export const TemplateConfigSchema = withDynamicKey(
+  TemplateConfigSchemaP1,
+  {
+    isKey: (key: string): key is `slot/${string}` =>
+      key.startsWith('slot/'),
+    schema: z.string(),
+  },
+);
 
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;

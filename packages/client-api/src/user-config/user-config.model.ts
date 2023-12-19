@@ -13,7 +13,8 @@ export type UserConfigP1 = Prettify<z.infer<typeof UserConfigP1Schema>>;
 
 // Add `window/**` keys to schema.
 export const UserConfigSchema = withDynamicKey(UserConfigP1Schema, {
-  isKey: (key: string): key is `window/${string}` => key.startsWith('window/'),
+  isKey: (key: string): key is `window/${string}` =>
+    key.startsWith('window/'),
   schema: WindowConfigSchema,
 });
 

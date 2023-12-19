@@ -21,7 +21,9 @@ export interface WindowStyles {
 
 const logger = createLogger('current-window');
 
-export async function setWindowPosition(position: Partial<WindowPosition>) {
+export async function setWindowPosition(
+  position: Partial<WindowPosition>,
+) {
   logger.debug(`Setting window position to:`, position);
 
   const window = await getCurrentWindow();

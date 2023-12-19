@@ -7,17 +7,21 @@ import {
   runWithOwner,
 } from 'solid-js';
 
-import { onProviderEmit, listenProvider, unlistenProvider } from '~/desktop';
+import {
+  onProviderEmit,
+  listenProvider,
+  unlistenProvider,
+} from '~/desktop';
 import { ProviderConfig } from '~/user-config';
 import { simpleHash } from '~/utils';
 
 /**
  * Utility for listening to a provider of a given config type.
  */
-export function createProviderListener<TConfig extends ProviderConfig, TVars>(
-  config: TConfig,
-  owner: Owner,
-): Promise<Accessor<TVars>> {
+export function createProviderListener<
+  TConfig extends ProviderConfig,
+  TVars,
+>(config: TConfig, owner: Owner): Promise<Accessor<TVars>> {
   return new Promise(async resolve => {
     const [payload, setPayload] = createSignal<TVars>();
 

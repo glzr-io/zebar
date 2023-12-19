@@ -6,5 +6,7 @@ export function toCssSelector(input: string): string {
   const sanitizedInput = input.replace(/[^a-zA-Z0-9]/g, '-');
 
   // Ensure the selector doesn't start with a number.
-  return /^\d/.test(sanitizedInput) ? `_${sanitizedInput}` : sanitizedInput;
+  return /^\d/.test(sanitizedInput)
+    ? `_${sanitizedInput}`
+    : sanitizedInput;
 }

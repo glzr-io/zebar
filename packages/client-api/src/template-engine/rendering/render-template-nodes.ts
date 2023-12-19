@@ -19,7 +19,8 @@ export interface RenderContext {
 }
 
 /** Pattern for the expression in a for loop statement. */
-const FOR_LOOP_EXPRESSION_PATTERN = /^\s*([(),\s0-9A-Za-z_$]*)\s+of\s+(.*)/;
+const FOR_LOOP_EXPRESSION_PATTERN =
+  /^\s*([(),\s0-9A-Za-z_$]*)\s+of\s+(.*)/;
 
 /** Pattern for the loop variable on the left-side of a for loop expression. */
 const FOR_LOOP_VARIABLE_PATTERN =
@@ -67,7 +68,8 @@ export function renderTemplateNodes(
   function visitIfStatementNode(node: IfStatementNode): string {
     for (const branch of node.branches) {
       const shouldVisit =
-        branch.type === 'else' || Boolean(evalExpression(branch.expression));
+        branch.type === 'else' ||
+        Boolean(evalExpression(branch.expression));
 
       if (shouldVisit) {
         return visitAll(branch.children);
@@ -100,7 +102,9 @@ export function renderTemplateNodes(
 
   function parseForExpression(expression: string) {
     try {
-      const expressionMatch = expression.match(FOR_LOOP_EXPRESSION_PATTERN);
+      const expressionMatch = expression.match(
+        FOR_LOOP_EXPRESSION_PATTERN,
+      );
       const [_, loopVariableExpression, iterable] = expressionMatch ?? [];
 
       if (!loopVariableExpression || !iterable) {

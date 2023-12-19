@@ -2,8 +2,9 @@ use serde::Deserialize;
 
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
-  host::HostProviderConfig, ip::IpProviderConfig, memory::MemoryProviderConfig,
-  network::NetworkProviderConfig, weather::WeatherProviderConfig,
+  host::HostProviderConfig, ip::IpProviderConfig,
+  memory::MemoryProviderConfig, network::NetworkProviderConfig,
+  weather::WeatherProviderConfig,
 };
 
 #[derive(Deserialize, Debug)]

@@ -62,8 +62,9 @@ impl<T: IntervalProvider + Send> Provider for T {
     let state = self.state();
 
     let forever = task::spawn(async move {
-      let mut interval =
-        time::interval(Duration::from_millis(config.refresh_interval_ms()));
+      let mut interval = time::interval(Duration::from_millis(
+        config.refresh_interval_ms(),
+      ));
 
       loop {
         // The first tick fires immediately.
@@ -106,7 +107,9 @@ impl<T: IntervalProvider + Send> Provider for T {
   }
 }
 
-fn to_variables_result(result: Result<ProviderVariables>) -> VariablesResult {
+fn to_variables_result(
+  result: Result<ProviderVariables>,
+) -> VariablesResult {
   match result {
     Ok(variables) => VariablesResult::Data(variables),
     Err(err) => VariablesResult::Error(err.to_string()),

@@ -21,4 +21,6 @@ export const WeatherProviderConfigSchema = z.object({
   refresh_interval_ms: z.coerce.number().default(60 * 60 * 1000),
 });
 
-export type WeatherProviderConfig = z.infer<typeof WeatherProviderConfigSchema>;
+export type WeatherProviderConfig = z.infer<
+  typeof WeatherProviderConfigSchema
+>;

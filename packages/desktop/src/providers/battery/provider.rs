@@ -46,8 +46,12 @@ impl BatteryProvider {
       charge_percent: battery.state_of_charge().get::<percent>(),
       health_percent: battery.state_of_health().get::<percent>(),
       state: battery.state().to_string(),
-      time_till_full: battery.time_to_full().map(|time| time.get::<second>()),
-      time_till_empty: battery.time_to_empty().map(|time| time.get::<second>()),
+      time_till_full: battery
+        .time_to_full()
+        .map(|time| time.get::<second>()),
+      time_till_empty: battery
+        .time_to_empty()
+        .map(|time| time.get::<second>()),
       power_consumption: battery.energy_rate().get::<watt>(),
       voltage: battery.voltage().get::<volt>(),
       cycle_count: battery.cycle_count(),

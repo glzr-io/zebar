@@ -11,7 +11,10 @@ export interface IpVariables {
   approxLongitude: number;
 }
 
-export async function createIpProvider(config: IpProviderConfig, owner: Owner) {
+export async function createIpProvider(
+  config: IpProviderConfig,
+  owner: Owner,
+) {
   const ipVariables = await createProviderListener<
     IpProviderConfig,
     IpVariables

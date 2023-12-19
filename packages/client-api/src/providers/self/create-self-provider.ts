@@ -11,7 +11,10 @@ export interface SelfVariables {
   env: Record<string, string>;
 }
 
-export async function createSelfProvider(_: SelfProviderConfig, __: Owner) {
+export async function createSelfProvider(
+  _: SelfProviderConfig,
+  __: Owner,
+) {
   const [selfVariables] = createStore<SelfVariables>(await getVariables());
 
   async function getVariables() {
