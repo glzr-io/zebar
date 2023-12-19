@@ -4,6 +4,7 @@ import {
   getCurrent as getCurrentWindow,
 } from '@tauri-apps/api/window';
 
+import { ZOrder } from '~/user-config';
 import { createLogger } from '~/utils';
 
 export interface WindowPosition {
@@ -14,7 +15,7 @@ export interface WindowPosition {
 }
 
 export interface WindowStyles {
-  alwaysOnTop: boolean;
+  zOrder: ZOrder;
   showInTaskbar: boolean;
   resizable: boolean;
 }
@@ -47,7 +48,15 @@ export async function setWindowPosition(
 
 export async function setWindowStyles(styles: Partial<WindowStyles>) {
   const window = await getCurrentWindow();
-  window.setAlwaysOnTop(styles.alwaysOnTop ?? true);
+
   window.setSkipTaskbar(!styles.showInTaskbar ?? false);
   window.setResizable(styles.resizable ?? false);
+
+  if (styles.zOrder === 'always_on_bottom') {
+    window.setAlwaysOnBottom(true);
+  } else if (styles.zOrder === 'always_on_top') {
+    window.setAlwaysOnTop(true);
+  } else {
+    window.setAlwaysOnTop(false);
+  }
 }

@@ -4,6 +4,7 @@ import { GroupConfigSchema } from './group-config.model';
 import { BaseElementConfigSchema } from './base-element-config.model';
 import { Prettify } from '~/utils';
 import { BooleanLikeSchema, withDynamicKey } from '../shared';
+import { ZOrderSchema } from './z-order.model';
 
 export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
   class_name: z.string().default('bar'),
@@ -11,7 +12,7 @@ export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
   position_y: z.coerce.number(),
   width: z.coerce.number().min(1),
   height: z.coerce.number().min(1),
-  always_on_top: BooleanLikeSchema.optional(),
+  z_order: ZOrderSchema,
   show_in_taskbar: BooleanLikeSchema.optional(),
   resizable: BooleanLikeSchema.optional(),
 });
