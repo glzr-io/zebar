@@ -17,7 +17,7 @@ use crate::providers::{
 use super::{BatteryProviderConfig, BatteryVariables};
 
 pub struct BatteryProvider {
-  pub config: BatteryProviderConfig,
+  pub config: Arc<BatteryProviderConfig>,
   abort_handle: Option<AbortHandle>,
   battery_manager: Arc<Manager>,
 }
@@ -27,7 +27,7 @@ impl BatteryProvider {
     let manager = Manager::new()?;
 
     Ok(BatteryProvider {
-      config,
+      config: Arc::new(config),
       abort_handle: None,
       battery_manager: Arc::new(manager),
     })
@@ -57,10 +57,11 @@ impl BatteryProvider {
 
 #[async_trait]
 impl IntervalProvider for BatteryProvider {
+  type Config = BatteryProviderConfig;
   type State = Manager;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
+  fn config(&self) -> Arc<BatteryProviderConfig> {
+    self.config.clone()
   }
 
   fn state(&self) -> Arc<Manager> {
@@ -76,6 +77,7 @@ impl IntervalProvider for BatteryProvider {
   }
 
   async fn get_refreshed_variables(
+    _: &BatteryProviderConfig,
     battery_manager: &Manager,
   ) -> Result<ProviderVariables> {
     Ok(ProviderVariables::Battery(Self::get_variables(

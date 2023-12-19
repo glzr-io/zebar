@@ -14,11 +14,30 @@ use super::{
   variables::ProviderVariables,
 };
 
+/// Require interval providers to have a refresh interval in their config.
+pub trait IntervalConfig {
+  fn refresh_interval_ms(&self) -> u64;
+}
+
+#[macro_export]
+macro_rules! impl_interval_config {
+  ($struct_name:ident) => {
+    use crate::providers::interval_provider::IntervalConfig;
+
+    impl IntervalConfig for $struct_name {
+      fn refresh_interval_ms(&self) -> u64 {
+        self.refresh_interval_ms
+      }
+    }
+  };
+}
+
 #[async_trait]
 pub trait IntervalProvider {
+  type Config: Sync + Send + 'static + IntervalConfig;
   type State: Sync + Send + 'static;
 
-  fn refresh_interval_ms(&self) -> u64;
+  fn config(&self) -> Arc<Self::Config>;
 
   fn state(&self) -> Arc<Self::State>;
 
@@ -27,6 +46,7 @@ pub trait IntervalProvider {
   fn set_abort_handle(&mut self, abort_handle: AbortHandle);
 
   async fn get_refreshed_variables(
+    config: &Self::Config,
     state: &Self::State,
   ) -> Result<ProviderVariables>;
 }
@@ -38,12 +58,12 @@ impl<T: IntervalProvider + Send> Provider for T {
     config_hash: String,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
-    let refresh_interval_ms = self.refresh_interval_ms();
+    let config = self.config();
     let state = self.state();
 
     let forever = task::spawn(async move {
       let mut interval =
-        time::interval(Duration::from_millis(refresh_interval_ms));
+        time::interval(Duration::from_millis(config.refresh_interval_ms()));
 
       loop {
         // The first tick fires immediately.
@@ -53,7 +73,7 @@ impl<T: IntervalProvider + Send> Provider for T {
           .send(ProviderOutput {
             config_hash: config_hash.clone(),
             variables: to_variables_result(
-              T::get_refreshed_variables(&state).await,
+              T::get_refreshed_variables(&config, &state).await,
             ),
           })
           .await;
@@ -73,7 +93,7 @@ impl<T: IntervalProvider + Send> Provider for T {
       .send(ProviderOutput {
         config_hash,
         variables: to_variables_result(
-          T::get_refreshed_variables(&self.state()).await,
+          T::get_refreshed_variables(&self.config(), &self.state()).await,
         ),
       })
       .await;

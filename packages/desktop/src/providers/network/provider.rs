@@ -14,7 +14,7 @@ use crate::providers::{
 use super::NetworkProviderConfig;
 
 pub struct NetworkProvider {
-  pub config: NetworkProviderConfig,
+  pub config: Arc<NetworkProviderConfig>,
   abort_handle: Option<AbortHandle>,
   sysinfo: Arc<Mutex<System>>,
 }
@@ -25,7 +25,7 @@ impl NetworkProvider {
     sysinfo: Arc<Mutex<System>>,
   ) -> NetworkProvider {
     NetworkProvider {
-      config,
+      config: Arc::new(config),
       abort_handle: None,
       sysinfo,
     }
@@ -34,10 +34,11 @@ impl NetworkProvider {
 
 #[async_trait]
 impl IntervalProvider for NetworkProvider {
+  type Config = NetworkProviderConfig;
   type State = Mutex<System>;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
+  fn config(&self) -> Arc<NetworkProviderConfig> {
+    self.config.clone()
   }
 
   fn state(&self) -> Arc<Mutex<System>> {
@@ -53,6 +54,7 @@ impl IntervalProvider for NetworkProvider {
   }
 
   async fn get_refreshed_variables(
+    _: &NetworkProviderConfig,
     sysinfo: &Mutex<System>,
   ) -> Result<ProviderVariables> {
     let mut sysinfo = sysinfo.lock().await;

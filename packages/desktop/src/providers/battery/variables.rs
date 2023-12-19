@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Serialize, Debug, Clone, Default)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BatteryVariables {
   pub charge_percent: f32,
