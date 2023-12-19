@@ -9,8 +9,8 @@ export interface IpVariables {
   address: string;
   approxCity: string;
   approxCountry: string;
-  approxLatitude: string;
-  approxLongitude: string;
+  approxLatitude: number;
+  approxLongitude: number;
 }
 
 export async function createIpProvider(config: IpProviderConfig, owner: Owner) {
@@ -18,8 +18,8 @@ export async function createIpProvider(config: IpProviderConfig, owner: Owner) {
     address: '',
     approxCity: '',
     approxCountry: '',
-    approxLatitude: '',
-    approxLongitude: '',
+    approxLatitude: 0,
+    approxLongitude: 0,
   });
 
   await refresh();
@@ -36,8 +36,8 @@ export async function createIpProvider(config: IpProviderConfig, owner: Owner) {
       address: data.ip,
       approxCity: data.city,
       approxCountry: data.country,
-      approxLatitude: data.loc.split(',')[0],
-      approxLongitude: data.loc.split(',')[1],
+      approxLatitude: Number(data.loc.split(',')[0]),
+      approxLongitude: Number(data.loc.split(',')[1]),
     });
   }
 

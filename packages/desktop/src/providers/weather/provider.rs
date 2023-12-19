@@ -9,7 +9,10 @@ use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
 
-use super::{WeatherProviderConfig, WeatherStatus, WeatherVariables};
+use super::{
+  open_meteo_res::OpenMeteoRes, WeatherProviderConfig, WeatherStatus,
+  WeatherVariables,
+};
 
 pub struct WeatherProvider {
   pub config: Arc<WeatherProviderConfig>,
@@ -23,6 +26,31 @@ impl WeatherProvider {
       config: Arc::new(config),
       abort_handle: None,
       http_client: Arc::new(Client::new()),
+    }
+  }
+
+  fn celsius_to_fahrenheit(celsius_temp: f32) -> f32 {
+    return (celsius_temp * 9.) / 5. + 32.;
+  }
+
+  /// Relevant documentation: https://open-meteo.com/en/docs#weathervariables
+  fn get_weather_status(code: u32, is_daytime: bool) -> WeatherStatus {
+    match code {
+      0 => match is_daytime {
+        true => WeatherStatus::ClearDay,
+        false => WeatherStatus::ClearNight,
+      },
+      1 | 2 => match is_daytime {
+        true => WeatherStatus::CloudyDay,
+        false => WeatherStatus::CloudyNight,
+      },
+      3..=50 => WeatherStatus::Overcast,
+      51..=62 => WeatherStatus::LightRain,
+      63..=70 => WeatherStatus::HeavyRain,
+      71..=79 => WeatherStatus::Snow,
+      80..=84 => WeatherStatus::HeavyRain,
+      85..=94 => WeatherStatus::Snow,
+      95..=u32::MAX => WeatherStatus::Snow,
     }
   }
 }
@@ -64,15 +92,18 @@ impl IntervalProvider for WeatherProvider {
       ])
       .send()
       .await?
-      .text()
+      .json::<OpenMeteoRes>()
       .await?;
 
+    let current_weather = body.current_weather;
+    let is_daytime = current_weather.is_day == 1;
+
     Ok(ProviderVariables::Weather(WeatherVariables {
-      is_daytime: true,
-      status: WeatherStatus::ClearDay,
-      celsius_temp: 32.,
-      fahrenheit_temp: 32.,
-      wind_speed: 32.,
+      is_daytime,
+      status: Self::get_weather_status(current_weather.weathercode, is_daytime),
+      celsius_temp: current_weather.temperature,
+      fahrenheit_temp: Self::celsius_to_fahrenheit(current_weather.temperature),
+      wind_speed: current_weather.windspeed,
     }))
   }
 }
