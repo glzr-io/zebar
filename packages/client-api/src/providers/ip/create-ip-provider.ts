@@ -1,9 +1,7 @@
-import axios from 'axios';
-import { Owner, onCleanup, runWithOwner } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import { Owner } from 'solid-js';
 
 import { IpProviderConfig } from '~/user-config';
-import { IpInfoApiResponse } from './ip-info-api-response.model';
+import { createProviderListener } from '../create-provider-listener';
 
 export interface IpVariables {
   address: string;
@@ -14,49 +12,26 @@ export interface IpVariables {
 }
 
 export async function createIpProvider(config: IpProviderConfig, owner: Owner) {
-  const [ipVariables, setIpVariables] = createStore<IpVariables>({
-    address: '',
-    approxCity: '',
-    approxCountry: '',
-    approxLatitude: 0,
-    approxLongitude: 0,
-  });
-
-  await refresh();
-  const interval = setInterval(refresh, config.refresh_interval_ms);
-  runWithOwner(owner, () => onCleanup(() => clearInterval(interval)));
-
-  async function refresh() {
-    // Use https://ipinfo.io as provider for IP-related info.
-    const { data } = await axios.get<IpInfoApiResponse>(
-      'https://ipinfo.io/json',
-    );
-
-    setIpVariables({
-      address: data.ip,
-      approxCity: data.city,
-      approxCountry: data.country,
-      approxLatitude: Number(data.loc.split(',')[0]),
-      approxLongitude: Number(data.loc.split(',')[1]),
-    });
-  }
+  const ipVariables = await createProviderListener<
+    IpProviderConfig,
+    IpVariables
+  >(config, owner);
 
   return {
     get address() {
-      return ipVariables.address;
+      return ipVariables().address;
     },
     get approxCity() {
-      return ipVariables.approxCity;
+      return ipVariables().approxCity;
     },
     get approxCountry() {
-      return ipVariables.approxCountry;
+      return ipVariables().approxCountry;
     },
     get approxLatitude() {
-      return ipVariables.approxLatitude;
+      return ipVariables().approxLatitude;
     },
     get approxLongitude() {
-      return ipVariables.approxLongitude;
+      return ipVariables().approxLongitude;
     },
-    refresh,
   };
 }

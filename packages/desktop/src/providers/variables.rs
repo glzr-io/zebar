@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use super::{
   battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
-  memory::MemoryVariables, network::NetworkVariables,
+  ip::IpVariables, memory::MemoryVariables, network::NetworkVariables,
   weather::WeatherVariables,
 };
 
@@ -12,6 +12,7 @@ pub enum ProviderVariables {
   Battery(BatteryVariables),
   Cpu(CpuVariables),
   Host(HostVariables),
+  Ip(IpVariables),
   Memory(MemoryVariables),
   Network(NetworkVariables),
   Weather(WeatherVariables),

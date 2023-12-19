@@ -3,6 +3,7 @@ pub mod config;
 pub mod cpu;
 pub mod host;
 pub mod interval_provider;
+pub mod ip;
 pub mod manager;
 pub mod memory;
 pub mod network;

@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
-  host::HostProviderConfig, memory::MemoryProviderConfig,
+  host::HostProviderConfig, ip::IpProviderConfig, memory::MemoryProviderConfig,
   network::NetworkProviderConfig, weather::WeatherProviderConfig,
 };
 
@@ -12,6 +12,7 @@ pub enum ProviderConfig {
   Battery(BatteryProviderConfig),
   Cpu(CpuProviderConfig),
   Host(HostProviderConfig),
+  Ip(IpProviderConfig),
   Memory(MemoryProviderConfig),
   Network(NetworkProviderConfig),
   Weather(WeatherProviderConfig),
