@@ -12,7 +12,7 @@ use crate::providers::{
 use super::{MemoryProviderConfig, MemoryVariables};
 
 pub struct MemoryProvider {
-  pub config: MemoryProviderConfig,
+  pub config: Arc<MemoryProviderConfig>,
   abort_handle: Option<AbortHandle>,
   sysinfo: Arc<Mutex<System>>,
 }
@@ -23,7 +23,7 @@ impl MemoryProvider {
     sysinfo: Arc<Mutex<System>>,
   ) -> MemoryProvider {
     MemoryProvider {
-      config,
+      config: Arc::new(config),
       abort_handle: None,
       sysinfo,
     }
@@ -32,10 +32,11 @@ impl MemoryProvider {
 
 #[async_trait]
 impl IntervalProvider for MemoryProvider {
+  type Config = MemoryProviderConfig;
   type State = Mutex<System>;
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval_ms
+  fn config(&self) -> Arc<MemoryProviderConfig> {
+    self.config.clone()
   }
 
   fn state(&self) -> Arc<Mutex<System>> {
@@ -51,6 +52,7 @@ impl IntervalProvider for MemoryProvider {
   }
 
   async fn get_refreshed_variables(
+    _: &MemoryProviderConfig,
     sysinfo: &Mutex<System>,
   ) -> Result<ProviderVariables> {
     let mut sysinfo = sysinfo.lock().await;
