@@ -1,5 +1,4 @@
 {
   "rust-analyzer.linkedProjects": ["packages/desktop/Cargo.toml"],
-  "cssModules.camelCase": true,
   "rust-analyzer.showUnlinkedFileNotification": false
 }
