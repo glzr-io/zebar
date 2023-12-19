@@ -33,4 +33,6 @@ export const ProviderConfigSchema = z.union([
   WeatherProviderConfigSchema,
 ]);
 
-export type ProviderConfig = Prettify<z.infer<typeof ProviderConfigSchema>>;
+export type ProviderConfig = Prettify<
+  z.infer<typeof ProviderConfigSchema>
+>;

@@ -18,11 +18,15 @@ export interface InExpressionState {
   activeWrappingSymbol: string | null;
 }
 
-export type TokenizeState = { type: TokenizeStateType } | InExpressionState;
+export type TokenizeState =
+  | { type: TokenizeStateType }
+  | InExpressionState;
 
 export function tokenizeTemplate(template: string): Token[] {
   // Stack of tokenize states. Last element represents current state.
-  const stateStack: TokenizeState[] = [{ type: TokenizeStateType.DEFAULT }];
+  const stateStack: TokenizeState[] = [
+    { type: TokenizeStateType.DEFAULT },
+  ];
 
   // Tokens within input template.
   const tokens: Token[] = [];
@@ -45,7 +49,9 @@ export function tokenizeTemplate(template: string): Token[] {
   // Push a tokenize state.
   function pushState(typeOrState: TokenizeStateType | TokenizeState) {
     const state =
-      typeof typeOrState === 'object' ? typeOrState : { type: typeOrState };
+      typeof typeOrState === 'object'
+        ? typeOrState
+        : { type: typeOrState };
 
     stateStack.push(state);
   }
@@ -238,7 +244,10 @@ export function tokenizeTemplate(template: string): Token[] {
     }
   }
 
-  function getActiveWrappingSymbol(current: string | null, matched: string) {
+  function getActiveWrappingSymbol(
+    current: string | null,
+    matched: string,
+  ) {
     const isOpeningSymbol = matched !== ')';
 
     // Set active wrapping symbol to the matched symbol.

@@ -14,7 +14,10 @@ export function GroupElement(props: GroupElementProps) {
     <div id={toCssSelector(config.id)} class={config.class_name}>
       <Index each={props.context.childIds}>
         {childId => (
-          <ChildElement childId={childId()} parentContext={props.context} />
+          <ChildElement
+            childId={childId()}
+            parentContext={props.context}
+          />
         )}
       </Index>
     </div>

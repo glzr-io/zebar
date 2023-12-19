@@ -10,14 +10,20 @@ type LogMethod = 'log' | 'warn' | 'error';
 
 // TODO: Get a minimum log level from environment.
 export function createLogger(section: string) {
-  function log(consoleLogMethod: LogMethod, message: string, ...data: any[]) {
+  function log(
+    consoleLogMethod: LogMethod,
+    message: string,
+    ...data: any[]
+  ) {
     const date = new Date();
     const timestamp = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}:${date.getMilliseconds()}`;
 
     // Clone data to avoid reference changes in Chrome console.
     // TODO: This needs to be improved.
     const clonedData = data.map(data => {
-      return data === null || data === undefined ? data : structuredClone(data);
+      return data === null || data === undefined
+        ? data
+        : structuredClone(data);
     });
 
     console[consoleLogMethod](

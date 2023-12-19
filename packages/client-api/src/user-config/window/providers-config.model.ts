@@ -15,4 +15,6 @@ export const ProvidersConfigSchema = z
   )
   .default([]);
 
-export type ProvidersConfig = Prettify<z.infer<typeof ProvidersConfigSchema>>;
+export type ProvidersConfig = Prettify<
+  z.infer<typeof ProvidersConfigSchema>
+>;

@@ -5,4 +5,6 @@ export const MemoryProviderConfigSchema = z.object({
   type: z.literal('memory'),
 });
 
-export type MemoryProviderConfig = z.infer<typeof MemoryProviderConfigSchema>;
+export type MemoryProviderConfig = z.infer<
+  typeof MemoryProviderConfigSchema
+>;

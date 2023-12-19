@@ -15,7 +15,10 @@ import { createSystemTrayProvider } from './system-tray/create-system-tray-provi
 import { createWeatherProvider } from './weather/create-weather-provider';
 import { ProviderConfig } from '~/user-config';
 
-export async function createProvider(config: ProviderConfig, owner: Owner) {
+export async function createProvider(
+  config: ProviderConfig,
+  owner: Owner,
+) {
   switch (config.type) {
     case 'active_window':
       return createActiveWindowProvider(config);

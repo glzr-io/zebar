@@ -14,7 +14,9 @@ use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
-use tauri::{AppHandle, Manager, RunEvent, State, WindowBuilder, WindowUrl};
+use tauri::{
+  AppHandle, Manager, RunEvent, State, WindowBuilder, WindowUrl,
+};
 use tokio::{
   sync::{mpsc, Mutex},
   task,

@@ -21,9 +21,8 @@ pub fn read_file(
 
   // Create new config file from sample if it doesn't exist.
   match config_path.exists() {
-    true => {
-      fs::read_to_string(&config_path).context("Unable to read config file.")
-    }
+    true => fs::read_to_string(&config_path)
+      .context("Unable to read config file."),
     false => create_from_sample(&config_path, app_handle),
   }
 }
@@ -38,14 +37,15 @@ fn create_from_sample(
     .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
     .context("Unable to resolve sample config path.")?;
 
-  let mut sample_file =
-    fs::File::open(&sample_path).context("Unable to read sample config.")?;
+  let mut sample_file = fs::File::open(&sample_path)
+    .context("Unable to read sample config.")?;
 
   // Read the contents of the sample config.
   let mut config_string = String::new();
   sample_file.read_to_string(&mut config_string)?;
 
-  let parent_dir = config_path.parent().context("Invalid config directory.")?;
+  let parent_dir =
+    config_path.parent().context("Invalid config directory.")?;
 
   // Create the containing directory for the config file.
   std::fs::create_dir_all(&parent_dir).with_context(|| {

@@ -22,8 +22,9 @@ export async function getElementProviders(
 ) {
   const [elementProviders, _] = createSignal(await getElementProviders());
 
-  const [mergedProviders, setMergedProviders] =
-    createStore(getMergedProviders());
+  const [mergedProviders, setMergedProviders] = createStore(
+    getMergedProviders(),
+  );
 
   // Update the store on changes to any provider variables.
   runWithOwner(owner, () => {
@@ -41,7 +42,8 @@ export async function getElementProviders(
     // Create tuple of configs and the created provider.
     const providers = await Promise.all(
       providerConfigs.map(
-        async config => [config, await createProvider(config, owner)] as const,
+        async config =>
+          [config, await createProvider(config, owner)] as const,
       ),
     );
 

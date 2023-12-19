@@ -25,7 +25,10 @@ const CI =
 export default defineConfig(config => {
   const watching = !!config.watch;
 
-  const parsed_options = preset.parsePresetOptions(preset_options, watching);
+  const parsed_options = preset.parsePresetOptions(
+    preset_options,
+    watching,
+  );
 
   if (!watching && !CI) {
     const package_fields = preset.generatePackageExports(parsed_options);

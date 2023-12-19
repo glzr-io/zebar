@@ -105,7 +105,9 @@ impl IntervalProvider for WeatherProvider {
         is_daytime,
       ),
       celsius_temp: current_weather.temperature,
-      fahrenheit_temp: Self::celsius_to_fahrenheit(current_weather.temperature),
+      fahrenheit_temp: Self::celsius_to_fahrenheit(
+        current_weather.temperature,
+      ),
       wind_speed: current_weather.wind_speed,
     }))
   }

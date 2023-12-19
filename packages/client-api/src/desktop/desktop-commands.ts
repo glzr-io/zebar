@@ -1,4 +1,7 @@
-import { InvokeArgs, invoke as tauriInvoke } from '@tauri-apps/api/primitives';
+import {
+  InvokeArgs,
+  invoke as tauriInvoke,
+} from '@tauri-apps/api/primitives';
 
 import { createLogger } from '../utils';
 import { ProviderConfig } from '~/user-config';
@@ -19,7 +22,9 @@ export function readConfigFile(): Promise<string> {
 export function getOpenWindowArgs(
   windowLabel: string,
 ): Promise<OpenWindowArgs | null> {
-  return invoke<OpenWindowArgs | null>('get_open_window_args', { windowLabel });
+  return invoke<OpenWindowArgs | null>('get_open_window_args', {
+    windowLabel,
+  });
 }
 
 // TODO: Add support for only fetching selected variables.
