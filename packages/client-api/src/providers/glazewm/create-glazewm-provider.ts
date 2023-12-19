@@ -36,7 +36,9 @@ export async function createGlazewmProvider(
 
     // Get GlazeWM monitor that corresponds to the bar's monitor.
     const monitor = monitors.reduce((a, b) =>
-      getDistance(currentPosition, a) < getDistance(currentPosition, b) ? a : b,
+      getDistance(currentPosition, a) < getDistance(currentPosition, b)
+        ? a
+        : b,
     );
 
     setGlazewmVariables({ workspaces: monitor.children });

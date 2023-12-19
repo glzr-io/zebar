@@ -10,9 +10,8 @@ export interface ChildElementProps {
 }
 
 export function ChildElement(props: ChildElementProps) {
-  const [childContext, setChildContext] = createSignal<ElementContext | null>(
-    null,
-  );
+  const [childContext, setChildContext] =
+    createSignal<ElementContext | null>(null);
 
   props.parentContext.initChild(props.childId).then(setChildContext);
 

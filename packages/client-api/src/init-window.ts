@@ -44,7 +44,9 @@ export async function initWindowAsync(): Promise<ElementContext> {
   ];
 
   if (!windowConfig) {
-    throw new Error(`Window '${openArgs.windowId}' doesn't exist in config.`);
+    throw new Error(
+      `Window '${openArgs.windowId}' doesn't exist in config.`,
+    );
   }
 
   const windowContext = await initElement({

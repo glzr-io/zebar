@@ -44,7 +44,10 @@ export async function initElement(
   runWithOwner(args.owner, () => {
     createEffect(() => {
       if (parsedConfig.styles) {
-        styleBuilder.setElementStyles(parsedConfig.id, parsedConfig.styles);
+        styleBuilder.setElementStyles(
+          parsedConfig.id,
+          parsedConfig.styles,
+        );
       }
     });
   });
@@ -80,7 +83,9 @@ export async function initElement(
 /**
  * Get child element configs.
  */
-function getChildConfigs(config: WindowConfig | GroupConfig | TemplateConfig) {
+function getChildConfigs(
+  config: WindowConfig | GroupConfig | TemplateConfig,
+) {
   return Object.entries(config).filter(
     (
       entry,

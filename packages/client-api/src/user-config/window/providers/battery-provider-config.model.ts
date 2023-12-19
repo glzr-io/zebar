@@ -5,4 +5,6 @@ export const BatteryProviderConfigSchema = z.object({
   refresh_interval_ms: z.coerce.number().default(60 * 1000),
 });
 
-export type BatteryProviderConfig = z.infer<typeof BatteryProviderConfigSchema>;
+export type BatteryProviderConfig = z.infer<
+  typeof BatteryProviderConfigSchema
+>;

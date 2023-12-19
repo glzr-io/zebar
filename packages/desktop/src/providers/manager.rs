@@ -70,7 +70,8 @@ fn handle_provider_emit_output<R: Runtime>(
   // app_handle: &AppHandle<R>,
   app_handle: (impl Manager<R> + Sync + Send + 'static),
 ) -> Sender<ProviderOutput> {
-  let (output_sender, mut output_receiver) = mpsc::channel::<ProviderOutput>(1);
+  let (output_sender, mut output_receiver) =
+    mpsc::channel::<ProviderOutput>(1);
 
   task::spawn(async move {
     while let Some(output) = output_receiver.recv().await {
@@ -156,8 +157,12 @@ fn create_provider(
   sysinfo: Arc<Mutex<System>>,
 ) -> Result<Box<dyn Provider + Send>> {
   let provider: Box<dyn Provider + Send> = match config {
-    ProviderConfig::Battery(config) => Box::new(BatteryProvider::new(config)?),
-    ProviderConfig::Cpu(config) => Box::new(CpuProvider::new(config, sysinfo)),
+    ProviderConfig::Battery(config) => {
+      Box::new(BatteryProvider::new(config)?)
+    }
+    ProviderConfig::Cpu(config) => {
+      Box::new(CpuProvider::new(config, sysinfo))
+    }
     ProviderConfig::Host(config) => {
       Box::new(HostProvider::new(config, sysinfo))
     }
@@ -168,7 +173,9 @@ fn create_provider(
     ProviderConfig::Network(config) => {
       Box::new(NetworkProvider::new(config, sysinfo))
     }
-    ProviderConfig::Weather(config) => Box::new(WeatherProvider::new(config)),
+    ProviderConfig::Weather(config) => {
+      Box::new(WeatherProvider::new(config))
+    }
   };
 
   Ok(provider)

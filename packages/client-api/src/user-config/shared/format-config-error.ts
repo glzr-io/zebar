@@ -28,5 +28,7 @@ export function formatConfigError(err: unknown) {
     );
   }
 
-  return new Error(`Problem reading config file: ${(err as Error).message}.`);
+  return new Error(
+    `Problem reading config file: ${(err as Error).message}.`,
+  );
 }

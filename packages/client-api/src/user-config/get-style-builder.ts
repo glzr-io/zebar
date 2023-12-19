@@ -7,9 +7,9 @@ import { createLogger, toCssSelector } from '~/utils';
 const logger = createLogger('style-builder');
 
 const [globalStyles, setGlobalStyles] = createSignal<string | null>(null);
-const [elementStyles, setElementStyles] = createStore<Record<string, string>>(
-  {},
-);
+const [elementStyles, setElementStyles] = createStore<
+  Record<string, string>
+>({});
 
 /**
  * Abstraction over building CSS from user-defined styles.

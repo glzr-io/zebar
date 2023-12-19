@@ -5,4 +5,6 @@ export const NetworkProviderConfigSchema = z.object({
   refresh_interval_ms: z.coerce.number().default(5 * 1000),
 });
 
-export type NetworkProviderConfig = z.infer<typeof NetworkProviderConfigSchema>;
+export type NetworkProviderConfig = z.infer<
+  typeof NetworkProviderConfigSchema
+>;

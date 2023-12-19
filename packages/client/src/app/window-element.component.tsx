@@ -17,7 +17,10 @@ export function WindowElement() {
         >
           <Index each={context().childIds}>
             {childId => (
-              <ChildElement childId={childId()} parentContext={context()} />
+              <ChildElement
+                childId={childId()}
+                parentContext={context()}
+              />
             )}
           </Index>
         </div>

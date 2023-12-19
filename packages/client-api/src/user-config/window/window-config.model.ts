@@ -16,12 +16,15 @@ export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
   resizable: BooleanLikeSchema.optional(),
 });
 
-export type WindowConfigP1 = Prettify<z.infer<typeof WindowConfigSchemaP1>>;
+export type WindowConfigP1 = Prettify<
+  z.infer<typeof WindowConfigSchemaP1>
+>;
 
 // Add `group/**` keys to schema.
 // TODO: Should be able to have `template/` as a child of window config.
 export const WindowConfigSchema = withDynamicKey(WindowConfigSchemaP1, {
-  isKey: (key: string): key is `group/${string}` => key.startsWith('group/'),
+  isKey: (key: string): key is `group/${string}` =>
+    key.startsWith('group/'),
   schema: GroupConfigSchema,
 });
 
