@@ -80,7 +80,7 @@ impl IntervalProvider for WeatherProvider {
     config: &WeatherProviderConfig,
     http_client: &Client,
   ) -> Result<ProviderVariables> {
-    let body = http_client
+    let res = http_client
       .get("https://api.open-meteo.com/v1/forecast")
       .query(&[
         ("temperature_unit", "celsius"),
@@ -95,15 +95,18 @@ impl IntervalProvider for WeatherProvider {
       .json::<OpenMeteoRes>()
       .await?;
 
-    let current_weather = body.current_weather;
+    let current_weather = res.current_weather;
     let is_daytime = current_weather.is_day == 1;
 
     Ok(ProviderVariables::Weather(WeatherVariables {
       is_daytime,
-      status: Self::get_weather_status(current_weather.weathercode, is_daytime),
+      status: Self::get_weather_status(
+        current_weather.weather_code,
+        is_daytime,
+      ),
       celsius_temp: current_weather.temperature,
       fahrenheit_temp: Self::celsius_to_fahrenheit(current_weather.temperature),
-      wind_speed: current_weather.windspeed,
+      wind_speed: current_weather.wind_speed,
     }))
   }
 }
