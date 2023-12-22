@@ -7,16 +7,12 @@ import {
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import {
-  TemplateConfig,
-  GroupConfig,
-  ProvidersConfigSchema,
-  WindowConfig,
-} from '~/user-config';
-import { createProvider } from '.';
+import { ProvidersConfigSchema } from '~/user-config';
+import { ElementContext } from '~/element-context.model';
+import { createProvider } from './create-provider';
 
 export async function getElementProviders(
-  config: WindowConfig | GroupConfig | TemplateConfig,
+  elementContext: Omit<ElementContext, 'parsedConfig' | 'providers'>,
   ancestorProviders: Accessor<Record<string, unknown>>[],
   owner: Owner,
 ) {
@@ -36,14 +32,18 @@ export async function getElementProviders(
    */
   async function getElementProviders() {
     const providerConfigs = ProvidersConfigSchema.parse(
-      config?.providers ?? [],
+      (elementContext.rawConfig as Record<string, unknown>)?.providers ??
+        [],
     );
 
     // Create tuple of configs and the created provider.
     const providers = await Promise.all(
       providerConfigs.map(
         async config =>
-          [config, await createProvider(config, owner)] as const,
+          [
+            config,
+            await createProvider(elementContext, config, owner),
+          ] as const,
       ),
     );
 

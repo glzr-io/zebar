@@ -3,19 +3,19 @@ import { Accessor, Owner, createEffect, runWithOwner } from 'solid-js';
 import {
   getStyleBuilder,
   getParsedElementConfig,
+  getChildConfigs,
   GlobalConfig,
 } from './user-config';
 import { getElementProviders } from './providers';
 import { ElementConfig, ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
-import { getChildConfigs } from './user-config/shared/get-child-configs';
 
 export interface InitElementArgs {
   id: string;
-  rawConfig: ElementConfig;
+  rawConfig: unknown;
+  globalConfig: GlobalConfig;
   ancestorProviders: Accessor<Record<string, unknown>>[];
   owner: Owner;
-  globalConfig: GlobalConfig;
 }
 
 export async function initElement(
@@ -23,32 +23,33 @@ export async function initElement(
 ): Promise<ElementContext> {
   const styleBuilder = getStyleBuilder(args.owner);
   const type = getElementType(args.id);
+  const childConfigs = getChildConfigs(args.rawConfig as ElementConfig);
 
-  const childConfigs = getChildConfigs(args.rawConfig);
-
-  const elementContext = {
+  // Create partial element context; `providers` and `parsedConfig` are set later.
+  // TODO: Use something other than `Omit` to indicate that those fields are partial.
+  // TODO: Add args and env to element context.
+  const elementContext: Omit<
+    ElementContext,
+    'parsedConfig' | 'providers'
+  > = {
     id: args.id,
     type,
     rawConfig: args.rawConfig,
     globalConfig: args.globalConfig,
     initChildElement,
-  } as ElementContext;
+  };
 
   const { element, merged } = await getElementProviders(
-    args.rawConfig,
+    elementContext,
     args.ancestorProviders,
     args.owner,
   );
 
-  const parsedConfig = getParsedElementConfig({
-    id: args.id,
-    type,
-    rawConfig: args.rawConfig,
-    providers: merged,
-    owner: args.owner,
-  });
-
+  // Since `parsedConfig` is set after the element config is parsed, it is
+  // initially unavailable on 'self' provider.
   elementContext.providers = merged;
+
+  const parsedConfig = getParsedElementConfig(elementContext, args.owner);
   elementContext.parsedConfig = parsedConfig;
 
   runWithOwner(args.owner, () => {

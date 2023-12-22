@@ -28,7 +28,7 @@ interface BaseElementContext<C extends ElementConfig, P = {}> {
   globalConfig: GlobalConfig;
 
   /**
-   * Map of providers and their variables.
+   * Map of this element's providers and their variables.
    */
   providers: P;
 

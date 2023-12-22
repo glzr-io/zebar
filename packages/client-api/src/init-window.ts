@@ -56,9 +56,9 @@ export async function initWindowAsync(): Promise<WindowContext> {
   const windowContext = (await initElement({
     id: openArgs.windowId,
     rawConfig: windowConfig,
+    globalConfig,
     ancestorProviders: [],
     owner,
-    globalConfig,
   })) as WindowContext;
 
   if (globalConfig.root_styles) {

@@ -1,33 +1,26 @@
 import { Owner, createComputed, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
+import { ElementContext } from '~/element-context.model';
 import { ElementType } from '~/element-type.model';
 import { TemplateError, getTemplateEngine } from '~/template-engine';
 import {
-  TemplateConfig,
-  GroupConfig,
-  WindowConfig,
   GroupConfigSchemaP1,
   TemplateConfigSchemaP1,
   WindowConfigSchemaP1,
   TemplatePropertyError,
 } from '~/user-config';
 
-export interface GetParsedElementConfigArgs {
-  id: string;
-  type: ElementType;
-  rawConfig: WindowConfig | GroupConfig | TemplateConfig;
-  providers: Record<string, unknown>;
-  owner: Owner;
-}
-
-export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
+export function getParsedElementConfig(
+  elementContext: Omit<ElementContext, 'parsedConfig'>,
+  owner: Owner,
+) {
   const templateEngine = getTemplateEngine();
 
   const [parsedConfig, setParsedConfig] = createStore(getParsedConfig());
 
   // Update the store on changes to any provider variables.
-  runWithOwner(args.owner, () => {
+  runWithOwner(owner, () => {
     createComputed(() => setParsedConfig(getParsedConfig()));
   });
 
@@ -35,8 +28,12 @@ export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
    * Get updated store value.
    */
   function getParsedConfig() {
-    const config = { ...args.rawConfig, id: args.id };
-    const schema = getSchemaForElement(args.type);
+    const config = {
+      ...(elementContext.rawConfig as Record<string, unknown>),
+      id: elementContext.id,
+    };
+
+    const schema = getSchemaForElement(elementContext.type);
 
     const newConfigEntries = Object.entries(config).map(([key, value]) => {
       // If value is not a string, then it can't contain any templating syntax.
@@ -46,7 +43,11 @@ export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
 
       // Run the value through the templating engine.
       try {
-        const rendered = templateEngine.render(value, args.providers);
+        const rendered = templateEngine.render(
+          value,
+          elementContext.providers,
+        );
+
         return [key, rendered];
       } catch (err) {
         // Re-throw error as `TemplatePropertyError`.
