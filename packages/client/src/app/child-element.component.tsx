@@ -13,7 +13,9 @@ export function ChildElement(props: ChildElementProps) {
   const [childContext, setChildContext] =
     createSignal<ElementContext | null>(null);
 
-  props.parentContext.initChild(props.childId).then(setChildContext);
+  props.parentContext
+    .initChildElement(props.childId)
+    .then(setChildContext);
 
   return (
     <Show when={childContext()}>

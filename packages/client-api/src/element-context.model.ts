@@ -1,12 +1,53 @@
-import { BaseElementConfig } from '~/user-config';
+import {
+  GlobalConfig,
+  GroupConfig,
+  TemplateConfig,
+  WindowConfig,
+} from '~/user-config';
 import { ElementType } from './element-type.model';
 
-export interface ElementContext<T = unknown> {
+export type ElementConfig = WindowConfig | GroupConfig | TemplateConfig;
+
+interface BaseElementContext<C extends ElementConfig, P = {}> {
   id: string;
-  rawConfig: unknown;
-  parsedConfig: BaseElementConfig;
   type: ElementType;
-  providers: T;
-  childIds: string[];
-  initChild: (id: string) => Promise<ElementContext | null>;
+
+  /**
+   * Unparsed config for this element.
+   */
+  rawConfig: unknown;
+
+  /**
+   * Parsed config for this element.
+   */
+  parsedConfig: C;
+
+  /**
+   * Global user config.
+   */
+  globalConfig: GlobalConfig;
+
+  /**
+   * Map of providers and their variables.
+   */
+  providers: P;
+
+  /**
+   * Initializes a child group or template element. For internal use.
+   */
+  initChildElement: (
+    id: string,
+  ) => Promise<GroupContext | TemplateContext | null>;
 }
+
+export type WindowContext<P = {}> = BaseElementContext<WindowConfig, P>;
+export type GroupContext<P = {}> = BaseElementContext<GroupConfig, P>;
+export type TemplateContext<P = {}> = BaseElementContext<
+  TemplateConfig,
+  P
+>;
+
+export type ElementContext =
+  | WindowContext
+  | GroupContext
+  | TemplateContext;

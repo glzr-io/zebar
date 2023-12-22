@@ -16,7 +16,7 @@ import {
 export interface GetParsedElementConfigArgs {
   id: string;
   type: ElementType;
-  config: WindowConfig | GroupConfig | TemplateConfig;
+  rawConfig: WindowConfig | GroupConfig | TemplateConfig;
   providers: Record<string, unknown>;
   owner: Owner;
 }
@@ -35,7 +35,7 @@ export function getParsedElementConfig(args: GetParsedElementConfigArgs) {
    * Get updated store value.
    */
   function getParsedConfig() {
-    const config = { ...args.config, id: args.id };
+    const config = { ...args.rawConfig, id: args.id };
     const schema = getSchemaForElement(args.type);
 
     const newConfigEntries = Object.entries(config).map(([key, value]) => {

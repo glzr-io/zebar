@@ -1,21 +1,21 @@
 import { Accessor, Owner, createEffect, runWithOwner } from 'solid-js';
 
 import {
-  WindowConfig,
-  GroupConfig,
-  TemplateConfig,
   getStyleBuilder,
   getParsedElementConfig,
+  GlobalConfig,
 } from './user-config';
 import { getElementProviders } from './providers';
-import { ElementContext } from './element-context.model';
+import { ElementConfig, ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
+import { getChildConfigs } from './user-config/shared/get-child-configs';
 
 export interface InitElementArgs {
   id: string;
-  config: WindowConfig | GroupConfig | TemplateConfig;
+  rawConfig: ElementConfig;
   ancestorProviders: Accessor<Record<string, unknown>>[];
   owner: Owner;
+  globalConfig: GlobalConfig;
 }
 
 export async function initElement(
@@ -24,11 +24,18 @@ export async function initElement(
   const styleBuilder = getStyleBuilder(args.owner);
   const type = getElementType(args.id);
 
-  const childConfigs = getChildConfigs(args.config);
-  const childIds = childConfigs.map(([key]) => key);
+  const childConfigs = getChildConfigs(args.rawConfig);
+
+  const elementContext = {
+    id: args.id,
+    type,
+    rawConfig: args.rawConfig,
+    globalConfig: args.globalConfig,
+    initChildElement,
+  } as ElementContext;
 
   const { element, merged } = await getElementProviders(
-    args.config,
+    args.rawConfig,
     args.ancestorProviders,
     args.owner,
   );
@@ -36,10 +43,13 @@ export async function initElement(
   const parsedConfig = getParsedElementConfig({
     id: args.id,
     type,
-    config: args.config,
+    rawConfig: args.rawConfig,
     providers: merged,
     owner: args.owner,
   });
+
+  elementContext.providers = merged;
+  elementContext.parsedConfig = parsedConfig;
 
   runWithOwner(args.owner, () => {
     createEffect(() => {
@@ -52,7 +62,7 @@ export async function initElement(
     });
   });
 
-  async function initChild(id: string) {
+  async function initChildElement(id: string) {
     const foundConfig = childConfigs.find(([key]) => key === id);
 
     if (!foundConfig) {
@@ -62,40 +72,15 @@ export async function initElement(
     const [configKey, childConfig] = foundConfig;
 
     return initElement({
-      config: childConfig,
+      rawConfig: childConfig,
       id: configKey,
       ancestorProviders: [...(args.ancestorProviders ?? []), element],
       owner: args.owner,
+      globalConfig: args.globalConfig,
     });
   }
 
-  return {
-    id: args.id,
-    rawConfig: args.config,
-    parsedConfig,
-    providers: merged,
-    type,
-    childIds,
-    initChild,
-  };
-}
-
-/**
- * Get child element configs.
- */
-function getChildConfigs(
-  config: WindowConfig | GroupConfig | TemplateConfig,
-) {
-  return Object.entries(config).filter(
-    (
-      entry,
-    ): entry is
-      | [`group/${string}`, GroupConfig]
-      | [`template/${string}`, TemplateConfig] => {
-      const [key] = entry;
-      return key.startsWith('group/') || key.startsWith('template/');
-    },
-  );
+  return elementContext;
 }
 
 function getElementType(id: string) {
