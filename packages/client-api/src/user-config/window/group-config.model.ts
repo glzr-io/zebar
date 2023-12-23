@@ -6,7 +6,7 @@ import { Prettify } from '~/utils';
 import { withDynamicKey } from '../shared';
 
 export const GroupConfigSchemaP1 = BaseElementConfigSchema.extend({
-  class_name: z.string().default('group'),
+  class_names: z.array(z.string()).default(['group']),
 });
 
 export type GroupConfigP1 = Prettify<z.infer<typeof GroupConfigSchemaP1>>;

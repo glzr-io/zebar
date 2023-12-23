@@ -5,7 +5,7 @@ import { ProvidersConfigSchema } from './providers-config.model';
 
 export const BaseElementConfigSchema = z.object({
   id: z.string(),
-  class_name: z.string(),
+  class_names: z.array(z.string()).default([]),
   styles: z.string().optional(),
   providers: ProvidersConfigSchema,
 });

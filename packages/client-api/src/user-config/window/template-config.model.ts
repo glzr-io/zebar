@@ -4,7 +4,7 @@ import { BaseElementConfigSchema } from './base-element-config.model';
 import { withDynamicKey } from '../shared';
 
 export const TemplateConfigSchemaP1 = BaseElementConfigSchema.extend({
-  class_name: z.string().default('template'),
+  class_names: z.array(z.string()).default(['template']),
   template: z.string(),
   slot: z.string().optional(),
 });

@@ -12,7 +12,10 @@ export function GroupElement(props: GroupElementProps) {
   const rawConfig = props.context.rawConfig;
 
   return (
-    <div id={toCssSelector(config.id)} class={config.class_name}>
+    <div
+      id={toCssSelector(config.id)}
+      class={config.class_names.join(' ')}
+    >
       <Index each={getChildIds(rawConfig)}>
         {childId => (
           <ChildElement

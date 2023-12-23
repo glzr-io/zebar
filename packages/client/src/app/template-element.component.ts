@@ -47,7 +47,7 @@ export function TemplateElement(props: TemplateElementProps) {
   function createRootElement() {
     const element = document.createElement('div');
     element.id = idSelector;
-    element.className = props.context.parsedConfig.class_name;
+    element.className = props.context.parsedConfig.class_names.join(' ');
     return element;
   }
 
