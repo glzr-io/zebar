@@ -7,7 +7,7 @@ import { BooleanLikeSchema, withDynamicKey } from '../shared';
 import { ZOrderSchema } from './z-order.model';
 
 export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
-  class_name: z.string().default('bar'),
+  class_name: z.string().default('window'),
   position_x: z.coerce.number(),
   position_y: z.coerce.number(),
   width: z.coerce.number().min(1),

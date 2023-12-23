@@ -10,7 +10,7 @@ export const BaseElementConfigSchema = z.object({
   providers: ProvidersConfigSchema,
 });
 
-/** Base config for bar, groups, and components. */
+/** Base config for windows, groups, and components. */
 export type BaseElementConfig = Prettify<
   z.infer<typeof BaseElementConfigSchema>
 >;
