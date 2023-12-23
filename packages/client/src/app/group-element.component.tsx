@@ -1,10 +1,5 @@
-import { Index, createMemo } from 'solid-js';
-import {
-  ElementContext,
-  GroupConfig,
-  getChildConfigs,
-  toCssSelector,
-} from 'zebar';
+import { Index } from 'solid-js';
+import { ElementContext, getChildIds, toCssSelector } from 'zebar';
 
 import { ChildElement } from './child-element.component';
 
@@ -14,16 +9,11 @@ export interface GroupElementProps {
 
 export function GroupElement(props: GroupElementProps) {
   const config = props.context.parsedConfig;
-
-  const childIds = createMemo(() =>
-    getChildConfigs(props.context.rawConfig as GroupConfig).map(
-      ([key]) => key,
-    ),
-  );
+  const rawConfig = props.context.rawConfig;
 
   return (
     <div id={toCssSelector(config.id)} class={config.class_name}>
-      <Index each={childIds()}>
+      <Index each={getChildIds(rawConfig)}>
         {childId => (
           <ChildElement
             childId={childId()}

@@ -3,11 +3,11 @@ import { Accessor, Owner, createEffect, runWithOwner } from 'solid-js';
 import {
   getStyleBuilder,
   getParsedElementConfig,
-  getChildConfigs,
+  getChildIds,
   GlobalConfig,
 } from './user-config';
 import { getElementProviders } from './providers';
-import { ElementConfig, ElementContext } from './element-context.model';
+import { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
 import { PickPartial } from './utils';
 
@@ -26,7 +26,7 @@ export async function initElement(
 ): Promise<ElementContext> {
   const styleBuilder = getStyleBuilder(args.owner);
   const type = getElementType(args.id);
-  const childConfigs = getChildConfigs(args.rawConfig as ElementConfig);
+  const childIds = getChildIds(args.rawConfig);
 
   // Create partial element context; `providers` and `parsedConfig` are set later.
   const elementContext: PickPartial<
@@ -72,17 +72,14 @@ export async function initElement(
   });
 
   async function initChildElement(id: string) {
-    const foundConfig = childConfigs.find(([key]) => key === id);
-
-    if (!foundConfig) {
+    // Check whether an element with the given ID exists in the config.
+    if (!childIds.find(childId => childId === id)) {
       return null;
     }
 
-    const [configKey, childConfig] = foundConfig;
-
     return initElement({
-      id: configKey,
-      rawConfig: childConfig,
+      id,
+      rawConfig: (args.rawConfig as Record<string, unknown>)[id],
       globalConfig: args.globalConfig,
       args: args.args,
       env: args.env,
