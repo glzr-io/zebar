@@ -15,9 +15,13 @@ import { createSystemTrayProvider } from './system-tray/create-system-tray-provi
 import { createWeatherProvider } from './weather/create-weather-provider';
 import { ProviderConfig } from '~/user-config';
 import { ElementContext } from '~/element-context.model';
+import { PickPartial } from '~/utils';
 
 export async function createProvider(
-  elementContext: Omit<ElementContext, 'parsedConfig' | 'providers'>,
+  elementContext: PickPartial<
+    ElementContext,
+    'parsedConfig' | 'providers'
+  >,
   config: ProviderConfig,
   owner: Owner,
 ) {

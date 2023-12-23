@@ -10,6 +10,7 @@ export type ElementConfig = WindowConfig | GroupConfig | TemplateConfig;
 
 interface BaseElementContext<C extends ElementConfig, P = {}> {
   id: string;
+
   type: ElementType;
 
   /**
@@ -28,12 +29,23 @@ interface BaseElementContext<C extends ElementConfig, P = {}> {
   globalConfig: GlobalConfig;
 
   /**
+   * Args used to open the window.
+   */
+  args: Record<string, string>;
+
+  /**
+   * Environment variables when window was opened.
+   */
+  env: Record<string, string>;
+
+  /**
    * Map of this element's providers and their variables.
    */
   providers: P;
 
   /**
-   * Initializes a child group or template element. For internal use.
+   * Initializes a child group or template element.
+   * @internal
    */
   initChildElement: (
     id: string,

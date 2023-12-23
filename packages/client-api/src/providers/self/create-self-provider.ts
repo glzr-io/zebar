@@ -1,12 +1,16 @@
 import { ElementContext } from '~/element-context.model';
+import { PickPartial } from '~/utils';
 
-export type SelfProvider = Omit<
+export type SelfProvider = PickPartial<
   ElementContext,
   'parsedConfig' | 'providers'
 >;
 
 export async function createSelfProvider(
-  elementContext: Omit<ElementContext, 'parsedConfig' | 'providers'>,
+  elementContext: PickPartial<
+    ElementContext,
+    'parsedConfig' | 'providers'
+  >,
 ): Promise<SelfProvider> {
   return elementContext;
 }

@@ -9,11 +9,14 @@ import {
 import { getElementProviders } from './providers';
 import { ElementConfig, ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
+import { PickPartial } from './utils';
 
 export interface InitElementArgs {
   id: string;
   rawConfig: unknown;
   globalConfig: GlobalConfig;
+  args: Record<string, string>;
+  env: Record<string, string>;
   ancestorProviders: Accessor<Record<string, unknown>>[];
   owner: Owner;
 }
@@ -26,9 +29,7 @@ export async function initElement(
   const childConfigs = getChildConfigs(args.rawConfig as ElementConfig);
 
   // Create partial element context; `providers` and `parsedConfig` are set later.
-  // TODO: Use something other than `Omit` to indicate that those fields are partial.
-  // TODO: Add args and env to element context.
-  const elementContext: Omit<
+  const elementContext: PickPartial<
     ElementContext,
     'parsedConfig' | 'providers'
   > = {
@@ -36,6 +37,8 @@ export async function initElement(
     type,
     rawConfig: args.rawConfig,
     globalConfig: args.globalConfig,
+    args: args.args,
+    env: args.env,
     initChildElement,
   };
 
@@ -45,11 +48,16 @@ export async function initElement(
     args.owner,
   );
 
-  // Since `parsedConfig` is set after the element config is parsed, it is
-  // initially unavailable on 'self' provider.
   elementContext.providers = merged;
 
-  const parsedConfig = getParsedElementConfig(elementContext, args.owner);
+  const parsedConfig = getParsedElementConfig(
+    elementContext as PickPartial<ElementContext, 'parsedConfig'>,
+    args.owner,
+  );
+
+  // Since `parsedConfig` and `providers` are set after initializing providers
+  // and parsing the element config, they are initially unavailable on 'self'
+  // provider.
   elementContext.parsedConfig = parsedConfig;
 
   runWithOwner(args.owner, () => {
@@ -73,15 +81,17 @@ export async function initElement(
     const [configKey, childConfig] = foundConfig;
 
     return initElement({
-      rawConfig: childConfig,
       id: configKey,
+      rawConfig: childConfig,
+      globalConfig: args.globalConfig,
+      args: args.args,
+      env: args.env,
       ancestorProviders: [...(args.ancestorProviders ?? []), element],
       owner: args.owner,
-      globalConfig: args.globalConfig,
     });
   }
 
-  return elementContext;
+  return elementContext as ElementContext;
 }
 
 function getElementType(id: string) {

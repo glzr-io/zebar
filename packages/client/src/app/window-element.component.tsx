@@ -20,10 +20,6 @@ export function WindowElement() {
         ),
   );
 
-  function getChildIds(context: WindowContext) {
-    return getChildConfigs(context.rawConfig as any).map(([key]) => key);
-  }
-
   initWindow(context => setContext(context));
 
   return (
@@ -33,8 +29,7 @@ export function WindowElement() {
           id={toCssSelector(context().parsedConfig.id)}
           class={context().parsedConfig.class_name}
         >
-          {/* <Index each={childIds()}> */}
-          <Index each={getChildIds(context())}>
+          <Index each={childIds()}>
             {childId => (
               <ChildElement
                 childId={childId()}

@@ -10,9 +10,13 @@ import { createStore } from 'solid-js/store';
 import { ProvidersConfigSchema } from '~/user-config';
 import { ElementContext } from '~/element-context.model';
 import { createProvider } from './create-provider';
+import { PickPartial } from '~/utils';
 
 export async function getElementProviders(
-  elementContext: Omit<ElementContext, 'parsedConfig' | 'providers'>,
+  elementContext: PickPartial<
+    ElementContext,
+    'parsedConfig' | 'providers'
+  >,
   ancestorProviders: Accessor<Record<string, unknown>>[],
   owner: Owner,
 ) {

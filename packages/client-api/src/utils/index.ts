@@ -1,3 +1,4 @@
+export * from './types/pick-partial';
 export * from './types/prettify';
 export * from './clsx';
 export * from './create-getter-proxy';

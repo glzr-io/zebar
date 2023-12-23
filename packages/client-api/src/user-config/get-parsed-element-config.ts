@@ -10,9 +10,10 @@ import {
   WindowConfigSchemaP1,
   TemplatePropertyError,
 } from '~/user-config';
+import { PickPartial } from '~/utils';
 
 export function getParsedElementConfig(
-  elementContext: Omit<ElementContext, 'parsedConfig'>,
+  elementContext: PickPartial<ElementContext, 'parsedConfig'>,
   owner: Owner,
 ) {
   const templateEngine = getTemplateEngine();

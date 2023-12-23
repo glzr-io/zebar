@@ -57,6 +57,8 @@ export async function initWindowAsync(): Promise<WindowContext> {
     id: openArgs.windowId,
     rawConfig: windowConfig,
     globalConfig,
+    args: openArgs.args,
+    env: openArgs.env,
     ancestorProviders: [],
     owner,
   })) as WindowContext;
