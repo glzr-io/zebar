@@ -14,9 +14,9 @@ import {
   setWindowStyles,
 } from './desktop';
 import { initElement } from './init-element';
-import { ElementContext } from './element-context.model';
+import { WindowContext } from './element-context.model';
 
-export function initWindow(callback: (context: ElementContext) => void) {
+export function initWindow(callback: (context: WindowContext) => void) {
   initWindowAsync().then(callback);
 }
 
@@ -29,7 +29,7 @@ export function initWindow(callback: (context: ElementContext) => void) {
  *  * Positioning the window
  *  * Building CSS and appending it to `<head>`
  */
-export async function initWindowAsync(): Promise<ElementContext> {
+export async function initWindowAsync(): Promise<WindowContext> {
   // TODO: Create new root if owner is null.
   const owner = getOwner()!;
   const config = await getUserConfig();
@@ -49,16 +49,19 @@ export async function initWindowAsync(): Promise<ElementContext> {
     );
   }
 
-  const windowContext = await initElement({
-    id: openArgs.windowId,
-    config: windowConfig,
-    ancestorProviders: [],
-    owner,
-  });
-
   const globalConfig = GlobalConfigSchema.strip().parse(
     (config as UserConfig).global,
   );
+
+  const windowContext = (await initElement({
+    id: openArgs.windowId,
+    rawConfig: windowConfig,
+    globalConfig,
+    args: openArgs.args,
+    env: openArgs.env,
+    ancestorProviders: [],
+    owner,
+  })) as WindowContext;
 
   if (globalConfig.root_styles) {
     styleBuilder.setGlobalStyles(globalConfig.root_styles);

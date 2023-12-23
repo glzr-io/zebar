@@ -1,10 +1,24 @@
-import { Index, Show, createSignal } from 'solid-js';
-import { ElementContext, initWindow, toCssSelector } from 'zebar';
+import { Index, Show, createMemo, createSignal } from 'solid-js';
+import {
+  WindowConfig,
+  WindowContext,
+  getChildConfigs,
+  initWindow,
+  toCssSelector,
+} from 'zebar';
 
 import { ChildElement } from './child-element.component';
 
 export function WindowElement() {
-  const [context, setContext] = createSignal<ElementContext | null>(null);
+  const [context, setContext] = createSignal<WindowContext | null>(null);
+
+  const childIds = createMemo(() =>
+    !context()
+      ? []
+      : getChildConfigs(context()!.rawConfig as WindowConfig).map(
+          ([key]) => key,
+        ),
+  );
 
   initWindow(context => setContext(context));
 
@@ -15,7 +29,7 @@ export function WindowElement() {
           id={toCssSelector(context().parsedConfig.id)}
           class={context().parsedConfig.class_name}
         >
-          <Index each={context().childIds}>
+          <Index each={childIds()}>
             {childId => (
               <ChildElement
                 childId={childId()}

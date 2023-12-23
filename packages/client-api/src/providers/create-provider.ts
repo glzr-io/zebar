@@ -14,8 +14,14 @@ import { createSelfProvider } from './self/create-self-provider';
 import { createSystemTrayProvider } from './system-tray/create-system-tray-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
 import { ProviderConfig } from '~/user-config';
+import { ElementContext } from '~/element-context.model';
+import { PickPartial } from '~/utils';
 
 export async function createProvider(
+  elementContext: PickPartial<
+    ElementContext,
+    'parsedConfig' | 'providers'
+  >,
   config: ProviderConfig,
   owner: Owner,
 ) {
@@ -41,7 +47,7 @@ export async function createProvider(
     case 'network':
       return createNetworkProvider(config, owner);
     case 'self':
-      return createSelfProvider(config, owner);
+      return createSelfProvider(elementContext);
     case 'system_tray':
       return createSystemTrayProvider(config);
     case 'weather':
