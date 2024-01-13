@@ -8,14 +8,15 @@ use std::{
   sync::Arc,
 };
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, RunEvent, State, WindowBuilder, WindowUrl,
+  path::BaseDirectory, AppHandle, Manager, RunEvent, State, WindowBuilder,
+  WindowUrl,
 };
 use tokio::{
   sync::{mpsc, Mutex},
@@ -160,6 +161,19 @@ async fn main() {
                 WindowUrl::default(),
               )
               .title(format!("Zebar - {}", open_args.window_id))
+              .data_directory(
+                // Set a different data dir for each window. Temporary fix
+                // until #8196 is resolved.
+                // Ref: https://github.com/tauri-apps/tauri/issues/8196
+                app_handle
+                  .path()
+                  .resolve(
+                    format!(".glazer/tmp-{}", window_count),
+                    BaseDirectory::Home,
+                  )
+                  .context("Unable to get home directory.")
+                  .unwrap(),
+              )
               .inner_size(500., 500.)
               .decorations(false)
               .resizable(false)
