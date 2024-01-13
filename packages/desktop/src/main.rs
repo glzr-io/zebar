@@ -106,23 +106,27 @@ async fn main() {
           Ok(())
         }
         CliCommand::Open { window_id, args } => {
-          let (tx, mut rx) = mpsc::unbounded_channel();
+          let (tx, mut rx) = mpsc::unbounded_channel::<OpenWindowArgs>();
+          let tx_clone = tx.clone();
 
-          let open_args = OpenWindowArgs {
-            window_id,
-            args: args.unwrap_or(vec![]).into_iter().collect(),
-            env: env::vars().collect(),
-          };
-
-          _ = tx.send(open_args.clone());
-
-          // If this is not the first instance of the app, emit the window to
-          // create to the original instance and exit immediately.
+          // If this is not the first instance of the app, this will emit
+          // to the original instance and exit immediately.
           app.handle().plugin(tauri_plugin_single_instance::init(
-            move |_, _, _| {
-              _ = tx.send(open_args.clone());
+            move |_, args, _| {
+              let cli = Cli::parse_from(args);
+
+              // CLI command is guaranteed to be an open command here.
+              if let CliCommand::Open { window_id, args } = cli.command {
+                _ = tx_clone.send(get_open_args(window_id, args));
+              }
             },
           ))?;
+
+          let open_args = get_open_args(window_id, args);
+
+          if let Err(err) = tx.send(open_args.clone()) {
+            info!("Error sending message: {}", err);
+          }
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
@@ -209,4 +213,15 @@ async fn main() {
       api.prevent_exit();
     }
   })
+}
+
+fn get_open_args(
+  window_id: String,
+  args: Option<Vec<(String, String)>>,
+) -> OpenWindowArgs {
+  OpenWindowArgs {
+    window_id,
+    args: args.unwrap_or(vec![]).into_iter().collect(),
+    env: env::vars().collect(),
+  }
 }
