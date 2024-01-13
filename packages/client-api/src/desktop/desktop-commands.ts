@@ -1,7 +1,4 @@
-import {
-  InvokeArgs,
-  invoke as tauriInvoke,
-} from '@tauri-apps/api/primitives';
+import { InvokeArgs, invoke as tauriInvoke } from '@tauri-apps/api/core';
 
 import { createLogger } from '../utils';
 import { ProviderConfig } from '~/user-config';
