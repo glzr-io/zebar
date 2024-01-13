@@ -19,7 +19,10 @@ use tauri::{
   WindowUrl,
 };
 use tokio::{
-  sync::{mpsc, Mutex},
+  sync::{
+    mpsc::{self, UnboundedSender},
+    Mutex,
+  },
   task,
 };
 use tracing::info;
@@ -117,16 +120,12 @@ async fn main() {
 
               // CLI command is guaranteed to be an open command here.
               if let CliCommand::Open { window_id, args } = cli.command {
-                _ = tx_clone.send(get_open_args(window_id, args));
+                emit_open_args(window_id, args, tx.clone());
               }
             },
           ))?;
 
-          let open_args = get_open_args(window_id, args);
-
-          if let Err(err) = tx.send(open_args.clone()) {
-            info!("Error sending message: {}", err);
-          }
+          emit_open_args(window_id, args, tx_clone);
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
@@ -215,13 +214,19 @@ async fn main() {
   })
 }
 
-fn get_open_args(
+/// Create and emit `OpenWindowArgs` to a channel.
+fn emit_open_args(
   window_id: String,
   args: Option<Vec<(String, String)>>,
-) -> OpenWindowArgs {
-  OpenWindowArgs {
+  tx: UnboundedSender<OpenWindowArgs>,
+) {
+  let open_args = OpenWindowArgs {
     window_id,
     args: args.unwrap_or(vec![]).into_iter().collect(),
     env: env::vars().collect(),
-  }
+  };
+
+  if let Err(err) = tx.send(open_args.clone()) {
+    info!("Error emitting window open args: {}", err);
+  };
 }
