@@ -1,6 +1,6 @@
 import {
-  PhysicalPosition,
-  PhysicalSize,
+  LogicalPosition,
+  LogicalSize,
   getCurrent as getCurrentWindow,
 } from '@tauri-apps/api/window';
 
@@ -29,21 +29,25 @@ export async function setWindowPosition(
 
   const window = await getCurrentWindow();
 
-  // TODO: Avoid setting position if neither x/y are defined.
-  await window.setPosition(
-    new PhysicalPosition(
-      position.x ?? (await window.outerPosition()).x,
-      position.y ?? (await window.outerPosition()).y,
-    ),
-  );
+  // Avoid setting position if neither x/y are defined.
+  if (position.x !== undefined || position.y !== undefined) {
+    await window.setPosition(
+      new LogicalPosition(
+        position.x ?? (await window.outerPosition()).x,
+        position.y ?? (await window.outerPosition()).y,
+      ),
+    );
+  }
 
-  // TODO: Avoid setting size if neither width/height are defined.
-  await window.setSize(
-    new PhysicalSize(
-      position.width ?? (await window.outerSize()).width,
-      position.height ?? (await window.outerSize()).height,
-    ),
-  );
+  // Avoid setting size if neither width/height are defined.
+  if (position.width !== undefined || position.height !== undefined) {
+    await window.setSize(
+      new LogicalSize(
+        position.width ?? (await window.outerSize()).width,
+        position.height ?? (await window.outerSize()).height,
+      ),
+    );
+  }
 }
 
 export async function setWindowStyles(styles: Partial<WindowStyles>) {
