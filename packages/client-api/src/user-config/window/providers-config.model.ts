@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { ProviderConfigSchema } from './provider-config.model';
 import { ProviderTypeSchema } from './provider-type.model';
-import { Prettify } from '~/utils';
+import type { Prettify } from '~/utils';
 
 export const ProvidersConfigSchema = z
   .array(

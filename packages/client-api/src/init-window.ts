@@ -3,8 +3,8 @@ import { getCurrent as getCurrentWindow } from '@tauri-apps/api/window';
 
 import {
   GlobalConfigSchema,
-  UserConfig,
-  WindowConfig,
+  type UserConfig,
+  type WindowConfig,
   getUserConfig,
   getStyleBuilder,
 } from './user-config';
@@ -14,7 +14,7 @@ import {
   setWindowStyles,
 } from './desktop';
 import { initElement } from './init-element';
-import { WindowContext } from './element-context.model';
+import type { WindowContext } from './element-context.model';
 
 export function initWindow(callback: (context: WindowContext) => void) {
   initWindowAsync().then(callback);

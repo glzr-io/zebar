@@ -1,4 +1,4 @@
-import { listen, Event } from '@tauri-apps/api/event';
+import { listen, type Event } from '@tauri-apps/api/event';
 
 export interface ProviderEmitEvent<T = unknown> {
   configHash: string;

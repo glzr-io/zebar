@@ -1,6 +1,6 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 
-import { BatteryProviderConfig } from '~/user-config';
+import type { BatteryProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface BatteryVariables {

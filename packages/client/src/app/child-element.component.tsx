@@ -1,5 +1,5 @@
 import { Match, Show, Switch, createSignal } from 'solid-js';
-import { ElementContext, ElementType } from 'zebar';
+import { type ElementContext, ElementType } from 'zebar';
 
 import { TemplateElement } from './template-element.component';
 import { GroupElement } from './group-element.component';

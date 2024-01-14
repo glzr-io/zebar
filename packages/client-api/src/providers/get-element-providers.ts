@@ -1,6 +1,6 @@
 import {
-  Accessor,
-  Owner,
+  type Accessor,
+  type Owner,
   createComputed,
   createSignal,
   runWithOwner,
@@ -8,9 +8,9 @@ import {
 import { createStore } from 'solid-js/store';
 
 import { ProvidersConfigSchema } from '~/user-config';
-import { ElementContext } from '~/element-context.model';
+import type { ElementContext } from '~/element-context.model';
 import { createProvider } from './create-provider';
-import { PickPartial } from '~/utils';
+import type { PickPartial } from '~/utils';
 
 export async function getElementProviders(
   elementContext: PickPartial<

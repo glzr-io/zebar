@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { TemplateConfigSchema } from './template-config.model';
 import { BaseElementConfigSchema } from './base-element-config.model';
-import { Prettify } from '~/utils';
+import type { Prettify } from '~/utils';
 import { withDynamicKey } from '../shared';
 
 export const GroupConfigSchemaP1 = BaseElementConfigSchema.extend({

@@ -1,4 +1,4 @@
-import { ActiveWindowProviderConfig } from '~/user-config';
+import type { ActiveWindowProviderConfig } from '~/user-config';
 
 // TODO: Implement provider.
 export async function createActiveWindowProvider(

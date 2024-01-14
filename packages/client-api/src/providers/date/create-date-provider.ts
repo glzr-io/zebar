@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon';
-import { Owner, onCleanup, runWithOwner } from 'solid-js';
+import { type Owner, onCleanup, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { DateProviderConfig } from '~/user-config';
+import type { DateProviderConfig } from '~/user-config';
 
 export interface DateVariables {
   /**

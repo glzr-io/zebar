@@ -1,6 +1,6 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 
-import { HostProviderConfig } from '~/user-config';
+import type { HostProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface HostVariables {

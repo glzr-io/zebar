@@ -1,7 +1,7 @@
-import { Owner, createComputed, runWithOwner } from 'solid-js';
+import { type Owner, createComputed, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { ElementContext } from '~/element-context.model';
+import type { ElementContext } from '~/element-context.model';
 import { ElementType } from '~/element-type.model';
 import { TemplateError, getTemplateEngine } from '~/template-engine';
 import {
@@ -10,7 +10,7 @@ import {
   WindowConfigSchemaP1,
   TemplatePropertyError,
 } from '~/user-config';
-import { PickPartial } from '~/utils';
+import type { PickPartial } from '~/utils';
 
 export function getParsedElementConfig(
   elementContext: PickPartial<ElementContext, 'parsedConfig'>,

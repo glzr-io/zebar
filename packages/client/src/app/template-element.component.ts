@@ -1,5 +1,5 @@
 import { createEffect, createMemo, onCleanup, onMount } from 'solid-js';
-import { ElementContext, createLogger, toCssSelector } from 'zebar';
+import { type ElementContext, createLogger, toCssSelector } from 'zebar';
 
 export interface TemplateElementProps {
   context: ElementContext;

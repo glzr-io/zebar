@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { GroupConfigSchema } from './group-config.model';
 import { BaseElementConfigSchema } from './base-element-config.model';
-import { Prettify } from '~/utils';
+import type { Prettify } from '~/utils';
 import { BooleanLikeSchema, withDynamicKey } from '../shared';
 import { ZOrderSchema } from './z-order.model';
 

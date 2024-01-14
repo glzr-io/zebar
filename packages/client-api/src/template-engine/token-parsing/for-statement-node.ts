@@ -1,4 +1,4 @@
-import { TemplateNode } from './template-node.model';
+import type { TemplateNode } from './template-node.model';
 import { TemplateNodeType } from './template-node-type.model';
 
 export interface ForStatementNode {

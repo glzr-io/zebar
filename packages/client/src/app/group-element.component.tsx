@@ -1,5 +1,5 @@
 import { Index } from 'solid-js';
-import { ElementContext, getChildIds, toCssSelector } from 'zebar';
+import { type ElementContext, getChildIds, toCssSelector } from 'zebar';
 
 import { ChildElement } from './child-element.component';
 

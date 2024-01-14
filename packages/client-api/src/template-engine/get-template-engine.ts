@@ -1,6 +1,6 @@
 import { createStore, reconcile } from 'solid-js/store';
 
-import { TemplateNode, parseTokens } from './token-parsing';
+import { type TemplateNode, parseTokens } from './token-parsing';
 import { renderTemplateNodes } from './rendering';
 import { tokenizeTemplate } from './tokenizing';
 

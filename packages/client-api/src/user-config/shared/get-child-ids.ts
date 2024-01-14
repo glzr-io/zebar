@@ -1,5 +1,5 @@
-import { ElementConfig } from '~/element-context.model';
-import { GroupConfig, TemplateConfig } from '../window';
+import type { ElementConfig } from '~/element-context.model';
+import type { GroupConfig, TemplateConfig } from '../window';
 
 /**
  * Get ID's of child group or template elements from an unparsed config.

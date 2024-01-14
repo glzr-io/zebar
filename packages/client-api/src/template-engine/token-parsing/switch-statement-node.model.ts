@@ -1,5 +1,5 @@
 import { TemplateNodeType } from './template-node-type.model';
-import { TemplateNode } from './template-node.model';
+import type { TemplateNode } from './template-node.model';
 
 export interface CaseBranch {
   type: 'case';
