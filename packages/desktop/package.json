@@ -2,8 +2,8 @@
   "name": "@zebar/desktop",
   "version": "0.0.0",
   "scripts": {
-    "dev": "npm run -s monitors -- --print0 | xargs -0 -P 99 -I % sh -c 'npm run tauri dev -- -- -- open window/bar --args %'",
     "build": "npm run tauri build",
+    "dev": "npm run -s monitors -- --print0 | xargs -0 -P 99 -I % sh -c 'npm run tauri dev -- -- -- open window/bar --args %'",
     "format": "cargo fmt",
     "monitors": "cargo run --no-default-features --quiet -- monitors",
     "tauri": "tauri"
