@@ -7,9 +7,9 @@ export function formatConfigError(err: unknown) {
     return new Error('Problem reading config file.');
   }
 
-  if (err instanceof ZodError) {
+  if (err instanceof ZodError && err.errors.length) {
     const [firstError] = err.errors;
-    const { message, path } = firstError;
+    const { message, path } = firstError!;
     const fullPath = path.join('.');
 
     return new Error(
