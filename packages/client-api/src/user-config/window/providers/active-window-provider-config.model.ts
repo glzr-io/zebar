@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
+import { ProviderType } from '../provider-type.model';
+
 export const ActiveWindowProviderConfigSchema = z.object({
-  type: z.literal('active_window'),
+  type: z.literal(ProviderType.ACTIVE_WINDOW),
 
   /** Substitution rules for formatting window title. */
   rewrite_title: z.record(z.string(), z.string()).default({}),

@@ -57,8 +57,15 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   function updateLatestState(state: Partial<TokenizeState>) {
+    if (!stateStack.length) {
+      throw new TemplateError(
+        'Could not update latest state while tokenizing template.',
+        scanner.cursor,
+      );
+    }
+
     stateStack[stateStack.length - 1] = {
-      ...stateStack[stateStack.length - 1],
+      ...stateStack[stateStack.length - 1]!,
       ...state,
     };
   }
@@ -69,7 +76,7 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   while (!scanner.isEmpty) {
-    switch (getState().type) {
+    switch (getState()!.type) {
       case TokenizeStateType.DEFAULT:
         tokenizeDefault();
         break;

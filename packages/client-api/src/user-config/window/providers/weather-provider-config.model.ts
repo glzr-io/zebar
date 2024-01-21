@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
+import { ProviderType } from '../provider-type.model';
+
 export const WeatherProviderConfigSchema = z.object({
-  type: z.literal('weather'),
+  type: z.literal(ProviderType.WEATHER),
 
   /**
    * Latitude to retrieve weather for. If not provided, latitude is instead

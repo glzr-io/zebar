@@ -13,7 +13,7 @@ import { createNetworkProvider } from './network/create-network-provider';
 import { createSelfProvider } from './self/create-self-provider';
 import { createSystemTrayProvider } from './system-tray/create-system-tray-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
-import type { ProviderConfig } from '~/user-config';
+import { ProviderType, type ProviderConfig } from '~/user-config';
 import type { ElementContext } from '~/element-context.model';
 import type { PickPartial } from '~/utils';
 
@@ -26,31 +26,31 @@ export async function createProvider(
   owner: Owner,
 ) {
   switch (config.type) {
-    case 'active_window':
+    case ProviderType.ACTIVE_WINDOW:
       return createActiveWindowProvider(config);
-    case 'battery':
+    case ProviderType.BATTERY:
       return createBatteryProvider(config, owner);
-    case 'cpu':
+    case ProviderType.CPU:
       return createCpuProvider(config, owner);
-    case 'date':
+    case ProviderType.DATE:
       return createDateProvider(config, owner);
-    case 'glazewm':
+    case ProviderType.GLAZEWM:
       return createGlazewmProvider(config, owner);
-    case 'host':
+    case ProviderType.HOST:
       return createHostProvider(config, owner);
-    case 'ip':
+    case ProviderType.IP:
       return createIpProvider(config, owner);
-    case 'memory':
+    case ProviderType.MEMORY:
       return createMemoryProvider(config, owner);
-    case 'monitors':
+    case ProviderType.MONITORS:
       return createMonitorsProvider(config, owner);
-    case 'network':
+    case ProviderType.NETWORK:
       return createNetworkProvider(config, owner);
-    case 'self':
+    case ProviderType.SELF:
       return createSelfProvider(elementContext);
-    case 'system_tray':
+    case ProviderType.SYSTEM_TRAY:
       return createSystemTrayProvider(config);
-    case 'weather':
+    case ProviderType.WEATHER:
       return createWeatherProvider(config, owner);
     default:
       throw new Error('Not a supported provider type.');
