@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { WindowConfigSchema } from './window';
 import { GlobalConfigSchema } from './global-config.model';
 import { withDynamicKey } from './shared';
-import { Prettify } from '~/utils';
+import type { Prettify } from '~/utils';
 
 export const UserConfigP1Schema = z.object({
   global: GlobalConfigSchema,

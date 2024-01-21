@@ -1,7 +1,7 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 
-import { MonitorInfo, getMonitors } from '~/desktop';
-import { MonitorsProviderConfig } from '~/user-config';
+import { type MonitorInfo, getMonitors } from '~/desktop';
+import type { MonitorsProviderConfig } from '~/user-config';
 
 export interface MonitorsVariables {
   primary?: MonitorInfo;

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { Prettify } from '~/utils';
+import type { Prettify } from '~/utils';
 import {
   ActiveWindowProviderConfigSchema,
   BatteryProviderConfigSchema,

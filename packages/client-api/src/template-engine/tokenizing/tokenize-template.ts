@@ -1,5 +1,5 @@
 import { createStringScanner } from '~/utils';
-import { Token } from './token.model';
+import type { Token } from './token.model';
 import { TokenType } from './token-type.model';
 import { TemplateError } from '../shared';
 

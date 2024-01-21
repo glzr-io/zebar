@@ -1,5 +1,5 @@
-import { ElementContext } from '~/element-context.model';
-import { PickPartial } from '~/utils';
+import type { ElementContext } from '~/element-context.model';
+import type { PickPartial } from '~/utils';
 
 export type SelfProvider = PickPartial<
   ElementContext,

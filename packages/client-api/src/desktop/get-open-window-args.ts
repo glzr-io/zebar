@@ -1,7 +1,7 @@
 import { getCurrent } from '@tauri-apps/api/window';
 import { createStore } from 'solid-js/store';
 
-import { OpenWindowArgs } from './shared';
+import type { OpenWindowArgs } from './shared';
 import { getOpenWindowArgs } from './desktop-commands';
 
 const [openWindowArgs, setOpenWindowArgs] = createStore({

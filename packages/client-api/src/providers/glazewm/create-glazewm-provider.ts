@@ -1,9 +1,9 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { GwmClient, GwmEventType, Workspace } from 'glazewm';
+import { GwmClient, GwmEventType, type Workspace } from 'glazewm';
 
 import { getMonitors } from '~/desktop';
-import { GlazewmProviderConfig } from '~/user-config';
+import type { GlazewmProviderConfig } from '~/user-config';
 
 export async function createGlazewmProvider(
   _: GlazewmProviderConfig,

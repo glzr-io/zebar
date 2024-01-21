@@ -21,5 +21,4 @@ pub enum WeatherStatus {
   LightRain,
   HeavyRain,
   Snow,
-  Thunder,
 }

@@ -1,5 +1,10 @@
 import { compileString } from 'sass';
-import { Owner, createEffect, createSignal, runWithOwner } from 'solid-js';
+import {
+  type Owner,
+  createEffect,
+  createSignal,
+  runWithOwner,
+} from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { createLogger, toCssSelector } from '~/utils';

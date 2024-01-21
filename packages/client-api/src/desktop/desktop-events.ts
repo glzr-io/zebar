@@ -1,4 +1,8 @@
-import { listen, Event } from '@tauri-apps/api/event';
+import {
+  listen,
+  type Event,
+  type UnlistenFn,
+} from '@tauri-apps/api/event';
 
 export interface ProviderEmitEvent<T = unknown> {
   configHash: string;
@@ -11,7 +15,7 @@ export interface ProviderEmitEvent<T = unknown> {
 export function onProviderEmit<T = unknown>(
   configHash: string,
   callback: (payload: T) => void,
-) {
+): Promise<UnlistenFn> {
   return listen('provider-emit', (event: Event<ProviderEmitEvent<T>>) => {
     // Ignore provider emissions for different configs.
     if (event.payload.configHash !== configHash) {

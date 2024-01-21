@@ -1,6 +1,6 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 
-import { CpuProviderConfig } from '~/user-config';
+import type { CpuProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface CpuVariables {

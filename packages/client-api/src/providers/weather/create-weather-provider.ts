@@ -1,7 +1,10 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 
-import { WeatherProviderConfig } from '~/user-config';
-import { IpVariables, createIpProvider } from '../ip/create-ip-provider';
+import type { WeatherProviderConfig } from '~/user-config';
+import {
+  type IpVariables,
+  createIpProvider,
+} from '../ip/create-ip-provider';
 import { WeatherStatus } from './weather-status.enum';
 import { createProviderListener } from '../create-provider-listener';
 

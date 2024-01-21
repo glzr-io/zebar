@@ -4,7 +4,7 @@ import {
   getCurrent as getCurrentWindow,
 } from '@tauri-apps/api/window';
 
-import { ZOrder } from '~/user-config';
+import type { ZOrder } from '~/user-config';
 import { createLogger } from '~/utils';
 
 export interface WindowPosition {

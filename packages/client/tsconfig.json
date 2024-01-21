@@ -1,13 +1,11 @@
 {
-  "extends": "../../base-tsconfig.json",
+  "extends": "@glzr/style-guide/tsconfig/solidjs-app",
   "compilerOptions": {
     "outDir": "dist",
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
-    "noEmit": true,
     "types": ["vite/client"],
     "paths": {
       "~/*": ["./src/app/*"]
     }
-  }
+  },
+  "include": ["src"]
 }

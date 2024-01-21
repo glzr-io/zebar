@@ -1,8 +1,11 @@
-import { InvokeArgs, invoke as tauriInvoke } from '@tauri-apps/api/core';
+import {
+  type InvokeArgs,
+  invoke as tauriInvoke,
+} from '@tauri-apps/api/core';
 
 import { createLogger } from '../utils';
-import { ProviderConfig } from '~/user-config';
-import { OpenWindowArgs } from './shared';
+import type { ProviderConfig } from '~/user-config';
+import type { OpenWindowArgs } from './shared';
 
 const logger = createLogger('desktop-commands');
 

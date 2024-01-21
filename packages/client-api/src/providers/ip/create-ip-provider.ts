@@ -1,6 +1,6 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 
-import { IpProviderConfig } from '~/user-config';
+import type { IpProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface IpVariables {

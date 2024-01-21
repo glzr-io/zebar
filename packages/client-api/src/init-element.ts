@@ -1,15 +1,20 @@
-import { Accessor, Owner, createEffect, runWithOwner } from 'solid-js';
+import {
+  type Accessor,
+  type Owner,
+  createEffect,
+  runWithOwner,
+} from 'solid-js';
 
 import {
   getStyleBuilder,
   getParsedElementConfig,
   getChildIds,
-  GlobalConfig,
+  type GlobalConfig,
 } from './user-config';
 import { getElementProviders } from './providers';
-import { ElementContext } from './element-context.model';
+import type { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
-import { PickPartial } from './utils';
+import type { PickPartial } from './utils';
 
 export interface InitElementArgs {
   id: string;

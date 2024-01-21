@@ -1,4 +1,4 @@
-import { Owner } from 'solid-js';
+import type { Owner } from 'solid-js';
 
 import { createActiveWindowProvider } from './active-window/create-active-window-provider';
 import { createBatteryProvider } from './battery/create-battery-provider';
@@ -13,9 +13,9 @@ import { createNetworkProvider } from './network/create-network-provider';
 import { createSelfProvider } from './self/create-self-provider';
 import { createSystemTrayProvider } from './system-tray/create-system-tray-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
-import { ProviderConfig } from '~/user-config';
-import { ElementContext } from '~/element-context.model';
-import { PickPartial } from '~/utils';
+import type { ProviderConfig } from '~/user-config';
+import type { ElementContext } from '~/element-context.model';
+import type { PickPartial } from '~/utils';
 
 export async function createProvider(
   elementContext: PickPartial<

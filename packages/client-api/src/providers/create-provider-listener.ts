@@ -1,9 +1,9 @@
 import {
-  Accessor,
+  type Accessor,
   createEffect,
   createSignal,
   onCleanup,
-  Owner,
+  type Owner,
   runWithOwner,
 } from 'solid-js';
 
@@ -12,7 +12,7 @@ import {
   listenProvider,
   unlistenProvider,
 } from '~/desktop';
-import { ProviderConfig } from '~/user-config';
+import type { ProviderConfig } from '~/user-config';
 import { simpleHash } from '~/utils';
 
 /**

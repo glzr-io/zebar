@@ -1,6 +1,6 @@
 import { Index, Show, createSignal } from 'solid-js';
 import {
-  WindowContext,
+  type WindowContext,
   getChildIds,
   initWindow,
   toCssSelector,

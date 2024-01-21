@@ -1,4 +1,4 @@
-import { Signal, createSignal } from 'solid-js';
+import { type Signal, createSignal } from 'solid-js';
 
 const cache: Record<string, Signal<any>> = {};
 

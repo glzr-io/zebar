@@ -1,13 +1,13 @@
 import {
-  Monitor,
+  type Monitor,
   availableMonitors as getAvailableMonitors,
   currentMonitor as getCurrentMonitor,
   primaryMonitor as getPrimaryMonitor,
 } from '@tauri-apps/api/window';
 import { createStore } from 'solid-js/store';
-import { Owner, createEffect, runWithOwner } from 'solid-js';
+import { type Owner, createEffect, runWithOwner } from 'solid-js';
 
-import { MonitorInfo } from './shared';
+import type { MonitorInfo } from './shared';
 
 let fetchMonitorsPromise: ReturnType<typeof fetchMonitors> | null = null;
 

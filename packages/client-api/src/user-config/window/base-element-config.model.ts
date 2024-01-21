@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { Prettify } from '~/utils';
+import type { Prettify } from '~/utils';
 import { ProvidersConfigSchema } from './providers-config.model';
 
 export const BaseElementConfigSchema = z.object({

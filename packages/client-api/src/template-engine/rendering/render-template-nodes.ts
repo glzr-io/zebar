@@ -1,11 +1,11 @@
 import {
-  ForStatementNode,
-  IfStatementNode,
-  InterpolationNode,
-  SwitchStatementNode,
-  TemplateNode,
+  type ForStatementNode,
+  type IfStatementNode,
+  type InterpolationNode,
+  type SwitchStatementNode,
+  type TemplateNode,
   TemplateNodeType,
-  TextNode,
+  type TextNode,
 } from '../token-parsing';
 import { TemplateError } from '../shared';
 
