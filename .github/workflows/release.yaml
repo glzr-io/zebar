@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: glzr-io/actions/semantic-release@main
+        with:
+          is-prerelease: false
+          gh-publish: true
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-draft-release: false

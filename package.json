@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "build": "turbo run build",
+    "check:prettier": "prettier --check .",
     "dev": "turbo run dev --continue",
     "format": "prettier --write \"**/*.{ts,tsx,md,html,json,js,scss}\" && turbo run format"
   },
