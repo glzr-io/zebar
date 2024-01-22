@@ -15,8 +15,8 @@ use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
 use tauri::{
-  path::BaseDirectory, AppHandle, Manager, RunEvent, State, WindowBuilder,
-  WindowUrl,
+  path::BaseDirectory, AppHandle, Manager, RunEvent, State, Window,
+  WindowBuilder, WindowUrl,
 };
 use tokio::{
   sync::{
@@ -27,10 +27,13 @@ use tokio::{
 };
 use tracing::info;
 
+use crate::util::window_ext::WindowExt;
+
 mod cli;
 mod monitors;
 mod providers;
 mod user_config;
+mod util;
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -88,6 +91,20 @@ async fn unlisten_provider(
     .unlisten(config_hash)
     .await
     .map_err(|err| err.to_string())
+}
+
+/// Tauri's implementation of `always_on_top` places the window above
+/// all normal windows (but not the MacOS menu bar). The following instead
+/// sets the z-order of the window to be above the menu bar.
+#[tauri::command]
+fn set_always_on_top(window: Window) -> Result<(), String> {
+  #[cfg(target_os = "macos")]
+  let res = window.set_above_menu_bar();
+
+  #[cfg(not(target_os = "macos"))]
+  let res = window.set_always_on_top(true);
+
+  res.map_err(|err| err.to_string())
 }
 
 #[tokio::main]
@@ -178,6 +195,7 @@ async fn main() {
                   .unwrap(),
               )
               .inner_size(500., 500.)
+              .visible_on_all_workspaces(true)
               .decorations(false)
               .resizable(false)
               .build()
@@ -201,7 +219,8 @@ async fn main() {
       read_config_file,
       get_open_window_args,
       listen_provider,
-      unlisten_provider
+      unlisten_provider,
+      set_always_on_top
     ])
     .build(tauri::generate_context!())
     .expect("Error while building Tauri application");

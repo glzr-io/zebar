@@ -29,7 +29,7 @@ window/bar:
   position_y: '{{ self.args.MONITOR_Y }}'
   # Whether to show the window above/below all others.
   # Allowed values: 'always_on_top', 'always_on_bottom', 'normal'.
-  z_order: 'normal'
+  z_order: 'always_on_top'
   # Whether the window should be shown in the taskbar.
   show_in_taskbar: false
   # Whether the window should have resize handles.

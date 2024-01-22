@@ -825,6 +825,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
+ "cocoa 0.25.0",
  "reqwest",
  "serde",
  "serde_json",

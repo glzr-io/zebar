@@ -78,16 +78,16 @@ export async function initWindowAsync(): Promise<WindowContext> {
 }
 
 async function redrawWindow(config: WindowConfig): Promise<void> {
+  await setWindowStyles({
+    zOrder: config.z_order,
+    showInTaskbar: config.show_in_taskbar,
+    resizable: config.resizable,
+  });
+
   await setWindowPosition({
     x: config.position_x,
     y: config.position_y,
     width: config.width,
     height: config.height,
-  });
-
-  await setWindowStyles({
-    zOrder: config.z_order,
-    showInTaskbar: config.show_in_taskbar,
-    resizable: config.resizable,
   });
 }

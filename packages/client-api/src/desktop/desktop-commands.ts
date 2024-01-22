@@ -40,6 +40,10 @@ export function unlistenProvider(configHash: string): Promise<void> {
   return invoke<void>('unlisten_provider', { configHash });
 }
 
+export function setAlwaysOnTop(): Promise<void> {
+  return invoke<void>('set_always_on_top');
+}
+
 // TODO: Implement this. Should kill the window and show error dialog. If
 // there are no windows remaining, then exit the app.
 export function exitWithError(message: string): never {
