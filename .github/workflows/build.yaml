@@ -37,9 +37,15 @@ jobs:
 
       - run: pnpm i
 
-      - run: pnpm build
+      - run: pnpm build --filter @zebar/client --filter zebar
 
-      - uses: actions/upload-artifact@v3
+      - uses: tauri-apps/tauri-action@v0
         with:
-          name: bundle-${{ matrix.platform }}
-          path: ${{ github.workspace }}/target/release/bundle
+          projectPath: './packages/desktop'
+
+      # - run: pnpm build
+
+      # - uses: actions/upload-artifact@v3
+      #   with:
+      #     name: bundle-${{ matrix.platform }}
+      #     path: ${{ github.workspace }}/target/release/bundle
