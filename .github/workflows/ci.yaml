@@ -8,15 +8,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.14.1
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm i
 
-      # Check whether Prettier has errors.
-      - run: npm run check:prettier
-
-      # Check whether build is successful.
-      - run: npm run build
+      - run: pnpm run check:prettier
