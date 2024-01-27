@@ -2,8 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: write
@@ -12,6 +10,9 @@ permissions:
   id-token: write
 
 jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+
   release:
     runs-on: ubuntu-latest
     steps:
@@ -25,3 +26,5 @@ jobs:
           gh-publish: true
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           gh-draft-release: false
+          npm-publish: true
+          npm-package-root: 'packages/client-api'
