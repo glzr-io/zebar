@@ -37,4 +37,9 @@ jobs:
 
       - run: pnpm i
 
-      - uses: tauri-apps/tauri-action@v0
+      - run: pnpm build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: bundle-${{ matrix.platform }}
+          path: ${{ github.workspace }}/target/release/bundle
