@@ -25,10 +25,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: pnpm
 
       - run: rustup toolchain install stable --profile minimal
 
       - uses: Swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
+        with:
+          workspaces: ./packages/desktop
 
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
@@ -37,16 +40,9 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - run: pnpm i
+      - run: pnpm build
 
-      - run: pnpm build --filter @zebar/client --filter zebar
-
-      - uses: tauri-apps/tauri-action@v0
+      - uses: actions/upload-artifact@v3
         with:
-          projectPath: './packages/desktop'
-
-      # - run: pnpm build
-
-      # - uses: actions/upload-artifact@v3
-      #   with:
-      #     name: bundle-${{ matrix.platform }}
-      #     path: ${{ github.workspace }}/target/release/bundle
+          name: bundle-${{ matrix.platform }}
+          path: ${{ github.workspace }}/packages/desktop/target/release/bundle
