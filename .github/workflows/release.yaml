@@ -27,4 +27,4 @@ jobs:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           gh-draft-release: false
           npm-publish: true
-          npm-package-root: 'packages/client-api'
+          npm-package-root: packages/client-api
