@@ -41,8 +41,8 @@ jobs:
           cache: pnpm
 
       - run: |
-        rustup toolchain install stable --profile minimal
-        rustup target add ${{ matrix.settings.target }}
+          rustup toolchain install stable --profile minimal
+          rustup target add ${{ matrix.settings.target }}
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
@@ -57,8 +57,8 @@ jobs:
       - run: pnpm i
 
       - run: |
-        pnpm build --filter zebar --filter @zebar/client
-        pnpm build --filter @zebar/desktop -- -- --target ${{ matrix.settings.target }}
+          pnpm build --filter zebar --filter @zebar/client
+          pnpm build --filter @zebar/desktop -- -- --target ${{ matrix.settings.target }}
 
       - uses: actions/upload-artifact@v3
         with:
