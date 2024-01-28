@@ -6,15 +6,28 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: write
-
 jobs:
   build:
     strategy:
       matrix:
-        platform: [macos-latest, ubuntu-22.04, windows-latest]
-    runs-on: ${{ matrix.platform }}
+        settings:
+          # MacOS (Intel)
+          - platform: 'macos-latest'
+            target: 'x86_64-apple-darwin'
+          # MacOS (Apple Silicon)
+          - platform: 'macos-latest'
+            target: 'aarch64-apple-darwin'
+          # 64-bit Linux
+          - platform: 'ubuntu-20.04'
+            target: 'x86_64-unknown-linux-gnu'
+          # 64-bit Windows
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+          # 32-bit Windows
+          - platform: 'windows-latest'
+            target: 'i686-pc-windows-msvc'
+
+    runs-on: ${{ matrix.settings.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,9 +40,11 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - run: rustup toolchain install stable --profile minimal
+      - run: |
+        rustup toolchain install stable --profile minimal
+        rustup target add ${{ matrix.settings.target }}
 
-      - uses: Swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
+      - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
           workspaces: ./packages/desktop
 
@@ -40,9 +55,12 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - run: pnpm i
-      - run: pnpm build
+
+      - run: |
+        pnpm build --filter zebar --filter @zebar/client
+        pnpm build --filter @zebar/desktop -- -- --target ${{ matrix.settings.target }}
 
       - uses: actions/upload-artifact@v3
         with:
-          name: bundle-${{ matrix.platform }}
+          name: bundle-${{ matrix.settings.target }}
           path: ${{ github.workspace }}/packages/desktop/target/release/bundle
