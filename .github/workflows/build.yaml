@@ -18,7 +18,7 @@ jobs:
           - platform: 'macos-latest'
             target: 'aarch64-apple-darwin'
           # 64-bit Linux
-          - platform: 'ubuntu-20.04'
+          - platform: 'ubuntu-22.04'
             target: 'x86_64-unknown-linux-gnu'
           # 64-bit Windows
           - platform: 'windows-latest'
