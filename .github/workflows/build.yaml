@@ -42,8 +42,7 @@ jobs:
           cache: pnpm
 
       - run: |
-          rustup toolchain install stable --profile minimal
-          rustup target add ${{ matrix.settings.target }} --toolchain stable
+          rustup toolchain install stable --profile minimal --target ${{ matrix.settings.target }}
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
