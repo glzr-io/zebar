@@ -1,4 +1,4 @@
-name: CI
+name: Lint check
 
 on: push
 
@@ -18,4 +18,4 @@ jobs:
           cache: pnpm
 
       - run: pnpm i
-      - run: pnpm run check:prettier
+      - run: pnpm run lint

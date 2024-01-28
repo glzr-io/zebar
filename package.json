@@ -7,9 +7,9 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "check:prettier": "prettier --check .",
     "dev": "turbo run dev --continue",
-    "format": "prettier --write \"**/*.{ts,tsx,md,html,json,js,scss}\" && turbo run format"
+    "format": "prettier --write \"**/*.{ts,tsx,md,html,json,js,scss}\" && turbo run format",
+    "lint": "prettier --check \"**/*.{ts,tsx,md,html,json,js,scss}\" && turbo run lint"
   },
   "prettier": "@glzr/style-guide/prettier",
   "dependencies": {},
