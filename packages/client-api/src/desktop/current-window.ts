@@ -1,6 +1,6 @@
 import {
-  LogicalPosition,
-  LogicalSize,
+  PhysicalPosition,
+  PhysicalSize,
   getCurrent as getCurrentWindow,
   type Window,
 } from '@tauri-apps/api/window';
@@ -33,22 +33,26 @@ export async function setWindowPosition(
 
   // Avoid setting position if neither x/y are defined.
   if (position.x !== undefined || position.y !== undefined) {
-    await window.setPosition(
-      new LogicalPosition(
-        position.x ?? (await window.outerPosition()).x,
-        position.y ?? (await window.outerPosition()).y,
-      ),
+    const newPosition = new PhysicalPosition(
+      position.x ?? (await window.outerPosition()).x,
+      position.y ?? (await window.outerPosition()).y,
     );
+
+    // Set position twice to handle DPI changes on cross-monitor moves.
+    await window.setPosition(newPosition);
+    await window.setPosition(newPosition);
   }
 
   // Avoid setting size if neither width/height are defined.
   if (position.width !== undefined || position.height !== undefined) {
-    await window.setSize(
-      new LogicalSize(
-        position.width ?? (await window.outerSize()).width,
-        position.height ?? (await window.outerSize()).height,
-      ),
+    const newSize = new PhysicalSize(
+      position.width ?? (await window.outerSize()).width,
+      position.height ?? (await window.outerSize()).height,
     );
+
+    // Set size twice to handle DPI changes on cross-monitor moves.
+    await window.setSize(newSize);
+    await window.setSize(newSize);
   }
 }
 
