@@ -41,10 +41,10 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
-        with:
-          toolchain: stable
-          targets: ${{ matrix.settings.target }}
+      - run: |
+          rustup toolchain install stable --profile minimal --target ${{ matrix.settings.target }}
+          rustup add target ${{ matrix.settings.target }}
+          rustup default stable
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
