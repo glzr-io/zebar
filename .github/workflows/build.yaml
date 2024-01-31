@@ -43,7 +43,7 @@ jobs:
 
       - run: |
           rustup toolchain install stable --profile minimal --target ${{ matrix.settings.target }}
-          rustup add target ${{ matrix.settings.target }}
+          rustup target add ${{ matrix.settings.target }}
           rustup default stable
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
