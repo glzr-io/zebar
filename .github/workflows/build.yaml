@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        settings:
+        include:
           # MacOS (Intel)
           - platform: macos-latest
             target: x86_64-apple-darwin
@@ -28,7 +28,7 @@ jobs:
           - platform: windows-latest
             target: i686-pc-windows-msvc
 
-    runs-on: ${{ matrix.settings.platform }}
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,24 +42,29 @@ jobs:
           cache: pnpm
 
       # - run: |
-      #     rustup toolchain install stable --profile minimal --target ${{ matrix.settings.target }}
-      #     rustup target add ${{ matrix.settings.target }}
+      #     rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+      #     rustup target add ${{ matrix.target }}
       #     rustup default stable
-      - uses: dtolnay/rust-toolchain@stable
+      # - uses: dtolnay/rust-toolchain@stable
+      #   with:
+      #     toolchain: stable-${{ matrix.target }}
+
+      - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
         with:
-          toolchain: stable-${{ matrix.settings.target }}
+          toolchain: stable
+          target: ${{ matrix.target }}
       # - name: install dependencies
       #   run: |
-      #     rustup target add ${{ matrix.settings.target }}
-      #     rustup toolchain install --force-non-host stable-${{ matrix.settings.target }}
-      #     rustup default stable-${{ matrix.settings.target }}
+      #     rustup target add ${{ matrix.target }}
+      #     rustup toolchain install --force-non-host stable-${{ matrix.target }}
+      #     rustup default stable-${{ matrix.target }}
 
       # - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
       #   with:
       #     workspaces: packages/desktop
 
       - name: Install dependencies (Ubuntu)
-        if: matrix.settings.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -68,11 +73,16 @@ jobs:
 
       - run: |
           pnpm build --filter zebar --filter @zebar/client
-          pnpm build --filter @zebar/desktop -- -- --target ${{ matrix.settings.target }}
+      # - run: |
+      #     pnpm build --filter zebar --filter @zebar/client
+      #     pnpm build --filter @zebar/desktop -- -- --target ${{ matrix.target }}
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: './packages/desktop'
 
       - uses: actions/upload-artifact@v3
         with:
-          name: bundle-${{ matrix.settings.target }}
+          name: bundle-${{ matrix.target }}
           path: |
             packages/desktop/target/release/bundle/**/*.AppImage
             packages/desktop/target/release/bundle/**/*.dmg
