@@ -45,11 +45,12 @@ jobs:
       #     rustup toolchain install stable --profile minimal --target ${{ matrix.settings.target }}
       #     rustup target add ${{ matrix.settings.target }}
       #     rustup default stable
-      - uses: dtolnay/rust-toolchain@stable
+      # - uses: dtolnay/rust-toolchain@stable
       - name: install dependencies
         run: |
           rustup target add ${{ matrix.settings.target }}
           rustup toolchain install --force-non-host stable-${{ matrix.settings.target }}
+          rustup default stable-${{ matrix.settings.target }}
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
