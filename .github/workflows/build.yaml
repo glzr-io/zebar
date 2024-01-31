@@ -48,8 +48,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: install dependencies
         run: |
-          rustup target add ${{ matrix.target }}
-          rustup toolchain install --force-non-host ${{ matrix.toolchain }}
+          rustup target add ${{ matrix.settings.target }}
+          rustup toolchain install --force-non-host stable-${{ matrix.settings.target }}
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
