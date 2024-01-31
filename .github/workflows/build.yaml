@@ -52,9 +52,9 @@ jobs:
           rustup toolchain install --force-non-host stable-${{ matrix.settings.target }}
           rustup default stable-${{ matrix.settings.target }}
 
-      - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
-        with:
-          workspaces: packages/desktop
+      # - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
+      #   with:
+      #     workspaces: packages/desktop
 
       - name: Install dependencies (Ubuntu)
         if: matrix.settings.platform == 'ubuntu-22.04'
