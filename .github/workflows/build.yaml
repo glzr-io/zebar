@@ -14,20 +14,20 @@ jobs:
         include:
           # MacOS (Intel & Apple Silicon)
           - platform: macos-latest
-            rust_targets: x86_64-apple-darwin,aarch64-apple-darwin
-            tauri_target: universal-apple-darwin
+            rust-targets: x86_64-apple-darwin,aarch64-apple-darwin
+            tauri-target: universal-apple-darwin
           # 64-bit Linux
           - platform: ubuntu-22.04
-            rust_targets: x86_64-unknown-linux-gnu
-            tauri_target: x86_64-unknown-linux-gnu
+            rust-targets: x86_64-unknown-linux-gnu
+            tauri-target: x86_64-unknown-linux-gnu
           # 64-bit Windows
           - platform: windows-latest
-            rust_targets: x86_64-pc-windows-msvc
-            tauri_target: x86_64-pc-windows-msvc
+            rust-targets: x86_64-pc-windows-msvc
+            tauri-target: x86_64-pc-windows-msvc
           # 32-bit Windows
           - platform: windows-latest
-            rust_targets: i686-pc-windows-msvc
-            tauri_target: i686-pc-windows-msvc
+            rust-targets: i686-pc-windows-msvc
+            tauri-target: i686-pc-windows-msvc
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -45,13 +45,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
         with:
           toolchain: nightly
-          targets: ${{ matrix.rust_targets }}
+          targets: ${{ matrix.rust-targets }}
 
-      - run: echo ${{ matrix.tauri_target }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
           workspaces: packages/desktop
-          shared-key: ${{ matrix.tauri_target }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
+          shared-key: ${{ matrix.tauri-target }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
 
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
@@ -66,9 +65,9 @@ jobs:
         id: tauri
         with:
           projectPath: packages/desktop
-          args: --target ${{ matrix.tauri_target }}
+          args: --target ${{ matrix.tauri-target }}
 
-      - name: Clean up file names
+      - name: Move & rename artifacts
         run: |
           mkdir tmp
           ARTIFACTS='${{ steps.tauri.outputs.artifactPaths }}'
@@ -79,6 +78,6 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: bundle-${{ matrix.tauri_target }}
+          name: bundle-${{ matrix.tauri-target }}
           if-no-files-found: error
           path: tmp
