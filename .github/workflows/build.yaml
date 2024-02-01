@@ -50,7 +50,7 @@ jobs:
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
           workspaces: packages/desktop
-          key: ${{ matrix.rust_targets }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
+          shared-key: ${{ matrix.rust_targets }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
 
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
@@ -70,8 +70,8 @@ jobs:
       - name: Clean up file names
         run: |
           mkdir tmp
-          ARTIFACTS=$(echo "${{ steps.tauri.outputs.artifactPaths }}" | jq -r '.[]')
-          for ARTIFACT in ARTIFACTS; do
+          ARTIFACTS='${{ steps.tauri.outputs.artifactPaths }}'
+          for ARTIFACT in $(echo "$ARTIFACTS" | jq -r '.[]'); do
             mv "$ARTIFACT" "tmp/tauri.${ARTIFACT##*.}"
           done
         shell: bash
