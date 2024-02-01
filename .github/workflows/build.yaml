@@ -76,6 +76,6 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: bundle-${{ matrix.target }}
+          name: bundle-${{ matrix.tauri_target }}
           if-no-files-found: error
           path: tmp
