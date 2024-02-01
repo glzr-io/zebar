@@ -1,7 +1,6 @@
 name: Build
 
 on:
-  push:
   workflow_call:
   pull_request:
     types: [opened, synchronize, reopened]
