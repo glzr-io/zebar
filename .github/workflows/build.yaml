@@ -67,10 +67,12 @@ jobs:
           args: --target ${{ matrix.tauri_target }}
 
       - run: |
+          mkdir tmp
           for f in "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"
           do
             mv f "tmp/tauri.${f##*.}"
           done
+        shell: bash
 
       - uses: actions/upload-artifact@v3
         with:
