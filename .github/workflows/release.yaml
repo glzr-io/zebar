@@ -60,3 +60,4 @@ jobs:
           npm-publish: true
           npm-token: ${{ secrets.NPM_TOKEN }}
           npm-package-root: packages/client-api
+          npm-package-manager: pnpm
