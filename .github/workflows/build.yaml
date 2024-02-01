@@ -12,21 +12,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # MacOS (Intel)
+          # MacOS (Intel & Apple Silicon)
           - platform: macos-latest
-            target: x86_64-apple-darwin
-          # MacOS (Apple Silicon)
-          - platform: macos-latest
-            target: aarch64-apple-darwin
+            rust_targets: x86_64-apple-darwin,aarch64-apple-darwin
+            tauri_target: universal-apple-darwin
           # 64-bit Linux
           - platform: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
+            tauri_target: x86_64-unknown-linux-gnu
           # 64-bit Windows
           - platform: windows-latest
-            target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            tauri_target: x86_64-pc-windows-msvc
           # 32-bit Windows
           - platform: windows-latest
-            target: i686-pc-windows-msvc
+            rust_targets: i686-pc-windows-msvc
+            tauri_target: i686-pc-windows-msvc
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -41,27 +42,14 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      # - run: |
-      #     rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
-      #     rustup target add ${{ matrix.target }}
-      #     rustup default stable
-      # - uses: dtolnay/rust-toolchain@stable
-      #   with:
-      #     toolchain: stable-${{ matrix.target }}
-
       - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
         with:
           toolchain: nightly
-          target: ${{ matrix.target }}
-      # - name: install dependencies
-      #   run: |
-      #     rustup target add ${{ matrix.target }}
-      #     rustup toolchain install --force-non-host stable-${{ matrix.target }}
-      #     rustup default stable-${{ matrix.target }}
+          target: ${{ matrix.rust_targets }}
 
-      # - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
-      #   with:
-      #     workspaces: packages/desktop
+      - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
+        with:
+          workspaces: packages/desktop
 
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
@@ -72,17 +60,20 @@ jobs:
       - run: pnpm i
       - run: pnpm build --filter zebar --filter @zebar/client
 
-      # - run: |
-      #     pnpm build --filter zebar --filter @zebar/client
-      #     pnpm build --filter @zebar/desktop -- -- --target ${{ matrix.target }}
       - uses: tauri-apps/tauri-action@v0
         id: tauri
         with:
-          projectPath: ./packages/desktop
-          args: --target ${{ matrix.target }}
+          projectPath: packages/desktop
+          args: --target ${{ matrix.tauri_target }}
+
+      - run: |
+          for f in "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"
+          do
+            mv f "tmp/tauri.${f##*.}"
+          done
 
       - uses: actions/upload-artifact@v3
         with:
           name: bundle-${{ matrix.target }}
           if-no-files-found: error
-          path: "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"
+          path: tmp
