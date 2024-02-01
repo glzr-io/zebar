@@ -45,11 +45,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
         with:
           toolchain: nightly
-          target: ${{ matrix.rust_targets }}
+          targets: ${{ matrix.rust_targets }}
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
           workspaces: packages/desktop
+          key: ${{ matrix.rust_targets }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
 
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
@@ -68,7 +69,7 @@ jobs:
 
       - run: |
           mkdir tmp
-          for f in "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"; do
+          for f in ${{ join(fromJSON(steps.tauri.outputs.artifactPaths), ' ') }}; do
             mv "$f" "tmp/tauri.${f##*.}"
           done
         shell: bash
