@@ -68,9 +68,8 @@ jobs:
 
       - run: |
           mkdir tmp
-          for f in "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"
-          do
-            mv f "tmp/tauri.${f##*.}"
+          for f in "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"; do
+            mv "$f" "tmp/tauri.${f##*.}"
           done
         shell: bash
 
