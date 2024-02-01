@@ -47,10 +47,11 @@ jobs:
           toolchain: nightly
           targets: ${{ matrix.rust_targets }}
 
+      - run: echo ${{ matrix.tauri_target }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
           workspaces: packages/desktop
-          shared-key: ${{ matrix.rust_targets }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
+          shared-key: ${{ matrix.tauri_target }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
 
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'

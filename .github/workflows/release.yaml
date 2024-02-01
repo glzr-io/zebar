@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  push:
   workflow_dispatch:
 
 permissions:
