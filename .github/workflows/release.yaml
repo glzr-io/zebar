@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: release
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: tmp
+          pattern: bundle-*
+
+      - uses: glzr-io/actions/semantic-release@main
+        with:
+          gh-publish: true
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-draft-release: false
+          gh-assets: |
+            [
+              {
+                "path": "tmp/bundle-x86_64-pc-windows-msvc/tauri.msi",
+                "name": "Zebar_x64_${nextRelease.gitTag}.msi"
+              },
+              {
+                "path": "tmp/bundle-i686-pc-windows-msvc/tauri.msi",
+                "name": "Zebar_x86_${nextRelease.gitTag}.msi"
+              },
+              {
+                "path": "tmp/bundle-universal-apple-darwin/tauri.dmg",
+                "name": "Zebar_${nextRelease.gitTag}.dmg"
+              },
+              {
+                "path": "tmp/bundle-x86_64-unknown-linux-gnu/tauri.deb",
+                "name": "Zebar_x64_${nextRelease.gitTag}.deb"
+              },
+              {
+                "path": "tmp/bundle-x86_64-unknown-linux-gnu/tauri.AppImage",
+                "name": "Zebar_x64_${nextRelease.gitTag}.AppImage"
+              }
+            ]
+          npm-publish: true
+          npm-token: ${{ secrets.NPM_TOKEN }}
+          npm-package-root: packages/client-api

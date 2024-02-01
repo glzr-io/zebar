@@ -25,7 +25,7 @@
       ],
       "identifier": "glazer.zebar",
       "resources": ["resources/*"],
-      "targets": "all"
+      "targets": ["deb", "appimage", "msi", "dmg", "updater"]
     },
     "macOSPrivateApi": true,
     "security": {
