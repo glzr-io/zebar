@@ -34,7 +34,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 8.14.1
+          version: 8
 
       - uses: actions/setup-node@v4
         with:
@@ -51,7 +51,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
         with:
-          toolchain: stable
+          toolchain: nightly
           target: ${{ matrix.target }}
       # - name: install dependencies
       #   run: |
@@ -70,21 +70,19 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - run: pnpm i
+      - run: pnpm build --filter zebar --filter @zebar/client
 
-      - run: |
-          pnpm build --filter zebar --filter @zebar/client
       # - run: |
       #     pnpm build --filter zebar --filter @zebar/client
       #     pnpm build --filter @zebar/desktop -- -- --target ${{ matrix.target }}
       - uses: tauri-apps/tauri-action@v0
+        id: tauri
         with:
-          projectPath: './packages/desktop'
+          projectPath: ./packages/desktop
+          args: --target ${{ matrix.target }}
 
       - uses: actions/upload-artifact@v3
         with:
           name: bundle-${{ matrix.target }}
-          path: |
-            packages/desktop/target/release/bundle/**/*.AppImage
-            packages/desktop/target/release/bundle/**/*.dmg
-            packages/desktop/target/release/bundle/**/*.deb
-            packages/desktop/target/release/bundle/**/*.msi
+          if-no-files-found: error
+          path: "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"

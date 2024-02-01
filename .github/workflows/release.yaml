@@ -20,11 +20,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/download-artifact@v4
+        with:
+          path: tmp
+          pattern: bundle-*
+          merge-multiple: true
+
       - uses: glzr-io/actions/semantic-release@main
         with:
-          is-prerelease: false
           gh-publish: true
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           gh-draft-release: false
+          gh-assets: |
+            [
+              {
+                "path": "artifacts/win-x64/GlazeWM.exe",
+                "name": "GlazeWM_x64_${nextRelease.gitTag}"
+              },
+              {
+                "path": "artifacts/win-x86/GlazeWM.exe",
+                "name": "GlazeWM_x86_${nextRelease.gitTag}"
+              }
+            ]
           npm-publish: true
+          npm-token: ${{ secrets.NPM_TOKEN }}
           npm-package-root: packages/client-api
