@@ -67,10 +67,12 @@ jobs:
           projectPath: packages/desktop
           args: --target ${{ matrix.tauri_target }}
 
-      - run: |
+      - name: Clean up file names
+        run: |
           mkdir tmp
-          for f in ${{ join(fromJSON(steps.tauri.outputs.artifactPaths), ' ') }}; do
-            mv "$f" "tmp/tauri.${f##*.}"
+          ARTIFACTS=$(echo "${{ steps.tauri.outputs.artifactPaths }}" | jq -r '.[]')
+          for ARTIFACT in ARTIFACTS; do
+            mv "$ARTIFACT" "tmp/tauri.${ARTIFACT##*.}"
           done
         shell: bash
 
