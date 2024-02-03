@@ -29,6 +29,10 @@ jobs:
           path: tmp
           pattern: bundle-*
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - uses: glzr-io/actions/semantic-release@main
         with:
           gh-publish: true
