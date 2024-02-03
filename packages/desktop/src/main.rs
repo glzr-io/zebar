@@ -188,7 +188,7 @@ async fn main() {
                 app_handle
                   .path()
                   .resolve(
-                    format!(".glazer/tmp-{}", window_count),
+                    format!(".glzr/zebar/tmp-{}", window_count),
                     BaseDirectory::Home,
                   )
                   .context("Unable to get home directory.")
@@ -196,6 +196,7 @@ async fn main() {
               )
               .inner_size(500., 500.)
               .visible_on_all_workspaces(true)
+              .transparent(true)
               .decorations(false)
               .resizable(false)
               .build()

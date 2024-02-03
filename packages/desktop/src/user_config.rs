@@ -3,15 +3,14 @@ use std::{fs, io::Read, path::PathBuf};
 use anyhow::{Context, Result};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
-/// Reads the config file at `/.glazer/zebar.yaml` in the user's home
-/// directory.
+/// Reads the config file at `~/.glzr/zebar/config.yaml`.
 pub fn read_file(
   config_path_override: Option<&str>,
   app_handle: AppHandle,
 ) -> Result<String> {
   let default_config_path = app_handle
     .path()
-    .resolve(".glazer/zebar.yaml", BaseDirectory::Home)
+    .resolve(".glzr/zebar/config.yaml", BaseDirectory::Home)
     .context("Unable to get home directory.")?;
 
   let config_path = match config_path_override {
@@ -61,7 +60,7 @@ fn create_from_sample(
 pub fn open_config_dir(app_handle: AppHandle) -> Result<()> {
   let config_dir_path = app_handle
     .path()
-    .resolve(".glazer", BaseDirectory::Home)
+    .resolve(".glzr/zebar", BaseDirectory::Home)
     .context("Unable to get home directory.")?;
 
   #[cfg(target_os = "windows")]
