@@ -63,8 +63,8 @@ export async function initWindowAsync(): Promise<WindowContext> {
     owner,
   })) as WindowContext;
 
-  if (globalConfig.root_styles) {
-    styleBuilder.setGlobalStyles(globalConfig.root_styles);
+  if (windowConfig.global_styles) {
+    styleBuilder.setGlobalStyles(windowConfig.global_styles);
   }
 
   // Set window position based on config values.
