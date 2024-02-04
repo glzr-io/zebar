@@ -50,7 +50,7 @@ window/bar:
     template/glazewm:
       providers: ['glazewm']
       template: |
-        @for (workspace of glazewm.workspaces) {
+        @for (workspace of glazewm.workspacesOnMonitor) {
           <button class="{{ workspace.state }}-workspace">
             {{ workspace.name }}
           </button>

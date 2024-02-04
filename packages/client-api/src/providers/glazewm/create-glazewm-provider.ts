@@ -13,8 +13,9 @@ export async function createGlazewmProvider(
   const client = new GwmClient();
 
   const [glazewmVariables, setGlazewmVariables] = createStore({
-    workspaces: [] as Workspace[],
-    binding_mode: '',
+    workspacesOnMonitor: [] as Workspace[],
+    // TODO
+    bindingMode: '',
   });
 
   client.onConnect(e => console.log('onOpen', e));
@@ -41,7 +42,7 @@ export async function createGlazewmProvider(
         : b,
     );
 
-    setGlazewmVariables({ workspaces: monitor.children });
+    setGlazewmVariables({ workspacesOnMonitor: monitor.children });
   }
 
   function getDistance(
@@ -54,12 +55,8 @@ export async function createGlazewmProvider(
   }
 
   return {
-    get workspaces() {
-      return glazewmVariables.workspaces;
+    get workspacesOnMonitor() {
+      return glazewmVariables.workspacesOnMonitor;
     },
-    get binding_mode() {
-      return glazewmVariables.binding_mode;
-    },
-    focus_workspace: () => {},
   };
 }
