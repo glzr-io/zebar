@@ -1,6 +1,6 @@
 import type { Owner } from 'solid-js';
 
-import type { WeatherProviderConfig } from '~/user-config';
+import { ProviderType, type WeatherProviderConfig } from '~/user-config';
 import {
   type IpVariables,
   createIpProvider,
@@ -38,7 +38,7 @@ export async function createWeatherProvider(
       ipProvider ??
       (ipProvider = await createIpProvider(
         {
-          type: 'ip',
+          type: ProviderType.IP,
           refresh_interval_ms: 60 * 60 * 1000,
         },
         owner,

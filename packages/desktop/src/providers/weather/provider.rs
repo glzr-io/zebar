@@ -40,17 +40,34 @@ impl WeatherProvider {
         true => WeatherStatus::ClearDay,
         false => WeatherStatus::ClearNight,
       },
-      1 | 2 => match is_daytime {
+      1..=50 => match is_daytime {
         true => WeatherStatus::CloudyDay,
         false => WeatherStatus::CloudyNight,
       },
-      3..=50 => WeatherStatus::Overcast,
-      51..=62 => WeatherStatus::LightRain,
-      63..=70 => WeatherStatus::HeavyRain,
-      71..=79 => WeatherStatus::Snow,
-      80..=84 => WeatherStatus::HeavyRain,
-      85..=94 => WeatherStatus::Snow,
-      95..=u32::MAX => WeatherStatus::Snow,
+      51..=62 => match is_daytime {
+        true => WeatherStatus::LightRainDay,
+        false => WeatherStatus::LightRainNight,
+      },
+      63..=70 => match is_daytime {
+        true => WeatherStatus::HeavyRainDay,
+        false => WeatherStatus::HeavyRainNight,
+      },
+      71..=79 => match is_daytime {
+        true => WeatherStatus::SnowDay,
+        false => WeatherStatus::SnowNight,
+      },
+      80..=84 => match is_daytime {
+        true => WeatherStatus::HeavyRainDay,
+        false => WeatherStatus::HeavyRainNight,
+      },
+      85..=94 => match is_daytime {
+        true => WeatherStatus::SnowDay,
+        false => WeatherStatus::SnowNight,
+      },
+      95..=u32::MAX => match is_daytime {
+        true => WeatherStatus::ThunderDay,
+        false => WeatherStatus::ThunderNight,
+      },
     }
   }
 }
@@ -98,7 +115,7 @@ impl IntervalProvider for WeatherProvider {
     let current_weather = res.current_weather;
     let is_daytime = current_weather.is_day == 1;
 
-    Ok(ProviderVariables::Weather(WeatherVariables {
+    let xxx = ProviderVariables::Weather(WeatherVariables {
       is_daytime,
       status: Self::get_weather_status(
         current_weather.weather_code,
@@ -109,6 +126,8 @@ impl IntervalProvider for WeatherProvider {
         current_weather.temperature,
       ),
       wind_speed: current_weather.wind_speed,
-    }))
+    });
+    println!("xxx {:?}", xxx);
+    Ok(xxx)
   }
 }
