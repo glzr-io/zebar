@@ -33,6 +33,13 @@ jobs:
         with:
           version: 8
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm i
+
       - uses: glzr-io/actions/semantic-release@main
         with:
           gh-publish: true
