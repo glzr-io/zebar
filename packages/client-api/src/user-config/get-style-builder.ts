@@ -47,7 +47,7 @@ function getCompiledCss(): string {
   const styles: string[] = [];
 
   if (globalStyles()) {
-    styles.push(scopeWith(':root', globalStyles()!));
+    styles.push(globalStyles()!);
   }
 
   for (const [id, elStyles] of Object.entries(elementStyles)) {
