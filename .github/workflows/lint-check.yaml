@@ -17,5 +17,10 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
+        with:
+          toolchain: nightly
+          components: rustfmt
+
       - run: pnpm i
       - run: pnpm run lint
