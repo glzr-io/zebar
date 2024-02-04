@@ -141,8 +141,7 @@ export function tokenizeTemplate(template: string): Token[] {
 
   function tokenizeStatementArgs() {
     if (scanner.scan(/\)?\s+/)) {
-      // Ignore whitespace within args, and closing parenthesis after
-      // statement args.
+      // Ignore the closing parenthesis and any following whitespace.
     } else if (scanner.scan(/\(/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
@@ -267,6 +266,15 @@ export function tokenizeTemplate(template: string): Token[] {
     // Otherwise, set/clear wrapping symbol depending on whether the inverse
     // symbol matches.
     return matched === inverse ? null : current;
+  }
+
+  // If state stack includes more than just the default state, then a
+  // statement or expression has no closing tag.
+  if (stateStack.length > 1) {
+    throw new TemplateError(
+      'Missing close symbol after statement or expression.',
+      scanner.cursor,
+    );
   }
 
   return tokens;

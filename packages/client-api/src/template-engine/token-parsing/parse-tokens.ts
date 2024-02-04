@@ -19,9 +19,10 @@ import type { TextNode } from './text-node.model';
 export function parseTokens(tokens: Token[]) {
   let cursor = 0;
   const nodes: TemplateNode[] = [];
+  console.log('tokens', tokens);
 
   while (cursor < tokens.length) {
-    const node = parseStandaloneToken(tokens[cursor]);
+    const node = parseStandaloneToken(tokens[cursor]!);
     nodes.push(node);
     cursor += 1;
   }
@@ -40,22 +41,22 @@ export function parseTokens(tokens: Token[]) {
         return parseSwitchStatement(token);
       case TokenType.SWITCH_CASE_STATEMENT:
         throw new TemplateError(
-          'Cannot use a switch case statement without a switch statement.',
+          'Cannot use @case without a @switch statement.',
           token.startIndex,
         );
       case TokenType.SWITCH_DEFAULT_STATEMENT:
         throw new TemplateError(
-          'Cannot use a switch default statement without a switch statement.',
+          'Cannot use @default without a @switch statement.',
           token.startIndex,
         );
       case TokenType.ELSE_IF_STATEMENT:
         throw new TemplateError(
-          'Cannot use an else if statement without an if statement.',
+          'Cannot use @elseif without an @if statement.',
           token.startIndex,
         );
       case TokenType.ELSE_STATEMENT:
         throw new TemplateError(
-          'Cannot use an else statement without an if statement.',
+          'Cannot use @else without an @if statement.',
           token.startIndex,
         );
       default:
@@ -71,6 +72,7 @@ export function parseTokens(tokens: Token[]) {
     let next = tokens[cursor + 1];
 
     while (
+      // TODO: Add null check here for `next`.
       next.type === TokenType.TEXT ||
       next.type === TokenType.OPEN_INTERPOLATION ||
       next.type === TokenType.IF_STATEMENT ||

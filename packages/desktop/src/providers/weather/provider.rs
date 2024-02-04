@@ -115,7 +115,7 @@ impl IntervalProvider for WeatherProvider {
     let current_weather = res.current_weather;
     let is_daytime = current_weather.is_day == 1;
 
-    let xxx = ProviderVariables::Weather(WeatherVariables {
+    Ok(ProviderVariables::Weather(WeatherVariables {
       is_daytime,
       status: Self::get_weather_status(
         current_weather.weather_code,
@@ -126,8 +126,6 @@ impl IntervalProvider for WeatherProvider {
         current_weather.temperature,
       ),
       wind_speed: current_weather.wind_speed,
-    });
-    println!("xxx {:?}", xxx);
-    Ok(xxx)
+    }))
   }
 }
