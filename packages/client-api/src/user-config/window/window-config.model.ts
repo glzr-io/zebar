@@ -15,6 +15,7 @@ export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
   z_order: ZOrderSchema,
   show_in_taskbar: BooleanLikeSchema.optional(),
   resizable: BooleanLikeSchema.optional(),
+  global_styles: z.string().optional(),
 });
 
 export type WindowConfigP1 = Prettify<
