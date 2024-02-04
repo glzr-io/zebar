@@ -19,14 +19,16 @@ export function getTemplateEngine(): TemplateEngine {
 }
 
 function render(template: string, context: Record<string, unknown>) {
-  if (cache[template]) {
-    return renderTemplateNodes(cache[template], context);
+  const cacheHit = cache[template];
+
+  if (cacheHit) {
+    return renderTemplateNodes(cacheHit, context);
   }
 
   // Tokenize and parse the template. Cache the result.
   const tokens = tokenizeTemplate(template);
   const parsed = parseTokens(tokens);
-  setCache(template, parseTokens(tokens));
+  setCache(template, parsed);
 
   return renderTemplateNodes(parsed, context);
 }
