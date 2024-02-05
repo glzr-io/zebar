@@ -197,6 +197,7 @@ async fn main() {
               .inner_size(500., 500.)
               .visible_on_all_workspaces(true)
               .transparent(true)
+              .shadow(false)
               .decorations(false)
               .resizable(false)
               .build()
