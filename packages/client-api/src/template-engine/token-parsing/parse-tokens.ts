@@ -19,7 +19,6 @@ import type { TextNode } from './text-node.model';
 export function parseTokens(tokens: Token[]) {
   let cursor = 0;
   const nodes: TemplateNode[] = [];
-  console.log('tokens', tokens);
 
   while (cursor < tokens.length) {
     const node = parseStandaloneToken(tokens[cursor]!);

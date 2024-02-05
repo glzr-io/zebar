@@ -122,9 +122,10 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scan(/{{/)) {
       pushToken(TokenType.OPEN_INTERPOLATION);
       pushState(TokenizeStateType.IN_INTERPOLATION);
-    } else if (scanner.scanUntil(/.+?(?={{|@|})/)) {
-      // Search until a close block, the start of a statement, or the start of
-      // an interpolation tag.
+    } else if (scanner.scanUntil(/[\S\s]+?(?={{|@|\})/)) {
+      // Search until a close block, the start of a statement, or the start
+      // of an interpolation tag. In a JavaScript regex, the . character
+      // does not match new line characters, so we instead use [\S\s].
       const latestMatch = scanner.latestMatch!;
 
       // Push text token with indentation removed.
@@ -145,7 +146,7 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scan(/\(/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
-        closeRegex: /.+?(?=\))/,
+        closeRegex: /[\S\s]+?(?=\))/,
         activeWrappingSymbol: null,
       });
     } else if (scanner.scan(/{/)) {
@@ -175,10 +176,10 @@ export function tokenizeTemplate(template: string): Token[] {
     } else if (scanner.scan(/}}/)) {
       pushToken(TokenType.CLOSE_INTERPOLATION);
       stateStack.pop();
-    } else if (scanner.scan(/.*?/)) {
+    } else if (scanner.scan(/[\S\s]*?/)) {
       pushState({
         type: TokenizeStateType.IN_EXPRESSION,
-        closeRegex: /.+?(?=}})/,
+        closeRegex: /[\S\s]+?(?=}})/,
         activeWrappingSymbol: null,
       });
     } else {
@@ -204,7 +205,7 @@ export function tokenizeTemplate(template: string): Token[] {
       let activeWrappingSymbol = state.activeWrappingSymbol;
 
       while (!subScanner.isEmpty) {
-        const symbolMatch = subScanner.scan(/.*?('|`|\(|\)|")/);
+        const symbolMatch = subScanner.scan(/[\S\s]*?('|`|\(|\)|")/);
 
         if (!symbolMatch) {
           break;
