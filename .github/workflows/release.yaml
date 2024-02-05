@@ -24,10 +24,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
           path: tmp
-          pattern: bundle-**
 
       - run: ls -al
       - run: cd tmp
