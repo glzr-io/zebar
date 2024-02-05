@@ -6,7 +6,7 @@ import { ElementType } from '~/element-type.model';
 import { TemplateError, getTemplateEngine } from '~/template-engine';
 import {
   GroupConfigSchemaP1,
-  TemplateConfigSchemaP1,
+  TemplateConfigSchema,
   WindowConfigSchemaP1,
   TemplatePropertyError,
 } from '~/user-config';
@@ -80,6 +80,6 @@ function getSchemaForElement(type: ElementType) {
     case ElementType.GROUP:
       return GroupConfigSchemaP1.strip();
     case ElementType.TEMPLATE:
-      return TemplateConfigSchemaP1.strip();
+      return TemplateConfigSchema.strip();
   }
 }
