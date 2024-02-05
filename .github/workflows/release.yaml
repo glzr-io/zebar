@@ -27,6 +27,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
+          name: bundle-i686-pc-windows-msvc
           path: tmp
 
       - run: ls -al
