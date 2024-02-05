@@ -5,7 +5,7 @@
     "distDir": "../client/dist"
   },
   "package": {
-    "productName": "tauri",
+    "productName": "Zebar",
     "version": "0.0.0"
   },
   "plugins": {
@@ -23,7 +23,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "glazer.zebar",
+      "identifier": "com.glzr.zebar",
       "resources": ["resources/*"],
       "targets": ["deb", "appimage", "msi", "dmg", "updater"]
     },
