@@ -2,7 +2,7 @@
 
 Zebar is a way to create customizable and cross-platform taskbars, desktop widgets, and popups.
 
-[How to contribute](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md)
+[Development & how to contribute](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md)
 
 ## Providers
 

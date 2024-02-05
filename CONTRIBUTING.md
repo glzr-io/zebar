@@ -1,3 +1,5 @@
+**NOTE: Using Git Bash or WSL is currently required to run the `dev` script on Windows.**
+
 # Contributing to Zebar
 
 Zebar uses the Tauri desktop framework and requires Node.js + Rust.
