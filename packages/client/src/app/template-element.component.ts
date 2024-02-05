@@ -21,8 +21,8 @@ export function TemplateElement(props: TemplateElementProps) {
 
   function createRootElement() {
     const element = document.createElement('div');
-    element.id = toCssSelector(config.id);
     element.className = config.class_names.join(' ');
+    element.id = toCssSelector(config.id);
     return element;
   }
 

@@ -13,8 +13,8 @@ export function GroupElement(props: GroupElementProps) {
 
   return (
     <div
-      id={toCssSelector(config.id)}
       class={config.class_names.join(' ')}
+      id={toCssSelector(config.id)}
     >
       <Index each={getChildIds(rawConfig)}>
         {childId => (

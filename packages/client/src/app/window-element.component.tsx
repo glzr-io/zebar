@@ -17,8 +17,8 @@ export function WindowElement() {
     <Show when={context()}>
       {context => (
         <div
-          id={toCssSelector(context().parsedConfig.id)}
           class={context().parsedConfig.class_names.join(' ')}
+          id={toCssSelector(context().parsedConfig.id)}
         >
           <Index each={getChildIds(context().rawConfig)}>
             {childId => (
