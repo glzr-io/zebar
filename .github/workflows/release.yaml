@@ -27,7 +27,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: tmp
-          pattern: bundle-*
+          pattern: bundle-**
 
       - run: ls -al
       - run: cd tmp
