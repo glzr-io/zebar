@@ -4,6 +4,10 @@ import {
   type UnlistenFn,
 } from '@tauri-apps/api/event';
 
+import { createLogger } from '~/utils';
+
+const logger = createLogger('desktop-events');
+
 export interface ProviderEmitEvent<T = unknown> {
   configHash: string;
   variables: { data: T } | { error: string };
@@ -25,9 +29,11 @@ export function onProviderEmit<T = unknown>(
     const { variables } = event.payload;
 
     if ('error' in variables) {
+      logger.error('Incoming provider error:', variables.error);
       throw new Error(variables.error);
     }
 
+    logger.debug('Incoming provider variables:', variables.data);
     callback(variables.data as T);
   });
 }
