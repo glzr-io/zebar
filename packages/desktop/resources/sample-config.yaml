@@ -1,22 +1,18 @@
-# Thanks for trying out zebar :)
-# Yaml is white-space sensitive BTW (use 2 spaces to indent).
+# Yaml is white-space sensitive (use 2 spaces to indent).
 
-##
-# Settings to apply to all windows, popups, and desktop widgets.
+###
+# Settings to apply to all windows.
+#
 # Docs regarding global: https://some-future-docs-link.com
-##
 global:
-  # CSS/SCSS to apply to the root document (ie. the <html> element).
-  root_styles: |
-    --some-var: blue;
-  # Path to CSS or SCSS file(s). Loaded after inline styles.
-  load_stylesheets: []
-  # Path to JS file(s). Loaded after mounting window element.
-  load_scripts: []
+  # Whether to enable the browser devtools.
+  enable_devtools: true
 
-##
+###
+# Define a new window with an id of 'bar'. This window can then be opened
+# via the Zebar cli by running 'zebar open bar'.
+#
 # Docs regarding window: https://some-future-docs-link.com
-##
 window/bar:
   providers: ['self']
   # Width of the window in physical pixels.
@@ -34,19 +30,35 @@ window/bar:
   show_in_taskbar: false
   # Whether the window should have resize handles.
   resizable: false
-  # CSS/SCSS styles to apply to the window element.
+  # Styles to apply globally within the window. For example, we can use
+  # this to import the Nerdfonts icon font. Ref https://www.nerdfonts.com/cheat-sheet
+  # for a cheatsheet of available Nerdfonts icons.
+  global_styles: |
+    @import "https://www.nerdfonts.com/assets/css/webfont.css";
+  # CSS/SCSS styles to apply to the root element within the window.
   styles: |
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
     height: 100%;
-    background: #20242cc4;
     color: #ffffff;
-    font-family: Segoe UI;
+    font-family: ui-monospace, monospace;
     font-size: 13px;
-    padding: 4px 6px;
+    padding: 4px 20px;
+    border-bottom: 2px solid #1d1d2a;
+    background: linear-gradient(
+      rgba(15, 15, 40, 0.9),
+      rgba(15, 15, 40, 0.7),
+    );
   group/left:
     styles: |
       display: flex;
+    template/logo:
+      styles: |
+        margin-right: 20px;
+      template: |
+        <i class="nf nf-fa-windows"></i>
+
     template/glazewm:
       providers: ['glazewm']
       template: |
@@ -55,19 +67,71 @@ window/bar:
             {{ workspace.name }}
           </button>
         }
-    template/clock:
-      providers: ['date']
-      template: |
-        {{ date.toFormat(date.now, 'yyyy') }}
 
   group/center:
-    template/ip:
-      providers: ['ip']
+    styles: |
+      justify-self: center;
+    template/clock:
+      providers: ['date']
+      # Available date tokens: https://moment.github.io/luxon/#/formatting?id=table-of-tokens
       template: |
-        {{ ip.address }}
+        {{ date.toFormat(date.now, 'EEE	d MMM t') }}
 
   group/right:
+    styles: |
+      justify-self: end;
+      display: flex;
+
+      i {
+        margin-left: 14px;
+        margin-right: 4px;
+      }
+    template/cpu:
+      providers: ['cpu']
+      styles: |
+        .high-usage {
+          color: #900029;
+        }
+      template: |
+        <i class="nf nf-oct-cpu"></i>
+
+        <!-- Change the text color if the CPU usage is high. -->
+        @if (cpu.usage > 85) {
+          <span class="high-usage">{{ Math.round(cpu.usage) }}%</span>
+        } @else {
+          <span>{{ Math.round(cpu.usage) }}%</span>
+        }
+
+    template/battery:
+      providers: ['battery']
+      template: |
+        <!-- Show icon for how much of the battery is charged. -->
+        @if (battery.chargePercent > 90) {<i class="nf nf-fa-battery_4"></i>}
+        @else if (battery.chargePercent > 70) {<i class="nf nf-fa-battery_3"></i>}
+        @else if (battery.chargePercent > 40) {<i class="nf nf-fa-battery_2"></i>}
+        @else if (battery.chargePercent > 20) {<i class="nf nf-fa-battery_1"></i>}
+        @else {<i class="nf nf-fa-battery_0"></i>}
+
+        <!-- Show icon for whether battery is charging. -->
+        @if (battery.isCharging) {<i class="nf nf-fa-bolt"></i>}
+
+        {{ Math.round(battery.chargePercent) }}%
+
     template/weather:
       providers: ['weather']
       template: |
-        {{ weather.status }} {{weather.celsiusTemp}}
+        @switch (weather.status) {
+          @case ('clear_day') {<i class="nf nf-weather-day_sunny"></i>}
+          @case ('clear_night') {<i class="nf nf-weather-night_clear"></i>}
+          @case ('cloudy_day') {<i class="nf nf-weather-day_cloudy"></i>}
+          @case ('cloudy_night') {<i class="nf nf-weather-night_alt_cloudy"></i>}
+          @case ('light_rain_day') {<i class="nf nf-weather-day_sprinkle"></i>}
+          @case ('light_rain_night') {<i class="nf nf-weather-night_alt_sprinkle"></i>}
+          @case ('heavy_rain_day') {<i class="nf nf-weather-day_rain"></i>}
+          @case ('heavy_rain_night') {<i class="nf nf-weather-night_alt_rain"></i>}
+          @case ('snow_day') {<i class="nf nf-weather-day_snow"></i>}
+          @case ('snow_night') {<i class="nf nf-weather-night_alt_snow"></i>}
+          @case ('thunder_day') {<i class="nf nf-weather-day_lightning"></i>}
+          @case ('thunder_night') {<i class="nf nf-weather-night_alt_lightning"></i>}
+        }
+        {{ weather.celsiusTemp }}°
