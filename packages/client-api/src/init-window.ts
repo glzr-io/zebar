@@ -50,7 +50,7 @@ export async function initWindowAsync(): Promise<WindowContext> {
   }
 
   const globalConfig = GlobalConfigSchema.strip().parse(
-    (config as UserConfig).global,
+    (config as UserConfig)?.global ?? {},
   );
 
   const windowContext = (await initElement({

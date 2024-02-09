@@ -4,7 +4,7 @@ import { BooleanLikeSchema } from './shared';
 
 export const GlobalConfigSchema = z
   .object({
-    enable_devtools: BooleanLikeSchema.optional(),
+    enable_devtools: BooleanLikeSchema.default(false),
   })
   .partial();
 
