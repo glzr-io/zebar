@@ -6,7 +6,7 @@ use starship_battery::{
   units::{
     electric_potential::volt, power::watt, ratio::percent, time::second,
   },
-  Manager,
+  Manager, State,
 };
 use tokio::task::AbortHandle;
 
@@ -46,6 +46,7 @@ impl BatteryProvider {
       charge_percent: battery.state_of_charge().get::<percent>(),
       health_percent: battery.state_of_health().get::<percent>(),
       state: battery.state().to_string(),
+      is_charging: battery.state() == State::Charging,
       time_till_full: battery
         .time_to_full()
         .map(|time| time.get::<second>()),

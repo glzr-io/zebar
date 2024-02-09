@@ -6,6 +6,7 @@ pub struct BatteryVariables {
   pub charge_percent: f32,
   pub health_percent: f32,
   pub state: String,
+  pub is_charging: bool,
   pub time_till_full: Option<f32>,
   pub time_till_empty: Option<f32>,
   pub power_consumption: f32,

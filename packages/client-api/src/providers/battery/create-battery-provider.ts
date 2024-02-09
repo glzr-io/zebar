@@ -8,7 +8,8 @@ export interface BatteryVariables {
   cycleCount: number;
   healthPercent: number;
   powerConsumption: number;
-  state: 'discharging' | 'charging';
+  state: 'discharging' | 'charging' | 'full' | 'empty' | 'unknown';
+  isCharging: boolean;
   timeTillEmpty: number | null;
   timeTillFull: number | null;
   voltage: number | null;
