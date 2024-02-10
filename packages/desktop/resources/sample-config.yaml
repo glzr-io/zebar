@@ -44,7 +44,7 @@ window/bar:
     color: #ffffffe6;
     font-family: ui-monospace, monospace;
     font-size: 13px;
-    padding: 4px 20px;
+    padding: 4px 24px;
     border-bottom: 1px solid #ffffff08;
     background: linear-gradient(
       rgba(14, 14, 28, 0.95),
@@ -97,8 +97,9 @@ window/bar:
       display: flex;
 
       i {
-        margin-left: 14px;
-        margin-right: 4px;
+        color: #7481b2e1;
+        margin-left: 20px;
+        margin-right: 6px;
       }
 
     template/memory:
