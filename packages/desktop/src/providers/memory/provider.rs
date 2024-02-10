@@ -58,7 +58,12 @@ impl IntervalProvider for MemoryProvider {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_memory();
 
+    let usage = (sysinfo.used_memory() as f32
+      / sysinfo.total_memory() as f32)
+      * 100.0;
+
     Ok(ProviderVariables::Memory(MemoryVariables {
+      usage,
       free_memory: sysinfo.free_memory(),
       used_memory: sysinfo.used_memory(),
       total_memory: sysinfo.total_memory(),

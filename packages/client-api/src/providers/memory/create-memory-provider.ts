@@ -4,6 +4,7 @@ import type { MemoryProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface MemoryVariables {
+  usage: number;
   freeMemory: number;
   usedMemory: number;
   totalMemory: number;
@@ -22,6 +23,9 @@ export async function createMemoryProvider(
   >(config, owner);
 
   return {
+    get usage() {
+      return memoryVariables().usage;
+    },
     get freeMemory() {
       return memoryVariables().freeMemory;
     },
