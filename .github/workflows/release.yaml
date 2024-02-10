@@ -33,10 +33,6 @@ jobs:
           pattern: bundle-**
           path: tmp
 
-      # TODO: Remove debug logs
-      - run: cd tmp
-      - run: ls -al
-
       - uses: pnpm/action-setup@v2
         with:
           version: 8
