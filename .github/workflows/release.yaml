@@ -85,7 +85,9 @@ jobs:
           done
         shell: bash
 
-      - uses: actions/upload-artifact@v3
+      - run: echo ${{ github.run_id }}
+
+      - uses: actions/upload-artifact@v4
         with:
           name: bundle-${{ matrix.tauri-target }}
           if-no-files-found: error
@@ -102,7 +104,6 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: bundle-i686-pc-windows-msvc
           path: tmp
 
       - run: ls -al
