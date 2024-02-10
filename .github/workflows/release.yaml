@@ -30,7 +30,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: bundle-**
+          pattern: bundle-**
           path: tmp
 
       # TODO: Remove debug logs
