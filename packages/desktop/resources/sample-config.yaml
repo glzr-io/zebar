@@ -18,7 +18,7 @@ window/bar:
   # Width of the window in physical pixels.
   width: '{{ self.args.MONITOR_WIDTH }}'
   # Height of the window in physical pixels.
-  height: '50'
+  height: '45'
   # X-position of the window in physical pixels.
   position_x: '{{ self.args.MONITOR_X }}'
   # Y-position of the window in physical pixels.
@@ -41,18 +41,20 @@ window/bar:
     grid-template-columns: 1fr 1fr 1fr;
     align-items: center;
     height: 100%;
-    color: #ffffff;
+    color: #ffffffe6;
     font-family: ui-monospace, monospace;
     font-size: 13px;
     padding: 4px 20px;
-    border-bottom: 2px solid #1d1d2a;
+    border-bottom: 1px solid #ffffff08;
     background: linear-gradient(
-      rgba(15, 15, 40, 0.9),
-      rgba(15, 15, 40, 0.7),
+      rgba(14, 14, 28, 0.95),
+      rgba(26, 14, 28, 0.85),
     );
   group/left:
     styles: |
       display: flex;
+      align-items: center;
+
     template/logo:
       styles: |
         margin-right: 20px;
@@ -60,17 +62,29 @@ window/bar:
         <i class="nf nf-fa-windows"></i>
 
     template/glazewm:
+      styles: |
+        display: flex;
+        align-items: center;
+
+        .workspace {
+          background: rgba(255, 255, 255, 0.05);
+          margin-right: 4px;
+          width: 30px;
+          height: 30px;
+          color: #ffffffe6;
+          border: none;
+          border-radius: 2px;
+        }
       providers: ['glazewm']
       template: |
         @for (workspace of glazewm.workspacesOnMonitor) {
-          <button class="{{ workspace.state }}-workspace">
-            {{ workspace.name }}
-          </button>
+          <button class="workspace">{{ workspace.name }}</button>
         }
 
   group/center:
     styles: |
       justify-self: center;
+
     template/clock:
       providers: ['date']
       # Available date tokens: https://moment.github.io/luxon/#/formatting?id=table-of-tokens
@@ -86,6 +100,13 @@ window/bar:
         margin-left: 14px;
         margin-right: 4px;
       }
+
+    template/memory:
+      providers: ['memory']
+      template: |
+        <i class="nf nf-fae-chip"></i>
+        {{ Math.round(memory.usage) }}%
+
     template/cpu:
       providers: ['cpu']
       styles: |
