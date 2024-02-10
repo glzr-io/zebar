@@ -2,9 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ci/fix-release-action
 
 permissions:
   contents: write
