@@ -15,6 +15,7 @@ import {
 } from './desktop';
 import { initElement } from './init-element';
 import type { WindowContext } from './element-context.model';
+import { ElementType } from './element-type.model';
 
 export function initWindow(callback: (context: WindowContext) => void) {
   initWindowAsync().then(callback);
@@ -40,12 +41,13 @@ export async function initWindowAsync(): Promise<WindowContext> {
     (await getOpenWindowArgs(await getCurrentWindow().label));
 
   const windowConfig = (config as UserConfig)[
-    openArgs.windowId as `window/${string}`
+    `window/${openArgs.windowId}` as const
   ];
 
   if (!windowConfig) {
     throw new Error(
-      `Window '${openArgs.windowId}' doesn't exist in config.`,
+      `Window '${openArgs.windowId}' doesn't exist in config. Is there a` +
+        `property for 'window/${openArgs.windowId}'?`,
     );
   }
 
@@ -55,6 +57,7 @@ export async function initWindowAsync(): Promise<WindowContext> {
 
   const windowContext = (await initElement({
     id: openArgs.windowId,
+    type: ElementType.WINDOW,
     rawConfig: windowConfig,
     globalConfig,
     args: openArgs.args,

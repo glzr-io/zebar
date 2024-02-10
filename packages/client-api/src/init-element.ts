@@ -8,7 +8,7 @@ import {
 import {
   getStyleBuilder,
   getParsedElementConfig,
-  getChildIds,
+  getChildConfigs,
   type GlobalConfig,
 } from './user-config';
 import { getElementProviders } from './providers';
@@ -18,6 +18,7 @@ import type { PickPartial } from './utils';
 
 export interface InitElementArgs {
   id: string;
+  type: ElementType;
   rawConfig: unknown;
   globalConfig: GlobalConfig;
   args: Record<string, string>;
@@ -30,8 +31,7 @@ export async function initElement(
   args: InitElementArgs,
 ): Promise<ElementContext> {
   const styleBuilder = getStyleBuilder(args.owner);
-  const type = getElementType(args.id);
-  const childIds = getChildIds(args.rawConfig);
+  const childConfigs = getChildConfigs(args.rawConfig);
 
   // Create partial element context; `providers` and `parsedConfig` are set later.
   const elementContext: PickPartial<
@@ -39,7 +39,7 @@ export async function initElement(
     'parsedConfig' | 'providers'
   > = {
     id: args.id,
-    type,
+    type: args.type,
     rawConfig: args.rawConfig,
     globalConfig: args.globalConfig,
     args: args.args,
@@ -77,14 +77,19 @@ export async function initElement(
   });
 
   async function initChildElement(id: string) {
+    const childConfig = childConfigs.find(
+      childConfig => childConfig.id === id,
+    );
+
     // Check whether an element with the given ID exists in the config.
-    if (!childIds.find(childId => childId === id)) {
+    if (!childConfig) {
       return null;
     }
 
     return initElement({
       id,
-      rawConfig: (args.rawConfig as Record<string, unknown>)[id],
+      type: childConfig.type,
+      rawConfig: childConfig.config,
       globalConfig: args.globalConfig,
       args: args.args,
       env: args.env,
@@ -94,15 +99,4 @@ export async function initElement(
   }
 
   return elementContext as ElementContext;
-}
-
-function getElementType(id: string) {
-  const [type] = id.split('/');
-
-  // TODO: Validate in P1 schema instead.
-  if (!Object.values(ElementType).includes(type as ElementType)) {
-    throw new Error(`Unrecognized element type '${type}'.`);
-  }
-
-  return type as ElementType;
 }

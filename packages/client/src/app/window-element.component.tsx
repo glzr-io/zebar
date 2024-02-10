@@ -1,7 +1,7 @@
 import { Index, Show, createSignal } from 'solid-js';
 import {
   type WindowContext,
-  getChildIds,
+  getChildConfigs,
   initWindow,
   toCssSelector,
 } from 'zebar';
@@ -20,10 +20,10 @@ export function WindowElement() {
           class={context().parsedConfig.class_names.join(' ')}
           id={toCssSelector(context().parsedConfig.id)}
         >
-          <Index each={getChildIds(context().rawConfig)}>
-            {childId => (
+          <Index each={getChildConfigs(context().rawConfig)}>
+            {childConfig => (
               <ChildElement
-                childId={childId()}
+                childId={childConfig().id}
                 parentContext={context()}
               />
             )}

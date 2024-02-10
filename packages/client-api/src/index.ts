@@ -1,6 +1,6 @@
 export { createLogger, toCssSelector } from './utils';
 export {
-  getChildIds,
+  getChildConfigs,
   type GlobalConfig,
   type WindowConfig,
   type GroupConfig,
