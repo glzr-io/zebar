@@ -66,9 +66,16 @@ export async function initWindowAsync(): Promise<WindowContext> {
     owner,
   })) as WindowContext;
 
-  if (windowConfig.global_styles) {
-    styleBuilder.setGlobalStyles(windowConfig.global_styles);
-  }
+  // Set global SCSS/CSS styles.
+  runWithOwner(owner, () => {
+    createEffect(() => {
+      if (windowContext.parsedConfig.global_styles) {
+        styleBuilder.setGlobalStyles(
+          windowContext.parsedConfig.global_styles,
+        );
+      }
+    });
+  });
 
   // Set window position based on config values.
   runWithOwner(owner, () => {
