@@ -6,17 +6,16 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev --continue",
-    "format": "prettier --write . && turbo run format",
-    "lint": "prettier --check . && turbo run lint"
+    "build": "pnpm run -r build",
+    "dev": "pnpm run --parallel dev",
+    "format": "prettier --write . && pnpm run -r format",
+    "lint": "prettier --check . && pnpm run -r lint"
   },
   "prettier": "@glzr/style-guide/prettier",
   "dependencies": {},
   "devDependencies": {
     "@glzr/style-guide": "1.1.0",
-    "prettier": "3.2.5",
-    "turbo": "1.12.3"
+    "prettier": "3.2.5"
   },
   "packageManager": "pnpm@8.14.1",
   "engines": {
