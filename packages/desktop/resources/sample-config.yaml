@@ -96,10 +96,13 @@ window/bar:
       justify-self: end;
       display: flex;
 
+      .template {
+        margin-left: 20px;
+      }
+
       i {
         color: #7481b2e1;
-        margin-left: 20px;
-        margin-right: 6px;
+        margin-right: 7px;
       }
 
     template/memory:
@@ -126,16 +129,24 @@ window/bar:
 
     template/battery:
       providers: ['battery']
+      styles: |
+        position: relative;
+
+        .charging-icon {
+          position: absolute;
+          left: 6.5px;
+          top: 2px;
+        }
       template: |
+        <!-- Show icon for whether battery is charging. -->
+        @if (battery.isCharging) {<i class="nf nf-fa-bolt charging-icon"></i>}
+
         <!-- Show icon for how much of the battery is charged. -->
         @if (battery.chargePercent > 90) {<i class="nf nf-fa-battery_4"></i>}
         @else if (battery.chargePercent > 70) {<i class="nf nf-fa-battery_3"></i>}
         @else if (battery.chargePercent > 40) {<i class="nf nf-fa-battery_2"></i>}
         @else if (battery.chargePercent > 20) {<i class="nf nf-fa-battery_1"></i>}
         @else {<i class="nf nf-fa-battery_0"></i>}
-
-        <!-- Show icon for whether battery is charging. -->
-        @if (battery.isCharging) {<i class="nf nf-fa-bolt"></i>}
 
         {{ Math.round(battery.chargePercent) }}%
 

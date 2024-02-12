@@ -60,8 +60,8 @@ export async function setWindowStyles(styles: Partial<WindowStyles>) {
   const window = await getCurrentWindow();
 
   await Promise.all([
-    window.setSkipTaskbar(!styles.showInTaskbar ?? false),
-    window.setResizable(styles.resizable ?? false),
+    window.setSkipTaskbar(styles.showInTaskbar === true),
+    window.setResizable(styles.resizable === true),
     setWindowZOrder(window, styles.zOrder),
   ]);
 }

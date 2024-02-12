@@ -40,6 +40,9 @@ export async function createBatteryProvider(
     get state() {
       return batteryVariables().state;
     },
+    get isCharging() {
+      return batteryVariables().isCharging;
+    },
     get timeTillEmpty() {
       return batteryVariables().timeTillEmpty;
     },
