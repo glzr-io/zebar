@@ -4,6 +4,7 @@ import {
   createEffect,
   runWithOwner,
 } from 'solid-js';
+import { createStore } from 'solid-js/store';
 
 import {
   getStyleBuilder,
@@ -34,10 +35,9 @@ export async function initElement(
   const childConfigs = getChildConfigs(args.rawConfig);
 
   // Create partial element context; `providers` and `parsedConfig` are set later.
-  const elementContext: PickPartial<
-    ElementContext,
-    'parsedConfig' | 'providers'
-  > = {
+  const [elementContext, setElementContext] = createStore<
+    PickPartial<ElementContext, 'parsedConfig' | 'providers'>
+  >({
     id: args.id,
     type: args.type,
     rawConfig: args.rawConfig,
@@ -45,7 +45,9 @@ export async function initElement(
     args: args.args,
     env: args.env,
     initChildElement,
-  };
+    providers: undefined,
+    parsedConfig: undefined,
+  });
 
   const { element, merged } = await getElementProviders(
     elementContext,
@@ -53,7 +55,7 @@ export async function initElement(
     args.owner,
   );
 
-  elementContext.providers = merged;
+  setElementContext('providers', merged);
 
   const parsedConfig = getParsedElementConfig(
     elementContext as PickPartial<ElementContext, 'parsedConfig'>,
@@ -63,7 +65,7 @@ export async function initElement(
   // Since `parsedConfig` and `providers` are set after initializing providers
   // and parsing the element config, they are initially unavailable on 'self'
   // provider.
-  elementContext.parsedConfig = parsedConfig;
+  setElementContext('parsedConfig', parsedConfig);
 
   runWithOwner(args.owner, () => {
     createEffect(() => {

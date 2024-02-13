@@ -4,7 +4,6 @@ import { getCurrent as getCurrentWindow } from '@tauri-apps/api/window';
 import {
   GlobalConfigSchema,
   type UserConfig,
-  type WindowConfig,
   getUserConfig,
   getStyleBuilder,
 } from './user-config';
@@ -12,6 +11,8 @@ import {
   getOpenWindowArgs,
   setWindowPosition,
   setWindowStyles,
+  type WindowPosition,
+  type WindowStyles,
 } from './desktop';
 import { initElement } from './init-element';
 import type { WindowContext } from './element-context.model';
@@ -77,27 +78,28 @@ export async function initWindowAsync(): Promise<WindowContext> {
     });
   });
 
-  // Set window position based on config values.
+  // Set window position and apply window styles/effects.
   runWithOwner(owner, () => {
-    createEffect(() =>
-      redrawWindow(windowContext.parsedConfig as WindowConfig),
-    );
+    createEffect(async () => {
+      // Create `styles` and `position` variables prior to awaiting, such that
+      // dependencies are tracked successfully within the effect.
+      const styles: Partial<WindowStyles> = {
+        zOrder: windowContext.parsedConfig.z_order,
+        showInTaskbar: windowContext.parsedConfig.show_in_taskbar,
+        resizable: windowContext.parsedConfig.resizable,
+      };
+
+      const position: Partial<WindowPosition> = {
+        x: windowContext.parsedConfig.position_x,
+        y: windowContext.parsedConfig.position_y,
+        width: windowContext.parsedConfig.width,
+        height: windowContext.parsedConfig.height,
+      };
+
+      await setWindowStyles(styles);
+      await setWindowPosition(position);
+    });
   });
 
   return windowContext;
-}
-
-async function redrawWindow(config: WindowConfig): Promise<void> {
-  await setWindowStyles({
-    zOrder: config.z_order,
-    showInTaskbar: config.show_in_taskbar,
-    resizable: config.resizable,
-  });
-
-  await setWindowPosition({
-    x: config.position_x,
-    y: config.position_y,
-    width: config.width,
-    height: config.height,
-  });
 }
