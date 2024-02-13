@@ -146,7 +146,7 @@
             {{/if}}
             {{resources}}
             <Component Id="CMP_EnvironmentVariable" Guid="{46e1e602-3642-4f99-b3d7-f02c38e57ec5}" KeyPath="yes">
-                <Environment Id="MyPathVariable" Name="Path" Value="[INSTALLDIR]" Action="set"  Part="last" Separator=";" />
+                <Environment Id="PathVariable" Name="Path" Value="[INSTALLDIR]" System="yes" Action="set"  Part="last" Separator=";" />
             </Component>
             <Component Id="CMP_UninstallShortcut" Guid="*">
 
@@ -262,6 +262,10 @@
             <RegistrySearch Id="WVRTInstalledSystem" Root="HKLM" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" Win64="no" />
             <RegistrySearch Id="WVRTInstalledUser" Root="HKCU" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw"/>
         </Property>
+
+        <!-- Reload environment variables after install (necessary when adding system-level variables). -->
+        <CustomActionRef Id="WixBroadcastSettingChange" />
+        <CustomActionRef Id="WixBroadcastEnvironmentChange" />
 
         {{#if download_bootstrapper}}
         <CustomAction Id='DownloadAndInvokeBootstrapper' Directory="INSTALLDIR" Execute="deferred" ExeCommand='powershell.exe -NoProfile -windowstyle hidden try [\{] [\[]Net.ServicePointManager[\]]::SecurityProtocol = [\[]Net.SecurityProtocolType[\]]::Tls12 [\}] catch [\{][\}]; Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "$env:TEMP\MicrosoftEdgeWebview2Setup.exe" ; Start-Process -FilePath "$env:TEMP\MicrosoftEdgeWebview2Setup.exe" -ArgumentList ({{webview_installer_args}} &apos;/install&apos;) -Wait' Return='check'/>
