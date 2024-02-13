@@ -25,7 +25,13 @@
       ],
       "identifier": "com.glzr.zebar",
       "resources": ["resources/*"],
-      "targets": ["deb", "appimage", "msi", "dmg", "updater"]
+      "targets": ["deb", "appimage", "msi", "dmg", "updater"],
+      "windows": {
+        "wix": {
+          "template": "./installer.wxs",
+          "license": "../../LICENSE.md"
+        }
+      }
     },
     "macOSPrivateApi": true,
     "security": {
