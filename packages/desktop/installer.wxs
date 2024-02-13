@@ -154,6 +154,9 @@
             </Component>
             {{/if}}
             {{resources}}
+            <Component Id="CMP_EnvironmentVariable" Guid="{46e1e602-3642-4f99-b3d7-f02c38e57ec5}" KeyPath="yes">
+                <Environment Id="MyPathVariable" Name="Path" Value="[INSTALLDIR]" Action="set"  Part="last" Separator=";" />
+            </Component>
             <Component Id="CMP_UninstallShortcut" Guid="*">
 
                 <Shortcut Id="UninstallShortcut"
@@ -161,9 +164,6 @@
 						  Description="Uninstalls {{product_name}}"
 						  Target="[System64Folder]msiexec.exe"
 						  Arguments="/x [ProductCode]" />
-            <Component Id="CMP_EnvironmentVariable" Guid="{46e1e602-3642-4f99-b3d7-f02c38e57ec5}" KeyPath="yes">
-                <Environment Id="MyPathVariable" Name="Path" Value="[INSTALLDIR]" Action="set"  Part="last" Separator=";" />
-            </Component>
 
 				<RemoveFolder Id="INSTALLDIR"
 							  On="uninstall" />
@@ -239,7 +239,7 @@
                 Description="!(loc.PathEnvVarFeature)"
                 Level="1"
                 Absent="allow">
-            <ComponentRef Id="CMP_EnvironmentVariable" />
+              <ComponentRef Id="CMP_EnvironmentVariable" />
             <ComponentRef Id="Path"/>
             {{#each binaries as |bin| ~}}
             <ComponentRef Id="{{ bin.id }}"/>
