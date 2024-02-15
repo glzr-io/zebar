@@ -113,6 +113,17 @@ async fn main() {
   tauri::async_runtime::set(tokio::runtime::Handle::current());
   tracing_subscriber::fmt::init();
 
+  // Attach to the console if there is one. When building for Windows,
+  // `windows_subsystem` is configured to be a GUI app and thus does not
+  // output anything without explicitly attaching to a console.
+  #[cfg(all(target_os = "windows", not(debug_assertions)))]
+  {
+    use windows::Win32::System::Console::*;
+    unsafe {
+      let _ = AttachConsole(ATTACH_PARENT_PROCESS);
+    }
+  }
+
   let app = tauri::Builder::default()
     .setup(|app| {
       let cli = Cli::parse();
