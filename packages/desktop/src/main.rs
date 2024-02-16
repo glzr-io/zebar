@@ -1,12 +1,6 @@
-// Prevents additional console window on Windows in release.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![feature(unix_sigpipe)]
 
-use std::{
-  collections::HashMap,
-  env::{self},
-  sync::Arc,
-};
+use std::{collections::HashMap, env, sync::Arc};
 
 use anyhow::{Context, Result};
 use clap::Parser;
