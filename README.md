@@ -6,6 +6,16 @@
 
 [[Screenshot of sample config]]
 
+#### Readme contents
+
+1. [Installation](#Installation)
+2. [Migration from GlazeWM bar](#Migration-from-GlazeWM-bar)
+3. [Intro to Zebar](#Intro-to-Zebar)
+   - [Styled with HTML + CSS](#sub-topic-11)
+   - [Reactive "providers"](#sub-topic-12)
+   - [Templating language](#sub-topic-12)
+4. [Providers](#Providers)
+
 ## Installation
 
 **Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**. After installing, you can run the default start script located at `%userprofile%/.glzr/zebar/start.bat` (Windows) or `$HOME/.glzr/zebar/start.sh` (MacOS/Linux).
@@ -33,6 +43,169 @@ There's 3 big differences that set Zebar apart from other similar projects:
 - Styled with HTML + CSS
 - Reactive "providers" for modifying the bar on the fly
 - Templating language
+
+### Concept 1: Styled with HTML + CSS
+
+The **_entire_** html + css of the bar can be customized via the user config. CSS/SCSS can be added to an element via the `styles` property, and child divs can be created via `template/<id>` and `group/<id>` properties.
+
+A basic config might look like this:
+
+```yaml
+# Define a new window with an ID of 'example', which can then be launched
+# by running 'zebar open example'.
+window/example:
+  width: '200'
+  height: '200'
+  position_x: '0'
+  position_y: '0'
+  styles: |
+    background: lightgreen;
+    height: 100%;
+    width: 100%;
+  # Add a child div for showing CPU usage. It uses the CPU provider to
+  # get a variable for the current usage (more on that below).
+  template/cpu:
+    providers: ['cpu']
+    template: |
+      <p>{{ cpu.usage }}</p>
+```
+
+Running `zebar open example` in a terminal will create an instance of this window config. It'll launch a 200x200 window in the corner of the screen where the CPU changes over time.
+
+[[pic]]
+
+[[pic]]
+
+`group/<id>` properties are used to add a child div, whereas `template/<id>` properties are used to add a child div that can have a custom HTML template. `group/<id>` properties can be nested infinitely, whereas `template/<id>` properties cannot be nested. The order of these config properties matters as can be seen from the resulting HTML (pic 3).
+
+```yaml
+window/example:
+  width: '200'
+  height: '200'
+  position_x: '0'
+  position_y: '0'
+  group/nested1:
+    group/nested2:
+      group/nested3:
+        template/my_template1:
+          template: |
+            <span>The mitochondria is the powerhouse of the cell</span>
+            <img src="https://google.com/mitochondria.jpg">
+  template/my_template2:
+    template: |
+      <span>Another template</span>
+```
+
+[[pic]]
+
+### Concept 2: Reactive "providers"
+
+Rather than having predefined components (eg. a cpu component, battery component, etc), Zebar instead introduces **providers**. Providers are a collection of functions and/or variables that can change over time. When a variable changes, it'll cause a reactive change **_wherever_** it is used in the config.
+
+```yaml
+window/example:
+  providers: ['cpu', 'memory']
+  width: '200'
+  height: '200'
+  # Set position of the window to be based off current memory/cpu usage. We
+  # need to round the values since `position_x` and `position_y` only accept
+  # whole numbers.
+  position_x: '{{ Math.round(cpu.usage) }}'
+  position_y: '{{ Math.round(memory.usage) }}'
+  template/cpu_and_memory:
+    template: |
+      CPU usage: {{ cpu.usage }}
+      Memory usage: {{ memory.usage}}
+```
+
+The above will create a window that jumps around the screen whenever cpu and memory usage changes. _All config properties are reactive to changes in providers._
+
+Providers "trickle down", meaning that a provider declared on a parent element (eg. `window/example`) will be available to any elements below (eg. `template/cpu-and-memory`). So we don't have to repeat declaring a CPU provider if we need it in multiple places; instead move the provider to a parent element.
+
+Providers can also optionally take some config options. For example, the CPU provider refreshes every 5 seconds by default but that can be changed by defining the providers as such:
+
+```yaml
+window/example:
+  providers:
+    - type: 'cpu'
+      refresh_interval: 3000
+    - type: 'weather'
+      latitude: 51.509865
+      longitude: -0.118092
+```
+
+A full list of providers and their configs is available [here](#providers).
+
+### Concept 3: Templating language
+
+Zebar's templating language has support for interpolation tags, if-else statements, for-loops, and switch statements. Just like providers, the templating syntax can be used on any config property (this includes switch, if-else statements etc).
+
+#### Interpolation tags
+
+```yaml
+window/example:
+  providers: ['weather']
+  # Window is only resizable when there is nice weather.
+  resizable: "{{ weather.status === 'sunny_day' }}"
+```
+
+Any arbitrary JavaScript is accepted within interpolation tags (eg. `{{ Math.random() }}`). However, it'll only re-evaluated when a provider changes.
+
+```yaml
+window/example:
+  template/weather:
+    providers: ['weather']
+    # Template will only change when weather temperature variable is updated.
+    template: |
+      <span>Random number: {{ Math.random() }}</span>
+      <span>Temperature: {{ weather.celsiusTemp }}</span>
+```
+
+#### If-else statements
+
+```yaml
+window/example:
+  template/weather:
+    providers: ['weather']
+    styles: |
+      .hot {
+        color: red;
+      }
+    template: |
+      @if (weather.celsiusTemp > 30) {
+        <p class="hot">It's hot yo</p>
+      } @else if (weather.celsiusTemp > 20) {
+        <p>It's not that bad</p>
+      } @else {
+        <p>It's chilly here</p>
+      }
+```
+
+#### For-loops
+
+```yaml
+window/example:
+  template/fruit:
+    template: |
+      @for (fruit of ['apple', 'orange', 'pineapple']) {
+        <span>{{ fruit }}</span>
+      }
+```
+
+#### Switch statements
+
+```yaml
+window/example:
+  template/weather:
+    providers: ['weather']
+    template: |
+      @switch (weather.status) {
+        @case ('clear_day') {<i class="nf nf-weather-day_sunny"></i>}
+        @case ('cloudy_day') {<i class="nf nf-weather-day_cloudy"></i>}
+        @case ('snow_day') {<i class="nf nf-weather-day_snow"></i>}
+        @default {<i class="nf nf-weather-day_sunny"></i>}
+      }
+```
 
 ## Providers
 
