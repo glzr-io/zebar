@@ -2,9 +2,9 @@
 
 **Zebar lets you create customizable and cross-platform taskbars, desktop widgets, and popups.**
 
-[🔧 Development & how to contribute](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md)
+![sample-config-bar](https://github.com/glzr-io/zebar/assets/34844898/859cd563-5d7b-4236-b9bd-88acdf82d7e4)
 
-[[Screenshot of sample config]]
+[🔧 Development & how to contribute](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md)
 
 #### Readme contents
 
@@ -16,13 +16,13 @@
    - [Templating language](#sub-topic-12)
 4. [Providers](#Providers)
 
-## Installation
+## ⚙️  Installation
 
 **Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**. After installing, you can run the default start script located at `%userprofile%/.glzr/zebar/start.bat` (Windows) or `$HOME/.glzr/zebar/start.sh` (MacOS/Linux).
 
 The config file is located `%userprofile%/.glzr/zebar/config.yaml`. A default config is created on startup.
 
-## Migration from GlazeWM bar
+## ➡️  Migration from GlazeWM bar
 
 Modify the following GlazeWM config options (at `%userprofile%/.glaze-wm/config.yaml`):
 
@@ -36,7 +36,7 @@ bar:
   enabled: false
 ```
 
-## Intro to Zebar
+## 🌟  Intro to Zebar
 
 There's 3 big differences that set Zebar apart from other similar projects:
 
@@ -72,9 +72,13 @@ window/example:
 
 Running `zebar open example` in a terminal will create an instance of this window config. It'll launch a 200x200 window in the corner of the screen where the CPU changes over time.
 
-[[pic]]
-
-[[pic]]
+<p align="middle">
+  <img align="top" src="https://github.com/glzr-io/zebar/assets/34844898/e5cd7b7e-97ab-4a6b-b952-8ed8302b710f">
+  <img align="top" src="https://github.com/glzr-io/zebar/assets/34844898/3ed88f73-808d-4734-8b99-411cfb2e2b38">
+</p>
+<p align="middle">
+  <i>The resulting window and underlying HTML from the above config.</i>
+</p>
 
 `group/<id>` properties are used to add a child div, whereas `template/<id>` properties are used to add a child div that can have a custom HTML template. `group/<id>` properties can be nested infinitely, whereas `template/<id>` properties cannot be nested. The order of these config properties matters as can be seen from the resulting HTML (pic 3).
 
@@ -96,7 +100,12 @@ window/example:
       <span>Another template</span>
 ```
 
-[[pic]]
+<p align="middle">
+  <img align="top" src="https://github.com/glzr-io/zebar/assets/34844898/3ea640bf-f1db-4adf-bdfe-93634960d215" width="400px">
+</p>
+<p align="middle">
+  <i>The resulting HTML from the above config.</i>
+</p>
 
 ### Concept 2: Reactive "providers"
 
@@ -207,7 +216,7 @@ window/example:
       }
 ```
 
-## Providers
+## 🧩  Providers
 
 - [battery](#Battery)
 - [cpu](#CPU)
