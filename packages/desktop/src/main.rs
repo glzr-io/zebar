@@ -1,8 +1,6 @@
-// Prevents additional console window on Windows in release.
-// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![feature(unix_sigpipe)]
 
-use std::{collections::HashMap, env, ffi::CString, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -22,9 +20,6 @@ use tokio::{
   task,
 };
 use tracing::info;
-use windows::Win32::System::Console::{
-  AttachConsole, ATTACH_PARENT_PROCESS,
-};
 
 use crate::util::window_ext::WindowExt;
 
@@ -111,30 +106,6 @@ fn set_always_on_top(window: Window) -> Result<(), String> {
 async fn main() {
   tauri::async_runtime::set(tokio::runtime::Handle::current());
   tracing_subscriber::fmt::init();
-
-  // Attach to the console if there is one. When building for Windows,
-  // `windows_subsystem` is configured to be a GUI app and thus does not
-  // output anything without explicitly attaching to a console.
-  // #[cfg(all(target_os = "windows", not(debug_assertions)))]
-  // {
-  // let console_attached = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
-  // if console_attached == 0 {
-  //   return;
-  // }
-
-  // let conin = CString::new("CONIN$").unwrap();
-  // let conout = CString::new("CONOUT$").unwrap();
-  // let r = CString::new("r").unwrap();
-  // let w = CString::new("w").unwrap();
-
-  // use libc_stdhandle::*;
-
-  // // Python uses the CRT for I/O, and it requires the descriptors are reopened.
-  // unsafe {
-  //   libc::freopen(conin.as_ptr(), r.as_ptr(), stdin());
-  //   libc::freopen(conout.as_ptr(), w.as_ptr(), stdout());
-  //   libc::freopen(conout.as_ptr(), w.as_ptr(), stderr());
-  // }
 
   let app = tauri::Builder::default()
     .setup(|app| {

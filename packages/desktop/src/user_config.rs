@@ -1,4 +1,4 @@
-use std::{fs, io::Read, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
@@ -19,11 +19,11 @@ pub fn read_file(
   };
 
   // Create new config file from sample if it doesn't exist.
-  match config_path.exists() {
-    true => fs::read_to_string(&config_path)
-      .context("Unable to read config file."),
-    false => create_from_sample(&config_path, app_handle),
+  if !config_path.exists() {
+    create_from_sample(&config_path, app_handle)?;
   }
+
+  fs::read_to_string(&config_path).context("Unable to read config file.")
 }
 
 /// Initialize config at the given path from the sample config resource.
@@ -31,45 +31,39 @@ pub fn read_file(
 fn create_from_sample(
   config_path: &PathBuf,
   app_handle: AppHandle,
-) -> Result<String> {
+) -> Result<()> {
   let resources_path = app_handle
     .path()
     .resolve("resources", BaseDirectory::Resource)
     .context("Unable to resolve resources for creating sample config.")?;
 
-  // let xx = resources_path.join("sample-config.yaml");
-  let mut sample_file = fs::File::open(&resources_path)
-    .context("Unable to read sample config.")?;
-
-  // Read the contents of the sample config.
-  let mut config_string = String::new();
-  sample_file.read_to_string(&mut config_string)?;
-
-  let parent_dir =
+  let dest_dir =
     config_path.parent().context("Invalid config directory.")?;
 
-  // Create the containing directory.
-  std::fs::create_dir_all(&parent_dir).with_context(|| {
+  // Create the destination directory.
+  std::fs::create_dir_all(&dest_dir).with_context(|| {
     format!("Unable to create directory {}.", &config_path.display())
   })?;
 
-  for entry_result in fs::read_dir(resources_path)? {
-    let entry = entry_result?;
-    let file_type = entry.file_type()?;
-    let src_path = entry.path();
-    let dest_path = parent_dir.join(entry.file_name());
+  let sample_filenames =
+    vec!["sample-config.yaml", "start.sh", "start.bat"];
 
-    if file_type.is_file() {
-      fs::copy(&src_path, &dest_path).with_context(|| {
-        format!("Unable to write to {}", dest_path.display())
-      })?;
-    }
+  // Copy over sample config and startup scripts.
+  for sample_filename in sample_filenames {
+    let dest_filename = match sample_filename {
+      "sample-config.yaml" => "config.yaml",
+      other => other,
+    };
+
+    let src_path = resources_path.join(sample_filename);
+    let dest_path = dest_dir.join(dest_filename);
+
+    fs::copy(&src_path, &dest_path).with_context(|| {
+      format!("Unable to write to {}.", dest_path.display())
+    })?;
   }
 
-  // fs::write(&config_path, &config_string)
-  //   .context("Unable to write config file.")?;
-
-  Ok(config_string)
+  Ok(())
 }
 
 pub fn open_config_dir(app_handle: AppHandle) -> Result<()> {
