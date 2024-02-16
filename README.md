@@ -8,7 +8,9 @@
 
 ## Installation
 
-**Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**. After installing, you can run the default start script located at `%userprofile%/.glzr/zebar/start.cmd` (Windows) or `$HOME/.glzr/zebar/start.sh` (MacOS/Linux).
+**Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**. After installing, you can run the default start script located at `%userprofile%/.glzr/zebar/start.bat` (Windows) or `$HOME/.glzr/zebar/start.sh` (MacOS/Linux).
+
+The config file is located `%userprofile%/.glzr/zebar/config.yaml`. A default config is created on startup.
 
 ## Migration from GlazeWM bar
 
@@ -23,6 +25,14 @@ bar:
   # Disable the built-in GlazeWM bar.
   enabled: false
 ```
+
+## Intro to Zebar
+
+There's 3 big differences that set Zebar apart from other similar projects:
+
+- Styled with HTML + CSS
+- Reactive "providers" for modifying the bar on the fly
+- Templating language
 
 ## Providers
 
@@ -90,9 +100,9 @@ bar:
 
 | Variable | Description                                                                                                              | Return type | Supported OS |
 | -------- | ------------------------------------------------------------------------------------------------------------------------ | ----------- | ------------ |
-| `new`    | Current date/time as a JavaScript `Date` object. Uses `new Date()` under the hood.                                       | `Date`      | [logo]       |
-| `now`    | Current date/time as milliseconds since epoch. Uses `Date.now()` under the hood.                                         | `number`    | [logo]       |
-| `iso`    | Current date/time as an ISO-8601 string (eg. `2017-04-22T20:47:05.335-04:00`). Uses `date.toISOString()` under the hood. | `string`    | [logo]       |
+| `new`    | Current date/time as a JavaScript `Date` object. Uses `new Date()` under the hood.                                       | `Date`      | [logos]      |
+| `now`    | Current date/time as milliseconds since epoch. Uses `Date.now()` under the hood.                                         | `number`    | [logos]      |
+| `iso`    | Current date/time as an ISO-8601 string (eg. `2017-04-22T20:47:05.335-04:00`). Uses `date.toISOString()` under the hood. | `string`    | [logos]      |
 
 ### Functions
 
@@ -235,8 +245,6 @@ Self provider doesn't take any config options.
 | `approxCountry`   | TODO        | `string`    | [logos]      |
 | `approxLatitude`  | TODO        | `number`    | [logos]      |
 | `approxLongitude` | TODO        | `number`    | [logos]      |
-
-
 
 [logo-microsoft]: https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa
 [logo-linux]: https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4
