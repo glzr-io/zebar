@@ -826,6 +826,8 @@ dependencies = [
  "async-trait",
  "clap",
  "cocoa 0.25.0",
+ "libc",
+ "libc-stdhandle",
  "reqwest",
  "serde",
  "serde_json",
@@ -1887,6 +1889,16 @@ name = "libc"
 version = "0.2.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a08173bc88b7955d1b3145aa561539096c421ac8debde8cbc3612ec635fee29b"
+
+[[package]]
+name = "libc-stdhandle"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dac2473dc28934c5e0b82250dab231c9d3b94160d91fe9ff483323b05797551"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "libloading"

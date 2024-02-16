@@ -16,6 +16,7 @@ tauri-build = { version = "2.0.0-alpha.11", features = [] }
 anyhow = "1.0"
 async-trait = "0.1.74"
 clap = { version = "4.4.8", features = ["derive"] }
+libc = "0.2"
 reqwest = { version = "0.11.22", features = ["json"] }
 tauri = { version = "2.0.0-alpha.17", features = ["macos-private-api"] }
 tauri-plugin-http = "2.0.0-alpha.5"
@@ -30,7 +31,8 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.17"
 
 [target."cfg(windows)".dependencies]
-windows = { version = "0.52.0", features = ["Win32_Foundation", "Win32_System_Console"] }
+windows = { version = "0.52.0", features = ["Win32_Foundation", "Win32_System_Console", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse"] }
+libc-stdhandle = "=0.1.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25.0"

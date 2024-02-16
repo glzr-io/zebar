@@ -1,7 +1,12 @@
-use std::process;
+use std::{io, process};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use windows::Win32::UI::Input::KeyboardAndMouse::VK_RETURN;
+use windows::Win32::{
+  Foundation::{HWND, LPARAM, WPARAM},
+  System::Console::{FreeConsole, GetConsoleWindow},
+};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None, arg_required_else_help = true)]
@@ -36,13 +41,35 @@ pub enum CliCommand {
 
 /// Print to `stdout`/`stderror` and exit the process.
 pub fn print_and_exit(output: Result<String>) {
+  use windows::Win32::UI::WindowsAndMessaging::*;
   match output {
     Ok(output) => {
       print!("{}", output);
+      // unsafe {
+      //   let cw: HWND = GetConsoleWindow();
+      //   println!("cw: {:?}", cw);
+      //   // SendMessageW(cw, WM_KEYDOWN, 0x0D, 0);
+      //   // SendMessageW(cw, WM_KEYUP, 0x0D, 0);
+      //   // let x = VK_ENTER;
+      //   let xx =
+      //     SendMessageW(cw, WM_CHAR, WPARAM(0x0D as _), LPARAM(0 as _));
+      //   println!("xx: {:?}", xx);
+      //   println!("xx: {:?}", xx.0);
+      //   // SendMessageW(cw, WM_KEYUP, WPARAM(0x0D as _), LPARAM(0 as _));
+
+      //   // let _ = SendMessageW(cw, 0x0102, 0x0D.into(), 0x0.into());
+      //   let _ = FreeConsole();
+      // };
       process::exit(0);
     }
     Err(err) => {
       eprintln!("Error: {}", err);
+      // unsafe {
+      //   let cw = GetConsoleWindow();
+      //   SendMessageW(cw, WM_CHAR, WPARAM(0x0D as _), LPARAM(0 as _));
+      //   // SendMessageW(cw, WM_KEYUP, WPARAM(0x0D as _), LPARAM(0 as _));
+      //   let _ = FreeConsole();
+      // };
       process::exit(1);
     }
   }

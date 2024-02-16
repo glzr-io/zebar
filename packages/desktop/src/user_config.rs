@@ -27,16 +27,18 @@ pub fn read_file(
 }
 
 /// Initialize config at the given path from the sample config resource.
+/// Also adds startup scripts for Windows and Unix.
 fn create_from_sample(
   config_path: &PathBuf,
   app_handle: AppHandle,
 ) -> Result<String> {
-  let sample_path = app_handle
+  let resources_path = app_handle
     .path()
-    .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
-    .context("Unable to resolve sample config path.")?;
+    .resolve("resources", BaseDirectory::Resource)
+    .context("Unable to resolve resources for creating sample config.")?;
 
-  let mut sample_file = fs::File::open(&sample_path)
+  // let xx = resources_path.join("sample-config.yaml");
+  let mut sample_file = fs::File::open(&resources_path)
     .context("Unable to read sample config.")?;
 
   // Read the contents of the sample config.
@@ -46,13 +48,26 @@ fn create_from_sample(
   let parent_dir =
     config_path.parent().context("Invalid config directory.")?;
 
-  // Create the containing directory for the config file.
+  // Create the containing directory.
   std::fs::create_dir_all(&parent_dir).with_context(|| {
     format!("Unable to create directory {}.", &config_path.display())
   })?;
 
-  fs::write(&config_path, &config_string)
-    .context("Unable to write config file.")?;
+  for entry_result in fs::read_dir(resources_path)? {
+    let entry = entry_result?;
+    let file_type = entry.file_type()?;
+    let src_path = entry.path();
+    let dest_path = parent_dir.join(entry.file_name());
+
+    if file_type.is_file() {
+      fs::copy(&src_path, &dest_path).with_context(|| {
+        format!("Unable to write to {}", dest_path.display())
+      })?;
+    }
+  }
+
+  // fs::write(&config_path, &config_string)
+  //   .context("Unable to write config file.")?;
 
   Ok(config_string)
 }
