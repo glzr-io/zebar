@@ -29,7 +29,7 @@ export async function setWindowPosition(
 ) {
   logger.debug(`Setting window position to:`, position);
 
-  const window = await getCurrentWindow();
+  const window = getCurrentWindow();
 
   // Avoid setting position if neither x/y are defined.
   if (position.x !== undefined || position.y !== undefined) {
@@ -57,10 +57,10 @@ export async function setWindowPosition(
 }
 
 export async function setWindowStyles(styles: Partial<WindowStyles>) {
-  const window = await getCurrentWindow();
+  const window = getCurrentWindow();
 
   await Promise.all([
-    window.setSkipTaskbar(styles.showInTaskbar === true),
+    window.setSkipTaskbar(styles.showInTaskbar !== true),
     window.setResizable(styles.resizable === true),
     setWindowZOrder(window, styles.zOrder),
   ]);
