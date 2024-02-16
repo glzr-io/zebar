@@ -9,8 +9,14 @@ import { ElementType } from './element-type.model';
 export type ElementConfig = WindowConfig | GroupConfig | TemplateConfig;
 
 interface BaseElementContext<C extends ElementConfig, P = {}> {
+  /**
+   * ID of this element.
+   */
   id: string;
 
+  /**
+   * Type of this element.
+   */
   type: ElementType;
 
   /**
