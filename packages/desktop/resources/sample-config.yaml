@@ -134,12 +134,13 @@ window/bar:
 
         .charging-icon {
           position: absolute;
-          left: 6.5px;
+          font-size: 11px;
+          left: 7px;
           top: 2px;
         }
       template: |
         <!-- Show icon for whether battery is charging. -->
-        @if (battery.isCharging) {<i class="nf nf-fa-bolt charging-icon"></i>}
+        @if (battery.isCharging) {<i class="nf nf-md-power_plug charging-icon"></i>}
 
         <!-- Show icon for how much of the battery is charged. -->
         @if (battery.chargePercent > 90) {<i class="nf nf-fa-battery_4"></i>}
