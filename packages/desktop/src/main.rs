@@ -140,6 +140,7 @@ async fn main() {
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
+          app.handle().plugin(tauri_plugin_dialog::init())?;
 
           providers::manager::init(app)?;
 
@@ -148,6 +149,11 @@ async fn main() {
           app.manage(args_map);
 
           let app_handle = app.handle().clone();
+
+          // Prevent the app icon from showing up in the dock on MacOS.
+          // TODO: Enable once https://github.com/tauri-apps/tauri/pull/8713 is released.
+          // #[cfg(target_os = "macos")]
+          // app.set_activation_policy(ActivationPolicy::Accessory);
 
           // Handle creation of new windows (both from the initial and
           // subsequent instances of the application)

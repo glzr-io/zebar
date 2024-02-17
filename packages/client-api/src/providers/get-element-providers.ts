@@ -7,7 +7,7 @@ import {
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import { ProvidersConfigSchema } from '~/user-config';
+import { ProvidersConfigSchema, parseWithSchema } from '~/user-config';
 import type { ElementContext } from '~/element-context.model';
 import { createProvider } from './create-provider';
 import type { PickPartial } from '~/utils';
@@ -35,7 +35,8 @@ export async function getElementProviders(
    * Get map of element providers.
    */
   async function getElementProviders() {
-    const providerConfigs = ProvidersConfigSchema.parse(
+    const providerConfigs = parseWithSchema(
+      ProvidersConfigSchema,
       (elementContext.rawConfig as Record<string, unknown>)?.providers ??
         [],
     );

@@ -1,7 +1,6 @@
 import { createSignal } from 'solid-js';
 import { parse } from 'yaml';
 
-import { formatConfigError } from './shared';
 import { createLogger } from '~/utils';
 import { readConfigFile } from '~/desktop';
 
@@ -29,6 +28,8 @@ export async function getUserConfig() {
 
     return configObj;
   } catch (err) {
-    throw formatConfigError(err);
+    throw new Error(
+      `Problem reading config file. ${(err as Error).message}`,
+    );
   }
 }

@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "2.0.0-alpha.13",
+    "@tauri-apps/plugin-dialog": "2.0.0-alpha.5",
     "@tauri-apps/plugin-shell": "2.0.0-alpha.3",
     "@tauri-apps/plugin-window": "2.0.0-alpha.1",
     "glazewm": "1.1.2",
