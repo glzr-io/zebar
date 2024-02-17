@@ -18,9 +18,9 @@
 
 ## ⚙️ Installation
 
-**Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**. After installing, you can run the default start script located at `%userprofile%/.glzr/zebar/start.bat` (Windows) or `$HOME/.glzr/zebar/start.sh` (MacOS/Linux).
+**Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**.
 
-The config file is located `%userprofile%/.glzr/zebar/config.yaml`. A default config is created on startup.
+A default start script can also be downloaded from the release. Run the script after install to launch the default bar, which will create a config file located at `%userprofile%/.glzr/zebar/config.yaml`.
 
 ## ➡️ Migration from GlazeWM bar
 
