@@ -1,55 +1,44 @@
-enum LogLevel {
-  DEBUG,
-  INFO,
-  WARNING,
-  ERROR,
-  OFF,
-}
-
 type LogMethod = 'log' | 'warn' | 'error';
 
-// TODO: Get a minimum log level from environment.
 export function createLogger(section: string) {
   function log(
     consoleLogMethod: LogMethod,
     message: string,
-    ...data: any[]
+    ...data: unknown[]
   ) {
     const date = new Date();
-    const timestamp = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}:${date.getMilliseconds()}`;
+    const timestamp =
+      `${date.getHours().toString().padStart(2, '0')}:` +
+      `${date.getMinutes().toString().padStart(2, '0')}:` +
+      `${date.getSeconds().toString().padStart(2, '0')}:` +
+      `${date.getMilliseconds().toString().padStart(3, '0')}`;
 
     // Clone data to avoid reference changes in Chrome console.
-    // TODO: This needs to be improved.
-    const clonedData = data.map(data => {
-      return data === null || data === undefined
-        ? data
-        : structuredClone(data);
-    });
+    const clonedData = data.map(tryClone);
 
     console[consoleLogMethod](
-      `${timestamp} [${section}] ${message}`,
+      `%c${timestamp}%c [${section}] %c${message}`,
+      'color: #f5f9b4',
+      'color: #d0b4f9',
+      'color: inherit',
       ...clonedData,
     );
   }
 
-  function debug(message: string, ...data: any) {
-    if (shouldLog(LogLevel.DEBUG)) log('log', message, ...data);
+  function debug(message: string, ...data: unknown[]) {
+    log('log', message, ...data);
   }
 
-  function info(message: string, ...data: any) {
-    if (shouldLog(LogLevel.INFO)) log('log', message, ...data);
+  function info(message: string, ...data: unknown[]) {
+    log('log', message, ...data);
   }
 
-  function warn(message: string, ...data: any) {
-    if (shouldLog(LogLevel.WARNING)) log('warn', message, ...data);
+  function warn(message: string, ...data: unknown[]) {
+    log('warn', message, ...data);
   }
 
-  function error(message: string, ...data: any) {
-    if (shouldLog(LogLevel.ERROR)) log('error', message, ...data);
-  }
-
-  function shouldLog(logLevel: LogLevel): boolean {
-    return true;
+  function error(message: string, ...data: unknown[]) {
+    log('error', message, ...data);
   }
 
   return {
@@ -58,4 +47,17 @@ export function createLogger(section: string) {
     warn,
     error,
   };
+}
+
+function tryClone(data: unknown) {
+  if (data === null || data === undefined || data instanceof Error) {
+    return data;
+  }
+
+  try {
+    return structuredClone(data);
+  } catch (err) {
+    console.warn('Unable to clone data');
+    return data;
+  }
 }

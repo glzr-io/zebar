@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import { parse } from 'yaml';
+import { YAMLParseError, parse } from 'yaml';
 
 import { formatConfigError } from './shared';
 import { createLogger } from '~/utils';
@@ -29,6 +29,13 @@ export async function getUserConfig() {
 
     return configObj;
   } catch (err) {
-    throw formatConfigError(err);
+    console.log('err', err.constructor.name);
+    if (err instanceof YAMLParseError) {
+      err.
+    }
+
+    throw new Error(
+      `Problem reading config file: ${(err as Error).message}`,
+    );
   }
 }

@@ -48,6 +48,9 @@ importers:
       '@tauri-apps/api':
         specifier: 2.0.0-alpha.13
         version: 2.0.0-alpha.13
+      '@tauri-apps/plugin-dialog':
+        specifier: 2.0.0-alpha.5
+        version: 2.0.0-alpha.5
       '@tauri-apps/plugin-shell':
         specifier: 2.0.0-alpha.3
         version: 2.0.0-alpha.3
@@ -1197,6 +1200,12 @@ packages:
       '@tauri-apps/cli-win32-ia32-msvc': 2.0.0-alpha.17
       '@tauri-apps/cli-win32-x64-msvc': 2.0.0-alpha.17
     dev: true
+
+  /@tauri-apps/plugin-dialog@2.0.0-alpha.5:
+    resolution: {integrity: sha512-OHodi10R5an4nVq/kavU9HOATkc20RYNVdFYWMvPSVyI7rL1n55llPmbGXdWiZO94Tn10XZyZDVs7eJ1uKOkeA==}
+    dependencies:
+      '@tauri-apps/api': 2.0.0-alpha.13
+    dev: false
 
   /@tauri-apps/plugin-shell@2.0.0-alpha.3:
     resolution: {integrity: sha512-v4qLTE9DfzpYdcjZq3ASOC7gFtMtzIDWN5Bo2FheB+pHQvDRq8mrP8gTdkL4/9pQaOFlB0B+MKCwANYhD1jLEQ==}
