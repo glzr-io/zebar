@@ -20,7 +20,7 @@ export const WeatherProviderConfigSchema = z.object({
   /**
    * How often this component refreshes in milliseconds.
    */
-  refresh_interval_ms: z.coerce.number().default(60 * 60 * 1000),
+  refresh_interval: z.coerce.number().default(60 * 60 * 1000),
 });
 
 export type WeatherProviderConfig = z.infer<

@@ -5,7 +5,7 @@ import { ProviderType } from '../provider-type.model';
 export const DateProviderConfigSchema = z.object({
   type: z.literal(ProviderType.DATE),
 
-  refresh_interval_ms: z.coerce.number().default(1000),
+  refresh_interval: z.coerce.number().default(1000),
 
   /**
    * Either a UTC offset (eg. `UTC+8`) or an IANA timezone (eg.

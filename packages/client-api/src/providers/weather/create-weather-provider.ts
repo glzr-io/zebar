@@ -39,7 +39,7 @@ export async function createWeatherProvider(
       (ipProvider = await createIpProvider(
         {
           type: ProviderType.IP,
-          refresh_interval_ms: 60 * 60 * 1000,
+          refresh_interval: 60 * 60 * 1000,
         },
         owner,
       ))

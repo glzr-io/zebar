@@ -16,13 +16,13 @@
    - [Templating language](#sub-topic-12)
 4. [Providers](#Providers)
 
-## ⚙️  Installation
+## ⚙️ Installation
 
 **Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**. After installing, you can run the default start script located at `%userprofile%/.glzr/zebar/start.bat` (Windows) or `$HOME/.glzr/zebar/start.sh` (MacOS/Linux).
 
 The config file is located `%userprofile%/.glzr/zebar/config.yaml`. A default config is created on startup.
 
-## ➡️  Migration from GlazeWM bar
+## ➡️ Migration from GlazeWM bar
 
 Modify the following GlazeWM config options (at `%userprofile%/.glaze-wm/config.yaml`):
 
@@ -36,7 +36,7 @@ bar:
   enabled: false
 ```
 
-## 🌟  Intro to Zebar
+## 🌟 Intro to Zebar
 
 There's 3 big differences that set Zebar apart from other similar projects:
 
@@ -216,7 +216,7 @@ window/example:
       }
 ```
 
-## 🧩  Providers
+## 🧩 Providers
 
 - [battery](#Battery)
 - [cpu](#CPU)
@@ -234,9 +234,9 @@ window/example:
 
 ### Provider config
 
-| Option                | Description                                        | Option type | Default value |
-| --------------------- | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
 ### Variables
 
@@ -256,9 +256,9 @@ window/example:
 
 ### Provider config
 
-| Option                | Description                                        | Option type | Default value |
-| --------------------- | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
 ### Variables
 
@@ -274,9 +274,9 @@ window/example:
 
 ### Provider config
 
-| Option                | Description                                        | Option type | Default value |
-| --------------------- | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds. | `number`    | `1000`        |
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `1000`        |
 
 ### Variables
 
@@ -308,9 +308,9 @@ GlazeWM provider doesn't take any config options.
 
 ### Provider config
 
-| Option                | Description                                        | Option type | Default value |
-| --------------------- | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds. | `number`    | `60000`       |
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `60000`       |
 
 ### Variables
 
@@ -327,9 +327,9 @@ GlazeWM provider doesn't take any config options.
 
 ### Provider config
 
-| Option                | Description                                        | Option type | Default value |
-| --------------------- | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds. | `number`    | `3600000`     |
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `3600000`     |
 
 ### Variables
 
@@ -345,9 +345,9 @@ GlazeWM provider doesn't take any config options.
 
 ### Provider config
 
-| Option                | Description                                        | Option type | Default value |
-| --------------------- | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
 ### Variables
 
@@ -379,9 +379,9 @@ Monitors provider doesn't take any config options.
 
 ### Provider config
 
-| Option                | Description                                        | Option type | Default value |
-| --------------------- | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
 ### Variables
 
@@ -412,11 +412,11 @@ Self provider doesn't take any config options.
 
 ### Provider config
 
-| Option                | Description                                                                                            | Option type           | Default value |
-| --------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- | ------------- |
-| `refresh_interval_ms` | How often this provider refreshes in milliseconds.                                                     | `number`              | `3600000`     |
-| `latitude`            | Latitude to retrieve weather for. If not provided, latitude is instead estimated based on public IP.   | `number \| undefined` | `undefined`   |
-| `longitude`           | Longitude to retrieve weather for. If not provided, longitude is instead estimated based on public IP. | `number \| undefined` | `undefined`   |
+| Option             | Description                                                                                            | Option type           | Default value |
+| ------------------ | ------------------------------------------------------------------------------------------------------ | --------------------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds.                                                     | `number`              | `3600000`     |
+| `latitude`         | Latitude to retrieve weather for. If not provided, latitude is instead estimated based on public IP.   | `number \| undefined` | `undefined`   |
+| `longitude`        | Longitude to retrieve weather for. If not provided, longitude is instead estimated based on public IP. | `number \| undefined` | `undefined`   |
 
 ### Variables
 

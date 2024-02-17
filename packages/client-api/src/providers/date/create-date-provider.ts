@@ -33,7 +33,7 @@ export async function createDateProvider(
 
   const interval = setInterval(
     () => setDateVariables(getDateVariables()),
-    config.refresh_interval_ms,
+    config.refresh_interval,
   );
 
   runWithOwner(owner, () => {

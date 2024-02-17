@@ -16,7 +16,7 @@ use super::{
 
 /// Require interval providers to have a refresh interval in their config.
 pub trait IntervalConfig {
-  fn refresh_interval_ms(&self) -> u64;
+  fn refresh_interval(&self) -> u64;
 }
 
 #[macro_export]
@@ -25,8 +25,8 @@ macro_rules! impl_interval_config {
     use crate::providers::interval_provider::IntervalConfig;
 
     impl IntervalConfig for $struct_name {
-      fn refresh_interval_ms(&self) -> u64 {
-        self.refresh_interval_ms
+      fn refresh_interval(&self) -> u64 {
+        self.refresh_interval
       }
     }
   };
@@ -62,9 +62,8 @@ impl<T: IntervalProvider + Send> Provider for T {
     let state = self.state();
 
     let forever = task::spawn(async move {
-      let mut interval = time::interval(Duration::from_millis(
-        config.refresh_interval_ms(),
-      ));
+      let mut interval =
+        time::interval(Duration::from_millis(config.refresh_interval()));
 
       loop {
         // The first tick fires immediately.
