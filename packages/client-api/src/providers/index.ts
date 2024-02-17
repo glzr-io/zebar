@@ -1,4 +1,3 @@
-export * from './active-window/create-active-window-provider';
 export * from './battery/create-battery-provider';
 export * from './cpu/create-cpu-provider';
 export * from './date/create-date-provider';
@@ -7,7 +6,6 @@ export * from './ip/create-ip-provider';
 export * from './memory/create-memory-provider';
 export * from './network/create-network-provider';
 export * from './self/create-self-provider';
-export * from './system-tray/create-system-tray-provider';
 export * from './weather/create-weather-provider';
 export * from './create-provider-listener';
 export * from './create-provider';

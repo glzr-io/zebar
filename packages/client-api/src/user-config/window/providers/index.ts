@@ -1,4 +1,3 @@
-export * from './active-window-provider-config.model';
 export * from './battery-provider-config.model';
 export * from './cpu-provider-config.model';
 export * from './date-provider-config.model';
@@ -9,5 +8,4 @@ export * from './memory-provider-config.model';
 export * from './monitors-provider-config.model';
 export * from './network-provider-config.model';
 export * from './self-provider-config.model';
-export * from './system-tray-provider-config.model';
 export * from './weather-provider-config.model';
