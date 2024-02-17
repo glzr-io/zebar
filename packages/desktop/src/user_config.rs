@@ -27,15 +27,14 @@ pub fn read_file(
 }
 
 /// Initialize config at the given path from the sample config resource.
-/// Also adds startup scripts for Windows and Unix.
 fn create_from_sample(
   config_path: &PathBuf,
   app_handle: AppHandle,
 ) -> Result<()> {
-  let resources_path = app_handle
+  let sample_path = app_handle
     .path()
-    .resolve("resources", BaseDirectory::Resource)
-    .context("Unable to resolve resources for creating sample config.")?;
+    .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
+    .context("Unable to resolve sample config resource.")?;
 
   let dest_dir =
     config_path.parent().context("Invalid config directory.")?;
@@ -45,23 +44,11 @@ fn create_from_sample(
     format!("Unable to create directory {}.", &config_path.display())
   })?;
 
-  let sample_filenames =
-    vec!["sample-config.yaml", "start.sh", "start.bat"];
-
-  // Copy over sample config and startup scripts.
-  for sample_filename in sample_filenames {
-    let dest_filename = match sample_filename {
-      "sample-config.yaml" => "config.yaml",
-      other => other,
-    };
-
-    let src_path = resources_path.join(sample_filename);
-    let dest_path = dest_dir.join(dest_filename);
-
-    fs::copy(&src_path, &dest_path).with_context(|| {
-      format!("Unable to write to {}.", dest_path.display())
-    })?;
-  }
+  // Copy over sample config.
+  let dest_path = dest_dir.join("config.yaml");
+  fs::copy(&sample_path, &dest_path).with_context(|| {
+    format!("Unable to write to {}.", dest_path.display())
+  })?;
 
   Ok(())
 }
