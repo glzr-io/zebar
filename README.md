@@ -8,13 +8,13 @@
 
 #### Readme contents
 
-1. [Installation](#Installation)
-2. [Migration from GlazeWM bar](#Migration-from-GlazeWM-bar)
-3. [Intro to Zebar](#Intro-to-Zebar)
-   - [Styled with HTML + CSS](#sub-topic-11)
-   - [Reactive "providers"](#sub-topic-12)
-   - [Templating language](#sub-topic-12)
-4. [Providers](#Providers)
+1. [Installation](#%EF%B8%8F-installation)
+2. [Migration from GlazeWM bar](#%EF%B8%8F-migration-from-glazewm-bar)
+3. [Intro to Zebar](#-intro-to-zebar)
+   - [Styled with HTML + CSS](#concept-1-styled-with-html--css)
+   - [Reactive "providers"](#concept-2-reactive-providers)
+   - [Templating language](#concept-3-templating-language)
+4. [Providers](#-providers)
 
 ## ⚙️ Installation
 
@@ -143,9 +143,9 @@ window/example:
       longitude: -0.118092
 ```
 
-A full list of providers and their configs is available [here](#providers).
+A full list of providers and their configs is available [here](#-providers).
 
-### Concept 3: Templating language
+### Lastly, concept 3: Templating language
 
 Zebar's templating language has support for interpolation tags, if-else statements, for-loops, and switch statements. Just like providers, the templating syntax can be used on any config property (this includes switch, if-else statements etc).
 
