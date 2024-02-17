@@ -21,6 +21,6 @@ export function parseWithSchema<T extends z.ZodType>(
       );
     }
 
-    throw new Error('Failed to parse config.');
+    throw new Error(`Failed to parse config. ${(err as Error).message}`);
   }
 }

@@ -106,12 +106,15 @@ export async function initElement(
 
     return elementContext as ElementContext;
   } catch (err) {
-    logger.error('Failed to initialize element:', err);
+    // Let error immediately bubble up if element is a window.
+    if (args.type !== ElementType.WINDOW) {
+      logger.error('Failed to initialize element:', err);
 
-    messageDialog((err as Error)?.message ?? 'Unknown reason.', {
-      title: 'Failed to initialize element!',
-      type: 'error',
-    });
+      await messageDialog((err as Error)?.message ?? 'Unknown reason.', {
+        title: 'Failed to initialize element!',
+        type: 'error',
+      });
+    }
 
     throw err;
   }

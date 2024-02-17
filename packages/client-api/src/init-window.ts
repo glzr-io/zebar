@@ -112,7 +112,7 @@ export async function initWindowAsync(): Promise<WindowContext> {
   } catch (err) {
     logger.error('Failed to initialize window:', err);
 
-    messageDialog((err as Error)?.message ?? 'Unknown reason.', {
+    await messageDialog((err as Error)?.message ?? 'Unknown reason.', {
       title: 'Failed to initialize window!',
       type: 'error',
     });

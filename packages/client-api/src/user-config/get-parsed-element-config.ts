@@ -8,7 +8,6 @@ import {
   GroupConfigSchemaP1,
   TemplateConfigSchema,
   WindowConfigSchemaP1,
-  TemplatePropertyError,
   parseWithSchema,
 } from '~/user-config';
 import type { PickPartial } from '~/utils';
@@ -52,15 +51,18 @@ export function getParsedElementConfig(
 
         return [key, rendered];
       } catch (err) {
-        // Re-throw error as `TemplatePropertyError`.
-        throw err instanceof TemplateError
-          ? new TemplatePropertyError(
-              err.message,
-              key,
-              value,
-              err.templateIndex,
-            )
-          : err;
+        if (!(err instanceof TemplateError)) {
+          throw err;
+        }
+
+        const { message, templateIndex } = err;
+
+        throw new Error(
+          `Property '${key}' in config isn't valid.\n\n` +
+            'Syntax error at:\n' +
+            `...${value.slice(templateIndex - 30, templateIndex)} << \n\n` +
+            `⚠️ ${message}`,
+        );
       }
     });
 
