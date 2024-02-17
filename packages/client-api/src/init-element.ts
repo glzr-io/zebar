@@ -5,14 +5,13 @@ import {
   runWithOwner,
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { message } from '@tauri-apps/plugin-dialog';
+import { message as messageDialog } from '@tauri-apps/plugin-dialog';
 
 import {
   getStyleBuilder,
   getParsedElementConfig,
   getChildConfigs,
   type GlobalConfig,
-  TemplatePropertyError,
 } from './user-config';
 import { getElementProviders } from './providers';
 import type { ElementContext } from './element-context.model';
@@ -107,17 +106,13 @@ export async function initElement(
 
     return elementContext as ElementContext;
   } catch (err) {
-    logger.error(
-      'Error initializing window:',
-      //@ts-ignore
-      Object.keys(err),
-      err instanceof TemplatePropertyError,
-      err,
-    );
-    message((err as Error).message, {
-      title: 'Encountered an error!',
+    logger.error('Failed to initialize element:', err);
+
+    messageDialog((err as Error)?.message ?? 'Unknown reason.', {
+      title: 'Failed to initialize element!',
       type: 'error',
     });
+
     throw err;
   }
 }

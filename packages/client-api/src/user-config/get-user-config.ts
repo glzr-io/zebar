@@ -29,11 +29,6 @@ export async function getUserConfig() {
 
     return configObj;
   } catch (err) {
-    console.log('err', err.constructor.name);
-    if (err instanceof YAMLParseError) {
-      err.
-    }
-
     throw new Error(
       `Problem reading config file: ${(err as Error).message}`,
     );

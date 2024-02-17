@@ -7,6 +7,7 @@ import {
   type UserConfig,
   getUserConfig,
   getStyleBuilder,
+  parseWithSchema,
 } from './user-config';
 import {
   getOpenWindowArgs,
@@ -57,7 +58,8 @@ export async function initWindowAsync(): Promise<WindowContext> {
       );
     }
 
-    const globalConfig = GlobalConfigSchema.strip().parse(
+    const globalConfig = parseWithSchema(
+      GlobalConfigSchema.strip(),
       (config as UserConfig)?.global ?? {},
     );
 
@@ -110,12 +112,13 @@ export async function initWindowAsync(): Promise<WindowContext> {
   } catch (err) {
     logger.error('Failed to initialize window:', err);
 
-    let message = (err as Error)?.message
-      ? `Failed to initialize window.\n\n${(err as Error).message}`
-      : `Failed to initialize window.`;
+    messageDialog((err as Error)?.message ?? 'Unknown reason.', {
+      title: 'Failed to initialize window!',
+      type: 'error',
+    });
 
-    // Show error dialog and exit.
-    messageDialog(message, { title: 'Fatal error :(', type: 'error' });
+    // Error during window initialization is unrecoverable, so we close
+    // the window.
     await getCurrentWindow().close();
 
     throw err;

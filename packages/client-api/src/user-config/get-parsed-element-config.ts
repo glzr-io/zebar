@@ -9,6 +9,7 @@ import {
   TemplateConfigSchema,
   WindowConfigSchemaP1,
   TemplatePropertyError,
+  parseWithSchema,
 } from '~/user-config';
 import type { PickPartial } from '~/utils';
 
@@ -66,7 +67,7 @@ export function getParsedElementConfig(
     // TODO: Add logging for updated config here.
     const newConfig = Object.fromEntries(newConfigEntries);
 
-    return schema.parse(newConfig);
+    return parseWithSchema(schema, newConfig);
   }
 
   return parsedConfig;
