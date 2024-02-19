@@ -4,7 +4,8 @@ import type { KomorebiProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface KomorebiVariables {
-  frequency: number;
+  // TODO
+  workspaces: any[];
 }
 
 export async function createKomorebiProvider(
@@ -17,8 +18,8 @@ export async function createKomorebiProvider(
   >(config, owner);
 
   return {
-    get frequency() {
-      return komorebiVariables().frequency;
+    get workspaces() {
+      return komorebiVariables().workspaces;
     },
   };
 }
