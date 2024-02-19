@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use sysinfo::{NetworkExt, System, SystemExt};
+use sysinfo::Networks;
 use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
@@ -16,18 +16,15 @@ use super::NetworkProviderConfig;
 pub struct NetworkProvider {
   pub config: Arc<NetworkProviderConfig>,
   abort_handle: Option<AbortHandle>,
-  sysinfo: Arc<Mutex<System>>,
+  networks: Arc<Mutex<Networks>>,
 }
 
 impl NetworkProvider {
-  pub fn new(
-    config: NetworkProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
-  ) -> NetworkProvider {
+  pub fn new(config: NetworkProviderConfig) -> NetworkProvider {
     NetworkProvider {
       config: Arc::new(config),
       abort_handle: None,
-      sysinfo,
+      networks: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
     }
   }
 }
@@ -35,14 +32,14 @@ impl NetworkProvider {
 #[async_trait]
 impl IntervalProvider for NetworkProvider {
   type Config = NetworkProviderConfig;
-  type State = Mutex<System>;
+  type State = Mutex<Networks>;
 
   fn config(&self) -> Arc<NetworkProviderConfig> {
     self.config.clone()
   }
 
-  fn state(&self) -> Arc<Mutex<System>> {
-    self.sysinfo.clone()
+  fn state(&self) -> Arc<Mutex<Networks>> {
+    self.networks.clone()
   }
 
   fn abort_handle(&self) -> &Option<AbortHandle> {
@@ -55,14 +52,14 @@ impl IntervalProvider for NetworkProvider {
 
   async fn get_refreshed_variables(
     _: &NetworkProviderConfig,
-    sysinfo: &Mutex<System>,
+    sysinfo: &Mutex<Networks>,
   ) -> Result<ProviderVariables> {
-    let mut sysinfo = sysinfo.lock().await;
-    sysinfo.refresh_networks();
+    let mut networks = sysinfo.lock().await;
+    networks.refresh();
 
     let mut interfaces = vec![];
 
-    for (name, data) in sysinfo.networks() {
+    for (name, data) in networks.into_iter() {
       interfaces.push(NetworkInterface {
         name: name.into(),
         mac_address: data.mac_address().to_string(),

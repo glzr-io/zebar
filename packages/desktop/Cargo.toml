@@ -25,7 +25,7 @@ tauri-plugin-single-instance = "2.0.0-alpha.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 starship-battery = "0.8.2"
-sysinfo = "0.29.10"
+sysinfo = "0.30.5"
 tokio = { version = "1.33.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.17"

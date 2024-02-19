@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use serde::Serialize;
-use sysinfo::{System, SystemExt};
+use sysinfo::System;
 use tauri::{App, AppHandle, Manager, Runtime};
 use tokio::{
   sync::{
@@ -171,7 +171,7 @@ fn create_provider(
       Box::new(MemoryProvider::new(config, sysinfo))
     }
     ProviderConfig::Network(config) => {
-      Box::new(NetworkProvider::new(config, sysinfo))
+      Box::new(NetworkProvider::new(config))
     }
     ProviderConfig::Weather(config) => {
       Box::new(WeatherProvider::new(config))
