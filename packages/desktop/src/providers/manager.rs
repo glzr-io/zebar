@@ -20,9 +20,9 @@ use crate::providers::provider::Provider;
 
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, variables::ProviderVariables,
-  weather::WeatherProvider,
+  host::HostProvider, ip::IpProvider, komorebi::KomorebiProvider,
+  memory::MemoryProvider, network::NetworkProvider,
+  variables::ProviderVariables, weather::WeatherProvider,
 };
 
 pub struct ListenProviderArgs {
@@ -202,6 +202,9 @@ fn create_provider(
       Box::new(HostProvider::new(config, sysinfo))
     }
     ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
+    ProviderConfig::Komorebi(config) => {
+      Box::new(KomorebiProvider::new(config))
+    }
     ProviderConfig::Memory(config) => {
       Box::new(MemoryProvider::new(config, sysinfo))
     }

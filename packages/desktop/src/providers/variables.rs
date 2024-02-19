@@ -2,8 +2,8 @@ use serde::Serialize;
 
 use super::{
   battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
-  ip::IpVariables, memory::MemoryVariables, network::NetworkVariables,
-  weather::WeatherVariables,
+  ip::IpVariables, komorebi::KomorebiVariables, memory::MemoryVariables,
+  network::NetworkVariables, weather::WeatherVariables,
 };
 
 #[derive(Serialize, Debug, Clone)]
@@ -13,6 +13,7 @@ pub enum ProviderVariables {
   Cpu(CpuVariables),
   Host(HostVariables),
   Ip(IpVariables),
+  Komorebi(KomorebiVariables),
   Memory(MemoryVariables),
   Network(NetworkVariables),
   Weather(WeatherVariables),
