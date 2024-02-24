@@ -21,7 +21,7 @@ impl KomorebiProvider {
   }
 }
 
-const NAME: &str = "komokana.sock";
+const NAME: &str = "zebar.sock";
 
 #[async_trait]
 impl Provider for KomorebiProvider {
@@ -46,7 +46,7 @@ impl Provider for KomorebiProvider {
             let notification: komorebi_client::Notification =
               serde_json::from_str(&line).unwrap();
 
-            println!("notification: {:?}", notification);
+            // println!("notification: {:?}", notification);
           }
         }
         Err(error) => { /* log any errors */ }

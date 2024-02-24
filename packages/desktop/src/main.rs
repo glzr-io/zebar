@@ -19,7 +19,8 @@ use tokio::{
   },
   task,
 };
-use tracing::info;
+use tracing::{info, level_filters::LevelFilter};
+use tracing_subscriber::EnvFilter;
 
 use crate::util::window_ext::WindowExt;
 
@@ -104,8 +105,14 @@ fn set_always_on_top(window: Window) -> Result<(), String> {
 #[tokio::main]
 #[unix_sigpipe = "sig_dfl"]
 async fn main() {
+  tracing_subscriber::fmt()
+    .with_env_filter(
+      EnvFilter::from_env("LOG_LEVEL")
+        .add_directive(LevelFilter::INFO.into()),
+    )
+    .init();
+
   tauri::async_runtime::set(tokio::runtime::Handle::current());
-  tracing_subscriber::fmt::init();
 
   let app = tauri::Builder::default()
     .setup(|app| {

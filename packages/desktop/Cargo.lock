@@ -111,6 +111,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c7d0618f0e0b7e8ff11427422b64564d5fb0be1940354bfe2e0529b18a9d9b8"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
+
+[[package]]
 name = "as-raw-xcb-connection"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1993,6 +1999,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hex_color"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d37f101bf4c633f7ca2e4b5e136050314503dd198e78e325ea602c327c484ef0"
+dependencies = [
+ "arrayvec",
+ "rand 0.8.5",
+ "serde",
+]
+
+[[package]]
 name = "home"
 version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2370,7 +2387,7 @@ dependencies = [
 [[package]]
 name = "komorebi"
 version = "0.1.22-dev.0"
-source = "git+https://github.com/LGUG2Z/komorebi?rev=8febaac9ff96de1cb22816defcc4b9ffbd644fc8#8febaac9ff96de1cb22816defcc4b9ffbd644fc8"
+source = "git+https://github.com/LGUG2Z/komorebi?rev=1a8b6a7398b12b3686b80c6228875a79e7165a26#1a8b6a7398b12b3686b80c6228875a79e7165a26"
 dependencies = [
  "bitflags 2.4.1",
  "clap",
@@ -2380,6 +2397,7 @@ dependencies = [
  "ctrlc",
  "dirs",
  "getset",
+ "hex_color",
  "hotwatch",
  "komorebi-core",
  "lazy_static",
@@ -2411,7 +2429,7 @@ dependencies = [
 [[package]]
 name = "komorebi-client"
 version = "0.1.22-dev.0"
-source = "git+https://github.com/LGUG2Z/komorebi?rev=8febaac9ff96de1cb22816defcc4b9ffbd644fc8#8febaac9ff96de1cb22816defcc4b9ffbd644fc8"
+source = "git+https://github.com/LGUG2Z/komorebi?rev=1a8b6a7398b12b3686b80c6228875a79e7165a26#1a8b6a7398b12b3686b80c6228875a79e7165a26"
 dependencies = [
  "komorebi",
  "komorebi-core",
@@ -2422,7 +2440,7 @@ dependencies = [
 [[package]]
 name = "komorebi-core"
 version = "0.1.22-dev.0"
-source = "git+https://github.com/LGUG2Z/komorebi?rev=8febaac9ff96de1cb22816defcc4b9ffbd644fc8#8febaac9ff96de1cb22816defcc4b9ffbd644fc8"
+source = "git+https://github.com/LGUG2Z/komorebi?rev=1a8b6a7398b12b3686b80c6228875a79e7165a26#1a8b6a7398b12b3686b80c6228875a79e7165a26"
 dependencies = [
  "clap",
  "color-eyre",
@@ -5515,15 +5533,15 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "5.0.0"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bf3ea8596f3a0dd5980b46430f2058dfe2c36a27ccfbb1845d6fbfcd9ba6e14"
+checksum = "7fa5e0c10bf77f44aac573e498d1a82d5fbd5e91f6fc0a99e7be4b38e85e101c"
 dependencies = [
  "either",
  "home",
  "once_cell",
  "rustix 0.38.31",
- "windows-sys 0.48.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
