@@ -3,9 +3,14 @@ use std::{
   sync::Arc,
 };
 
+use anyhow::Result;
 use async_trait::async_trait;
-use tokio::{sync::mpsc::Sender, task};
-use tracing::{debug, error, info};
+use komorebi_client::{SocketMessage, UnixListener};
+use tokio::{
+  sync::mpsc::Sender,
+  task::{self, AbortHandle},
+};
+use tracing::{debug, info};
 
 use crate::providers::{
   komorebi::KomorebiVariables,
@@ -16,19 +21,26 @@ use crate::providers::{
 
 use super::KomorebiProviderConfig;
 
+const SOCKET_NAME: &str = "zebar.sock";
+
 pub struct KomorebiProvider {
   pub config: Arc<KomorebiProviderConfig>,
+  socket: Arc<UnixListener>,
+  abort_handle: Option<AbortHandle>,
 }
 
 impl KomorebiProvider {
-  pub fn new(config: KomorebiProviderConfig) -> KomorebiProvider {
-    KomorebiProvider {
+  pub fn new(config: KomorebiProviderConfig) -> Result<KomorebiProvider> {
+    let socket = komorebi_client::subscribe(SOCKET_NAME)?;
+    debug!("Connected to Komorebi socket.");
+
+    Ok(KomorebiProvider {
       config: Arc::new(config),
-    }
+      socket: Arc::new(socket),
+      abort_handle: None,
+    })
   }
 }
-
-const NAME: &str = "zebar.sock";
 
 #[async_trait]
 impl Provider for KomorebiProvider {
@@ -37,8 +49,10 @@ impl Provider for KomorebiProvider {
     config_hash: String,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
-    let forever = task::spawn(async move {
-      let socket = komorebi_client::subscribe(NAME).unwrap();
+    let socket = self.socket.clone();
+
+    let task_handle = task::spawn(async move {
+      // let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
       debug!("Connected to Komorebi socket.");
 
       for incoming in socket.incoming() {
@@ -68,6 +82,9 @@ impl Provider for KomorebiProvider {
         }
       }
     });
+
+    self.abort_handle = Some(task_handle.abort_handle());
+    _ = task_handle.await;
   }
 
   async fn on_refresh(
@@ -76,6 +93,8 @@ impl Provider for KomorebiProvider {
     emit_output_tx: Sender<ProviderOutput>,
   ) {
     //
+    let res = komorebi_client::send_query(&SocketMessage::State);
+    info!("Komorebi state: {:?}", res);
   }
 
   async fn on_stop(&mut self) {
