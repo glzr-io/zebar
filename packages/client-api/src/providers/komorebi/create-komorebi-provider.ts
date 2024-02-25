@@ -24,12 +24,13 @@ export async function createKomorebiProvider(
 
   createEffect(() => {
     // @ts-ignore
-    const { stateJson } = providerListener();
-    console.log('incoming!!!');
-    const state = JSON.parse(stateJson);
-    console.log('state', state);
+    // const { monitors } = providerListener();
+    const aaa = providerListener();
+    console.log('incoming!!!', aaa);
+    // const state = JSON.parse(monitors);
+    // console.log('state', state);
 
-    const workspaces = state.workspaces;
+    // const workspaces = state.workspaces;
   });
 
   return {

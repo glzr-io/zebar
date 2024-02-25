@@ -5,7 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::providers::{
   komorebi::KomorebiVariables,
@@ -49,22 +49,21 @@ impl Provider for KomorebiProvider {
           let reader = BufReader::new(data.try_clone().unwrap());
 
           for line in reader.lines().flatten() {
-            println!("line: {}", line);
+            println!("line");
 
-            emit_output_tx
+            let notification: komorebi_client::Notification =
+              serde_json::from_str(&line).unwrap();
+
+            _ = emit_output_tx
               .send(ProviderOutput {
                 config_hash: config_hash.clone(),
                 variables: VariablesResult::Data(
                   ProviderVariables::Komorebi(KomorebiVariables {
-                    state_json: line.clone(),
+                    monitors: notification.state.monitors,
                   }),
                 ),
               })
-              .await
-              .unwrap();
-
-            // let notification: komorebi_client::Notification =
-            //   serde_json::from_str(&line).unwrap();
+              .await;
           }
         }
         Err(error) => { /* log any errors */ }
