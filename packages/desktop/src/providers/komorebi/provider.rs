@@ -1,11 +1,18 @@
-use std::io::BufRead;
-use std::io::BufReader;
-use std::sync::Arc;
+use std::{
+  io::{BufRead, BufReader},
+  sync::Arc,
+};
 
 use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
+use tracing::{debug, info};
 
-use crate::providers::{manager::ProviderOutput, provider::Provider};
+use crate::providers::{
+  komorebi::KomorebiVariables,
+  manager::{ProviderOutput, VariablesResult},
+  provider::Provider,
+  variables::ProviderVariables,
+};
 
 use super::KomorebiProviderConfig;
 
@@ -30,11 +37,12 @@ impl Provider for KomorebiProvider {
     config_hash: String,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
+    info!("fdsjaiofdsajo");
     let socket = komorebi_client::subscribe(NAME).unwrap();
-    println!("connected to komorebi");
+    info!("Connected to Komorebi socket.");
 
     for incoming in socket.incoming() {
-      println!("incoming socket message");
+      info!("Incoming Komorebi socket message.");
 
       match incoming {
         Ok(data) => {
@@ -43,10 +51,20 @@ impl Provider for KomorebiProvider {
           for line in reader.lines().flatten() {
             println!("line: {}", line);
 
-            let notification: komorebi_client::Notification =
-              serde_json::from_str(&line).unwrap();
+            emit_output_tx
+              .send(ProviderOutput {
+                config_hash: config_hash.clone(),
+                variables: VariablesResult::Data(
+                  ProviderVariables::Komorebi(KomorebiVariables {
+                    state_json: line.clone(),
+                  }),
+                ),
+              })
+              .await
+              .unwrap();
 
-            // println!("notification: {:?}", notification);
+            // let notification: komorebi_client::Notification =
+            //   serde_json::from_str(&line).unwrap();
           }
         }
         Err(error) => { /* log any errors */ }
