@@ -203,7 +203,7 @@ fn create_provider(
     }
     ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
     ProviderConfig::Komorebi(config) => {
-      Box::new(KomorebiProvider::new(config)?)
+      Box::new(KomorebiProvider::new(config))
     }
     ProviderConfig::Memory(config) => {
       Box::new(MemoryProvider::new(config, sysinfo))

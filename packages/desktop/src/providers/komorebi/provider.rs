@@ -3,14 +3,12 @@ use std::{
   sync::Arc,
 };
 
-use anyhow::Result;
 use async_trait::async_trait;
-use komorebi_client::{SocketMessage, UnixListener};
 use tokio::{
   sync::mpsc::Sender,
   task::{self, AbortHandle},
 };
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::providers::{
   komorebi::KomorebiVariables,
@@ -25,20 +23,15 @@ const SOCKET_NAME: &str = "zebar.sock";
 
 pub struct KomorebiProvider {
   pub config: Arc<KomorebiProviderConfig>,
-  socket: Arc<UnixListener>,
   abort_handle: Option<AbortHandle>,
 }
 
 impl KomorebiProvider {
-  pub fn new(config: KomorebiProviderConfig) -> Result<KomorebiProvider> {
-    let socket = komorebi_client::subscribe(SOCKET_NAME)?;
-    debug!("Connected to Komorebi socket.");
-
-    Ok(KomorebiProvider {
+  pub fn new(config: KomorebiProviderConfig) -> KomorebiProvider {
+    KomorebiProvider {
       config: Arc::new(config),
-      socket: Arc::new(socket),
       abort_handle: None,
-    })
+    }
   }
 }
 
@@ -49,10 +42,8 @@ impl Provider for KomorebiProvider {
     config_hash: String,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
-    let socket = self.socket.clone();
-
     let task_handle = task::spawn(async move {
-      // let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
+      let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
       debug!("Connected to Komorebi socket.");
 
       for incoming in socket.incoming() {
@@ -78,7 +69,14 @@ impl Provider for KomorebiProvider {
                 .await;
             }
           }
-          Err(error) => { /* log any errors */ }
+          Err(error) => {
+            _ = emit_output_tx
+              .send(ProviderOutput {
+                config_hash: config_hash.clone(),
+                variables: VariablesResult::Error(error.to_string()),
+              })
+              .await;
+          }
         }
       }
     });
@@ -89,15 +87,15 @@ impl Provider for KomorebiProvider {
 
   async fn on_refresh(
     &mut self,
-    config_hash: String,
-    emit_output_tx: Sender<ProviderOutput>,
+    _config_hash: String,
+    _emit_output_tx: Sender<ProviderOutput>,
   ) {
-    //
-    let res = komorebi_client::send_query(&SocketMessage::State);
-    info!("Komorebi state: {:?}", res);
+    // No-op.
   }
 
   async fn on_stop(&mut self) {
-    //
+    if let Some(handle) = &self.abort_handle {
+      handle.abort();
+    }
   }
 }
