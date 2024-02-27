@@ -2,15 +2,24 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": ["*-*"],
   "permissions": [
-    "path:default",
+    "app:default",
+    "dialog:allow-message",
     "event:default",
     "window:default",
-    "app:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
-    "shell:allow-open"
+    "window:allow-center",
+    "window:allow-close",
+    "window:allow-hide",
+    "window:allow-maximize",
+    "window:allow-minimize",
+    "window:allow-set-skip-taskbar",
+    "window:allow-set-always-on-bottom",
+    "window:allow-set-always-on-top",
+    "window:allow-set-resizable",
+    "window:allow-set-position",
+    "window:allow-set-size",
+    "shell:allow-open",
+    "tray:default"
   ]
 }
