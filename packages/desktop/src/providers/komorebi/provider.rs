@@ -4,6 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
+use komorebi_client::Monitor;
 use tokio::{
   sync::mpsc::Sender,
   task::{self, AbortHandle},
@@ -17,7 +18,7 @@ use crate::providers::{
   variables::ProviderVariables,
 };
 
-use super::KomorebiProviderConfig;
+use super::{KomorebiMonitor, KomorebiProviderConfig};
 
 const SOCKET_NAME: &str = "zebar.sock";
 
@@ -32,6 +33,33 @@ impl KomorebiProvider {
       config: Arc::new(config),
       abort_handle: None,
     }
+  }
+
+  fn transform_response(
+    state: komorebi_client::State,
+  ) -> KomorebiVariables {
+    let monitors = state
+      .monitors
+      .elements()
+      .into_iter()
+      .map(|&monitor| KomorebiMonitor {
+        id: monitor.id(),
+        name: monitor.name().to_string(),
+        device_id: monitor.device_id().clone(),
+        size: monitor.size(),
+        work_area_size: KomorebiRect {
+          left: size.left,
+          top: size.top,
+          right: size.right,
+          bottom: size.bottom,
+        },
+        work_area_offset: monitor.work_area_offset(),
+        work_area_size: monitor.work_area_size(),
+        workspaces: monitor.workspaces(),
+      })
+      .collect();
+
+    KomorebiVariables { monitors }
   }
 }
 
