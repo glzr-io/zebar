@@ -6,6 +6,8 @@ use super::manager::ProviderOutput;
 
 #[async_trait]
 pub trait Provider {
+  fn min_refresh_interval(&self) -> Option<u64>;
+
   async fn on_start(
     &mut self,
     config_hash: String,

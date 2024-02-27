@@ -37,6 +37,11 @@ pub trait IntervalProvider {
   type Config: Sync + Send + 'static + IntervalConfig;
   type State: Sync + Send + 'static;
 
+  /// Default to 2 seconds as the minimum refresh interval.
+  fn min_refresh_interval(&self) -> Option<u64> {
+    Some(2000)
+  }
+
   fn config(&self) -> Arc<Self::Config>;
 
   fn state(&self) -> Arc<Self::State>;
@@ -53,6 +58,10 @@ pub trait IntervalProvider {
 
 #[async_trait]
 impl<T: IntervalProvider + Send> Provider for T {
+  fn min_refresh_interval(&self) -> Option<u64> {
+    T::min_refresh_interval(self)
+  }
+
   async fn on_start(
     &mut self,
     config_hash: String,

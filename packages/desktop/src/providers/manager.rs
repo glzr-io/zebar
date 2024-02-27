@@ -35,6 +35,8 @@ pub struct UnlistenProviderArgs {
 /// Reference to a currently active provider.
 pub struct ProviderRef {
   config_hash: String,
+  min_refresh_interval: Option<u64>,
+  last_variables: Option<ProviderVariables>,
   refresh_tx: Sender<()>,
   stop_tx: Sender<()>,
 }
@@ -67,7 +69,6 @@ pub fn init<R: Runtime>(app: &mut App<R>) -> Result<()> {
 
 /// Create a channel for outputting provider variables to client.
 fn handle_provider_emit_output<R: Runtime>(
-  // app_handle: &AppHandle<R>,
   app_handle: (impl Manager<R> + Sync + Send + 'static),
 ) -> Sender<ProviderOutput> {
   let (output_sender, mut output_receiver) =
@@ -78,6 +79,7 @@ fn handle_provider_emit_output<R: Runtime>(
       info!("Emitting for provider: {}", output.config_hash);
       // TODO: Error handling.
       app_handle.emit("provider-emit", output).unwrap();
+      println!("output {:?}", output);
     }
   });
 
@@ -115,37 +117,40 @@ fn handle_provider_listen_input(
       let emit_output_tx = emit_output_tx.clone();
       let config_hash = input.config_hash.clone();
 
-      // Spawn a new provider.
+      // Attempt to create a new provider.
       let new_provider = create_provider(input.config, sysinfo.clone());
 
-      task::spawn(async move {
-        match new_provider {
-          Err(err) => {
-            _ = emit_output_tx
-              .send(ProviderOutput {
-                config_hash: input.config_hash.clone(),
-                variables: VariablesResult::Error(err.to_string()),
-              })
-              .await;
-          }
-          Ok(mut provider) => {
-            provider
-              .start(
-                input.config_hash.clone(),
-                emit_output_tx,
-                refresh_rx,
-                stop_rx,
-              )
-              .await
-          }
-        };
-      });
+      if let Err(err) = new_provider {
+        _ = emit_output_tx
+          .send(ProviderOutput {
+            config_hash: input.config_hash.clone(),
+            variables: VariablesResult::Error(err.to_string()),
+          })
+          .await;
 
-      providers.push(ProviderRef {
-        config_hash,
-        refresh_tx,
-        stop_tx,
-      })
+        continue;
+      } else if let Ok(mut new_provider) = new_provider {
+        let min_refresh_interval = new_provider.min_refresh_interval();
+
+        providers.push(ProviderRef {
+          config_hash,
+          min_refresh_interval,
+          last_variables: None,
+          refresh_tx,
+          stop_tx,
+        });
+
+        task::spawn(async move {
+          new_provider
+            .start(
+              input.config_hash.clone(),
+              emit_output_tx,
+              refresh_rx,
+              stop_rx,
+            )
+            .await
+        });
+      }
     }
   });
 
