@@ -171,15 +171,15 @@ dependencies = [
 
 [[package]]
 name = "async-executor"
-version = "1.5.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fa3dc5f2a8564f07759c008b9109dc0d39de92a88d5588b8a5036d286383afb"
+checksum = "17ae5ebefcc48e7452b4987947920dac9450be1110cadf34d1b8c116bdbaf97c"
 dependencies = [
- "async-lock 2.7.0",
+ "async-lock 3.3.0",
  "async-task",
  "concurrent-queue",
- "fastrand 1.9.0",
- "futures-lite 1.13.0",
+ "fastrand 2.0.1",
+ "futures-lite 2.0.0",
  "slab",
 ]
 
@@ -4212,8 +4212,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-single-instance"
 version = "2.0.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "023e294ad2466a3c8104874bb33db0d4c994634698e131f2881917b012577dc7"
+source = "git+https://github.com/glzr-io/tauri-plugins-workspace?branch=v2#9d92c076a29fe82c5f73c6d5a2ab3b664b82805a"
 dependencies = [
  "log",
  "serde",
