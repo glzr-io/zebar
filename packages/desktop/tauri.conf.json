@@ -1,40 +1,30 @@
 {
   "$schema": "node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "devPath": "http://localhost:4200",
-    "distDir": "../client/dist"
+    "devUrl": "http://localhost:4200",
+    "frontendDist": "../client/dist"
   },
-  "package": {
-    "productName": "Zebar",
-    "version": "0.0.0"
-  },
+  "productName": "Zebar",
+  "version": "0.0.0",
+  "identifier": "com.glzr.zebar",
   "plugins": {
     "shell": {
       "open": true
     }
   },
-  "tauri": {
-    "bundle": {
-      "active": true,
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "shortDescription": "Zebar",
-      "identifier": "com.glzr.zebar",
-      "category": "Utility",
-      "resources": ["resources/*"],
-      "targets": ["deb", "appimage", "msi", "dmg", "updater"],
-      "windows": {
-        "wix": {
-          "template": "./installer.wxs",
-          "license": "../../LICENSE.md"
-        }
-      }
-    },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": ["resources/*"],
+    "targets": ["deb", "appimage", "msi", "dmg", "updater"]
+  },
+  "app": {
     "macOSPrivateApi": true,
     "security": {
       "csp": null

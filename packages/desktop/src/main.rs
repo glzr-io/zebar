@@ -9,8 +9,8 @@ use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
 use tauri::{
-  path::BaseDirectory, AppHandle, Manager, RunEvent, State, Window,
-  WindowBuilder, WindowUrl,
+  path::BaseDirectory, AppHandle, Manager, RunEvent, State, WebviewUrl,
+  WebviewWindowBuilder, Window,
 };
 use tokio::{
   sync::{
@@ -175,10 +175,10 @@ async fn main() {
               let window_label =
                 format!("{}-{}", window_count, &open_args.window_id);
 
-              let window = WindowBuilder::new(
+              let window = WebviewWindowBuilder::new(
                 &app_handle,
                 &window_label,
-                WindowUrl::default(),
+                WebviewUrl::default(),
               )
               .title(format!("Zebar - {}", open_args.window_id))
               .data_directory(
