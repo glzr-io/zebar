@@ -4,6 +4,7 @@ import { GwmClient, GwmEventType, type Workspace } from 'glazewm';
 
 import { getMonitors } from '~/desktop';
 import type { GlazewmProviderConfig } from '~/user-config';
+import { getCoordinateDistance } from '~/utils';
 
 export async function createGlazewmProvider(
   _: GlazewmProviderConfig,
@@ -37,21 +38,13 @@ export async function createGlazewmProvider(
 
     // Get GlazeWM monitor that corresponds to the bar's monitor.
     const monitor = monitors.reduce((a, b) =>
-      getDistance(currentPosition, a) < getDistance(currentPosition, b)
+      getCoordinateDistance(currentPosition, a) <
+      getCoordinateDistance(currentPosition, b)
         ? a
         : b,
     );
 
     setGlazewmVariables({ workspacesOnMonitor: monitor.children });
-  }
-
-  function getDistance(
-    pointA: { x: number; y: number },
-    pointB: { x: number; y: number },
-  ) {
-    return Math.sqrt(
-      Math.pow(pointB.x - pointA.x, 2) + Math.pow(pointB.y - pointA.y, 2),
-    );
   }
 
   return {
