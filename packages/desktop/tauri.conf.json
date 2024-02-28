@@ -21,8 +21,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "shortDescription": "Zebar",
+    "category": "Utility",
     "resources": ["resources/*"],
-    "targets": ["deb", "appimage", "msi", "dmg", "updater"]
+    "targets": ["deb", "appimage", "msi", "dmg", "updater"],
+    "windows": {
+      "wix": {
+        "template": "./installer.wxs"
+      }
+    }
   },
   "app": {
     "macOSPrivateApi": true,
