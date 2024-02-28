@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::info;
@@ -6,6 +8,8 @@ use super::manager::ProviderOutput;
 
 #[async_trait]
 pub trait Provider {
+  fn min_refresh_interval(&self) -> Duration;
+
   async fn on_start(
     &mut self,
     config_hash: String,
