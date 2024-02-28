@@ -1,6 +1,7 @@
 use std::{
   io::{BufRead, BufReader},
   sync::Arc,
+  time::Duration,
 };
 
 use async_trait::async_trait;
@@ -123,6 +124,11 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
+  // State should always be up to date.
+  fn min_refresh_interval(&self) -> Duration {
+    Duration::MAX
+  }
+
   async fn on_start(
     &mut self,
     config_hash: String,
