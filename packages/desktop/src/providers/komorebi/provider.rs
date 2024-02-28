@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use komorebi_client::Monitor;
+use komorebi_client::{Container, Monitor, Window, Workspace};
 use tokio::{
   sync::mpsc::Sender,
   task::{self, AbortHandle},
@@ -18,7 +18,10 @@ use crate::providers::{
   variables::ProviderVariables,
 };
 
-use super::{KomorebiMonitor, KomorebiProviderConfig};
+use super::{
+  KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
+  KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
+};
 
 const SOCKET_NAME: &str = "zebar.sock";
 
@@ -38,28 +41,83 @@ impl KomorebiProvider {
   fn transform_response(
     state: komorebi_client::State,
   ) -> KomorebiVariables {
-    let monitors = state
+    let all_monitors = state
       .monitors
       .elements()
       .into_iter()
-      .map(|&monitor| KomorebiMonitor {
-        id: monitor.id(),
-        name: monitor.name().to_string(),
-        device_id: monitor.device_id().clone(),
-        size: monitor.size(),
-        work_area_size: KomorebiRect {
-          left: size.left,
-          top: size.top,
-          right: size.right,
-          bottom: size.bottom,
-        },
-        work_area_offset: monitor.work_area_offset(),
-        work_area_size: monitor.work_area_size(),
-        workspaces: monitor.workspaces(),
-      })
+      .map(Self::transform_monitor)
       .collect();
 
-    KomorebiVariables { monitors }
+    KomorebiVariables {
+      all_monitors,
+      focused_monitor_index: state.monitors.focused_idx(),
+    }
+  }
+
+  fn transform_monitor(monitor: &Monitor) -> KomorebiMonitor {
+    KomorebiMonitor {
+      id: monitor.id(),
+      name: monitor.name().to_string(),
+      device_id: monitor.device_id().clone(),
+      focused_workspace_index: monitor.focused_workspace_idx(),
+      size: *monitor.size(),
+      work_area_size: *monitor.work_area_size(),
+      work_area_offset: monitor.work_area_offset(),
+      workspaces: monitor
+        .workspaces()
+        .into_iter()
+        .map(Self::transform_workspace)
+        .collect(),
+    }
+  }
+
+  fn transform_workspace(workspace: &Workspace) -> KomorebiWorkspace {
+    KomorebiWorkspace {
+      container_padding: workspace.container_padding(),
+      floating_windows: workspace
+        .floating_windows()
+        .into_iter()
+        .map(Self::transform_window)
+        .collect(),
+      focused_container_index: workspace.focused_container_idx(),
+      latest_layout: (*workspace.latest_layout()).clone(),
+      layout: KomorebiLayout::from((*workspace.layout()).clone()),
+      layout_flip: workspace.layout_flip().map(KomorebiLayoutFlip::from),
+      name: workspace.name().clone(),
+      maximized_window: workspace
+        .maximized_window()
+        .map(|w| Self::transform_window(&w)),
+      monocle_container: workspace
+        .monocle_container()
+        .as_ref()
+        .map(|c| Self::transform_container(&c)),
+      tiling_containers: workspace
+        .containers()
+        .into_iter()
+        .map(Self::transform_container)
+        .collect(),
+      workspace_padding: workspace.workspace_padding(),
+    }
+  }
+
+  fn transform_container(container: &Container) -> KomorebiContainer {
+    KomorebiContainer {
+      id: container.id().to_string(),
+      windows: container
+        .windows()
+        .iter()
+        .map(Self::transform_window)
+        .collect(),
+    }
+  }
+
+  fn transform_window(window: &Window) -> KomorebiWindow {
+    KomorebiWindow {
+      class: window.class().ok(),
+      exe: window.exe().ok(),
+      hwnd: window.hwnd().0 as u64,
+      title: window.title().ok(),
+    }
   }
 }
 
@@ -85,13 +143,14 @@ impl Provider for KomorebiProvider {
               let notification: komorebi_client::Notification =
                 serde_json::from_str(&line).unwrap();
 
+              // Transform and emit the incoming Komorebi state.
               _ = emit_output_tx
                 .send(ProviderOutput {
                   config_hash: config_hash.clone(),
                   variables: VariablesResult::Data(
-                    ProviderVariables::Komorebi(KomorebiVariables {
-                      monitors: notification.state.monitors,
-                    }),
+                    ProviderVariables::Komorebi(Self::transform_response(
+                      notification.state,
+                    )),
                   ),
                 })
                 .await;

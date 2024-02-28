@@ -6,6 +6,11 @@ import { createProviderListener } from '../create-provider-listener';
 import { getMonitors } from '~/desktop';
 import { getCoordinateDistance } from '~/utils';
 
+interface KomorebiResponse {
+  allMonitors: KomorebiMonitor[];
+  focusedMonitorIndex: number;
+}
+
 export interface KomorebiProvider {
   /**
    * Workspace displayed on the current monitor.
@@ -30,7 +35,7 @@ export interface KomorebiProvider {
   /**
    * All monitors.
    */
-  monitors: KomorebiMonitor[];
+  allMonitors: KomorebiMonitor[];
 
   /**
    * Monitor that currently has focus.
@@ -45,9 +50,9 @@ export interface KomorebiProvider {
 
 export interface KomorebiMonitor {
   id: number;
-  name: string;
   deviceId: string;
   focusedWorkspaceIndex: number;
+  name: string;
   size: KomorebiRect;
   workAreaOffset: number | null;
   workAreaSize: KomorebiRect;
@@ -55,16 +60,17 @@ export interface KomorebiMonitor {
 }
 
 export interface KomorebiWorkspace {
-  containerPadding: number;
+  containerPadding: number | null;
   floatingWindows: KomorebiWindow[];
+  focusedContainerIndex: number;
   latestLayout: KomorebiRect[];
   layout: KomorebiLayout;
   layoutFlip: KomorebiLayoutFlip | null;
-  name: string;
   maximizedWindow: KomorebiWindow | null;
   monocleContainer: KomorebiContainer | null;
+  name: string | null;
   tilingContainers: KomorebiContainer[];
-  workspacePadding: number;
+  workspacePadding: number | null;
 }
 
 export interface KomorebiContainer {
@@ -73,11 +79,10 @@ export interface KomorebiContainer {
 }
 
 export interface KomorebiWindow {
-  class: string;
-  exe: string;
+  class: string | null;
+  exe: string | null;
   hwnd: number;
-  size: KomorebiRect;
-  title: string;
+  title: string | null;
 }
 
 export interface KomorebiRect {
@@ -92,9 +97,14 @@ export type KomorebiLayout =
   | 'vertical_stack'
   | 'horizontal_stack'
   | 'ultrawide_vertical_stack'
-  | 'rows';
+  | 'rows'
+  | 'grid'
+  | 'custom';
 
-export type KomorebiLayoutFlip = 'horizontal' | 'vertical';
+export type KomorebiLayoutFlip =
+  | 'horizontal'
+  | 'vertical'
+  | 'horizontal_and_vertical';
 
 export async function createKomorebiProvider(
   config: KomorebiProviderConfig,
@@ -104,7 +114,7 @@ export async function createKomorebiProvider(
 
   const providerListener = await createProviderListener<
     KomorebiProviderConfig,
-    KomorebiProvider
+    KomorebiResponse
   >(config, owner);
 
   const [komorebiVariables, setKomorebiVariables] = createStore(
@@ -118,7 +128,7 @@ export async function createKomorebiProvider(
     const currentPosition = { x: currentMonitor!.x, y: currentMonitor!.y };
 
     // Get Komorebi monitor that corresponds to the window's monitor.
-    const currentKomorebiMonitor = state.monitors.reduce((a, b) =>
+    const currentKomorebiMonitor = state.allMonitors.reduce((a, b) =>
       getCoordinateDistance(currentPosition, {
         x: a.workAreaSize.left,
         y: a.workAreaSize.top,
@@ -136,14 +146,22 @@ export async function createKomorebiProvider(
         currentKomorebiMonitor.focusedWorkspaceIndex
       ]!;
 
+    const allWorkspaces = state.allMonitors.flatMap(
+      monitor => monitor.workspaces,
+    );
+
+    const focusedMonitor = state.allMonitors[state.focusedMonitorIndex]!;
+    const focusedWorkspace =
+      focusedMonitor.workspaces[focusedMonitor.focusedWorkspaceIndex]!;
+
     return {
       displayedWorkspace,
-      focusedWorkspace: state.focusedWorkspace,
+      focusedWorkspace,
       currentWorkspaces: currentKomorebiMonitor.workspaces,
-      allWorkspaces: state.allWorkspaces,
-      monitors: state.monitors,
-      focusedMonitor: state.focusedMonitor,
+      allWorkspaces,
+      focusedMonitor,
       currentMonitor: currentKomorebiMonitor,
+      allMonitors: state.allMonitors,
     };
   }
 
@@ -160,8 +178,8 @@ export async function createKomorebiProvider(
     get allWorkspaces() {
       return komorebiVariables.allWorkspaces;
     },
-    get monitors() {
-      return komorebiVariables.monitors;
+    get allMonitors() {
+      return komorebiVariables.allMonitors;
     },
     get focusedMonitor() {
       return komorebiVariables.focusedMonitor;
