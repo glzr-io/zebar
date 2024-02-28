@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+  sync::Arc,
+  time::{Duration, Instant},
+};
 
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -11,7 +14,7 @@ use tokio::{
   },
   task,
 };
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::providers::provider::Provider;
 
@@ -35,8 +38,9 @@ pub struct UnlistenProviderArgs {
 /// Reference to a currently active provider.
 pub struct ProviderRef {
   config_hash: String,
-  min_refresh_interval: Option<u64>,
-  last_variables: Option<ProviderVariables>,
+  min_refresh_interval: Duration,
+  prev_refresh: Option<Instant>,
+  prev_output: Option<Box<ProviderOutput>>,
   refresh_tx: Sender<()>,
   stop_tx: Sender<()>,
 }
@@ -70,6 +74,7 @@ pub fn init<R: Runtime>(app: &mut App<R>) -> Result<()> {
 /// Create a channel for outputting provider variables to client.
 fn handle_provider_emit_output<R: Runtime>(
   app_handle: (impl Manager<R> + Sync + Send + 'static),
+  active_providers: Arc<Mutex<Vec<ProviderRef>>>,
 ) -> Sender<ProviderOutput> {
   let (output_sender, mut output_receiver) =
     mpsc::channel::<ProviderOutput>(1);
@@ -77,9 +82,23 @@ fn handle_provider_emit_output<R: Runtime>(
   task::spawn(async move {
     while let Some(output) = output_receiver.recv().await {
       info!("Emitting for provider: {}", output.config_hash);
-      // TODO: Error handling.
-      app_handle.emit("provider-emit", output).unwrap();
-      println!("output {:?}", output);
+      let output = Box::new(output);
+
+      if let Err(err) = app_handle.emit("provider-emit", output.clone()) {
+        warn!("Error emitting provider output: {:?}", err);
+      }
+
+      let mut providers = active_providers.lock().await;
+
+      // Find provider that matches given config hash.
+      let found_provider = providers
+        .iter_mut()
+        .find(|provider| *provider.config_hash == output.config_hash);
+
+      if let Some(found) = found_provider {
+        found.prev_refresh = Some(Instant::now());
+        found.prev_output = Some(output);
+      }
     }
   });
 
@@ -108,7 +127,17 @@ fn handle_provider_listen_input(
       // If a provider with the given config already exists, refresh it and
       // return early.
       if let Some(found) = found_provider {
-        _ = found.refresh_tx.send(()).await;
+        // The previous output of providers is cached. If within the
+        // minimum refresh interval, send the previous output.
+        match (found.prev_refresh, found.prev_output.clone()) {
+          (Some(prev_refresh), Some(prev_output))
+            if prev_refresh.elapsed() < found.min_refresh_interval =>
+          {
+            _ = emit_output_tx.send(*prev_output).await
+          }
+          _ => _ = found.refresh_tx.send(()).await,
+        }
+
         continue;
       };
 
@@ -135,7 +164,8 @@ fn handle_provider_listen_input(
         providers.push(ProviderRef {
           config_hash,
           min_refresh_interval,
-          last_variables: None,
+          prev_refresh: None,
+          prev_output: None,
           refresh_tx,
           stop_tx,
         });
@@ -203,9 +233,10 @@ fn handle_provider_unlisten_input(
 
       // Stop the given provider. This triggers any necessary cleanup.
       if let Some(found_index) = found_index {
-        let provider = providers.get(found_index).unwrap();
-        _ = provider.stop_tx.send(()).await;
-        providers.remove(found_index);
+        if let Some(provider) = providers.get(found_index) {
+          let _ = provider.stop_tx.send(()).await;
+          providers.remove(found_index);
+        }
       };
     }
   });
@@ -215,16 +246,18 @@ fn handle_provider_unlisten_input(
 
 impl ProviderManager {
   pub fn new<R: Runtime>(app_handle: AppHandle<R>) -> ProviderManager {
-    let emit_output_tx = handle_provider_emit_output(app_handle);
-
     let active_providers = Arc::new(Mutex::new(vec![]));
-    let active_providers_clone = active_providers.clone();
 
-    let listen_input_tx =
-      handle_provider_listen_input(active_providers, emit_output_tx);
+    let emit_output_tx =
+      handle_provider_emit_output(app_handle, active_providers.clone());
+
+    let listen_input_tx = handle_provider_listen_input(
+      active_providers.clone(),
+      emit_output_tx,
+    );
 
     let unlisten_input_tx =
-      handle_provider_unlisten_input(active_providers_clone);
+      handle_provider_unlisten_input(active_providers);
 
     ProviderManager {
       listen_input_tx,
