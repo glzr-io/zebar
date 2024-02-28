@@ -37,8 +37,8 @@ bar:
 
 window_rules:
   # Ignore the bar window.
-  - command: "ignore"
-    match_process_name: "/Zebar/"
+  - command: 'ignore'
+    match_process_name: '/Zebar/'
 ```
 
 ## 🌟 Intro to Zebar
