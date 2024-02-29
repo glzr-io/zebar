@@ -3,7 +3,7 @@ use std::{
   time::{Duration, Instant},
 };
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use sysinfo::System;
 use tauri::{App, AppHandle, Manager, Runtime};
@@ -18,6 +18,8 @@ use tracing::{info, warn};
 
 use crate::providers::provider::Provider;
 
+#[cfg(all(windows, target_arch = "x86_64"))]
+use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
@@ -202,6 +204,10 @@ fn create_provider(
       Box::new(HostProvider::new(config, sysinfo))
     }
     ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
+    #[cfg(all(windows, target_arch = "x86_64"))]
+    ProviderConfig::Komorebi(config) => {
+      Box::new(KomorebiProvider::new(config))
+    }
     ProviderConfig::Memory(config) => {
       Box::new(MemoryProvider::new(config, sysinfo))
     }
@@ -211,6 +217,8 @@ fn create_provider(
     ProviderConfig::Weather(config) => {
       Box::new(WeatherProvider::new(config))
     }
+    #[allow(unreachable_patterns)]
+    _ => bail!("Provider not supported on this operating system."),
   };
 
   Ok(provider)

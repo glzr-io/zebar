@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+#[cfg(all(windows, target_arch = "x86_64"))]
+use super::komorebi::KomorebiProviderConfig;
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
   host::HostProviderConfig, ip::IpProviderConfig,
@@ -14,6 +16,8 @@ pub enum ProviderConfig {
   Cpu(CpuProviderConfig),
   Host(HostProviderConfig),
   Ip(IpProviderConfig),
+  #[cfg(all(windows, target_arch = "x86_64"))]
+  Komorebi(KomorebiProviderConfig),
   Memory(MemoryProviderConfig),
   Network(NetworkProviderConfig),
   Weather(WeatherProviderConfig),

@@ -6,6 +6,7 @@ import { createDateProvider } from './date/create-date-provider';
 import { createGlazewmProvider } from './glazewm/create-glazewm-provider';
 import { createHostProvider } from './host/create-host-provider';
 import { createIpProvider } from './ip/create-ip-provider';
+import { createKomorebiProvider } from './komorebi/create-komorebi-provider';
 import { createMemoryProvider } from './memory/create-memory-provider';
 import { createMonitorsProvider } from './monitors/create-monitors-provider';
 import { createNetworkProvider } from './network/create-network-provider';
@@ -36,6 +37,8 @@ export async function createProvider(
       return createHostProvider(config, owner);
     case ProviderType.IP:
       return createIpProvider(config, owner);
+    case ProviderType.KOMOREBI:
+      return createKomorebiProvider(config, owner);
     case ProviderType.MEMORY:
       return createMemoryProvider(config, owner);
     case ProviderType.MONITORS:

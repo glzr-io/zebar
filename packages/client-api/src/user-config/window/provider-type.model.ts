@@ -7,6 +7,7 @@ export enum ProviderType {
   GLAZEWM = 'glazewm',
   HOST = 'host',
   IP = 'ip',
+  KOMOREBI = 'komorebi',
   MEMORY = 'memory',
   MONITORS = 'monitors',
   NETWORK = 'network',
