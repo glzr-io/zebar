@@ -41,6 +41,52 @@ window_rules:
     match_process_name: '/Zebar/'
 ```
 
+## ➡️ Usage with Komorebi
+
+Modify the `float_rules` in the Komorebi config options (at `%userprofile%/komorebi.json`).
+
+```json
+{
+  "float_rules": [
+    {
+      "kind": "Exe",
+      "id": "Zebar.exe",
+      "matching_strategy": "Equals"
+    }
+  ]
+}
+```
+
+And in the Zebar config (if using the default generated one), replace the GlazeWM element with the following:
+
+```yaml
+    template/workspaces:
+      styles: |
+        display: flex;
+        align-items: center;
+
+        .workspace {
+          background: rgba(255, 255, 255, 0.05);
+          margin-right: 4px;
+          width: 30px;
+          height: 30px;
+          color: #ffffffe6;
+          border: none;
+          border-radius: 2px;
+
+          &.active {
+            background: rgba(255, 255, 255, 0.1);
+          }
+        }
+      providers: ['glazewm']
+      template: |
+        @for (workspace of komorebi.currentWorkspaces) {
+          <button class="workspace {{ workspace === komorebi.focusedWorkspace && 'active' }}">
+            {{ workspace.name }}
+          </button>
+        }
+```
+
 ## 🌟 Intro to Zebar
 
 There's 3 big differences that set Zebar apart from other similar projects:
