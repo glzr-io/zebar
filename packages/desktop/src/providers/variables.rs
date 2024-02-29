@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[cfg(windows)]
+#[cfg(all(windows, target_arch = "x86_64"))]
 use super::komorebi::KomorebiVariables;
 use super::{
   battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
@@ -15,7 +15,7 @@ pub enum ProviderVariables {
   Cpu(CpuVariables),
   Host(HostVariables),
   Ip(IpVariables),
-  #[cfg(windows)]
+  #[cfg(all(windows, target_arch = "x86_64"))]
   Komorebi(KomorebiVariables),
   Memory(MemoryVariables),
   Network(NetworkVariables),

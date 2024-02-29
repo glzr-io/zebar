@@ -18,7 +18,7 @@ use tracing::{info, warn};
 
 use crate::providers::provider::Provider;
 
-#[cfg(windows)]
+#[cfg(all(windows, target_arch = "x86_64"))]
 use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
@@ -204,7 +204,7 @@ fn create_provider(
       Box::new(HostProvider::new(config, sysinfo))
     }
     ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
-    #[cfg(windows)]
+    #[cfg(all(windows, target_arch = "x86_64"))]
     ProviderConfig::Komorebi(config) => {
       Box::new(KomorebiProvider::new(config))
     }
