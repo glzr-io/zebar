@@ -2,6 +2,11 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      draft-release:
+        type: boolean
+        default: false
+        description: Whether to publish the release as a draft.
 
 permissions:
   contents: write
@@ -45,7 +50,7 @@ jobs:
         with:
           gh-publish: true
           gh-token: ${{ secrets.GITHUB_TOKEN }}
-          gh-draft-release: false
+          gh-draft-release: ${{ inputs.draft-release }}
           gh-assets: |
             [
               {
