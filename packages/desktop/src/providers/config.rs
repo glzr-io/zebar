@@ -6,7 +6,7 @@ use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
   host::HostProviderConfig, ip::IpProviderConfig,
   memory::MemoryProviderConfig, network::NetworkProviderConfig,
-  weather::WeatherProviderConfig,
+  newnetwork::NewNetworkProviderConfig, weather::WeatherProviderConfig,
 };
 
 #[derive(Deserialize, Debug)]
@@ -20,5 +20,6 @@ pub enum ProviderConfig {
   Komorebi(KomorebiProviderConfig),
   Memory(MemoryProviderConfig),
   Network(NetworkProviderConfig),
+  NewNetwork(NewNetworkProviderConfig),
   Weather(WeatherProviderConfig),
 }

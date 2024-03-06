@@ -5,7 +5,7 @@ use super::komorebi::KomorebiVariables;
 use super::{
   battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
   ip::IpVariables, memory::MemoryVariables, network::NetworkVariables,
-  weather::WeatherVariables,
+  newnetwork::NewNetworkVariables, weather::WeatherVariables,
 };
 
 #[derive(Serialize, Debug, Clone)]
@@ -19,5 +19,6 @@ pub enum ProviderVariables {
   Komorebi(KomorebiVariables),
   Memory(MemoryVariables),
   Network(NetworkVariables),
+  NewNetwork(NewNetworkVariables),
   Weather(WeatherVariables),
 }

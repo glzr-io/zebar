@@ -10,6 +10,7 @@ import { createKomorebiProvider } from './komorebi/create-komorebi-provider';
 import { createMemoryProvider } from './memory/create-memory-provider';
 import { createMonitorsProvider } from './monitors/create-monitors-provider';
 import { createNetworkProvider } from './network/create-network-provider';
+import { createNewNetworkProvider } from './newnetwork/create-new-network-provider';
 import { createSelfProvider } from './self/create-self-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
 import { ProviderType, type ProviderConfig } from '~/user-config';
@@ -45,6 +46,8 @@ export async function createProvider(
       return createMonitorsProvider(config, owner);
     case ProviderType.NETWORK:
       return createNetworkProvider(config, owner);
+    case ProviderType.NEWNETWORK:
+      return createNewNetworkProvider(config, owner);
     case ProviderType.SELF:
       return createSelfProvider(elementContext);
     case ProviderType.WEATHER:

@@ -11,6 +11,7 @@ export enum ProviderType {
   MEMORY = 'memory',
   MONITORS = 'monitors',
   NETWORK = 'network',
+  NEWNETWORK = 'newnetwork',
   SELF = 'self',
   WEATHER = 'weather',
 }

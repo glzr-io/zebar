@@ -29,6 +29,8 @@ sysinfo = "0.30"
 tokio = { version = "1.33", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+wifiscanner = "0.5.*"
+default-net = "0.21.0"
 
 [target.'cfg(all(target_os = "windows", target_arch = "x86_64"))'.dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", rev = "1a8b6a7398b12b3686b80c6228875a79e7165a26" }
