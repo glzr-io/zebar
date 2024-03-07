@@ -82,7 +82,8 @@ impl IntervalProvider for NewNetworkProvider {
     let default_gateway_ssid_and_strength = {
       let ssid = None;
       let signal = None;
-      Gateway { ssid, signal };
+      let connected = false;
+      Gateway { ssid, signal, connected };
     };
 
     let variables = NewNetworkVariables {
@@ -109,7 +110,8 @@ impl IntervalProvider for NewNetworkProvider {
         ipv4: default_interface.gateway.as_ref().unwrap().ipv4.clone(),
         ipv6: default_interface.gateway.as_ref().unwrap().ipv6.clone(),
         ssid: default_gateway_ssid_and_strength.ssid.unwrap(),
-        signal_strength: default_gateway_ssid_and_strength.signal.unwrap(),
+        signal_strength_percent: default_gateway_ssid_and_strength.signal.unwrap(),
+        connected: default_gateway_ssid_and_strength.connected,
       },
       interfaces: interfaces
         .iter()
@@ -128,9 +130,7 @@ impl IntervalProvider for NewNetworkProvider {
         })
         .collect(),
     };
-
-    println!("variables: {:?}", variables);
-
+    
     Ok(ProviderVariables::NewNetwork(variables))
   }
 }

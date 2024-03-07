@@ -50,7 +50,8 @@ export interface Gateway {
   ipv4: Ipv4Addr[];
   ipv6: Ipv6Addr[];
   ssid: string;
-  signal_strength: string;
+  signal_strength: number;
+  connected: boolean;
 }
 
 enum InterfaceType {

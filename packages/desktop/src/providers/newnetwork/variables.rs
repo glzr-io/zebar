@@ -38,7 +38,8 @@ pub struct Gateway {
   pub ipv4: Vec<Ipv4Addr>,
   pub ipv6: Vec<Ipv6Addr>,
   pub ssid: String,
-  pub signal_strength: String,
+  pub signal_strength_percent: u32,
+  pub connected: bool,
 }
 
 #[derive(Serialize, Debug, Clone)]
