@@ -124,13 +124,23 @@ window/bar:
           <span>{{ Math.round(cpu.usage) }}%</span>
         }
     
-    template/newnetwork:
-      providers: ['newnetwork']
+    template/new_network:
+      providers: ['network']
+      # Signal strength is generally measured in dBm.
+      # The new_network provider returns signal strength as a percentage, where
+      # 100% represents a signal strength of -50 dBm or better, and 0% represents
+      # a signal strength of -100 dBm or worse. The calculation method is dBm = percentage / 2 - 100.
+      # Signal strengths of ~-67dBm (~66%) or more are considered very good.
+      # Signal strengths of ~-80dBm (~40%) or less are considered not good.
+      # Signal strengths of ~-90dBm (~20%) or less considered unusable.
       template: |
-        <span>test</span>
-        <i class="nf nf-md-wifi_arrow_up"></i>{{ `${newnetwork.strength || "strength didn't work"} ` }} | 
-        <i class="nf nf-md-wifi_arrow_down"></i>{{ `${newnetwork.name || "name didn't work"}` }}
-
+        <!-- Show icon based on signal strength. -->
+        @if (network.defaultGateway.connected !== true) { <i class="nf-md-wifi_strength_off_outline"></i> } 
+        @else if (network.defaultGateway.signal_strength_percent >= 80) { <i class="nf-md-wifi_strength_4"></i> }
+        @else if (network.defaultGateway.signal_strength_percent >= 65) { <i class="nf-md-wifi_strength_3"></i> } 
+        @else if (network.defaultGateway.signal_strength_percent >= 40) { <i class="nf-md-wifi_strength_2"></i> }
+        @else if (network.defaultGateway.signal_strength_percent >= 25) { <i class="nf-md-wifi_strength_1"></i> }
+        @else { <i class="nf-md-wifi_strength_outline"></i> }
 
     template/battery:
       providers: ['battery']

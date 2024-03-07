@@ -9,7 +9,6 @@ pub mod komorebi;
 pub mod manager;
 pub mod memory;
 pub mod network;
-pub mod newnetwork;
 pub mod provider;
 pub mod variables;
 pub mod weather;
