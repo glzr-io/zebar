@@ -78,7 +78,7 @@ And in the Zebar config (if using the default generated one), replace the GlazeW
             background: rgba(255, 255, 255, 0.1);
           }
         }
-      providers: ['glazewm']
+      providers: ['komorebi']
       template: |
         @for (workspace of komorebi.currentWorkspaces) {
           <button class="workspace {{ workspace === komorebi.focusedWorkspace && 'active' }}">
