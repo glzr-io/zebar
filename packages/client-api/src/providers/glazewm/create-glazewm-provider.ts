@@ -28,7 +28,11 @@ export async function createGlazewmProvider(
   await refetch();
 
   await client.subscribeMany(
-    [GwmEventType.WORKSPACE_ACTIVATED, GwmEventType.WORKSPACE_DEACTIVATED],
+    [
+      GwmEventType.WORKSPACE_ACTIVATED, 
+      GwmEventType.WORKSPACE_DEACTIVATED,
+      GwmEventType.FOCUS_CHANGED
+    ],
     refetch,
   );
 
@@ -44,7 +48,7 @@ export async function createGlazewmProvider(
         : b,
     );
 
-    setGlazewmVariables({ workspacesOnMonitor: monitor.children });
+    setGlazewmVariables({ workspacesOnMonitor: monitor.children.sort((a, b) => Number(a.name) - Number(b.name)) });
   }
 
   return {
