@@ -82,27 +82,27 @@ impl IntervalProvider for NetworkProvider {
         name: default_interface.name.clone(),
         friendly_name: default_interface.friendly_name.clone(),
         description: default_interface.description.clone(),
-        if_type: default_interface.if_type,
+        interface_type: default_interface.if_type,
         ipv4: default_interface.ipv4.clone(),
         ipv6: default_interface.ipv6.clone(),
-        mac_addr: default_interface.mac_addr.unwrap(),
+        mac_address: default_interface.mac_addr.unwrap(),
         transmit_speed: default_interface.transmit_speed,
         receive_speed: default_interface.receive_speed,
         dns_servers: default_interface.dns_servers.clone(),
-        default: default_interface.default,
+        is_default: default_interface.default,
       },
       default_gateway: Gateway {
-        mac_addr: default_interface
+        mac_address: default_interface
           .gateway
           .as_ref()
           .unwrap()
           .mac_addr
           .clone(),
-        ipv4: default_interface.gateway.as_ref().unwrap().ipv4.clone(),
-        ipv6: default_interface.gateway.as_ref().unwrap().ipv6.clone(),
+        ipv4_addresses: default_interface.gateway.as_ref().unwrap().ipv4.clone(),
+        ipv6_addresses: default_interface.gateway.as_ref().unwrap().ipv6.clone(),
         ssid: default_gateway_ssid_and_strength.ssid.unwrap(),
         signal_strength_percent: default_gateway_ssid_and_strength.signal.unwrap(),
-        connected: default_gateway_ssid_and_strength.connected,
+        is_connected: default_gateway_ssid_and_strength.connected,
       },
       interfaces: interfaces
         .iter()
@@ -110,14 +110,14 @@ impl IntervalProvider for NetworkProvider {
           name: iface.name.clone(),
           friendly_name: iface.friendly_name.clone(),
           description: iface.description.clone(),
-          if_type: iface.if_type.clone(),
+          interface_type: iface.if_type.clone(),
           ipv4: iface.ipv4.clone(),
           ipv6: iface.ipv6.clone(),
-          mac_addr: iface.mac_addr.unwrap().clone(),
+          mac_address: iface.mac_addr.unwrap().clone(),
           transmit_speed: iface.transmit_speed,
           receive_speed: iface.receive_speed,
           dns_servers: iface.dns_servers.clone(),
-          default: iface.default,
+          is_default: iface.default,
         })
         .collect(),
     };
