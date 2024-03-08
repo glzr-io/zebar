@@ -18,28 +18,28 @@ pub struct NetworkInterface {
   pub friendly_name: Option<String>,
   pub description: Option<String>,
   #[serde(serialize_with = "interfacetype_ser")]
-  pub if_type: NdInterfaceType,
+  pub interface_type: NdInterfaceType,
   #[serde(serialize_with = "ipv4_ser")]
   pub ipv4: Vec<NdIpv4Net>,
   #[serde(serialize_with = "ipv6_ser")]
   pub ipv6: Vec<NdIpv6Net>,
   #[serde(serialize_with = "macaddr_ser")]
-  pub mac_addr: NdMacAddr,
+  pub mac_address: NdMacAddr,
   pub transmit_speed: Option<u64>,
   pub receive_speed: Option<u64>,
   pub dns_servers: Vec<IpAddr>,
-  pub default: bool,
+  pub is_default: bool,
 }
 
 #[derive(Serialize, Debug, Clone)]
 pub struct Gateway {
   #[serde(serialize_with = "macaddr_ser")]
-  pub mac_addr: NdMacAddr,
-  pub ipv4: Vec<Ipv4Addr>,
-  pub ipv6: Vec<Ipv6Addr>,
+  pub mac_address: NdMacAddr,
+  pub ipv4_addresses: Vec<Ipv4Addr>,
+  pub ipv6_addresses: Vec<Ipv6Addr>,
   pub ssid: String,
   pub signal_strength_percent: u32,
-  pub connected: bool,
+  pub is_connected: bool,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -123,8 +123,8 @@ fn interfacetype_ser<S: Serializer>(
 
 #[derive(Serialize, Debug, Clone)]
 pub struct Ipv4Net {
-  pub addr: Ipv4Addr,
-  pub prefix_len: u8,
+  pub address: Ipv4Addr,
+  pub prefix_length: u8,
   pub netmask: Ipv4Addr,
 }
 
@@ -138,8 +138,8 @@ fn ipv4net_to_local(ipv4net: &Vec<NdIpv4Net>) -> Vec<Ipv4Net> {
         netmask,
       } => {
         result.push(Ipv4Net {
-          addr: *addr,
-          prefix_len: *prefix_len,
+          address: *addr,
+          prefix_length: *prefix_len,
           netmask: *netmask,
         });
       }
@@ -158,8 +158,8 @@ fn ipv4_ser<S: Serializer>(
 
 #[derive(Serialize, Debug, Clone)]
 struct Ipv6Net {
-  pub addr: Ipv6Addr,
-  pub prefix_len: u8,
+  pub address: Ipv6Addr,
+  pub prefix_length: u8,
   pub netmask: Ipv6Addr,
 }
 
@@ -173,8 +173,8 @@ fn ipv6net_to_local(ipv6net: &Vec<NdIpv6Net>) -> Vec<Ipv6Net> {
         netmask,
       } => {
         result.push(Ipv6Net {
-          addr: *addr,
-          prefix_len: *prefix_len,
+          address: *addr,
+          prefix_length: *prefix_len,
           netmask: *netmask,
         });
       }
