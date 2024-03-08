@@ -14,6 +14,7 @@ pub struct NetshInfo {
   pub connected: bool,
 }
 
+#[cfg(target_os = "windows")]
 pub fn get_primary_interface_ssid_and_strength(
 ) -> anyhow::Result<NetshInfo> {
   let ssid_match = Regex::new(r"(?m)^\s*SSID\s*:\s*(.*?)\r?$").unwrap();
@@ -49,4 +50,14 @@ pub fn get_primary_interface_ssid_and_strength(
     .map(|m| m.get(1).unwrap().as_str().to_string()) == Some("connected".to_string());
   
   return Ok(NetshInfo { ssid, signal, connected });
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn get_primary_interface_ssid_and_strength(
+) -> anyhow::Result<NetshInfo> {
+  Ok(NetshInfo {
+    ssid: None,
+    signal: None,
+    connected: false,
+  })
 }

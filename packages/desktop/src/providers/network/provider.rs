@@ -74,17 +74,8 @@ impl IntervalProvider for NetworkProvider {
 
     let interfaces = netdev.interfaces.lock().await;
 
-    #[cfg(target_os = "windows")]
     let default_gateway_ssid_and_strength =
-      get_primary_interface_ssid_and_strength()?;
-
-    #[cfg(not(target_os = "windows"))]
-    let default_gateway_ssid_and_strength = {
-      let ssid = None;
-      let signal = None;
-      let connected = false;
-      Gateway { ssid, signal, connected };
-    };
+      get_primary_interface_ssid_and_strength()?; // Returns ssid = None, signal = None, connected = false if not on Windows for now
 
     let variables = NetworkVariables {
       default_interface: NetworkInterface {
