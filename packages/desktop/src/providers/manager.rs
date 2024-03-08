@@ -23,8 +23,8 @@ use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, variables::ProviderVariables,
-  weather::WeatherProvider,
+  network::NetworkProvider,
+  variables::ProviderVariables, weather::WeatherProvider,
 };
 
 pub struct ListenProviderArgs {

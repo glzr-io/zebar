@@ -22,8 +22,6 @@ use tokio::{
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
-use crate::util::window_ext::WindowExt;
-
 mod cli;
 mod monitors;
 mod providers;
