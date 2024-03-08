@@ -172,11 +172,11 @@ window/bar:
       # Signal strengths of ~-90dBm (~20%) or less considered unusable.
       template: |
         <!-- Ethernet is currently untested and may need to be adjusted. -->
+        <!-- Show icon based on signal strength. -->
         @if (network.defaultInterface.if_type === 'Ethernet') {
           @if (network.defaultGateway.connected !== true) { <i class="nf-md-ethernet_off"></i> }
           @else { <i class="nf-md-ethernet_cable"></i> }
         }
-        <!-- Show icon based on signal strength. -->
         @else if (network.defaultGateway.connected !== true) { <i class="nf-md-wifi_strength_off_outline"></i> } 
         @else if (network.defaultGateway.signal_strength_percent >= 80) { <i class="nf-md-wifi_strength_4"></i> }
         @else if (network.defaultGateway.signal_strength_percent >= 65) { <i class="nf-md-wifi_strength_3"></i> } 
