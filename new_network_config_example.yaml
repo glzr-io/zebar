@@ -124,7 +124,7 @@ window/bar:
           <span>{{ Math.round(cpu.usage) }}%</span>
         }
     
-    template/new_network:
+    template/network:
       providers: ['network']
 
       # --------- Available variables ---------
