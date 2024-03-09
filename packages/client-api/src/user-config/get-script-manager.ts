@@ -1,3 +1,5 @@
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { join, homeDir } from '@tauri-apps/api/path';
 import {
   type Owner,
   createEffect,
@@ -25,7 +27,17 @@ export function getScriptManager() {
 }
 
 async function loadScript(path: string): Promise<any> {
-  const importPromise = import(path);
+  const scriptPath = await join(await homeDir(), '.glzr/zebar', path);
+  const scriptAssetPath = convertFileSrc(scriptPath);
+  console.log('path', scriptPath, scriptAssetPath);
+  const importPromise = import(scriptAssetPath);
+
+  const imgPath = await join(await homeDir(), '.glzr/zebar', 'out.png');
+  const imgAssetPath = convertFileSrc(imgPath);
+  const img = new Image();
+  img.src = imgAssetPath;
+  document.body.appendChild(img);
+
   setModules({ [path]: importPromise });
   return importPromise;
 }

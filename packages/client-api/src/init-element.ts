@@ -11,6 +11,7 @@ import {
   getParsedElementConfig,
   getChildConfigs,
   type GlobalConfig,
+  getScriptManager,
 } from './user-config';
 import { getElementProviders } from './providers';
 import type { ElementContext } from './element-context.model';
@@ -36,6 +37,7 @@ export async function initElement(
 ): Promise<ElementContext> {
   try {
     const styleBuilder = getStyleBuilder();
+    const scriptManager = getScriptManager();
     const childConfigs = getChildConfigs(args.rawConfig);
 
     // Create partial element context; `providers` and `parsedConfig` are set later.
@@ -96,7 +98,7 @@ export async function initElement(
         if (parsedConfig.events) {
           for (const event of parsedConfig.events) {
             const split = event.fn_path.split('#');
-            import(split[0]!).then(module => module[split[1]!]!);
+            scriptManager.loadScript(split[0]!);
           }
         }
       });
