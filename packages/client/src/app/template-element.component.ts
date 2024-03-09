@@ -18,15 +18,16 @@ export function TemplateElement(props: TemplateElementProps) {
   // Create element with ID.
   const element = createRootElement();
 
+  // Currently active event listeners.
+  let listeners: { type: string; fn: (event: Event) => Promise<any> }[] =
+    [];
+
   // Update the HTML element when the template changes.
   createEffect(() => {
+    clearEventListeners();
     // @ts-ignore - TODO
     element.innerHTML = config.template;
-    config.events.forEach(event => {
-      element.addEventListener(event.type, () =>
-        scriptManager.callFn(event.fn_path),
-      );
-    });
+    addEventListeners();
   });
 
   onMount(() => logger.debug('Mounted'));
@@ -37,6 +38,24 @@ export function TemplateElement(props: TemplateElementProps) {
     element.className = config.class_names.join(' ');
     element.id = toCssSelector(config.id);
     return element;
+  }
+
+  function clearEventListeners() {
+    listeners.forEach(({ type, fn }) =>
+      element.removeEventListener(type, fn),
+    );
+
+    listeners = [];
+  }
+
+  function addEventListeners() {
+    config.events.forEach(eventConfig => {
+      const callFn = (event: Event) =>
+        scriptManager.callFn(eventConfig.fn_path, event, props.context);
+
+      element.addEventListener(eventConfig.type, callFn);
+      listeners.push({ type: eventConfig.type, fn: callFn });
+    });
   }
 
   return element;

@@ -3,6 +3,7 @@ import { join, homeDir } from '@tauri-apps/api/path';
 import { createStore } from 'solid-js/store';
 
 import { createLogger } from '~/utils';
+import type { ElementContext } from '../element-context.model';
 
 const logger = createLogger('script-manager');
 
@@ -29,7 +30,11 @@ async function loadScript(path: string): Promise<any> {
   return importPromise;
 }
 
-async function callFn(fnPath: string): Promise<any> {
+async function callFn(
+  fnPath: string,
+  event: Event,
+  context: ElementContext,
+): Promise<any> {
   const split = fnPath.split('#');
   const foundModule = modules[split[0]!];
 
@@ -44,6 +49,6 @@ async function callFn(fnPath: string): Promise<any> {
       throw new Error('Invalid function path');
     }
 
-    return fn();
+    return fn(event, context);
   });
 }
