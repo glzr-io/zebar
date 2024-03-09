@@ -20,12 +20,7 @@ use super::{
 pub struct NetworkProvider {
   pub config: Arc<NetworkProviderConfig>,
   abort_handle: Option<AbortHandle>,
-  netdev_data: Arc<Mutex<NetdevData>>,
-}
-
-pub struct NetdevData {
-  pub default_interface: Arc<Mutex<Interface>>,
-  pub interfaces: Arc<Mutex<Vec<Interface>>>,
+  state: Arc<Mutex<()>>,
 }
 
 impl NetworkProvider {
@@ -33,12 +28,7 @@ impl NetworkProvider {
     NetworkProvider {
       config: Arc::new(config),
       abort_handle: None,
-      netdev_data: Arc::new(Mutex::new(NetdevData {
-        default_interface: Arc::new(Mutex::new(
-          get_default_interface().unwrap(),
-        )),
-        interfaces: Arc::new(Mutex::new(get_interfaces())),
-      })),
+      state: Arc::new(Mutex::new(())),
     }
   }
 }
@@ -46,14 +36,14 @@ impl NetworkProvider {
 #[async_trait]
 impl IntervalProvider for NetworkProvider {
   type Config = NetworkProviderConfig;
-  type State = Mutex<NetdevData>;
+  type State = ();
 
   fn config(&self) -> Arc<NetworkProviderConfig> {
     self.config.clone()
   }
 
-  fn state(&self) -> Arc<Mutex<NetdevData>> {
-    self.netdev_data.clone()
+  fn state(&self) -> Arc<()> {
+    Arc::new(())
   }
 
   fn abort_handle(&self) -> &Option<AbortHandle> {
@@ -66,13 +56,12 @@ impl IntervalProvider for NetworkProvider {
 
   async fn get_refreshed_variables(
     _: &NetworkProviderConfig,
-    netdev_data: &Mutex<NetdevData>,
+    state: &(),
   ) -> Result<ProviderVariables> {
-    let netdev = netdev_data.lock().await;
 
-    let default_interface = netdev.default_interface.lock().await.clone();
+    let default_interface = get_default_interface().unwrap();
 
-    let interfaces = netdev.interfaces.lock().await;
+    let interfaces = get_interfaces();
 
     let default_gateway_ssid_and_strength =
       get_primary_interface_ssid_and_strength()?; // Returns ssid = None, signal = None, connected = false if not on Windows for now
