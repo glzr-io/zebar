@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use netdev::interface::{
-  get_default_interface, get_interfaces, Interface,
+  get_default_interface, get_interfaces,
 };
 use tokio::{sync::Mutex, task::AbortHandle};
 
@@ -58,7 +58,6 @@ impl IntervalProvider for NetworkProvider {
     _: &NetworkProviderConfig,
     state: &(),
   ) -> Result<ProviderVariables> {
-
     let default_interface = get_default_interface().unwrap();
 
     let interfaces = get_interfaces();
@@ -87,10 +86,22 @@ impl IntervalProvider for NetworkProvider {
           .unwrap()
           .mac_addr
           .clone(),
-        ipv4_addresses: default_interface.gateway.as_ref().unwrap().ipv4.clone(),
-        ipv6_addresses: default_interface.gateway.as_ref().unwrap().ipv6.clone(),
+        ipv4_addresses: default_interface
+          .gateway
+          .as_ref()
+          .unwrap()
+          .ipv4
+          .clone(),
+        ipv6_addresses: default_interface
+          .gateway
+          .as_ref()
+          .unwrap()
+          .ipv6
+          .clone(),
         ssid: default_gateway_ssid_and_strength.ssid.unwrap(),
-        signal_strength_percent: default_gateway_ssid_and_strength.signal.unwrap(),
+        signal_strength_percent: default_gateway_ssid_and_strength
+          .signal
+          .unwrap(),
         is_connected: default_gateway_ssid_and_strength.connected,
       },
       interfaces: interfaces
