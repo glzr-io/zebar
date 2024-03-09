@@ -1,11 +1,5 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { join, homeDir } from '@tauri-apps/api/path';
-import {
-  type Owner,
-  createEffect,
-  createSignal,
-  runWithOwner,
-} from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { createLogger } from '~/utils';
@@ -29,15 +23,8 @@ export function getScriptManager() {
 async function loadScript(path: string): Promise<any> {
   const scriptPath = await join(await homeDir(), '.glzr/zebar', path);
   const scriptAssetPath = convertFileSrc(scriptPath);
-  console.log('path', scriptPath, scriptAssetPath);
+
   const importPromise = import(scriptAssetPath);
-
-  const imgPath = await join(await homeDir(), '.glzr/zebar', 'out.png');
-  const imgAssetPath = convertFileSrc(imgPath);
-  const img = new Image();
-  img.src = imgAssetPath;
-  document.body.appendChild(img);
-
   setModules({ [path]: importPromise });
   return importPromise;
 }
@@ -52,6 +39,7 @@ async function callFn(fnPath: string): Promise<any> {
 
   return foundModule.then(m => {
     const fn = m[split[1]!];
+
     if (!fn) {
       throw new Error('Invalid function path');
     }

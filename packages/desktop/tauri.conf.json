@@ -37,7 +37,7 @@
       "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**", "**/*"]
+        "scope": ["$HOME/.glzr/zebar/**"]
       }
     }
   }
