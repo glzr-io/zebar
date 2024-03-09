@@ -1,4 +1,5 @@
 export * from './base-element-config.model';
+export * from './element-events-config.model';
 export * from './group-config.model';
 export * from './provider-config.model';
 export * from './provider-type.model';

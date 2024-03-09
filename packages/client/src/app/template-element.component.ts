@@ -1,5 +1,10 @@
 import { createEffect, onCleanup, onMount } from 'solid-js';
-import { type ElementContext, createLogger, toCssSelector } from 'zebar';
+import {
+  type ElementContext,
+  createLogger,
+  toCssSelector,
+  getScriptManager,
+} from 'zebar';
 
 export interface TemplateElementProps {
   context: ElementContext;
@@ -8,13 +13,21 @@ export interface TemplateElementProps {
 export function TemplateElement(props: TemplateElementProps) {
   const config = props.context.parsedConfig;
   const logger = createLogger(`#${config.id}`);
+  const scriptManager = getScriptManager();
 
   // Create element with ID.
   const element = createRootElement();
 
   // Update the HTML element when the template changes.
-  // @ts-ignore - TODO
-  createEffect(() => (element.innerHTML = config.template));
+  createEffect(() => {
+    // @ts-ignore - TODO
+    element.innerHTML = config.template;
+    config.events.forEach(event => {
+      element.addEventListener(event.type, () =>
+        scriptManager.callFn(event.fn_path),
+      );
+    });
+  });
 
   onMount(() => logger.debug('Mounted'));
   onCleanup(() => logger.debug('Cleanup'));

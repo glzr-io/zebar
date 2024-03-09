@@ -71,6 +71,7 @@ export async function initElement(
     // provider.
     setElementContext('parsedConfig', parsedConfig);
 
+    // Build the CSS for the element.
     runWithOwner(args.owner, () => {
       createEffect(async () => {
         if (parsedConfig.styles) {
@@ -84,6 +85,18 @@ export async function initElement(
               title: `Non-fatal: Error in ${args.type}/${args.id}`,
               error: err,
             });
+          }
+        }
+      });
+    });
+
+    // Import the scripts for the element.
+    runWithOwner(args.owner, () => {
+      createEffect(() => {
+        if (parsedConfig.events) {
+          for (const event of parsedConfig.events) {
+            const split = event.fn_path.split('#');
+            import(split[0]!).then(module => module[split[1]!]!);
           }
         }
       });
