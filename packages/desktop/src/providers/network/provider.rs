@@ -20,7 +20,7 @@ use super::{
 pub struct NetworkProvider {
   pub config: Arc<NetworkProviderConfig>,
   abort_handle: Option<AbortHandle>,
-  state: Arc<Mutex<()>>,
+  _state: Arc<Mutex<()>>,
 }
 
 impl NetworkProvider {
@@ -28,7 +28,7 @@ impl NetworkProvider {
     NetworkProvider {
       config: Arc::new(config),
       abort_handle: None,
-      state: Arc::new(Mutex::new(())),
+      _state: Arc::new(Mutex::new(())),
     }
   }
 }
@@ -56,7 +56,7 @@ impl IntervalProvider for NetworkProvider {
 
   async fn get_refreshed_variables(
     _: &NetworkProviderConfig,
-    state: &(),
+    _state: &(),
   ) -> Result<ProviderVariables> {
     let default_interface = get_default_interface().unwrap();
 
@@ -99,7 +99,7 @@ impl IntervalProvider for NetworkProvider {
           .ipv6
           .clone(),
         ssid: default_gateway_ssid_and_strength.ssid.unwrap(),
-        signal_strength_percent: default_gateway_ssid_and_strength
+        signal_strength: default_gateway_ssid_and_strength
           .signal
           .unwrap(),
         is_connected: default_gateway_ssid_and_strength.connected,
