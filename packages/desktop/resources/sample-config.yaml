@@ -111,37 +111,37 @@ window/bar:
       # --------- Available variables ---------
       # network.defaultInterface -- the default network interface of the device
       # network.defaultInterface.name -- string
-      # network.defaultInterface.friendly_name -- string
+      # network.defaultInterface.friendlyName -- string
       # network.defaultInterface.description -- string
-      # network.defaultInterface.if_type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
+      # network.defaultInterface.type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
       # network.defaultInterface.ipv4[0] -- array of Ipv4Net objects: ipv4.addr, ipv4.netmask
       # network.defaultInterface.ipv6[0] -- array of Ipv6Net objects: ipv6.addr, ipv6.netmask
-      # network.defaultInterface.mac_addr -- MacAddr object
-      # network.defaultInterface.transmit_speed -- number
-      # network.defaultInterface.receive_speed -- number
-      # network.defaultInterface.dns_servers[0] -- array of IpAddr objects
-      # network.defaultInterface.default -- boolean, whether this is the default interface
+      # network.defaultInterface.macAddress -- MacAddr object
+      # network.defaultInterface.transmitSpeed -- number
+      # network.defaultInterface.receiveSpeed -- number
+      # network.defaultInterface.dnsServers[0] -- array of IpAddr objects
+      # network.defaultInterface.isDefault -- boolean, whether this is the default interface
       
       # network.defaultGateway -- the default gateway of the device
-      # network.defaultGateway.mac_addr -- MacAddr object
+      # network.defaultGateway.macAddress -- MacAddr object
       # network.defaultGateway.ipv4[0] -- array of Ipv4Addr objects
       # network.defaultGateway.ipv6[0] -- array of Ipv6Addr objects
       # network.defaultGateway.ssid -- Windows Only for now, string
-      # network.defaultGateway.signal_strength_percent -- Windows Only for now, number 0-100 representing % strength 
-      # network.defaultGateway.connected -- Windows Only for now, boolean
+      # network.defaultGateway.signalStrengthPercent -- Windows Only for now, number 0-100 representing % strength 
+      # network.defaultGateway.isConnected -- Windows Only for now, boolean
       
       # network.interfaces -- array of all network interfaces of the device
       # network.interfaces[0].name -- string
-      # network.interfaces[0].friendly_name -- string
+      # network.interfaces[0].friendlyName -- string
       # network.interfaces[0].description -- string
-      # network.interfaces[0].if_type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
+      # network.interfaces[0].type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
       # network.interfaces[0].ipv4[0] -- array of Ipv4Net objects: ipv4.addr, ipv4.netmask
       # network.interfaces[0].ipv6[0] -- array of Ipv6Net objects: ipv6.addr, ipv6.netmask
-      # network.interfaces[0].mac_addr -- MacAddr object
-      # network.interfaces[0].transmit_speed -- numebr
-      # network.interfaces[0].receive_speed -- number
-      # network.interfaces[0].dns_servers[0] -- array of IpAddr objects
-      # network.interfaces[0].default -- boolean, whether this is the default interface
+      # network.interfaces[0].macAddress -- MacAddr object
+      # network.interfaces[0].transmitSpeed -- numebr
+      # network.interfaces[0].receiveSpeed -- number
+      # network.interfaces[0].dnsServers[0] -- array of IpAddr objects
+      # network.interfaces[0].isDefault -- boolean, whether this is the default interface
 
       # --------- Signal strength explanation ---------
       # Signal strength is generally measured in dBm.
@@ -154,15 +154,15 @@ window/bar:
       template: |
         <!-- Ethernet is currently untested and may need to be adjusted. -->
         <!-- Show icon based on signal strength. -->
-        @if (network.defaultInterface.if_type === 'Ethernet') {
-          @if (network.defaultGateway.connected !== true) { <i class="nf-md-ethernet_off"></i> }
+        @if (network.defaultInterface.type === 'Ethernet') {
+          @if (network.defaultGateway.isConnected !== true) { <i class="nf-md-ethernet_off"></i> }
           @else { <i class="nf-md-ethernet_cable"></i> }
         }
         @else if (network.defaultGateway.connected !== true) { <i class="nf-md-wifi_strength_off_outline"></i> } 
-        @else if (network.defaultGateway.signal_strength_percent >= 80) { <i class="nf-md-wifi_strength_4"></i> }
-        @else if (network.defaultGateway.signal_strength_percent >= 65) { <i class="nf-md-wifi_strength_3"></i> } 
-        @else if (network.defaultGateway.signal_strength_percent >= 40) { <i class="nf-md-wifi_strength_2"></i> }
-        @else if (network.defaultGateway.signal_strength_percent >= 25) { <i class="nf-md-wifi_strength_1"></i> }
+        @else if (network.defaultGateway.signalStrengthPercent >= 80) { <i class="nf-md-wifi_strength_4"></i> }
+        @else if (network.defaultGateway.signalStrengthPercent >= 65) { <i class="nf-md-wifi_strength_3"></i> } 
+        @else if (network.defaultGateway.signalStrengthPercent >= 40) { <i class="nf-md-wifi_strength_2"></i> }
+        @else if (network.defaultGateway.signalStrengthPercent >= 25) { <i class="nf-md-wifi_strength_1"></i> }
         @else { <i class="nf-md-wifi_strength_outline"></i> }
 
     template/memory:

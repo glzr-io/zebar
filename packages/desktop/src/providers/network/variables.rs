@@ -13,11 +13,13 @@ pub struct NetworkVariables {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkInterface {
   pub name: String,
   pub friendly_name: Option<String>,
   pub description: Option<String>,
   #[serde(serialize_with = "interfacetype_ser")]
+  #[serde(rename = "type")]
   pub interface_type: NdInterfaceType,
   #[serde(serialize_with = "ipv4_ser")]
   pub ipv4: Vec<NdIpv4Net>,
@@ -32,6 +34,7 @@ pub struct NetworkInterface {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Gateway {
   #[serde(serialize_with = "macaddr_ser")]
   pub mac_address: NdMacAddr,
@@ -43,6 +46,7 @@ pub struct Gateway {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub enum InterfaceType {
   Unknown,
   Ethernet,
@@ -122,6 +126,7 @@ fn interfacetype_ser<S: Serializer>(
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Ipv4Net {
   pub address: Ipv4Addr,
   pub prefix_length: u8,
@@ -157,6 +162,7 @@ fn ipv4_ser<S: Serializer>(
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 struct Ipv6Net {
   pub address: Ipv6Addr,
   pub prefix_length: u8,
