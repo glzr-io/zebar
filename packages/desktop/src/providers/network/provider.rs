@@ -2,21 +2,25 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use sysinfo::Networks;
+use netdev::interface::{
+  get_default_interface, get_interfaces,
+};
 use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
   interval_provider::IntervalProvider,
-  network::{NetworkInterface, NetworkVariables},
+  network::parse_netsh::get_primary_interface_ssid_and_strength,
   variables::ProviderVariables,
 };
 
-use super::NetworkProviderConfig;
+use super::{
+  Gateway, NetworkInterface, NetworkProviderConfig, NetworkVariables,
+};
 
 pub struct NetworkProvider {
   pub config: Arc<NetworkProviderConfig>,
   abort_handle: Option<AbortHandle>,
-  networks: Arc<Mutex<Networks>>,
+  _state: Arc<Mutex<()>>,
 }
 
 impl NetworkProvider {
@@ -24,7 +28,7 @@ impl NetworkProvider {
     NetworkProvider {
       config: Arc::new(config),
       abort_handle: None,
-      networks: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
+      _state: Arc::new(Mutex::new(())),
     }
   }
 }
@@ -32,14 +36,14 @@ impl NetworkProvider {
 #[async_trait]
 impl IntervalProvider for NetworkProvider {
   type Config = NetworkProviderConfig;
-  type State = Mutex<Networks>;
+  type State = ();
 
   fn config(&self) -> Arc<NetworkProviderConfig> {
     self.config.clone()
   }
 
-  fn state(&self) -> Arc<Mutex<Networks>> {
-    self.networks.clone()
+  fn state(&self) -> Arc<()> {
+    Arc::new(())
   }
 
   fn abort_handle(&self) -> &Option<AbortHandle> {
@@ -52,24 +56,72 @@ impl IntervalProvider for NetworkProvider {
 
   async fn get_refreshed_variables(
     _: &NetworkProviderConfig,
-    sysinfo: &Mutex<Networks>,
+    _state: &(),
   ) -> Result<ProviderVariables> {
-    let mut networks = sysinfo.lock().await;
-    networks.refresh();
+    let default_interface = get_default_interface().unwrap();
 
-    let mut interfaces = vec![];
+    let interfaces = get_interfaces();
 
-    for (name, data) in networks.into_iter() {
-      interfaces.push(NetworkInterface {
-        name: name.into(),
-        mac_address: data.mac_address().to_string(),
-        transmitted: data.transmitted(),
-        total_transmitted: data.total_transmitted(),
-        received: data.received(),
-        total_received: data.total_received(),
-      });
-    }
+    let default_gateway_ssid_and_strength =
+      get_primary_interface_ssid_and_strength()?; // Returns ssid = None, signal = None, connected = false if not on Windows for now
 
-    Ok(ProviderVariables::Network(NetworkVariables { interfaces }))
+    let variables = NetworkVariables {
+      default_interface: NetworkInterface {
+        name: default_interface.name.clone(),
+        friendly_name: default_interface.friendly_name.clone(),
+        description: default_interface.description.clone(),
+        interface_type: default_interface.if_type,
+        ipv4: default_interface.ipv4.clone(),
+        ipv6: default_interface.ipv6.clone(),
+        mac_address: default_interface.mac_addr.unwrap(),
+        transmit_speed: default_interface.transmit_speed,
+        receive_speed: default_interface.receive_speed,
+        dns_servers: default_interface.dns_servers.clone(),
+        is_default: default_interface.default,
+      },
+      default_gateway: Gateway {
+        mac_address: default_interface
+          .gateway
+          .as_ref()
+          .unwrap()
+          .mac_addr
+          .clone(),
+        ipv4_addresses: default_interface
+          .gateway
+          .as_ref()
+          .unwrap()
+          .ipv4
+          .clone(),
+        ipv6_addresses: default_interface
+          .gateway
+          .as_ref()
+          .unwrap()
+          .ipv6
+          .clone(),
+        ssid: default_gateway_ssid_and_strength.ssid.unwrap(),
+        signal_strength: default_gateway_ssid_and_strength
+          .signal
+          .unwrap(),
+        is_connected: default_gateway_ssid_and_strength.connected,
+      },
+      interfaces: interfaces
+        .iter()
+        .map(|iface| NetworkInterface {
+          name: iface.name.clone(),
+          friendly_name: iface.friendly_name.clone(),
+          description: iface.description.clone(),
+          interface_type: iface.if_type.clone(),
+          ipv4: iface.ipv4.clone(),
+          ipv6: iface.ipv6.clone(),
+          mac_address: iface.mac_addr.unwrap().clone(),
+          transmit_speed: iface.transmit_speed,
+          receive_speed: iface.receive_speed,
+          dns_servers: iface.dns_servers.clone(),
+          is_default: iface.default,
+        })
+        .collect(),
+    };
+
+    Ok(ProviderVariables::Network(variables))
   }
 }
