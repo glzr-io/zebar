@@ -107,50 +107,6 @@ window/bar:
 
     template/network:
       providers: ['network']
-
-      # --------- Available variables ---------
-      # network.defaultInterface -- the default network interface of the device
-      # network.defaultInterface.name -- string
-      # network.defaultInterface.friendlyName -- string
-      # network.defaultInterface.description -- string
-      # network.defaultInterface.type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
-      # network.defaultInterface.ipv4[0] -- array of Ipv4Net objects: ipv4.address, ipv4.netmask
-      # network.defaultInterface.ipv6[0] -- array of Ipv6Net objects: ipv6.address, ipv6.netmask
-      # network.defaultInterface.macAddress -- MacAddr object
-      # network.defaultInterface.transmitSpeed -- number
-      # network.defaultInterface.receiveSpeed -- number
-      # network.defaultInterface.dnsServers[0] -- array of IpAddr objects
-      # network.defaultInterface.isDefault -- boolean, whether this is the default interface
-      
-      # network.defaultGateway -- the default gateway of the device
-      # network.defaultGateway.macAddress -- MacAddr object
-      # network.defaultGateway.ipv4[0] -- array of Ipv4Addr objects
-      # network.defaultGateway.ipv6[0] -- array of Ipv6Addr objects
-      # network.defaultGateway.ssid -- Windows Only for now, string
-      # network.defaultGateway.signalStrengthPercent -- Windows Only for now, number 0-100 representing % strength 
-      # network.defaultGateway.isConnected -- Windows Only for now, boolean
-      
-      # network.interfaces -- array of all network interfaces of the device
-      # network.interfaces[0].name -- string
-      # network.interfaces[0].friendlyName -- string
-      # network.interfaces[0].description -- string
-      # network.interfaces[0].type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
-      # network.interfaces[0].ipv4[0] -- array of Ipv4Net objects: ipv4.address, ipv4.netmask
-      # network.interfaces[0].ipv6[0] -- array of Ipv6Net objects: ipv6.address, ipv6.netmask
-      # network.interfaces[0].macAddress -- MacAddr object
-      # network.interfaces[0].transmitSpeed -- numebr
-      # network.interfaces[0].receiveSpeed -- number
-      # network.interfaces[0].dnsServers[0] -- array of IpAddr objects
-      # network.interfaces[0].isDefault -- boolean, whether this is the default interface
-
-      # --------- Signal strength explanation ---------
-      # Signal strength is generally measured in dBm.
-      # The new_network provider returns signal strength as a percentage, where
-      # 100% represents a signal strength of -50 dBm or better, and 0% represents
-      # a signal strength of -100 dBm or worse. The calculation method is dBm = percentage / 2 - 100.
-      # Signal strengths of ~-67dBm (~66%) or more are considered very good.
-      # Signal strengths of ~-80dBm (~40%) or less are considered not good.
-      # Signal strengths of ~-90dBm (~20%) or less considered unusable.
       template: |
         <!-- Ethernet is currently untested and may need to be adjusted. -->
         <!-- Show icon based on signal strength. -->
