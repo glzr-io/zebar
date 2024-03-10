@@ -41,7 +41,7 @@ pub struct Gateway {
   pub ipv4_addresses: Vec<Ipv4Addr>,
   pub ipv6_addresses: Vec<Ipv6Addr>,
   pub ssid: String,
-  pub signal_strength_percent: u32,
+  pub signal_strength: u32,
   pub is_connected: bool,
 }
 
