@@ -114,8 +114,8 @@ window/bar:
       # network.defaultInterface.friendlyName -- string
       # network.defaultInterface.description -- string
       # network.defaultInterface.type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
-      # network.defaultInterface.ipv4[0] -- array of Ipv4Net objects: ipv4.addr, ipv4.netmask
-      # network.defaultInterface.ipv6[0] -- array of Ipv6Net objects: ipv6.addr, ipv6.netmask
+      # network.defaultInterface.ipv4[0] -- array of Ipv4Net objects: ipv4.address, ipv4.netmask
+      # network.defaultInterface.ipv6[0] -- array of Ipv6Net objects: ipv6.address, ipv6.netmask
       # network.defaultInterface.macAddress -- MacAddr object
       # network.defaultInterface.transmitSpeed -- number
       # network.defaultInterface.receiveSpeed -- number
@@ -135,8 +135,8 @@ window/bar:
       # network.interfaces[0].friendlyName -- string
       # network.interfaces[0].description -- string
       # network.interfaces[0].type -- Interface Type, Options: Unknown, Ethernet, TokenRing, Fddi, BasicIsdn, PrimaryIsdn, Ppp, Loopback, Ethernet3Megabit, Slip, Atm, GenericModem, FastEthernetT, Isdn, FastEthernetFx, Wireless80211, AsymmetricDsl, RateAdaptDsl, SymmetricDsl, VeryHighSpeedDsl, IPOverAtm, GigabitEthernet, Tunnel, MultiRateSymmetricDsl, HighPerformanceSerialBus, Wman, Wwanpp, Wwanpp2, Bridge
-      # network.interfaces[0].ipv4[0] -- array of Ipv4Net objects: ipv4.addr, ipv4.netmask
-      # network.interfaces[0].ipv6[0] -- array of Ipv6Net objects: ipv6.addr, ipv6.netmask
+      # network.interfaces[0].ipv4[0] -- array of Ipv4Net objects: ipv4.address, ipv4.netmask
+      # network.interfaces[0].ipv6[0] -- array of Ipv6Net objects: ipv6.address, ipv6.netmask
       # network.interfaces[0].macAddress -- MacAddr object
       # network.interfaces[0].transmitSpeed -- numebr
       # network.interfaces[0].receiveSpeed -- number
