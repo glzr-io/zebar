@@ -23,8 +23,8 @@ use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider,
-  variables::ProviderVariables, weather::WeatherProvider,
+  network::NetworkProvider, variables::ProviderVariables,
+  weather::WeatherProvider,
 };
 
 pub struct ListenProviderArgs {
@@ -38,6 +38,7 @@ pub struct UnlistenProviderArgs {
 }
 
 /// Reference to a currently active provider.
+#[derive(Debug, Clone)]
 pub struct ProviderRef {
   config_hash: String,
   min_refresh_interval: Duration,
@@ -90,16 +91,18 @@ fn handle_provider_emit_output<R: Runtime>(
         warn!("Error emitting provider output: {:?}", err);
       }
 
-      let mut providers = active_providers.lock().await;
+      if let Ok(mut providers) = active_providers.try_lock() {
+        // Find provider that matches given config hash.
+        let found_provider = providers
+          .iter_mut()
+          .find(|provider| *provider.config_hash == output.config_hash);
 
-      // Find provider that matches given config hash.
-      let found_provider = providers
-        .iter_mut()
-        .find(|provider| *provider.config_hash == output.config_hash);
-
-      if let Some(found) = found_provider {
-        found.prev_refresh = Some(Instant::now());
-        found.prev_output = Some(output);
+        if let Some(found) = found_provider {
+          found.prev_refresh = Some(Instant::now());
+          found.prev_output = Some(output);
+        }
+      } else {
+        warn!("Failed to update provider output cache.");
       }
     }
   });
@@ -119,12 +122,15 @@ fn handle_provider_listen_input(
 
   task::spawn(async move {
     while let Some(input) = listen_input_rx.recv().await {
-      let mut providers = active_providers.lock().await;
-
       // Find provider that matches given config hash.
-      let found_provider = providers
-        .iter()
-        .find(|&provider| *provider.config_hash == input.config_hash);
+      let found_provider = {
+        active_providers
+          .lock()
+          .await
+          .iter()
+          .find(|&provider| *provider.config_hash == input.config_hash)
+          .cloned()
+      };
 
       // If a provider with the given config already exists, refresh it and
       // return early.
@@ -146,7 +152,6 @@ fn handle_provider_listen_input(
       let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
       let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
       let emit_output_tx = emit_output_tx.clone();
-      let config_hash = input.config_hash.clone();
 
       // Attempt to create a new provider.
       let new_provider = create_provider(input.config, sysinfo.clone());
@@ -154,7 +159,7 @@ fn handle_provider_listen_input(
       if let Err(err) = new_provider {
         _ = emit_output_tx
           .send(ProviderOutput {
-            config_hash: input.config_hash.clone(),
+            config_hash: input.config_hash,
             variables: VariablesResult::Error(err.to_string()),
           })
           .await;
@@ -163,8 +168,9 @@ fn handle_provider_listen_input(
       } else if let Ok(mut new_provider) = new_provider {
         let min_refresh_interval = new_provider.min_refresh_interval();
 
+        let mut providers = active_providers.lock().await;
         providers.push(ProviderRef {
-          config_hash,
+          config_hash: input.config_hash.clone(),
           min_refresh_interval,
           prev_refresh: None,
           prev_output: None,
@@ -174,12 +180,7 @@ fn handle_provider_listen_input(
 
         task::spawn(async move {
           new_provider
-            .start(
-              input.config_hash.clone(),
-              emit_output_tx,
-              refresh_rx,
-              stop_rx,
-            )
+            .start(input.config_hash, emit_output_tx, refresh_rx, stop_rx)
             .await
         });
       }
