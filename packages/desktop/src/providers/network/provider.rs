@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use tokio::{sync::Mutex, task::AbortHandle};
 
@@ -108,16 +108,19 @@ impl IntervalProvider for NetworkProvider {
   ) -> Result<ProviderVariables> {
     let interfaces = netdev::get_interfaces();
 
-    let default_interface =
-      netdev::get_default_interface().map_err(|e| anyhow!(e))?;
+    let default_interface = netdev::get_default_interface().ok();
 
     let variables = NetworkVariables {
-      default_interface: Self::transform_interface(&default_interface),
-      default_gateway: default_interface.gateway.and_then(|gateway| {
-        default_gateway_wifi()
-          .map(|wifi| Self::transform_gateway(&gateway, wifi))
-          .ok()
-      }),
+      default_interface: default_interface
+        .as_ref()
+        .map(Self::transform_interface),
+      default_gateway: default_interface
+        .and_then(|interface| interface.gateway)
+        .and_then(|gateway| {
+          default_gateway_wifi()
+            .map(|wifi| Self::transform_gateway(&gateway, wifi))
+            .ok()
+        }),
       interfaces: interfaces
         .iter()
         .map(Self::transform_interface)

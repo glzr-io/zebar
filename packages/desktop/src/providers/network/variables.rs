@@ -4,7 +4,7 @@ use serde::Serialize;
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkVariables {
-  pub default_interface: NetworkInterface,
+  pub default_interface: Option<NetworkInterface>,
   pub default_gateway: Option<NetworkGateway>,
   pub interfaces: Vec<NetworkInterface>,
 }
