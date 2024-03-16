@@ -43,30 +43,17 @@ pub enum InterfaceType {
   Ethernet,
   TokenRing,
   Fddi,
-  BasicIsdn,
-  PrimaryIsdn,
   Ppp,
   Loopback,
-  Ethernet3Megabit,
   Slip,
   Atm,
   GenericModem,
-  FastEthernetT,
   Isdn,
-  FastEthernetFx,
-  Wireless80211,
-  AsymmetricDsl,
-  RateAdaptDsl,
-  SymmetricDsl,
-  VeryHighSpeedDsl,
-  IPOverAtm,
-  GigabitEthernet,
+  Wifi,
+  Dsl,
   Tunnel,
-  MultiRateSymmetricDsl,
   HighPerformanceSerialBus,
-  Wman,
-  Wwanpp,
-  Wwanpp2,
+  MobileBroadband,
   Bridge,
 }
 
@@ -74,37 +61,36 @@ impl From<NdInterfaceType> for InterfaceType {
   fn from(layout: NdInterfaceType) -> Self {
     match layout {
       NdInterfaceType::Unknown => InterfaceType::Unknown,
-      NdInterfaceType::Ethernet => InterfaceType::Ethernet,
+      NdInterfaceType::Ethernet
+      | NdInterfaceType::Ethernet3Megabit
+      | NdInterfaceType::FastEthernetFx
+      | NdInterfaceType::FastEthernetT
+      | NdInterfaceType::GigabitEthernet => InterfaceType::Ethernet,
       NdInterfaceType::TokenRing => InterfaceType::TokenRing,
       NdInterfaceType::Fddi => InterfaceType::Fddi,
-      NdInterfaceType::BasicIsdn => InterfaceType::BasicIsdn,
-      NdInterfaceType::PrimaryIsdn => InterfaceType::PrimaryIsdn,
       NdInterfaceType::Ppp => InterfaceType::Ppp,
       NdInterfaceType::Loopback => InterfaceType::Loopback,
-      NdInterfaceType::Ethernet3Megabit => InterfaceType::Ethernet3Megabit,
       NdInterfaceType::Slip => InterfaceType::Slip,
-      NdInterfaceType::Atm => InterfaceType::Atm,
-      NdInterfaceType::GenericModem => InterfaceType::GenericModem,
-      NdInterfaceType::FastEthernetT => InterfaceType::FastEthernetT,
-      NdInterfaceType::Isdn => InterfaceType::Isdn,
-      NdInterfaceType::FastEthernetFx => InterfaceType::FastEthernetFx,
-      NdInterfaceType::Wireless80211 => InterfaceType::Wireless80211,
-      NdInterfaceType::AsymmetricDsl => InterfaceType::AsymmetricDsl,
-      NdInterfaceType::RateAdaptDsl => InterfaceType::RateAdaptDsl,
-      NdInterfaceType::SymmetricDsl => InterfaceType::SymmetricDsl,
-      NdInterfaceType::VeryHighSpeedDsl => InterfaceType::VeryHighSpeedDsl,
-      NdInterfaceType::IPOverAtm => InterfaceType::IPOverAtm,
-      NdInterfaceType::GigabitEthernet => InterfaceType::GigabitEthernet,
-      NdInterfaceType::Tunnel => InterfaceType::Tunnel,
-      NdInterfaceType::MultiRateSymmetricDsl => {
-        InterfaceType::MultiRateSymmetricDsl
+      NdInterfaceType::Atm | NdInterfaceType::IPOverAtm => {
+        InterfaceType::Atm
       }
+      NdInterfaceType::GenericModem => InterfaceType::GenericModem,
+      NdInterfaceType::Isdn
+      | NdInterfaceType::BasicIsdn
+      | NdInterfaceType::PrimaryIsdn => InterfaceType::Isdn,
+      NdInterfaceType::Wireless80211 => InterfaceType::Wifi,
+      NdInterfaceType::AsymmetricDsl
+      | NdInterfaceType::RateAdaptDsl
+      | NdInterfaceType::SymmetricDsl
+      | NdInterfaceType::VeryHighSpeedDsl
+      | NdInterfaceType::MultiRateSymmetricDsl => InterfaceType::Dsl,
+      NdInterfaceType::Tunnel => InterfaceType::Tunnel,
       NdInterfaceType::HighPerformanceSerialBus => {
         InterfaceType::HighPerformanceSerialBus
       }
-      NdInterfaceType::Wman => InterfaceType::Wman,
-      NdInterfaceType::Wwanpp => InterfaceType::Wwanpp,
-      NdInterfaceType::Wwanpp2 => InterfaceType::Wwanpp2,
+      NdInterfaceType::Wman
+      | NdInterfaceType::Wwanpp
+      | NdInterfaceType::Wwanpp2 => InterfaceType::MobileBroadband,
       NdInterfaceType::Bridge => InterfaceType::Bridge,
     }
   }
