@@ -3,98 +3,32 @@ import {
   availableMonitors as getAvailableMonitors,
   currentMonitor as getCurrentMonitor,
   primaryMonitor as getPrimaryMonitor,
+  getCurrent as getCurrentWindow,
 } from '@tauri-apps/api/window';
 import { createStore } from 'solid-js/store';
-import { type Owner, createEffect, runWithOwner } from 'solid-js';
 
 import type { MonitorInfo } from './shared';
 
-let fetchMonitorsPromise: ReturnType<typeof fetchMonitors> | null = null;
+let createCachePromise: Promise<MonitorCache> | null = null;
 
-/**
- * Store of available monitors. Lazily initialize as values are fetched.
- */
-const [monitorCache, setMonitorCache] = createStore({
-  current: {
-    value: null as MonitorInfo | null,
-    isFetching: false,
-    isInitialized: false,
-  },
-  primary: {
-    value: null as MonitorInfo | null,
-    isFetching: false,
-    isInitialized: false,
-  },
-  secondary: {
-    value: [] as MonitorInfo[],
-    isFetching: false,
-    isInitialized: false,
-  },
-  all: {
-    value: [] as MonitorInfo[],
-    isFetching: false,
-    isInitialized: false,
-  },
+interface MonitorCache {
+  currentMonitor: MonitorInfo | null;
+  primaryMonitor: MonitorInfo | null;
+  secondaryMonitors: MonitorInfo[];
+  allMonitors: MonitorInfo[];
+}
+
+const [monitorCache, setMonitorCache] = createStore<{
+  value: MonitorCache | null;
+}>({
+  value: null,
 });
 
 export async function getMonitors() {
-  return fetchMonitorsPromise ?? (fetchMonitorsPromise = fetchMonitors());
+  return createCachePromise ?? (createCachePromise = createMonitorCache());
 }
 
-// export async function _getAllMonitors(owner: Owner) {
-//   return createSharedCache('all-monitors', async () => {
-//     getAvailableMonitors(),
-//   });
-// }
-
-// export async function __getPrimaryMonitor(owner: Owner) {
-//   return createSharedCache('primary-monitor', async () => {
-//     getPrimaryMonitor(),
-//   });
-// }
-
-// export async function __getCurrentMonitor(owner: Owner) {
-//   const monitorMap = await createSharedCache('monitor-map', async () =>
-//     getPrimaryMonitor(),
-//   );
-// }
-
-// export async function getMonitorCache(owner: Owner) {
-//   const monitorCache = await createSharedCache('monitors', async () =>
-//     getMonitorCache(),
-//   );
-// }
-
-export async function _getPrimaryMonitor(owner: Owner) {
-  if (monitorCache.primary.isInitialized) {
-    return monitorCache.primary.value;
-  }
-
-  if (monitorCache.primary.isFetching) {
-    runWithOwner(owner, () => {
-      createEffect(() => {
-        if (!monitorCache.primary.isFetching) {
-          return Promise.resolve(monitorCache.primary.value);
-        }
-      });
-    });
-  }
-
-  setMonitorCache('primary', 'isFetching', true);
-
-  const primaryMonitor = await getPrimaryMonitor();
-  const value = primaryMonitor ? toMonitorInfo(primaryMonitor) : null;
-
-  setMonitorCache('primary', {
-    value,
-    isFetching: false,
-    isInitialized: true,
-  });
-
-  return value;
-}
-
-async function fetchMonitors() {
+async function createMonitorCache() {
   const [currentMonitor, primaryMonitor, allMonitors] = await Promise.all([
     getCurrentMonitor(),
     getPrimaryMonitor(),
@@ -109,12 +43,37 @@ async function fetchMonitors() {
   // return value, and refresh it in an effect when displays are changed.
   // Ref https://github.com/tauri-apps/tauri/issues/8405
 
-  return {
-    currentMonitor: currentMonitor ? toMonitorInfo(currentMonitor) : null,
-    primaryMonitor: primaryMonitor ? toMonitorInfo(primaryMonitor) : null,
-    secondaryMonitors: secondaryMonitors.map(toMonitorInfo),
-    allMonitors: allMonitors.map(toMonitorInfo),
-  };
+  setMonitorCache({
+    value: {
+      currentMonitor: currentMonitor
+        ? toMonitorInfo(currentMonitor)
+        : null,
+      primaryMonitor: primaryMonitor
+        ? toMonitorInfo(primaryMonitor)
+        : null,
+      secondaryMonitors: secondaryMonitors.map(toMonitorInfo),
+      allMonitors: allMonitors.map(toMonitorInfo),
+    },
+  });
+
+  getCurrentWindow().onResized(() => updateCurrentMonitor());
+  getCurrentWindow().onMoved(() => updateCurrentMonitor());
+
+  // Update the current monitor when the window is moved or resized.
+  async function updateCurrentMonitor() {
+    const currentMonitor = await getCurrentMonitor();
+
+    setMonitorCache({
+      value: {
+        ...monitorCache.value!,
+        currentMonitor: currentMonitor
+          ? toMonitorInfo(currentMonitor)
+          : null,
+      },
+    });
+  }
+
+  return monitorCache.value!;
 }
 
 function isMatch(monitorA: Monitor, monitorB: Monitor) {
