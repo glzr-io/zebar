@@ -1,4 +1,4 @@
-import { createEffect, type Owner } from 'solid-js';
+import { createEffect, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import type { KomorebiProviderConfig } from '~/user-config';
@@ -121,7 +121,9 @@ export async function createKomorebiProvider(
     await getVariables(),
   );
 
-  createEffect(async () => setKomorebiVariables(await getVariables()));
+  runWithOwner(owner, () => {
+    createEffect(async () => setKomorebiVariables(await getVariables()));
+  });
 
   async function getVariables() {
     const state = providerListener();

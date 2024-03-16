@@ -1,4 +1,4 @@
-import { createEffect, on, type Owner } from 'solid-js';
+import { createEffect, on, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { GwmClient, GwmEventType, type Workspace } from 'glazewm';
 
@@ -8,7 +8,7 @@ import { getCoordinateDistance } from '~/utils';
 
 export async function createGlazewmProvider(
   _: GlazewmProviderConfig,
-  __: Owner,
+  owner: Owner,
 ) {
   const monitors = await getMonitors();
   const client = new GwmClient();
@@ -36,7 +36,9 @@ export async function createGlazewmProvider(
     refetch,
   );
 
-  createEffect(on(() => monitors.currentMonitor, refetch));
+  runWithOwner(owner, () => {
+    createEffect(on(() => monitors.currentMonitor, refetch));
+  });
 
   async function refetch() {
     const currentPosition = {
