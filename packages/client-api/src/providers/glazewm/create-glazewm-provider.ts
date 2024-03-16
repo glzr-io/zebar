@@ -1,4 +1,4 @@
-import type { Owner } from 'solid-js';
+import { createEffect, on, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { GwmClient, GwmEventType, type Workspace } from 'glazewm';
 
@@ -10,7 +10,7 @@ export async function createGlazewmProvider(
   _: GlazewmProviderConfig,
   __: Owner,
 ) {
-  const { currentMonitor } = await getMonitors();
+  const monitors = await getMonitors();
   const client = new GwmClient();
 
   const [glazewmVariables, setGlazewmVariables] = createStore({
@@ -29,26 +29,34 @@ export async function createGlazewmProvider(
 
   await client.subscribeMany(
     [
-      GwmEventType.WORKSPACE_ACTIVATED, 
+      GwmEventType.WORKSPACE_ACTIVATED,
       GwmEventType.WORKSPACE_DEACTIVATED,
-      GwmEventType.FOCUS_CHANGED
+      GwmEventType.FOCUS_CHANGED,
     ],
     refetch,
   );
 
+  createEffect(on(() => monitors.currentMonitor, refetch));
+
   async function refetch() {
-    const monitors = await client.getMonitors();
-    const currentPosition = { x: currentMonitor!.x, y: currentMonitor!.y };
+    const currentPosition = {
+      x: monitors.currentMonitor!.x,
+      y: monitors.currentMonitor!.y,
+    };
 
     // Get GlazeWM monitor that corresponds to the bar's monitor.
-    const monitor = monitors.reduce((a, b) =>
+    const glazewmMonitor = (await client.getMonitors()).reduce((a, b) =>
       getCoordinateDistance(currentPosition, a) <
       getCoordinateDistance(currentPosition, b)
         ? a
         : b,
     );
 
-    setGlazewmVariables({ workspacesOnMonitor: monitor.children.sort((a, b) => Number(a.name) - Number(b.name)) });
+    setGlazewmVariables({
+      workspacesOnMonitor: glazewmMonitor.children.sort(
+        (a, b) => Number(a.name) - Number(b.name),
+      ),
+    });
   }
 
   return {

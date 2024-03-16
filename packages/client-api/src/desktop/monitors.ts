@@ -18,12 +18,6 @@ interface MonitorCache {
   allMonitors: MonitorInfo[];
 }
 
-const [monitorCache, setMonitorCache] = createStore<{
-  value: MonitorCache | null;
-}>({
-  value: null,
-});
-
 export async function getMonitors() {
   return createCachePromise ?? (createCachePromise = createMonitorCache());
 }
@@ -43,17 +37,11 @@ async function createMonitorCache() {
   // return value, and refresh it in an effect when displays are changed.
   // Ref https://github.com/tauri-apps/tauri/issues/8405
 
-  setMonitorCache({
-    value: {
-      currentMonitor: currentMonitor
-        ? toMonitorInfo(currentMonitor)
-        : null,
-      primaryMonitor: primaryMonitor
-        ? toMonitorInfo(primaryMonitor)
-        : null,
-      secondaryMonitors: secondaryMonitors.map(toMonitorInfo),
-      allMonitors: allMonitors.map(toMonitorInfo),
-    },
+  const [monitorCache, setMonitorCache] = createStore<MonitorCache>({
+    currentMonitor: currentMonitor ? toMonitorInfo(currentMonitor) : null,
+    primaryMonitor: primaryMonitor ? toMonitorInfo(primaryMonitor) : null,
+    secondaryMonitors: secondaryMonitors.map(toMonitorInfo),
+    allMonitors: allMonitors.map(toMonitorInfo),
   });
 
   getCurrentWindow().onResized(() => updateCurrentMonitor());
@@ -64,16 +52,13 @@ async function createMonitorCache() {
     const currentMonitor = await getCurrentMonitor();
 
     setMonitorCache({
-      value: {
-        ...monitorCache.value!,
-        currentMonitor: currentMonitor
-          ? toMonitorInfo(currentMonitor)
-          : null,
-      },
+      currentMonitor: currentMonitor
+        ? toMonitorInfo(currentMonitor)
+        : null,
     });
   }
 
-  return monitorCache.value!;
+  return monitorCache;
 }
 
 function isMatch(monitorA: Monitor, monitorB: Monitor) {
