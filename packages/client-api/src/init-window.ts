@@ -37,24 +37,28 @@ export function initWindow(callback: (context: WindowContext) => void) {
  *  * Building CSS and appending it to `<head>`
  */
 export async function initWindowAsync(): Promise<WindowContext> {
+  // Window ID is moved out of the try-catch to improve error messages.
+  let windowId: string | null = null;
+
   try {
     // TODO: Create new root if owner is null.
     const owner = getOwner()!;
     const config = await getUserConfig();
-    const styleBuilder = getStyleBuilder(owner);
+    const styleBuilder = getStyleBuilder();
 
     const openArgs =
       window.__ZEBAR_OPEN_ARGS ??
       (await getOpenWindowArgs(getCurrentWindow().label));
 
+    windowId = openArgs.windowId;
     const windowConfig = (config as UserConfig)[
-      `window/${openArgs.windowId}` as const
+      `window/${windowId}` as const
     ];
 
     if (!windowConfig) {
       throw new Error(
-        `Window \`${openArgs.windowId}\` isn\'t defined in the config. ` +
-          `Is there a property for \`window/${openArgs.windowId}\`?`,
+        `Window \`${windowId}\` isn\'t defined in the config. ` +
+          `Is there a property for \`window/${windowId}\`?`,
       );
     }
 
@@ -64,7 +68,7 @@ export async function initWindowAsync(): Promise<WindowContext> {
     );
 
     const windowContext = (await initElement({
-      id: openArgs.windowId,
+      id: windowId,
       type: ElementType.WINDOW,
       rawConfig: windowConfig,
       globalConfig,
@@ -76,11 +80,18 @@ export async function initWindowAsync(): Promise<WindowContext> {
 
     // Set global SCSS/CSS styles.
     runWithOwner(owner, () => {
-      createEffect(() => {
+      createEffect(async () => {
         if (windowContext.parsedConfig.global_styles) {
-          styleBuilder.setGlobalStyles(
-            windowContext.parsedConfig.global_styles,
-          );
+          try {
+            styleBuilder.setGlobalStyles(
+              windowContext.parsedConfig.global_styles,
+            );
+          } catch (err) {
+            await messageDialog((err as Error).message, {
+              title: `Non-fatal: Error in window/${windowId}`,
+              kind: 'error',
+            });
+          }
         }
       });
     });
@@ -113,7 +124,9 @@ export async function initWindowAsync(): Promise<WindowContext> {
     logger.error('Failed to initialize window:', err);
 
     await messageDialog((err as Error)?.message ?? 'Unknown reason.', {
-      title: 'Failed to initialize window!',
+      title: windowId
+        ? `Fatal: Error in window/${windowId}`
+        : 'Fatal: Error in unknown window',
       kind: 'error',
     });
 

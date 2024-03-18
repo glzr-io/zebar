@@ -1,37 +1,35 @@
 import { compileString } from 'sass';
-import {
-  type Owner,
-  createEffect,
-  createSignal,
-  runWithOwner,
-} from 'solid-js';
-import { createStore } from 'solid-js/store';
 
 import { createLogger, toCssSelector } from '~/utils';
 
 const logger = createLogger('style-builder');
 
-const [globalStyles, setGlobalStyles] = createSignal<string | null>(null);
-const [elementStyles, setElementStyles] = createStore<
-  Record<string, string>
->({});
+let globalStyles: string | null = null;
+let elementStyles: Record<string, string> = {};
+let styleElement: HTMLStyleElement | null = null;
 
 /**
  * Abstraction over building CSS from user-defined styles.
  */
-export function getStyleBuilder(owner: Owner) {
-  const hasInitialized = document.querySelector('style[data-zebar]');
+export function getStyleBuilder() {
+  function setGlobalStyles(styles: string) {
+    globalStyles = styles;
+    buildStyles();
+  }
 
-  // Listen to changes to changes in global + element styles, and dynamically
-  // append built <style> tag to document head.
-  if (!hasInitialized) {
-    const styleElement = document.createElement('style');
-    styleElement.setAttribute('data-zebar', '');
-    document.head.appendChild(styleElement);
+  function setElementStyles(id: string, styles: string) {
+    elementStyles[id] = styles;
+    buildStyles();
+  }
 
-    runWithOwner(owner, () => {
-      createEffect(() => (styleElement.innerHTML = getCompiledCss()));
-    });
+  function buildStyles() {
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.setAttribute('data-zebar', '');
+      document.head.appendChild(styleElement);
+    }
+
+    styleElement.innerHTML = getCompiledCss();
   }
 
   return {
@@ -44,20 +42,25 @@ export function getStyleBuilder(owner: Owner) {
  * Compile user-defined SCSS to CSS to be added to the DOM.
  */
 function getCompiledCss(): string {
-  const styles: string[] = [];
+  try {
+    const styles: string[] = [];
 
-  if (globalStyles()) {
-    styles.push(globalStyles()!);
+    if (globalStyles) {
+      styles.push(globalStyles);
+    }
+
+    for (const [id, elStyles] of Object.entries(elementStyles)) {
+      styles.push(scopeWith(`#${toCssSelector(id)}`, elStyles));
+    }
+
+    const { css } = compileString(styles.join('\n'));
+    logger.debug('Compiled SCSS into CSS:', css);
+
+    return css;
+  } catch (err) {
+    // Re-throw error with formatted message.
+    throw new Error(`Failed to build CSS: ${(err as Error).message}`);
   }
-
-  for (const [id, elStyles] of Object.entries(elementStyles)) {
-    styles.push(scopeWith(`#${toCssSelector(id)}`, elStyles));
-  }
-
-  const { css } = compileString(styles.join(''));
-  logger.debug('Compiled SCSS into CSS:', css);
-
-  return css;
 }
 
 /**

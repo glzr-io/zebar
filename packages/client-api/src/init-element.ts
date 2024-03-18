@@ -35,7 +35,7 @@ export async function initElement(
   args: InitElementArgs,
 ): Promise<ElementContext> {
   try {
-    const styleBuilder = getStyleBuilder(args.owner);
+    const styleBuilder = getStyleBuilder();
     const childConfigs = getChildConfigs(args.rawConfig);
 
     // Create partial element context; `providers` and `parsedConfig` are set later.
@@ -72,12 +72,19 @@ export async function initElement(
     setElementContext('parsedConfig', parsedConfig);
 
     runWithOwner(args.owner, () => {
-      createEffect(() => {
+      createEffect(async () => {
         if (parsedConfig.styles) {
-          styleBuilder.setElementStyles(
-            parsedConfig.id,
-            parsedConfig.styles,
-          );
+          try {
+            styleBuilder.setElementStyles(
+              parsedConfig.id,
+              parsedConfig.styles,
+            );
+          } catch (err) {
+            await messageDialog((err as Error).message, {
+              title: `Non-fatal: Error in ${args.type}/${args.id}`,
+              kind: 'error',
+            });
+          }
         }
       });
     });
@@ -111,8 +118,8 @@ export async function initElement(
       logger.error('Failed to initialize element:', err);
 
       await messageDialog((err as Error)?.message ?? 'Unknown reason.', {
-        title: 'Failed to initialize element!',
-        type: 'error',
+        title: `Non-fatal: Error in ${args.type}/${args.id}`,
+        kind: 'error',
       });
     }
 
