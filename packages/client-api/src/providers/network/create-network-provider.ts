@@ -4,9 +4,50 @@ import type { NetworkProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 
 export interface NetworkVariables {
-  defaultInterface: NetworkInterface;
-  defaultGateway: Gateway;
+  defaultInterface: NetworkInterface | null;
+  defaultGateway: NetworkGateway | null;
   interfaces: NetworkInterface[];
+}
+
+export interface NetworkInterface {
+  name: string;
+  friendlyName: string | null;
+  description: string | null;
+  type: InterfaceType;
+  ipv4Addresses: string[];
+  ipv6Addresses: string[];
+  macAddress: string | null;
+  transmitSeed: number | null;
+  receiveSpeed: number | null;
+  dnsServers: string[];
+  isDefault: boolean;
+}
+
+export interface NetworkGateway {
+  macAddress: string;
+  ipv4Addresses: string[];
+  ipv6Addresses: string[];
+  ssid: string | null;
+  signalStrength: number | null;
+}
+
+export enum InterfaceType {
+  UNKNOWN = 'unknown',
+  ETHERNET = 'ethernet',
+  TOKEN_RING = 'token_ring',
+  FDDI = 'fddi',
+  PPP = 'ppp',
+  LOOPBACK = 'loopback',
+  SLIP = 'slip',
+  ATM = 'atm',
+  GENERIC_MODEM = 'generic_modem',
+  ISDN = 'isdn',
+  WIFI = 'wifi',
+  DSL = 'dsl',
+  TUNNEL = 'tunnel',
+  HIGH_PERFORMANCE_SERIAL_BUS = 'high_performance_serial_bus',
+  MOBILE_BROADBAND = 'mobile_broadband',
+  BRIDGE = 'bridge',
 }
 
 export async function createNetworkProvider(
@@ -29,83 +70,4 @@ export async function createNetworkProvider(
       return networkVariables().interfaces;
     },
   };
-}
-
-export interface NetworkInterface {
-  name: string;
-  friendlName: string;
-  description: string;
-  interfaceType: InterfaceType;
-  ipv4: Ipv4Net;
-  ipv6: Ipv6Net;
-  macAddress: MacAddress;
-  transmitSeed: number;
-  receiveSpeed: number;
-  dnsServers: (Ipv4Addr | Ipv6Addr)[];
-  default: boolean;
-}
-
-export interface Gateway {
-  macAddress: MacAddress;
-  ipv4: Ipv4Addr[];
-  ipv6: Ipv6Addr[];
-  ssid: string;
-  signal_strength: number;
-  connected: boolean;
-}
-
-enum InterfaceType {
-  Unknown,
-  Ethernet,
-  TokenRing,
-  Fddi,
-  BasicIsdn,
-  PrimaryIsdn,
-  Ppp,
-  Loopback,
-  Ethernet3Megabit,
-  Slip,
-  Atm,
-  GenericModem,
-  FastEthernetT,
-  Isdn,
-  FastEthernetFx,
-  Wireless80211,
-  AsymmetricDsl,
-  RateAdaptDsl,
-  SymmetricDsl,
-  VeryHighSpeedDsl,
-  IPOverAtm,
-  GigabitEthernet,
-  Tunnel,
-  MultiRateSymmetricDsl,
-  HighPerformanceSerialBus,
-  Wman,
-  Wwanpp,
-  Wwanpp2,
-  Bridge,
-}
-
-interface Ipv4Net {
-  addr: Ipv4Addr;
-  netmask: Ipv4Addr;
-  prefixLength: number;
-}
-
-interface Ipv6Net {
-  addr: Ipv6Addr;
-  netmask: Ipv6Addr;
-  prefixLength: number;
-}
-
-interface Ipv6Addr {
-  octects: number[];
-}
-
-interface Ipv4Addr {
-  octects: number[];
-}
-
-interface MacAddress {
-  octects: number[];
 }

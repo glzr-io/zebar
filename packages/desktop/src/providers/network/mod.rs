@@ -1,7 +1,7 @@
 mod config;
 mod provider;
 mod variables;
-mod parse_netsh;
+mod wifi_hotspot;
 
 pub use config::*;
 pub use provider::*;
