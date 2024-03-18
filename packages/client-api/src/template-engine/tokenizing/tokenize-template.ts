@@ -126,14 +126,9 @@ export function tokenizeTemplate(template: string): Token[] {
       // Search until a close block, the start of a statement, or the start
       // of an interpolation tag. In a JavaScript regex, the . character
       // does not match new line characters, so we instead use [\S\s].
-      const latestMatch = scanner.latestMatch!;
-
-      // Push text token with indentation removed.
       pushToken({
         type: TokenType.TEXT,
-        ...latestMatch,
-        // TODO: This doesn't seem like a good way to handle new-lines.
-        substring: latestMatch.substring.replace(/\n\s*/g, ''),
+        ...scanner.latestMatch!,
       });
     } else {
       throw new TemplateError('No valid tokens found.', scanner.cursor);
