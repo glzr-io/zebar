@@ -5,7 +5,6 @@ import {
   runWithOwner,
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { message as messageDialog } from '@tauri-apps/plugin-dialog';
 
 import {
   getStyleBuilder,
@@ -17,6 +16,7 @@ import { getElementProviders } from './providers';
 import type { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
 import { createLogger, type PickPartial } from './utils';
+import { showErrorDialog } from './desktop';
 
 const logger = createLogger('init-element');
 
@@ -80,9 +80,9 @@ export async function initElement(
               parsedConfig.styles,
             );
           } catch (err) {
-            await messageDialog((err as Error).message, {
+            await showErrorDialog({
               title: `Non-fatal: Error in ${args.type}/${args.id}`,
-              kind: 'error',
+              error: err,
             });
           }
         }
@@ -117,9 +117,9 @@ export async function initElement(
     if (args.type !== ElementType.WINDOW) {
       logger.error('Failed to initialize element:', err);
 
-      await messageDialog((err as Error)?.message ?? 'Unknown reason.', {
+      await showErrorDialog({
         title: `Non-fatal: Error in ${args.type}/${args.id}`,
-        kind: 'error',
+        error: err,
       });
     }
 

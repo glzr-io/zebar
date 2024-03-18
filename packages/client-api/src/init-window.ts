@@ -1,6 +1,5 @@
-import { createEffect, getOwner, runWithOwner } from 'solid-js';
 import { getCurrent as getCurrentWindow } from '@tauri-apps/api/window';
-import { message as messageDialog } from '@tauri-apps/plugin-dialog';
+import { createEffect, getOwner, runWithOwner } from 'solid-js';
 
 import {
   GlobalConfigSchema,
@@ -13,6 +12,7 @@ import {
   getOpenWindowArgs,
   setWindowPosition,
   setWindowStyles,
+  showErrorDialog,
   type WindowPosition,
   type WindowStyles,
 } from './desktop';
@@ -87,9 +87,9 @@ export async function initWindowAsync(): Promise<WindowContext> {
               windowContext.parsedConfig.global_styles,
             );
           } catch (err) {
-            await messageDialog((err as Error).message, {
+            await showErrorDialog({
               title: `Non-fatal: Error in window/${windowId}`,
-              kind: 'error',
+              error: err,
             });
           }
         }
@@ -123,11 +123,11 @@ export async function initWindowAsync(): Promise<WindowContext> {
   } catch (err) {
     logger.error('Failed to initialize window:', err);
 
-    await messageDialog((err as Error)?.message ?? 'Unknown reason.', {
+    await showErrorDialog({
       title: windowId
         ? `Fatal: Error in window/${windowId}`
         : 'Fatal: Error in unknown window',
-      kind: 'error',
+      error: err,
     });
 
     // Error during window initialization is unrecoverable, so we close
