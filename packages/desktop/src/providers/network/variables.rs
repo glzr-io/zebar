@@ -37,7 +37,7 @@ pub struct NetworkGateway {
 }
 
 #[derive(Serialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 pub enum InterfaceType {
   Unknown,
   Ethernet,
