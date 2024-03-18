@@ -1,4 +1,4 @@
-import { createEffect, type Owner } from 'solid-js';
+import { createEffect, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import type { KomorebiProviderConfig } from '~/user-config';
@@ -110,7 +110,7 @@ export async function createKomorebiProvider(
   config: KomorebiProviderConfig,
   owner: Owner,
 ): Promise<KomorebiProvider> {
-  const { currentMonitor } = await getMonitors();
+  const monitors = await getMonitors();
 
   const providerListener = await createProviderListener<
     KomorebiProviderConfig,
@@ -121,11 +121,17 @@ export async function createKomorebiProvider(
     await getVariables(),
   );
 
-  createEffect(async () => setKomorebiVariables(await getVariables()));
+  runWithOwner(owner, () => {
+    createEffect(async () => setKomorebiVariables(await getVariables()));
+  });
 
   async function getVariables() {
     const state = providerListener();
-    const currentPosition = { x: currentMonitor!.x, y: currentMonitor!.y };
+
+    const currentPosition = {
+      x: monitors.currentMonitor!.x,
+      y: monitors.currentMonitor!.y,
+    };
 
     // Get Komorebi monitor that corresponds to the window's monitor.
     const currentKomorebiMonitor = state.allMonitors.reduce((a, b) =>
@@ -141,25 +147,29 @@ export async function createKomorebiProvider(
         : b,
     );
 
-    const displayedWorkspace =
+    const displayedKomorebiWorkspace =
       currentKomorebiMonitor.workspaces[
         currentKomorebiMonitor.focusedWorkspaceIndex
       ]!;
 
-    const allWorkspaces = state.allMonitors.flatMap(
+    const allKomorebiWorkspaces = state.allMonitors.flatMap(
       monitor => monitor.workspaces,
     );
 
-    const focusedMonitor = state.allMonitors[state.focusedMonitorIndex]!;
-    const focusedWorkspace =
-      focusedMonitor.workspaces[focusedMonitor.focusedWorkspaceIndex]!;
+    const focusedKomorebiMonitor =
+      state.allMonitors[state.focusedMonitorIndex]!;
+
+    const focusedKomorebiWorkspace =
+      focusedKomorebiMonitor.workspaces[
+        focusedKomorebiMonitor.focusedWorkspaceIndex
+      ]!;
 
     return {
-      displayedWorkspace,
-      focusedWorkspace,
+      displayedWorkspace: displayedKomorebiWorkspace,
+      focusedWorkspace: focusedKomorebiWorkspace,
       currentWorkspaces: currentKomorebiMonitor.workspaces,
-      allWorkspaces,
-      focusedMonitor,
+      allWorkspaces: allKomorebiWorkspaces,
+      focusedMonitor: focusedKomorebiMonitor,
       currentMonitor: currentKomorebiMonitor,
       allMonitors: state.allMonitors,
     };
