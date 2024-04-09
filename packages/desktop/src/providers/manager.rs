@@ -6,6 +6,7 @@ use std::{
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use sysinfo::System;
+use sysinfo::Networks;
 use tauri::{App, AppHandle, Manager, Runtime};
 use tokio::{
   sync::{
@@ -23,8 +24,8 @@ use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, variables::ProviderVariables,
-  weather::WeatherProvider,
+  network::NetworkProvider, networkactivity::NetworkActivityProvider,
+  variables::ProviderVariables, weather::WeatherProvider,
 };
 
 pub struct ListenProviderArgs {
@@ -117,8 +118,9 @@ fn handle_provider_listen_input(
 ) -> Sender<ListenProviderArgs> {
   let (listen_input_tx, mut listen_input_rx) =
     mpsc::channel::<ListenProviderArgs>(1);
-
+    
   let sysinfo = Arc::new(Mutex::new(System::new_all()));
+  let netinfo = Arc::new(Mutex::new(Networks::new_with_refreshed_list()));
 
   task::spawn(async move {
     while let Some(input) = listen_input_rx.recv().await {
@@ -154,7 +156,7 @@ fn handle_provider_listen_input(
       let emit_output_tx = emit_output_tx.clone();
 
       // Attempt to create a new provider.
-      let new_provider = create_provider(input.config, sysinfo.clone());
+      let new_provider = create_provider(input.config, sysinfo.clone(), netinfo.clone());
 
       if let Err(err) = new_provider {
         _ = emit_output_tx
@@ -193,6 +195,7 @@ fn handle_provider_listen_input(
 fn create_provider(
   config: ProviderConfig,
   sysinfo: Arc<Mutex<System>>,
+  netinfo: Arc<Mutex<Networks>>,
 ) -> Result<Box<dyn Provider + Send>> {
   let provider: Box<dyn Provider + Send> = match config {
     ProviderConfig::Battery(config) => {
@@ -214,6 +217,9 @@ fn create_provider(
     }
     ProviderConfig::Network(config) => {
       Box::new(NetworkProvider::new(config))
+    }
+    ProviderConfig::NetworkActivity(config) => {
+      Box::new(NetworkActivityProvider::new(config, netinfo))
     }
     ProviderConfig::Weather(config) => {
       Box::new(WeatherProvider::new(config))
