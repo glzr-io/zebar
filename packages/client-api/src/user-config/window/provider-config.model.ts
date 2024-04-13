@@ -12,7 +12,6 @@ import {
   MemoryProviderConfigSchema,
   MonitorsProviderConfigSchema,
   NetworkProviderConfigSchema,
-  NetworkActivityProviderConfigSchema,
   SelfProviderConfigSchema,
   WeatherProviderConfigSchema,
 } from './providers';
@@ -28,7 +27,6 @@ export const ProviderConfigSchema = z.union([
   MemoryProviderConfigSchema,
   MonitorsProviderConfigSchema,
   NetworkProviderConfigSchema,
-  NetworkActivityProviderConfigSchema,
   SelfProviderConfigSchema,
   WeatherProviderConfigSchema,
 ]);

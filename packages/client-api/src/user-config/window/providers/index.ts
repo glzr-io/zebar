@@ -8,6 +8,5 @@ export * from './komorebi-provider-config.model';
 export * from './memory-provider-config.model';
 export * from './monitors-provider-config.model';
 export * from './network-provider-config.model';
-export * from './networkactivity-provider-config.model';
 export * from './self-provider-config.model';
 export * from './weather-provider-config.model';

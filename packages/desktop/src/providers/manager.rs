@@ -24,8 +24,8 @@ use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, networkactivity::NetworkActivityProvider,
-  variables::ProviderVariables, weather::WeatherProvider,
+  network::NetworkProvider, variables::ProviderVariables,
+  weather::WeatherProvider,
 };
 
 pub struct ListenProviderArgs {
@@ -216,10 +216,7 @@ fn create_provider(
       Box::new(MemoryProvider::new(config, sysinfo))
     }
     ProviderConfig::Network(config) => {
-      Box::new(NetworkProvider::new(config))
-    }
-    ProviderConfig::NetworkActivity(config) => {
-      Box::new(NetworkActivityProvider::new(config, netinfo))
+      Box::new(NetworkProvider::new(config, netinfo))
     }
     ProviderConfig::Weather(config) => {
       Box::new(WeatherProvider::new(config))
