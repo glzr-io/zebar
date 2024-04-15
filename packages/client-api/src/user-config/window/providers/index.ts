@@ -1,5 +1,6 @@
 export * from './battery-provider-config.model';
 export * from './cpu-provider-config.model';
+export * from './data-provider-config.model';
 export * from './date-provider-config.model';
 export * from './glazewm-provider-config.model';
 export * from './host-provider-config.model';
