@@ -20,7 +20,7 @@ export async function createDataProvider(
   const byteCommonUnits = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
   const byteIECUnits = [' B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
 
-  function convertBytes(bytes: number, decimals = 2, minUnit: 'B') {
+  function convertBytes(bytes: number, decimals: number, minUnit: string) {
     let unitIndex = bitUnits.findIndex(u => u === minUnit);
 
     if (unitIndex !== -1) {
@@ -43,7 +43,7 @@ export async function createDataProvider(
     return 'NoUnit';
   }
 
-  function convert(k: number, units: string[], bytes: number, decimals = 2, unitIndex: number) {
+  function convert(k: number, units: string[], bytes: number, decimals: number, unitIndex: number) {
     const dm = decimals < 0 ? 0 : decimals;
 
     if (!+bytes) {
