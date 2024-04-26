@@ -56,7 +56,7 @@ export async function createDataProvider(
       i = unitIndex;
     }
 
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${units[i]?.trimStart()}`;
+    return `${(bytes / Math.pow(k, i)).toFixed(dm)} ${units[i]?.trimStart()}`;
   }
 
   return {
