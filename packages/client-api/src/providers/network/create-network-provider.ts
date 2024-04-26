@@ -7,6 +7,7 @@ export interface NetworkVariables {
   defaultInterface: NetworkInterface;
   defaultGateway: Gateway;
   interfaces: NetworkInterface[];
+  traffic: NetworkTraffic;
 }
 
 export async function createNetworkProvider(
@@ -28,7 +29,15 @@ export async function createNetworkProvider(
     get interfaces() {
       return networkVariables().interfaces;
     },
+    get traffic() {
+      return networkVariables().traffic;
+    },
   };
+}
+
+export interface NetworkTraffic {
+  received: number;
+  transmitted: number;
 }
 
 export interface NetworkInterface {
@@ -39,7 +48,7 @@ export interface NetworkInterface {
   ipv4: Ipv4Net;
   ipv6: Ipv6Net;
   macAddress: MacAddress;
-  transmitSeed: number;
+  transmitSpeed: number;
   receiveSpeed: number;
   dnsServers: (Ipv4Addr | Ipv6Addr)[];
   default: boolean;

@@ -4,6 +4,7 @@ import type { Prettify } from '~/utils';
 import {
   BatteryProviderConfigSchema,
   CpuProviderConfigSchema,
+  DataProviderConfigSchema,
   DateProviderConfigSchema,
   GlazewmProviderConfigSchema,
   HostProviderConfigSchema,
@@ -19,6 +20,7 @@ import {
 export const ProviderConfigSchema = z.union([
   BatteryProviderConfigSchema,
   CpuProviderConfigSchema,
+  DataProviderConfigSchema,
   DateProviderConfigSchema,
   GlazewmProviderConfigSchema,
   HostProviderConfigSchema,

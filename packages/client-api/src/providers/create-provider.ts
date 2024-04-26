@@ -2,6 +2,7 @@ import type { Owner } from 'solid-js';
 
 import { createBatteryProvider } from './battery/create-battery-provider';
 import { createCpuProvider } from './cpu/create-cpu-provider';
+import { createDataProvider } from './data/create-data-provider';
 import { createDateProvider } from './date/create-date-provider';
 import { createGlazewmProvider } from './glazewm/create-glazewm-provider';
 import { createHostProvider } from './host/create-host-provider';
@@ -29,6 +30,8 @@ export async function createProvider(
       return createBatteryProvider(config, owner);
     case ProviderType.CPU:
       return createCpuProvider(config, owner);
+    case ProviderType.DATA:
+      return createDataProvider(config, owner);
     case ProviderType.DATE:
       return createDateProvider(config, owner);
     case ProviderType.GLAZEWM:
