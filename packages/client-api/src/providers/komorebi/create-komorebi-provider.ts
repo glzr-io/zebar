@@ -99,6 +99,7 @@ export type KomorebiLayout =
   | 'ultrawide_vertical_stack'
   | 'rows'
   | 'grid'
+  | 'right_main_vertical_stack'
   | 'custom';
 
 export type KomorebiLayoutFlip =

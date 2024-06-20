@@ -59,7 +59,7 @@ impl KomorebiProvider {
     KomorebiMonitor {
       id: monitor.id(),
       name: monitor.name().to_string(),
-      device_id: monitor.device_id().clone(),
+      device_id: Some(monitor.device_id().clone()),
       focused_workspace_index: monitor.focused_workspace_idx(),
       size: *monitor.size(),
       work_area_size: *monitor.work_area_size(),

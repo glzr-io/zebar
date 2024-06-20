@@ -62,6 +62,7 @@ pub enum KomorebiLayout {
   UltrawideVerticalStack,
   Rows,
   Grid,
+  RightMainVerticalStack,
   Custom,
 }
 
@@ -78,6 +79,7 @@ impl From<Layout> for KomorebiLayout {
           KomorebiLayout::UltrawideVerticalStack
         }
         DefaultLayout::Grid => KomorebiLayout::Grid,
+        DefaultLayout::RightMainVerticalStack => KomorebiLayout::RightMainVerticalStack,
       },
       _ => KomorebiLayout::Custom,
     }
