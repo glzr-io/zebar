@@ -2,19 +2,16 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use netdev::interface::{
-  get_default_interface, get_interfaces,
-};
 use tokio::{sync::Mutex, task::AbortHandle};
 
 use crate::providers::{
-  interval_provider::IntervalProvider,
-  network::parse_netsh::get_primary_interface_ssid_and_strength,
-  variables::ProviderVariables,
+  interval_provider::IntervalProvider, variables::ProviderVariables,
 };
 
 use super::{
-  Gateway, NetworkInterface, NetworkProviderConfig, NetworkVariables,
+  wifi_hotspot::{default_gateway_wifi, WifiHotstop},
+  InterfaceType, NetworkGateway, NetworkInterface, NetworkProviderConfig,
+  NetworkVariables,
 };
 
 pub struct NetworkProvider {
@@ -29,6 +26,57 @@ impl NetworkProvider {
       config: Arc::new(config),
       abort_handle: None,
       _state: Arc::new(Mutex::new(())),
+    }
+  }
+
+  fn transform_interface(
+    interface: &netdev::Interface,
+  ) -> NetworkInterface {
+    NetworkInterface {
+      name: interface.name.to_string(),
+      friendly_name: interface.friendly_name.clone(),
+      description: interface.description.clone(),
+      interface_type: InterfaceType::from(interface.if_type),
+      ipv4_addresses: interface
+        .ipv4
+        .iter()
+        .map(|ip| ip.to_string())
+        .collect(),
+      ipv6_addresses: interface
+        .ipv6
+        .iter()
+        .map(|ip| ip.to_string())
+        .collect(),
+      mac_address: interface.mac_addr.map(|mac| mac.to_string()),
+      transmit_speed: interface.transmit_speed,
+      receive_speed: interface.receive_speed,
+      dns_servers: interface
+        .dns_servers
+        .iter()
+        .map(|ip| ip.to_string())
+        .collect(),
+      is_default: interface.default,
+    }
+  }
+
+  fn transform_gateway(
+    gateway: &netdev::NetworkDevice,
+    wifi_hotspot: WifiHotstop,
+  ) -> NetworkGateway {
+    NetworkGateway {
+      mac_address: gateway.mac_addr.address(),
+      ipv4_addresses: gateway
+        .ipv4
+        .iter()
+        .map(|ip| ip.to_string())
+        .collect(),
+      ipv6_addresses: gateway
+        .ipv6
+        .iter()
+        .map(|ip| ip.to_string())
+        .collect(),
+      ssid: wifi_hotspot.ssid,
+      signal_strength: wifi_hotspot.signal_strength,
     }
   }
 }
@@ -58,67 +106,24 @@ impl IntervalProvider for NetworkProvider {
     _: &NetworkProviderConfig,
     _state: &(),
   ) -> Result<ProviderVariables> {
-    let default_interface = get_default_interface().unwrap();
+    let interfaces = netdev::get_interfaces();
 
-    let interfaces = get_interfaces();
-
-    let default_gateway_ssid_and_strength =
-      get_primary_interface_ssid_and_strength()?; // Returns ssid = None, signal = None, connected = false if not on Windows for now
+    let default_interface = netdev::get_default_interface().ok();
 
     let variables = NetworkVariables {
-      default_interface: NetworkInterface {
-        name: default_interface.name.clone(),
-        friendly_name: default_interface.friendly_name.clone(),
-        description: default_interface.description.clone(),
-        interface_type: default_interface.if_type,
-        ipv4: default_interface.ipv4.clone(),
-        ipv6: default_interface.ipv6.clone(),
-        mac_address: default_interface.mac_addr.unwrap(),
-        transmit_speed: default_interface.transmit_speed,
-        receive_speed: default_interface.receive_speed,
-        dns_servers: default_interface.dns_servers.clone(),
-        is_default: default_interface.default,
-      },
-      default_gateway: Gateway {
-        mac_address: default_interface
-          .gateway
-          .as_ref()
-          .unwrap()
-          .mac_addr
-          .clone(),
-        ipv4_addresses: default_interface
-          .gateway
-          .as_ref()
-          .unwrap()
-          .ipv4
-          .clone(),
-        ipv6_addresses: default_interface
-          .gateway
-          .as_ref()
-          .unwrap()
-          .ipv6
-          .clone(),
-        ssid: default_gateway_ssid_and_strength.ssid.unwrap(),
-        signal_strength: default_gateway_ssid_and_strength
-          .signal
-          .unwrap(),
-        is_connected: default_gateway_ssid_and_strength.connected,
-      },
+      default_interface: default_interface
+        .as_ref()
+        .map(Self::transform_interface),
+      default_gateway: default_interface
+        .and_then(|interface| interface.gateway)
+        .and_then(|gateway| {
+          default_gateway_wifi()
+            .map(|wifi| Self::transform_gateway(&gateway, wifi))
+            .ok()
+        }),
       interfaces: interfaces
         .iter()
-        .map(|iface| NetworkInterface {
-          name: iface.name.clone(),
-          friendly_name: iface.friendly_name.clone(),
-          description: iface.description.clone(),
-          interface_type: iface.if_type.clone(),
-          ipv4: iface.ipv4.clone(),
-          ipv6: iface.ipv6.clone(),
-          mac_address: iface.mac_addr.unwrap().clone(),
-          transmit_speed: iface.transmit_speed,
-          receive_speed: iface.receive_speed,
-          dns_servers: iface.dns_servers.clone(),
-          is_default: iface.default,
-        })
+        .map(Self::transform_interface)
         .collect(),
     };
 
