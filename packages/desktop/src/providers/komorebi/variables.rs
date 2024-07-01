@@ -79,7 +79,9 @@ impl From<Layout> for KomorebiLayout {
           KomorebiLayout::UltrawideVerticalStack
         }
         DefaultLayout::Grid => KomorebiLayout::Grid,
-        DefaultLayout::RightMainVerticalStack => KomorebiLayout::RightMainVerticalStack,
+        DefaultLayout::RightMainVerticalStack => {
+          KomorebiLayout::RightMainVerticalStack
+        }
       },
       _ => KomorebiLayout::Custom,
     }
