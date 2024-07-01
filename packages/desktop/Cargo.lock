@@ -2374,8 +2374,8 @@ dependencies = [
 
 [[package]]
 name = "komorebi"
-version = "0.1.23"
-source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.23#bea3d1fcbca4356dcdcc91fcb65b35533511247e"
+version = "0.1.25"
+source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.25#62900c59cbb236394f84241937a3fd73f6748538"
 dependencies = [
  "bitflags 2.4.1",
  "clap",
@@ -2416,8 +2416,8 @@ dependencies = [
 
 [[package]]
 name = "komorebi-client"
-version = "0.1.23"
-source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.23#bea3d1fcbca4356dcdcc91fcb65b35533511247e"
+version = "0.1.25"
+source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.25#62900c59cbb236394f84241937a3fd73f6748538"
 dependencies = [
  "komorebi",
  "komorebi-core",
@@ -2427,8 +2427,8 @@ dependencies = [
 
 [[package]]
 name = "komorebi-core"
-version = "0.1.23"
-source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.23#bea3d1fcbca4356dcdcc91fcb65b35533511247e"
+version = "0.1.25"
+source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.25#62900c59cbb236394f84241937a3fd73f6748538"
 dependencies = [
  "clap",
  "color-eyre",
@@ -2708,11 +2708,11 @@ dependencies = [
 
 [[package]]
 name = "miow"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52ffbca2f655e33c08be35d87278e5b18b89550a37dbd598c20db92f6a471123"
+checksum = "359f76430b20a79f9e20e115b3428614e654f04fab314482fc0fda0ebd3c6044"
 dependencies = [
- "windows-sys 0.42.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -5792,21 +5792,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd19df78e5168dfb0aedc343d1d1b8d422ab2db6756d2dc3fef75035402a3f64"
 dependencies = [
  "windows-targets 0.52.4",
-]
-
-[[package]]
-name = "windows-sys"
-version = "0.42.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a3e1820f08b8513f676f7ab6c1f99ff312fb97b553d30ff4dd86f9f15728aa7"
-dependencies = [
- "windows_aarch64_gnullvm 0.42.2",
- "windows_aarch64_msvc 0.42.2",
- "windows_i686_gnu 0.42.2",
- "windows_i686_msvc 0.42.2",
- "windows_x86_64_gnu 0.42.2",
- "windows_x86_64_gnullvm 0.42.2",
- "windows_x86_64_msvc 0.42.2",
 ]
 
 [[package]]
