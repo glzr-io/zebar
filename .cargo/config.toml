@@ -1,0 +1,1 @@
+rustflags = ["-Zon-broken-pipe=kill"]

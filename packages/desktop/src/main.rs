@@ -1,5 +1,3 @@
-#![feature(unix_sigpipe)]
-
 use std::{collections::HashMap, env, sync::Arc};
 
 use anyhow::{Context, Result};
@@ -21,6 +19,8 @@ use tokio::{
 };
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
+
+#[cfg(target_os = "macos")]
 use crate::util::window_ext::WindowExt;
 
 mod cli;
@@ -102,7 +102,6 @@ fn set_always_on_top(window: Window) -> Result<(), String> {
 }
 
 #[tokio::main]
-#[unix_sigpipe = "sig_dfl"]
 async fn main() {
   tracing_subscriber::fmt()
     .with_env_filter(
