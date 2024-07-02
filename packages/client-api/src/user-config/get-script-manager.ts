@@ -7,14 +7,14 @@ import type { ElementContext } from '../element-context.model';
 const logger = createLogger('script-manager');
 
 /**
- * Map of asset paths to promises that resolve to the module.
- */
-const modulesByPath: Record<string, Promise<any>> = {};
-
-/**
  * Map of module paths to asset paths.
  */
-const modulePathToAssetPath: Record<string, string> = {};
+const assetPathCache: Record<string, string> = {};
+
+/**
+ * Map of asset paths to promises that resolve to the module.
+ */
+const moduleCache: Record<string, Promise<any>> = {};
 
 /**
  * Abstraction over loading and invoking user-defined scripts.
@@ -28,21 +28,7 @@ export function getScriptManager() {
 
 async function loadScriptForFn(fnPath: string): Promise<any> {
   const { modulePath } = parseFnPath(fnPath);
-
-  const assetPath =
-    modulePathToAssetPath[modulePath] ??
-    (modulePathToAssetPath[modulePath] = convertFileSrc(
-      await join(await homeDir(), '.glzr/zebar', modulePath),
-    ));
-
-  logger.info(
-    `Loading script at path '${assetPath}' for function path '${fnPath}'.`,
-  );
-
-  const importPromise = import(assetPath);
-  modulesByPath[assetPath] = importPromise;
-
-  return importPromise;
+  return resolveModule(modulePath);
 }
 
 async function callFn(
@@ -51,24 +37,43 @@ async function callFn(
   context: ElementContext,
 ): Promise<any> {
   const { modulePath, functionName } = parseFnPath(fnPath);
-  const assetPath = modulePathToAssetPath[modulePath];
-  const foundModule = modulesByPath[assetPath!];
+  const foundModule = await resolveModule(modulePath);
+  const fn = foundModule[functionName];
 
-  if (!foundModule) {
-    throw new Error(`No script found at function path '${fnPath}'.`);
+  if (!fn) {
+    throw new Error(
+      `No function with the name '${functionName}' at function path '${fnPath}'.`,
+    );
   }
 
-  return foundModule.then(foundModule => {
-    const fn = foundModule[functionName!];
+  return fn(event, context);
+}
 
-    if (!fn) {
-      throw new Error(
-        `No function with the name '${functionName}' at function path '${fnPath}'.`,
-      );
-    }
+async function resolveModule(modulePath: string): Promise<any> {
+  const assetPath = await getAssetPath(modulePath);
+  const foundModule = moduleCache[assetPath];
 
-    return fn(event, context);
-  });
+  if (foundModule) {
+    return foundModule;
+  }
+
+  logger.info(`Loading script at path '${assetPath}'.`);
+  return (moduleCache[assetPath] = import(assetPath));
+}
+
+/**
+ * Converts user-defined path to a URL that can be loaded by the webview.
+ */
+async function getAssetPath(modulePath: string): Promise<string> {
+  const foundAssetPath = assetPathCache[modulePath];
+
+  if (foundAssetPath) {
+    return foundAssetPath;
+  }
+
+  return (assetPathCache[modulePath] = convertFileSrc(
+    await join(await homeDir(), '.glzr/zebar', modulePath),
+  ));
 }
 
 function parseFnPath(fnPath: string): {

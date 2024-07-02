@@ -10,6 +10,12 @@ export interface TemplateElementProps {
   context: ElementContext;
 }
 
+interface ElementEventListener {
+  eventType: string;
+  eventCallback: (event: Event) => Promise<any>;
+  selectorElement: Element;
+}
+
 export function TemplateElement(props: TemplateElementProps) {
   const config = props.context.parsedConfig;
   const logger = createLogger(`#${config.id}`);
@@ -19,15 +25,13 @@ export function TemplateElement(props: TemplateElementProps) {
   const element = createRootElement();
 
   // Currently active event listeners.
-  let listeners: { type: string; fn: (event: Event) => Promise<any> }[] =
-    [];
+  let listeners: ElementEventListener[] = [];
 
   // Update the HTML element when the template changes.
   createEffect(() => {
-    clearEventListeners();
     // @ts-ignore - TODO
     element.innerHTML = config.template;
-    addEventListeners();
+    updateEventListeners();
   });
 
   onMount(() => logger.debug('Mounted'));
@@ -40,21 +44,32 @@ export function TemplateElement(props: TemplateElementProps) {
     return element;
   }
 
-  function clearEventListeners() {
-    listeners.forEach(({ type, fn }) =>
-      element.removeEventListener(type, fn),
+  function updateEventListeners() {
+    // Remove existing event listeners.
+    listeners.forEach(({ eventType, eventCallback, selectorElement }) =>
+      selectorElement.removeEventListener(eventType, eventCallback),
     );
 
     listeners = [];
-  }
 
-  function addEventListeners() {
     config.events.forEach(eventConfig => {
-      const callFn = (event: Event) =>
+      const eventCallback = (event: Event) =>
         scriptManager.callFn(eventConfig.fn_path, event, props.context);
 
-      element.addEventListener(eventConfig.type, callFn);
-      listeners.push({ type: eventConfig.type, fn: callFn });
+      // Default to the root element if no selector is provided.
+      const selectorElement = eventConfig.selector
+        ? element.querySelector(eventConfig.selector)
+        : element;
+
+      if (selectorElement) {
+        selectorElement.addEventListener(eventConfig.type, eventCallback);
+
+        listeners.push({
+          eventType: eventConfig.type,
+          eventCallback,
+          selectorElement,
+        });
+      }
     });
   }
 

@@ -92,7 +92,7 @@ export async function initElement(
       });
     });
 
-    // Import the scripts for the element.
+    // Preload the scripts used for the element's events.
     runWithOwner(args.owner, () => {
       createEffect(async () => {
         try {
