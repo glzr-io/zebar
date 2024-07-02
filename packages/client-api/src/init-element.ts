@@ -78,7 +78,7 @@ export async function initElement(
       createEffect(async () => {
         if (parsedConfig.styles) {
           try {
-            styleBuilder.setElementStyles(
+            styleBuilder.buildElementStyles(
               parsedConfig.id,
               parsedConfig.styles,
             );

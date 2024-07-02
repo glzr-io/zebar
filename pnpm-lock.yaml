@@ -10,7 +10,7 @@ importers:
     devDependencies:
       '@glzr/style-guide':
         specifier: 1.1.0
-        version: 1.1.0(prettier@3.2.5)
+        version: 1.1.0(prettier@3.2.5)(typescript@5.3.3)
       prettier:
         specifier: 3.2.5
         version: 3.2.5
@@ -32,13 +32,13 @@ importers:
         version: 5.3.3
       vite:
         specifier: 5.1.1
-        version: 5.1.1(@types/node@20.11.17)
+        version: 5.1.1(@types/node@20.11.17)(sass@1.70.0)
       vite-plugin-checker:
         specifier: 0.6.4
-        version: 0.6.4(typescript@5.3.3)(vite@5.1.1)
+        version: 0.6.4(typescript@5.3.3)(vite@5.1.1(@types/node@20.11.17)(sass@1.70.0))
       vite-plugin-solid:
         specifier: 2.9.1
-        version: 2.9.1(solid-js@1.8.14)(vite@5.1.1)
+        version: 2.9.1(solid-js@1.8.14)(vite@5.1.1(@types/node@20.11.17)(sass@1.70.0))
       wait-on:
         specifier: 7.2.0
         version: 7.2.0
@@ -60,9 +60,6 @@ importers:
       luxon:
         specifier: 3.4.4
         version: 3.4.4
-      sass:
-        specifier: 1.70.0
-        version: 1.70.0
       solid-js:
         specifier: 1.8.14
         version: 1.8.14
@@ -81,10 +78,10 @@ importers:
         version: 0.20.0
       tsup:
         specifier: 8.0.2
-        version: 8.0.2(typescript@5.3.3)
+        version: 8.0.2(postcss@8.4.35)(typescript@5.3.3)
       tsup-preset-solid:
         specifier: 2.2.0
-        version: 2.2.0(esbuild@0.20.0)(solid-js@1.8.14)(tsup@8.0.2)
+        version: 2.2.0(esbuild@0.20.0)(solid-js@1.8.14)(tsup@8.0.2(postcss@8.4.35)(typescript@5.3.3))
       typescript:
         specifier: 5.3.3
         version: 5.3.3
@@ -2107,11 +2104,13 @@ snapshots:
   '@esbuild/win32-x64@0.20.0':
     optional: true
 
-  '@glzr/style-guide@1.1.0(prettier@3.2.5)':
+  '@glzr/style-guide@1.1.0(prettier@3.2.5)(typescript@5.3.3)':
     dependencies:
-      prettier: 3.2.5
       prettier-plugin-astro: 0.12.3
       prettier-plugin-packagejson: 2.4.5(prettier@3.2.5)
+    optionalDependencies:
+      prettier: 3.2.5
+      typescript: 5.3.3
 
   '@hapi/hoek@9.3.0': {}
 
@@ -2668,7 +2667,8 @@ snapshots:
 
   ignore@5.3.0: {}
 
-  immutable@4.3.4: {}
+  immutable@4.3.4:
+    optional: true
 
   is-binary-path@2.1.0:
     dependencies:
@@ -2847,10 +2847,12 @@ snapshots:
 
   pirates@4.0.6: {}
 
-  postcss-load-config@4.0.2:
+  postcss-load-config@4.0.2(postcss@8.4.35):
     dependencies:
       lilconfig: 3.0.0
       yaml: 2.3.4
+    optionalDependencies:
+      postcss: 8.4.35
 
   postcss@8.4.35:
     dependencies:
@@ -2866,9 +2868,10 @@ snapshots:
 
   prettier-plugin-packagejson@2.4.5(prettier@3.2.5):
     dependencies:
-      prettier: 3.2.5
       sort-package-json: 2.5.1
       synckit: 0.8.5
+    optionalDependencies:
+      prettier: 3.2.5
 
   prettier@3.2.5: {}
 
@@ -2928,6 +2931,7 @@ snapshots:
       chokidar: 3.5.3
       immutable: 4.3.4
       source-map-js: 1.0.2
+    optional: true
 
   semver@6.3.1: {}
 
@@ -3067,16 +3071,16 @@ snapshots:
 
   tslib@2.6.2: {}
 
-  tsup-preset-solid@2.2.0(esbuild@0.20.0)(solid-js@1.8.14)(tsup@8.0.2):
+  tsup-preset-solid@2.2.0(esbuild@0.20.0)(solid-js@1.8.14)(tsup@8.0.2(postcss@8.4.35)(typescript@5.3.3)):
     dependencies:
       esbuild-plugin-solid: 0.5.0(esbuild@0.20.0)(solid-js@1.8.14)
-      tsup: 8.0.2(typescript@5.3.3)
+      tsup: 8.0.2(postcss@8.4.35)(typescript@5.3.3)
     transitivePeerDependencies:
       - esbuild
       - solid-js
       - supports-color
 
-  tsup@8.0.2(typescript@5.3.3):
+  tsup@8.0.2(postcss@8.4.35)(typescript@5.3.3):
     dependencies:
       bundle-require: 4.0.2(esbuild@0.19.11)
       cac: 6.7.14
@@ -3086,12 +3090,14 @@ snapshots:
       execa: 5.1.1
       globby: 11.1.0
       joycon: 3.1.1
-      postcss-load-config: 4.0.2
+      postcss-load-config: 4.0.2(postcss@8.4.35)
       resolve-from: 5.0.0
       rollup: 4.10.0
       source-map: 0.8.0-beta.0
       sucrase: 3.35.0
       tree-kill: 1.2.2
+    optionalDependencies:
+      postcss: 8.4.35
       typescript: 5.3.3
     transitivePeerDependencies:
       - supports-color
@@ -3115,7 +3121,7 @@ snapshots:
 
   validate-html-nesting@1.2.2: {}
 
-  vite-plugin-checker@0.6.4(typescript@5.3.3)(vite@5.1.1):
+  vite-plugin-checker@0.6.4(typescript@5.3.3)(vite@5.1.1(@types/node@20.11.17)(sass@1.70.0)):
     dependencies:
       '@babel/code-frame': 7.23.5
       ansi-escapes: 4.3.2
@@ -3128,14 +3134,15 @@ snapshots:
       semver: 7.5.4
       strip-ansi: 6.0.1
       tiny-invariant: 1.3.1
-      typescript: 5.3.3
-      vite: 5.1.1(@types/node@20.11.17)
+      vite: 5.1.1(@types/node@20.11.17)(sass@1.70.0)
       vscode-languageclient: 7.0.0
       vscode-languageserver: 7.0.0
       vscode-languageserver-textdocument: 1.0.11
       vscode-uri: 3.0.8
+    optionalDependencies:
+      typescript: 5.3.3
 
-  vite-plugin-solid@2.9.1(solid-js@1.8.14)(vite@5.1.1):
+  vite-plugin-solid@2.9.1(solid-js@1.8.14)(vite@5.1.1(@types/node@20.11.17)(sass@1.70.0)):
     dependencies:
       '@babel/core': 7.23.7
       '@types/babel__core': 7.20.5
@@ -3143,23 +3150,24 @@ snapshots:
       merge-anything: 5.1.7
       solid-js: 1.8.14
       solid-refresh: 0.6.3(solid-js@1.8.14)
-      vite: 5.1.1(@types/node@20.11.17)
-      vitefu: 0.2.5(vite@5.1.1)
+      vite: 5.1.1(@types/node@20.11.17)(sass@1.70.0)
+      vitefu: 0.2.5(vite@5.1.1(@types/node@20.11.17)(sass@1.70.0))
     transitivePeerDependencies:
       - supports-color
 
-  vite@5.1.1(@types/node@20.11.17):
+  vite@5.1.1(@types/node@20.11.17)(sass@1.70.0):
     dependencies:
-      '@types/node': 20.11.17
       esbuild: 0.19.11
       postcss: 8.4.35
       rollup: 4.10.0
     optionalDependencies:
+      '@types/node': 20.11.17
       fsevents: 2.3.3
+      sass: 1.70.0
 
-  vitefu@0.2.5(vite@5.1.1):
-    dependencies:
-      vite: 5.1.1(@types/node@20.11.17)
+  vitefu@0.2.5(vite@5.1.1(@types/node@20.11.17)(sass@1.70.0)):
+    optionalDependencies:
+      vite: 5.1.1(@types/node@20.11.17)(sass@1.70.0)
 
   vscode-jsonrpc@6.0.0: {}
 

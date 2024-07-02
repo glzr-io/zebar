@@ -83,7 +83,7 @@ export async function initWindowAsync(): Promise<WindowContext> {
       createEffect(async () => {
         if (windowContext.parsedConfig.global_styles) {
           try {
-            styleBuilder.setGlobalStyles(
+            styleBuilder.buildGlobalStyles(
               windowContext.parsedConfig.global_styles,
             );
           } catch (err) {
