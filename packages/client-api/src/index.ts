@@ -1,5 +1,6 @@
 export { createLogger, toCssSelector } from './utils';
 export {
+  getScriptManager,
   getChildConfigs,
   type GlobalConfig,
   type WindowConfig,

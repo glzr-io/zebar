@@ -1,4 +1,5 @@
 export * from './get-parsed-element-config';
+export * from './get-script-manager';
 export * from './get-style-builder';
 export * from './get-user-config';
 export * from './global-config.model';
