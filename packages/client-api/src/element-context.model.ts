@@ -49,8 +49,6 @@ interface BaseElementContext<C extends ElementConfig, P = {}> {
    */
   providers: P;
 
-  // TODO: Consider adding `scripts` record where keys are script paths.
-
   /**
    * Initializes a child group or template element.
    * @internal
