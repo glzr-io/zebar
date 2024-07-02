@@ -94,12 +94,18 @@ export async function initElement(
 
     // Import the scripts for the element.
     runWithOwner(args.owner, () => {
-      createEffect(() => {
-        if (parsedConfig.events) {
-          for (const event of parsedConfig.events) {
-            const split = event.fn_path.split('#');
-            scriptManager.loadScript(split[0]!);
-          }
+      createEffect(async () => {
+        try {
+          await Promise.all(
+            parsedConfig.events
+              .map(config => config.fn_path)
+              .map(scriptManager.loadScriptForFn),
+          );
+        } catch (err) {
+          await showErrorDialog({
+            title: `Non-fatal: Error in ${args.type}/${args.id}`,
+            error: err,
+          });
         }
       });
     });
