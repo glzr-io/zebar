@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, sync::Arc};
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use clap::Parser;
 use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
@@ -43,7 +43,7 @@ struct OpenWindowArgsMap(Arc<Mutex<HashMap<String, OpenWindowArgs>>>);
 fn read_config_file(
   config_path_override: Option<&str>,
   app_handle: AppHandle,
-) -> Result<String, String> {
+) -> anyhow::Result<String, String> {
   user_config::read_file(config_path_override, app_handle)
     .map_err(|err| err.to_string())
 }
@@ -52,7 +52,7 @@ fn read_config_file(
 async fn get_open_window_args(
   window_label: String,
   open_window_args_map: State<'_, OpenWindowArgsMap>,
-) -> Result<Option<OpenWindowArgs>, String> {
+) -> anyhow::Result<Option<OpenWindowArgs>, String> {
   Ok(
     open_window_args_map
       .0
@@ -69,7 +69,7 @@ async fn listen_provider(
   config: ProviderConfig,
   tracked_access: Vec<String>,
   provider_manager: State<'_, ProviderManager>,
-) -> Result<(), String> {
+) -> anyhow::Result<(), String> {
   provider_manager
     .listen(config_hash, config, tracked_access)
     .await
@@ -80,7 +80,7 @@ async fn listen_provider(
 async fn unlisten_provider(
   config_hash: String,
   provider_manager: State<'_, ProviderManager>,
-) -> Result<(), String> {
+) -> anyhow::Result<(), String> {
   provider_manager
     .unlisten(config_hash)
     .await
@@ -91,7 +91,7 @@ async fn unlisten_provider(
 /// all normal windows (but not the MacOS menu bar). The following instead
 /// sets the z-order of the window to be above the menu bar.
 #[tauri::command]
-fn set_always_on_top(window: Window) -> Result<(), String> {
+fn set_always_on_top(window: Window) -> anyhow::Result<(), String> {
   #[cfg(target_os = "macos")]
   let res = window.set_above_menu_bar();
 

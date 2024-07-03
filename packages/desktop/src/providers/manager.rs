@@ -3,7 +3,7 @@ use std::{
   time::{Duration, Instant},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context};
 use serde::Serialize;
 use sysinfo::System;
 use tauri::{App, AppHandle, Manager, Runtime};
@@ -69,7 +69,7 @@ pub struct ProviderManager {
 }
 
 /// Initializes `ProviderManager` in Tauri state.
-pub fn init<R: Runtime>(app: &mut App<R>) -> Result<()> {
+pub fn init<R: Runtime>(app: &mut App<R>) -> anyhow::Result<()> {
   app.manage(ProviderManager::new(app.handle().clone()));
   Ok(())
 }
@@ -193,7 +193,7 @@ fn handle_provider_listen_input(
 fn create_provider(
   config: ProviderConfig,
   sysinfo: Arc<Mutex<System>>,
-) -> Result<Box<dyn Provider + Send>> {
+) -> anyhow::Result<Box<dyn Provider + Send>> {
   let provider: Box<dyn Provider + Send> = match config {
     ProviderConfig::Battery(config) => {
       Box::new(BatteryProvider::new(config)?)
@@ -280,7 +280,7 @@ impl ProviderManager {
     config_hash: String,
     config: ProviderConfig,
     tracked_access: Vec<String>,
-  ) -> Result<()> {
+  ) -> anyhow::Result<()> {
     self
       .listen_input_tx
       .send(ListenProviderArgs {
@@ -293,7 +293,7 @@ impl ProviderManager {
   }
 
   /// Destroy and clean up a provider with the given config.
-  pub async fn unlisten(&self, config_hash: String) -> Result<()> {
+  pub async fn unlisten(&self, config_hash: String) -> anyhow::Result<()> {
     self
       .unlisten_input_tx
       .send(UnlistenProviderArgs { config_hash })

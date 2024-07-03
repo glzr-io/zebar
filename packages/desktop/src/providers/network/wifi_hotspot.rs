@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use regex::Regex;
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub struct WifiHotstop {
 //
 /// Unclear if the primary interface is always the default interface
 /// returned by the netdev/defaultnet crate - requires more testing.
-pub fn default_gateway_wifi() -> Result<WifiHotstop> {
+pub fn default_gateway_wifi() -> anyhow::Result<WifiHotstop> {
   if cfg!(not(target_os = "windows")) {
     return Ok(WifiHotstop {
       ssid: None,

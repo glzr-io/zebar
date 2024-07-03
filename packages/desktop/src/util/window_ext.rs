@@ -1,4 +1,3 @@
-use anyhow::Result;
 use tauri::{Runtime, Window};
 
 #[cfg(target_os = "macos")]
@@ -9,12 +8,12 @@ use cocoa::{
 
 pub trait WindowExt {
   #[cfg(target_os = "macos")]
-  fn set_above_menu_bar(&self) -> Result<()>;
+  fn set_above_menu_bar(&self) -> anyhow::Result<()>;
 }
 
 impl<R: Runtime> WindowExt for Window<R> {
   #[cfg(target_os = "macos")]
-  fn set_above_menu_bar(&self) -> Result<()> {
+  fn set_above_menu_bar(&self) -> anyhow::Result<()> {
     use anyhow::Context;
 
     {

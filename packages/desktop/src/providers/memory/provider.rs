@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{sync::Mutex, task::AbortHandle};
@@ -54,7 +53,7 @@ impl IntervalProvider for MemoryProvider {
   async fn get_refreshed_variables(
     _: &MemoryProviderConfig,
     sysinfo: &Mutex<System>,
-  ) -> Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderVariables> {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_memory();
 

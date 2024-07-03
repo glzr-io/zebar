@@ -1,6 +1,5 @@
 use std::process;
 
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -35,7 +34,7 @@ pub enum CliCommand {
 }
 
 /// Print to stdout/stderror and exit the process.
-pub fn print_and_exit(output: Result<String>) {
+pub fn print_and_exit(output: anyhow::Result<String>) {
   match output {
     Ok(output) => {
       print!("{}", output);
@@ -49,7 +48,9 @@ pub fn print_and_exit(output: Result<String>) {
 }
 
 /// Parses arguments passed to the `open` CLI command into a string tuple.
-fn parse_open_args(input: &str) -> Result<(String, String), String> {
+fn parse_open_args(
+  input: &str,
+) -> anyhow::Result<(String, String), String> {
   let mut parts = input.split('=');
 
   match (parts.next(), parts.next()) {

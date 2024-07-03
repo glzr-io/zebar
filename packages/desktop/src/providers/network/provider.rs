@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use tokio::{sync::Mutex, task::AbortHandle};
 
@@ -105,7 +104,7 @@ impl IntervalProvider for NetworkProvider {
   async fn get_refreshed_variables(
     _: &NetworkProviderConfig,
     _state: &(),
-  ) -> Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderVariables> {
     let interfaces = netdev::get_interfaces();
 
     let default_interface = netdev::get_default_interface().ok();
