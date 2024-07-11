@@ -58,7 +58,7 @@ jobs:
                 "name": "Zebar_x64_${nextRelease.gitTag}.msi"
               },
               {
-                "path": "tmp/bundle-i686-pc-windows-msvc/tauri.msi",
+                "path": "tmp/bundle-aarch64-pc-windows-msvc/tauri.msi",
                 "name": "Zebar_x86_${nextRelease.gitTag}.msi"
               },
               {
