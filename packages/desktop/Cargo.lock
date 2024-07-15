@@ -512,6 +512,11 @@ name = "cc"
 version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2755ff20a1d93490d26ba33a6f092a38a508398a5320df5d4b3014fcccce9410"
+dependencies = [
+ "jobserver",
+ "libc",
+ "once_cell",
+]
 
 [[package]]
 name = "cesu8"
@@ -697,6 +702,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
 dependencies = [
  "crossbeam-utils",
+]
+
+[[package]]
+name = "const_fn"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "373e9fafaa20882876db20562275ff58d50e0caa2590077fe7ce7bef90211d0d"
+
+[[package]]
+name = "const_format"
+version = "0.2.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3a214c7af3d04997541b18d432afaff4c455e79e2029079647e72fc2bd27673"
+dependencies = [
+ "const_format_proc_macros",
+]
+
+[[package]]
+name = "const_format_proc_macros"
+version = "0.2.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7f6ff08fd20f4f299298a28e2dfa8a8ba1036e6cd2460ac1de7b425d76f2500"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -1268,12 +1299,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fixedbitset"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
-
-[[package]]
 name = "flate2"
 version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1645,6 +1670,19 @@ dependencies = [
  "libc",
  "system-deps",
  "winapi",
+]
+
+[[package]]
+name = "git2"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b903b73e45dc0c6c596f2d37eccece7c1c8bb6e4407b001096387c63d0d93724"
+dependencies = [
+ "bitflags 2.6.0",
+ "libc",
+ "libgit2-sys",
+ "log",
+ "url",
 ]
 
 [[package]]
@@ -2208,10 +2246,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "is_debug"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06d198e9919d9822d5f7083ba8530e04de87841eaf21ead9af8f2304efd57c89"
+
+[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8478577c03552c21db0e2724ffb8986a5ce7af88107e6be5d2ee6e158c12800"
+
+[[package]]
+name = "itertools"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+dependencies = [
+ "either",
+]
 
 [[package]]
 name = "itoa"
@@ -2271,6 +2324,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8eaf4bc02d17cbdd7ff4c7438cafcdf7fb9a4613313ad11b4f8fefe7d3fa0130"
 
 [[package]]
+name = "jobserver"
+version = "0.1.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2b099aaa34a9751c5bf0878add70444e1ed2dd73f347be99003d4577277de6e"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2303,8 +2365,8 @@ dependencies = [
 
 [[package]]
 name = "komorebi"
-version = "0.1.25"
-source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.25#62900c59cbb236394f84241937a3fd73f6748538"
+version = "0.1.28-dev.0"
+source = "git+https://github.com/LGUG2Z/komorebi?tag=nightly#2a67c9c78663348be81c92a33d1a0913fff5f262"
 dependencies = [
  "bitflags 2.6.0",
  "clap",
@@ -2328,6 +2390,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json_lenient",
+ "shadow-rs",
  "strum",
  "sysinfo",
  "tracing",
@@ -2336,6 +2399,7 @@ dependencies = [
  "uds_windows",
  "which",
  "widestring",
+ "win32-display-data",
  "windows 0.54.0",
  "windows-implement 0.53.0",
  "windows-interface 0.53.0",
@@ -2345,8 +2409,8 @@ dependencies = [
 
 [[package]]
 name = "komorebi-client"
-version = "0.1.25"
-source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.25#62900c59cbb236394f84241937a3fd73f6748538"
+version = "0.1.28-dev.0"
+source = "git+https://github.com/LGUG2Z/komorebi?tag=nightly#2a67c9c78663348be81c92a33d1a0913fff5f262"
 dependencies = [
  "komorebi",
  "komorebi-core",
@@ -2356,8 +2420,8 @@ dependencies = [
 
 [[package]]
 name = "komorebi-core"
-version = "0.1.25"
-source = "git+https://github.com/LGUG2Z/komorebi?tag=v0.1.25#62900c59cbb236394f84241937a3fd73f6748538"
+version = "0.1.28-dev.0"
+source = "git+https://github.com/LGUG2Z/komorebi?tag=nightly#2a67c9c78663348be81c92a33d1a0913fff5f262"
 dependencies = [
  "clap",
  "color-eyre",
@@ -2447,6 +2511,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
+name = "libgit2-sys"
+version = "0.17.0+1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10472326a8a6477c3c20a64547b0059e4b0d086869eee31e6d7da728a8eb7224"
+dependencies = [
+ "cc",
+ "libc",
+ "libz-sys",
+ "pkg-config",
+]
+
+[[package]]
 name = "libloading"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2464,6 +2540,18 @@ checksum = "c0ff37bd590ca25063e35af745c343cb7a0271906fb7b37e4813e8f79f00268d"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c15da26e5af7e25c90b37a2d75cdbf940cf4a55316de9d84c679c9b8bfabf82e"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]
@@ -2898,6 +2986,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_threads"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "objc"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3202,13 +3299,10 @@ version = "0.9.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e401f977ab385c9e4e3ab30627d6f26d00e2c73eef317493c4ec6d468726cf8"
 dependencies = [
- "backtrace",
  "cfg-if 1.0.0",
  "libc",
- "petgraph",
  "redox_syscall 0.5.2",
  "smallvec",
- "thread-id",
  "windows-targets 0.52.5",
 ]
 
@@ -3229,16 +3323,6 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
-
-[[package]]
-name = "petgraph"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
-dependencies = [
- "fixedbitset",
- "indexmap 2.2.6",
-]
 
 [[package]]
 name = "phf"
@@ -4184,9 +4268,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json_lenient"
-version = "0.1.8"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc61c66b53a4035fcce237ef38043f4b2f0ebf918fd0e69541a5166104065581"
+checksum = "a5d0bae483150302560d7cb52e7932f39b69a6fbdd099e48d33ef060a8c9c078"
 dependencies = [
  "itoa 1.0.11",
  "ryu",
@@ -4320,6 +4404,19 @@ dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "shadow-rs"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a600f795d0894cda22235b44eea4b85c2a35b405f65523645ac8e35b306817a"
+dependencies = [
+ "const_format",
+ "git2",
+ "is_debug",
+ "time",
+ "tzdb",
 ]
 
 [[package]]
@@ -5072,16 +5169,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "thread-id"
-version = "4.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0ec81c46e9eb50deaa257be2f148adf052d1fb7701cfd55ccfab2525280b70b"
-dependencies = [
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "thread_local"
 version = "1.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5099,7 +5186,9 @@ checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa 1.0.11",
+ "libc",
  "num-conv",
+ "num_threads",
  "powerfmt",
  "serde",
  "time-core",
@@ -5404,6 +5493,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
+name = "tz-rs"
+version = "0.6.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33851b15c848fad2cf4b105c6bb66eb9512b6f6c44a4b13f57c53c73c707e2b4"
+dependencies = [
+ "const_fn",
+]
+
+[[package]]
+name = "tzdb"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b580f6b365fa89f5767cdb619a55d534d04a4e14c2d7e5b9a31e94598687fb1"
+dependencies = [
+ "iana-time-zone",
+ "tz-rs",
+ "tzdb_data",
+]
+
+[[package]]
+name = "tzdb_data"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1889fdffac09d65c1d95c42d5202e9b21ad8c758f426e9fe09088817ea998d6"
+dependencies = [
+ "tz-rs",
+]
+
+[[package]]
 name = "uds_windows"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5481,6 +5599,12 @@ name = "unicode-segmentation"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4c87d22b6e3f4a18d4d40ef354e97c90fcb14dd91d7dc0aa9d8a1172ebf7202"
+
+[[package]]
+name = "unicode-xid"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
 
 [[package]]
 name = "unsafe-libyaml"
@@ -5820,6 +5944,16 @@ name = "widestring"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7219d36b6eac893fa81e84ebe06485e7dcbb616177469b142df14f1f4deb1311"
+
+[[package]]
+name = "win32-display-data"
+version = "0.1.0"
+source = "git+https://github.com/LGUG2Z/win32-display-data?rev=2a0f7166da154880a1750b91829b1186d9c6a00c#2a0f7166da154880a1750b91829b1186d9c6a00c"
+dependencies = [
+ "itertools",
+ "thiserror",
+ "windows 0.54.0",
+]
 
 [[package]]
 name = "winapi"

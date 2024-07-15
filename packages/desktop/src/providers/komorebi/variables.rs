@@ -12,7 +12,7 @@ pub struct KomorebiVariables {
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiMonitor {
   pub id: isize,
-  pub device_id: Option<String>,
+  pub device_id: String,
   pub focused_workspace_index: usize,
   pub name: String,
   pub size: Rect,
