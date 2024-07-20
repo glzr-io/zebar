@@ -12,6 +12,7 @@
 <?endif?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <!-- Upgrade code is stable across the product name. -->
     <Product
             Id="*"
             Name="{{product_name}}"

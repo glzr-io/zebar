@@ -23,8 +23,10 @@
     ],
     "shortDescription": "Zebar",
     "category": "Utility",
+    "publisher": "Glzr Software Pte. Ltd.",
     "resources": ["resources/*"],
-    "targets": ["deb", "appimage", "msi", "dmg", "updater"],
+    "targets": ["deb", "appimage", "msi", "dmg"],
+    "createUpdaterArtifacts": true,
     "windows": {
       "wix": {
         "template": "./installer.wxs"

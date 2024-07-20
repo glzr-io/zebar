@@ -1,7 +1,7 @@
 import {
   PhysicalPosition,
   PhysicalSize,
-  getCurrent as getCurrentWindow,
+  getCurrentWindow,
   type Window,
 } from '@tauri-apps/api/window';
 

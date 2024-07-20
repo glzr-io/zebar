@@ -58,7 +58,7 @@ async function resolveModule(modulePath: string): Promise<any> {
   }
 
   logger.info(`Loading script at path '${assetPath}'.`);
-  return (moduleCache[assetPath] = import(assetPath));
+  return (moduleCache[assetPath] = import(/* @vite-ignore */ assetPath));
 }
 
 /**

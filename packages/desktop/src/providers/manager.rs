@@ -6,7 +6,7 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use sysinfo::System;
-use tauri::{App, AppHandle, Manager, Runtime};
+use tauri::{App, AppHandle, Manager, Emitter, Runtime};
 use tokio::{
   sync::{
     mpsc::{self, Sender},
@@ -76,7 +76,7 @@ pub fn init<R: Runtime>(app: &mut App<R>) -> anyhow::Result<()> {
 
 /// Create a channel for outputting provider variables to client.
 fn handle_provider_emit_output<R: Runtime>(
-  app_handle: (impl Manager<R> + Sync + Send + 'static),
+  app_handle: (impl Emitter<R> + Sync + Send + 'static),
   active_providers: Arc<Mutex<Vec<ProviderRef>>>,
 ) -> Sender<ProviderOutput> {
   let (output_sender, mut output_receiver) =

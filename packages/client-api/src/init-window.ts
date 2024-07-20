@@ -1,4 +1,4 @@
-import { getCurrent as getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { createEffect, getOwner, runWithOwner } from 'solid-js';
 
 import {

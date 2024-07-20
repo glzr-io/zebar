@@ -186,19 +186,6 @@ async fn main() {
                 WebviewUrl::default(),
               )
               .title(format!("Zebar - {}", open_args.window_id))
-              .data_directory(
-                // Set a different data dir for each window. Temporary fix
-                // until #8196 is resolved.
-                // Ref: https://github.com/tauri-apps/tauri/issues/8196
-                app_handle
-                  .path()
-                  .resolve(
-                    format!(".glzr/zebar/tmp-{}", window_count),
-                    BaseDirectory::Home,
-                  )
-                  .context("Unable to get home directory.")
-                  .unwrap(),
-              )
               .inner_size(500., 500.)
               .visible_on_all_workspaces(true)
               .transparent(true)
