@@ -1,14 +1,13 @@
 use std::{collections::HashMap, env, sync::Arc};
 
-use anyhow::Context;
 use clap::Parser;
 use cli::{Cli, CliCommand};
 use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
 use tauri::{
-  path::BaseDirectory, AppHandle, Manager, RunEvent, State, WebviewUrl,
-  WebviewWindowBuilder, Window,
+  AppHandle, Manager, RunEvent, State, WebviewUrl, WebviewWindowBuilder,
+  Window,
 };
 use tokio::{
   sync::{

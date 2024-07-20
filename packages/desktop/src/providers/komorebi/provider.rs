@@ -146,18 +146,21 @@ impl Provider for KomorebiProvider {
             let reader = BufReader::new(data.try_clone().unwrap());
 
             for line in reader.lines().flatten() {
-              if let Ok(notification) = serde_json::from_str::<komorebi_client::Notification>(&line) {
+              if let Ok(notification) = serde_json::from_str::<
+                komorebi_client::Notification,
+              >(&line)
+              {
                 // Transform and emit the incoming Komorebi state.
                 _ = emit_output_tx
-                    .send(ProviderOutput {
-                      config_hash: config_hash.clone(),
-                      variables: VariablesResult::Data(
-                        ProviderVariables::Komorebi(Self::transform_response(
-                          notification.state,
-                        )),
+                  .send(ProviderOutput {
+                    config_hash: config_hash.clone(),
+                    variables: VariablesResult::Data(
+                      ProviderVariables::Komorebi(
+                        Self::transform_response(notification.state),
                       ),
-                    })
-                    .await;
+                    ),
+                  })
+                  .await;
               }
             }
           }
