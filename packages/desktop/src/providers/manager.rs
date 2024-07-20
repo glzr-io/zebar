@@ -6,7 +6,7 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use sysinfo::System;
-use tauri::{App, AppHandle, Manager, Emitter, Runtime};
+use tauri::{App, AppHandle, Emitter, Manager, Runtime};
 use tokio::{
   sync::{
     mpsc::{self, Sender},
@@ -16,8 +16,6 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-use crate::providers::provider::Provider;
-
 #[cfg(all(windows, target_arch = "x86_64"))]
 use super::komorebi::KomorebiProvider;
 use super::{
@@ -26,6 +24,7 @@ use super::{
   network::NetworkProvider, variables::ProviderVariables,
   weather::WeatherProvider,
 };
+use crate::providers::provider::Provider;
 
 pub struct ListenProviderArgs {
   pub config_hash: String,

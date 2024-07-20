@@ -5,11 +5,10 @@ use async_trait::async_trait;
 use reqwest::Client;
 use tokio::task::AbortHandle;
 
+use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpVariables};
 
 pub struct IpProvider {
   pub config: Arc<IpProviderConfig>,

@@ -4,11 +4,10 @@ use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{sync::Mutex, task::AbortHandle};
 
+use super::{CpuProviderConfig, CpuVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{CpuProviderConfig, CpuVariables};
 
 pub struct CpuProvider {
   pub config: Arc<CpuProviderConfig>,

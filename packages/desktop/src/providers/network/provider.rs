@@ -3,14 +3,13 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::{sync::Mutex, task::AbortHandle};
 
-use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
-};
-
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
   InterfaceType, NetworkGateway, NetworkInterface, NetworkProviderConfig,
   NetworkVariables,
+};
+use crate::providers::{
+  interval_provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct NetworkProvider {

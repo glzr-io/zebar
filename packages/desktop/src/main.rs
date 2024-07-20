@@ -115,8 +115,9 @@ async fn main() {
     .setup(|app| {
       let cli = Cli::parse();
 
-      // Since most Tauri plugins and setup is not needed for the `monitors`
-      // CLI command, the setup is conditional based on the CLI command.
+      // Since most Tauri plugins and setup is not needed for the
+      // `monitors` CLI command, the setup is conditional based on
+      // the CLI command.
       match cli.command {
         CliCommand::Monitors { print0 } => {
           let monitors_str = get_monitors_str(app, print0);
@@ -173,9 +174,9 @@ async fn main() {
                 window_count, open_args.window_id, open_args.args
               );
 
-              // Window label needs to be globally unique. Hence add a prefix
-              // with the window count to handle cases where multiple of the
-              // same window are opened.
+              // Window label needs to be globally unique. Hence add a
+              // prefix with the window count to handle cases where
+              // multiple of the same window are opened.
               let window_label =
                 format!("{}-{}", window_count, &open_args.window_id);
 

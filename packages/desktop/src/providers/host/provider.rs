@@ -4,11 +4,10 @@ use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{sync::Mutex, task::AbortHandle};
 
+use super::{HostProviderConfig, HostVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{HostProviderConfig, HostVariables};
 
 pub struct HostProvider {
   pub config: Arc<HostProviderConfig>,

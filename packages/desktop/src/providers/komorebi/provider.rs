@@ -12,16 +12,15 @@ use tokio::{
 };
 use tracing::debug;
 
+use super::{
+  KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
+  KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
+};
 use crate::providers::{
   komorebi::KomorebiVariables,
   manager::{ProviderOutput, VariablesResult},
   provider::Provider,
   variables::ProviderVariables,
-};
-
-use super::{
-  KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
-  KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
 };
 
 const SOCKET_NAME: &str = "zebar.sock";

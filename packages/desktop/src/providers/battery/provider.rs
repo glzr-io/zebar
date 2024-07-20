@@ -11,11 +11,10 @@ use starship_battery::{
 };
 use tokio::task::AbortHandle;
 
+use super::{BatteryProviderConfig, BatteryVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{BatteryProviderConfig, BatteryVariables};
 
 pub struct BatteryProvider {
   pub config: Arc<BatteryProviderConfig>,

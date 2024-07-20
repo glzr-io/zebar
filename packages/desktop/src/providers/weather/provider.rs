@@ -4,13 +4,12 @@ use async_trait::async_trait;
 use reqwest::Client;
 use tokio::task::AbortHandle;
 
-use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
-};
-
 use super::{
   open_meteo_res::OpenMeteoRes, WeatherProviderConfig, WeatherStatus,
   WeatherVariables,
+};
+use crate::providers::{
+  interval_provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct WeatherProvider {

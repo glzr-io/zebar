@@ -1,10 +1,9 @@
-use tauri::{Runtime, Window};
-
 #[cfg(target_os = "macos")]
 use cocoa::{
   appkit::{NSMainMenuWindowLevel, NSWindow},
   base::id,
 };
+use tauri::{Runtime, Window};
 
 pub trait WindowExt {
   #[cfg(target_os = "macos")]
