@@ -69,7 +69,7 @@
 
     <!-- Initialize with previous `InstallDir`. -->
     <Property Id="INSTALLDIR">
-      <RegistrySearch Id="PrevInstallDirReg" Root="HKCU" Key="Software\\glzr.io\\Zebar" Name="InstallDir" Type="raw" />
+      <RegistrySearch Id="PrevInstallDirReg" Root="HKCU" Key="Software\glzr.io\Zebar" Name="InstallDir" Type="raw" />
     </Property>
 
     <UI>
@@ -112,7 +112,7 @@
 
           <RegistryValue
             Root="HKCU"
-            Key="Software\\glzr.io\\{{product_name}}"
+            Key="Software\glzr.io\Zebar"
             Name="Desktop Shortcut"
             Type="integer"
             Value="1"
@@ -132,13 +132,13 @@
 
     <DirectoryRef Id="INSTALLDIR">
       <Component Id="RegistryEntries" Guid="*">
-        <RegistryKey Root="HKCU" Key="Software\\glzr.io\\{{product_name}}">
+        <RegistryKey Root="HKCU" Key="Software\glzr.io\Zebar">
           <RegistryValue Name="InstallDir" Type="string" Value="[INSTALLDIR]" KeyPath="yes" />
         </RegistryKey>
 
         <!-- Change the root to HKCU for `perUser` installations -->
         {{#each deep_link_protocols as |protocol| ~}}
-        <RegistryKey Root="HKLM" Key="Software\\Classes\\{{protocol}}">
+        <RegistryKey Root="HKLM" Key="Software\Classes\{{protocol}}">
           <RegistryValue Type="string" Name="URL Protocol" Value="" />
           <RegistryValue Type="string" Value="URL:{{bundle_id}} protocol" />
           <RegistryKey Key="DefaultIcon">
@@ -212,7 +212,7 @@
 
         <RegistryValue
           Root="HKCU"
-          Key="Software\\glzr.io\\{{product_name}}"
+          Key="Software\glzr.io\Zebar"
           Name="Uninstaller Shortcut"
           Type="integer"
           Value="1"
@@ -238,7 +238,7 @@
 
         <RegistryValue
           Root="HKCU"
-          Key="Software\\glzr.io\\{{product_name}}"
+          Key="Software\glzr.io\Zebar"
           Name="Start Menu Shortcut"
           Type="integer"
           Value="1"
