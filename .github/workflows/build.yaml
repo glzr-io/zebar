@@ -63,10 +63,13 @@ jobs:
       - run: pnpm i
       - run: pnpm run --filter zebar --filter @zebar/client build
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Set version number
+        run: |
+          jq '.version="${{ inputs.version-number || '0.0.0' }}"' packages/desktop/tauri.conf.json
+
+      - name: Tauri build
+        uses: tauri-apps/tauri-action@v0
         id: tauri
-        env:
-          VERSION_NUMBER: ${{ inputs.version-number || '0.0.0' }}
         with:
           projectPath: packages/desktop
           args: --target ${{ matrix.tauri-target }}
@@ -80,7 +83,8 @@ jobs:
           done
         shell: bash
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
         with:
           name: bundle-${{ matrix.tauri-target }}
           if-no-files-found: error
