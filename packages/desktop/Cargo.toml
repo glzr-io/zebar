@@ -1,5 +1,5 @@
 [package]
-name = "desktop"
+name = "zebar"
 version = "0.0.0"
 description = "Zebar is a tool for creating customizable and cross-platform taskbars, desktop widgets, and popups."
 authors = ["you"]

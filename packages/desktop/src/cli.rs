@@ -2,8 +2,10 @@ use std::process;
 
 use clap::{Parser, Subcommand};
 
+const VERSION: &'static str = env!("VERSION_NUMBER");
+
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None, arg_required_else_help = true)]
+#[clap(author, version = VERSION, about, long_about = None, arg_required_else_help = true)]
 pub struct Cli {
   #[command(subcommand)]
   pub command: CliCommand,

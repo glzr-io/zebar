@@ -988,33 +988,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "desktop"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "clap",
- "cocoa",
- "komorebi-client",
- "netdev",
- "regex",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "starship-battery",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-http",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6525,6 +6498,33 @@ dependencies = [
  "serde",
  "static_assertions",
  "zvariant",
+]
+
+[[package]]
+name = "zebar"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "clap",
+ "cocoa",
+ "komorebi-client",
+ "netdev",
+ "regex",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "starship-battery",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-http",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

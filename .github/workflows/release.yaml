@@ -18,11 +18,17 @@ concurrency:
   group: release
 
 jobs:
+  next-version:
+    uses: semantic-release-action/next-release-version/.github/workflows/next-release-version.yml@3c2d88ce0390012bac0b8383059a0b67d2594dc1
+
   build:
+    needs: [next-version]
     uses: ./.github/workflows/build.yaml
+    with:
+      version-number: ${{ needs.next-version.outputs.new-release-version }}
 
   release:
-    needs: build
+    needs: [next-version, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
