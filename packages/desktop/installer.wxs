@@ -122,7 +122,9 @@
       </Directory>
 
       <Directory Id="$(var.PlatformProgramFilesFolder)" Name="PFiles">
-        <Directory Id="INSTALLDIR" Name="{{product_name}}" />
+        <Directory Id="Custom_OrgDir" Name="glzr.io">
+          <Directory Id="INSTALLDIR" Name="{{product_name}}" />
+        </Directory>
       </Directory>
 
       <Directory Id="ProgramMenuFolder">
