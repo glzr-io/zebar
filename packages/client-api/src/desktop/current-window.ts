@@ -18,7 +18,7 @@ export interface WindowPosition {
 
 export interface WindowStyles {
   zOrder: ZOrder;
-  showInTaskbar: boolean;
+  shownInTaskbar: boolean;
   resizable: boolean;
 }
 
@@ -60,7 +60,7 @@ export async function setWindowStyles(styles: Partial<WindowStyles>) {
   const window = getCurrentWindow();
 
   await Promise.all([
-    window.setSkipTaskbar(styles.showInTaskbar !== true),
+    window.setSkipTaskbar(styles.shownInTaskbar !== true),
     window.setResizable(styles.resizable === true),
     setWindowZOrder(window, styles.zOrder),
   ]);

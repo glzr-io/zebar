@@ -27,7 +27,7 @@ window/bar:
   # Allowed values: 'always_on_top', 'always_on_bottom', 'normal'.
   z_order: 'normal'
   # Whether the window should be shown in the taskbar.
-  show_in_taskbar: false
+  shown_in_taskbar: false
   # Whether the window should have resize handles.
   resizable: false
   # Styles to apply globally within the window. For example, we can use

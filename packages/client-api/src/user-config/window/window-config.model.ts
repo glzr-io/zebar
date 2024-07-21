@@ -13,7 +13,9 @@ export const WindowConfigSchemaP1 = BaseElementConfigSchema.extend({
   width: z.coerce.number().min(1),
   height: z.coerce.number().min(1),
   z_order: ZOrderSchema,
+  // TODO: Deprecate in future release in favour of `shown_in_taskbar`.
   show_in_taskbar: BooleanLikeSchema.optional(),
+  shown_in_taskbar: BooleanLikeSchema.optional(),
   resizable: BooleanLikeSchema.optional(),
   global_styles: z.string().optional(),
 });

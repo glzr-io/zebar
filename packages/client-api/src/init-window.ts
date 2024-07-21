@@ -103,7 +103,9 @@ export async function initWindowAsync(): Promise<WindowContext> {
         // dependencies are tracked successfully within the effect.
         const styles: Partial<WindowStyles> = {
           zOrder: windowContext.parsedConfig.z_order,
-          showInTaskbar: windowContext.parsedConfig.show_in_taskbar,
+          shownInTaskbar:
+            windowContext.parsedConfig.show_in_taskbar ||
+            windowContext.parsedConfig.shown_in_taskbar,
           resizable: windowContext.parsedConfig.resizable,
         };
 
