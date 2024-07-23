@@ -5,17 +5,17 @@ param(
 )
 
 $secrets = @(
-  $ENV:AZ_VAULT_URL,
-  $ENV:AZ_CERT_NAME,
-  $ENV:AZ_CLIENT_ID,
-  $ENV:AZ_CLIENT_SECRET,
-  $ENV:AZ_TENANT_ID,
-  $ENV:RFC3161_TIMESTAMP_URL
+  "AZ_VAULT_URL",
+  "AZ_CERT_NAME",
+  "AZ_CLIENT_ID",
+  "AZ_CLIENT_SECRET",
+  "AZ_TENANT_ID",
+  "RFC3161_TIMESTAMP_URL"
 )
 
 foreach ($secret in $secrets) {
-  if (!$secret) {
-    Write-Output "Skipping signing due to missing secret."
+  if (-not (Test-Path "env:$secret")) {
+    Write-Output "Skipping signing due to missing secret '$secret'."
     Return
   }
 }
