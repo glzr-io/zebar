@@ -27,6 +27,7 @@
     "resources": ["resources/*"],
     "targets": ["deb", "appimage", "msi", "dmg"],
     "windows": {
+      "signCommand": "azuresigntool sign -kvu $ENV:AZ_VAULT_URL -kvc $ENV:AZ_CERT_NAME -kvi $ENV:AZ_CLIENT_ID -kvs $ENV:AZ_CLIENT_SECRET -kvt $ENV:AZ_TENANT_ID -tr $ENV:RFC3161_TIMESTAMP_URL -td sha256 %1",
       "wix": {
         "template": "./installer.wxs"
       }
