@@ -78,7 +78,7 @@ export async function initWindowAsync(): Promise<WindowContext> {
       owner,
     })) as WindowContext;
 
-    // Set global SCSS/CSS styles.
+    // Set global CSS styles.
     runWithOwner(owner, () => {
       createEffect(async () => {
         if (windowContext.parsedConfig.global_styles) {

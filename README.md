@@ -9,37 +9,17 @@
 #### Readme contents
 
 1. [Installation](#%EF%B8%8F-installation)
-2. [Migration from GlazeWM bar](#%EF%B8%8F-migration-from-glazewm-bar)
-3. [Intro to Zebar](#-intro-to-zebar)
+2. [Intro to Zebar](#-intro-to-zebar)
    - [Styled with HTML + CSS](#concept-1-styled-with-html--css)
    - [Reactive "providers"](#concept-2-reactive-providers)
    - [Templating language](#concept-3-templating-language)
-4. [Providers](#-providers)
+3. [Providers](#-providers)
 
 ## ⚙️ Installation
 
 **Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**.
 
 A default start script can also be downloaded from the release. Run the script after install to launch the default bar, which will create a config file located at `%userprofile%/.glzr/zebar/config.yaml`.
-
-## ➡️ Migration from GlazeWM bar
-
-Modify the following GlazeWM config options (at `%userprofile%/.glaze-wm/config.yaml`):
-
-```yaml
-gaps:
-  # Add more spacing at the top.
-  outer_gap: '45px 20px 20px 20px'
-
-bar:
-  # Disable the built-in GlazeWM bar.
-  enabled: false
-
-window_rules:
-  # Ignore the bar window.
-  - command: 'ignore'
-    match_process_name: '/Zebar/'
-```
 
 ## ➡️ Usage with Komorebi
 
@@ -97,7 +77,7 @@ There's 3 big differences that set Zebar apart from other similar projects:
 
 ### Concept 1: Styled with HTML + CSS
 
-The **_entire_** html + css of the bar can be customized via the user config. CSS/SCSS can be added to an element via the `styles` property, and child divs can be created via `template/<id>` and `group/<id>` properties.
+The **_entire_** html + css of the bar can be customized via the user config. CSS can be added to an element via the `styles` property, and child divs can be created via `template/<id>` and `group/<id>` properties.
 
 A basic config might look like this:
 

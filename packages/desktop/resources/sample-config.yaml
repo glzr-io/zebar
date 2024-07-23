@@ -35,8 +35,8 @@ window/bar:
   # for a cheatsheet of available Nerdfonts icons.
   global_styles: |
     @import "https://www.nerdfonts.com/assets/css/webfont.css";
-  # CSS/SCSS styles to apply to the root element within the window. Using
-  # CSS nesting, we can also target nested elements (e.g. below we set the
+  # CSS styles to apply to the root element within the window. Using CSS
+  # nesting, we can also target nested elements (e.g. below we set the
   # color and margin-right of icons).
   styles: |
     display: grid;
