@@ -6,8 +6,7 @@ use monitors::get_monitors_str;
 use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, RunEvent, State, WebviewUrl, WebviewWindowBuilder,
-  Window,
+  AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, Window,
 };
 use tokio::{
   sync::{
@@ -215,15 +214,8 @@ async fn main() {
       unlisten_provider,
       set_always_on_top
     ])
-    .build(tauri::generate_context!())
-    .expect("Error while building Tauri application");
-
-  app.run(|_, event| {
-    if let RunEvent::ExitRequested { api, .. } = &event {
-      // Keep the message loop running even if all windows are closed.
-      api.prevent_exit();
-    }
-  })
+    .run(tauri::generate_context!())
+    .expect("Failed to build Tauri application.");
 }
 
 /// Create and emit `OpenWindowArgs` to a channel.
@@ -239,6 +231,6 @@ fn emit_open_args(
   };
 
   if let Err(err) = tx.send(open_args.clone()) {
-    info!("Error emitting window open args: {}", err);
+    info!("Failed to emit window's open args: {}", err);
   };
 }
