@@ -1,9 +1,6 @@
 use std::{collections::HashMap, env, sync::Arc};
 
 use clap::Parser;
-use cli::{Cli, CliCommand};
-use monitors::get_monitors_str;
-use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
 use tauri::{
   AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, Window,
@@ -20,10 +17,17 @@ use tracing_subscriber::EnvFilter;
 
 #[cfg(target_os = "macos")]
 use crate::util::window_ext::WindowExt;
+use crate::{
+  cli::{Cli, CliCommand},
+  monitors::get_monitors_str,
+  providers::{config::ProviderConfig, manager::ProviderManager},
+  sys_tray::setup_sys_tray,
+};
 
 mod cli;
 mod monitors;
 mod providers;
+mod sys_tray;
 mod user_config;
 mod util;
 
@@ -110,7 +114,7 @@ async fn main() {
 
   tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-  let app = tauri::Builder::default()
+  tauri::Builder::default()
     .setup(|app| {
       let cli = Cli::parse();
 
@@ -145,6 +149,9 @@ async fn main() {
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
           app.handle().plugin(tauri_plugin_dialog::init())?;
+
+          // Add application icon to system tray.
+          setup_sys_tray(app)?;
 
           providers::manager::init(app)?;
 

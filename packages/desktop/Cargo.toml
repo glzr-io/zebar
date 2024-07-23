@@ -21,6 +21,7 @@ tauri = { version = "2.0.0-beta", features = [
   "devtools",
   "macos-private-api",
   "protocol-asset",
+  "tray-icon",
 ] }
 tauri-plugin-dialog = "2.0.0-beta"
 tauri-plugin-http = "2.0.0-beta"

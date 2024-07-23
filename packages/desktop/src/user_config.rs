@@ -53,23 +53,24 @@ fn create_from_sample(
   Ok(())
 }
 
-pub fn open_config_dir(app_handle: AppHandle) -> anyhow::Result<()> {
-  let config_dir_path = app_handle
+pub fn open_config_dir(app_handle: &AppHandle) -> anyhow::Result<()> {
+  let dir_path = app_handle
     .path()
     .resolve(".glzr/zebar", BaseDirectory::Home)
-    .context("Unable to get home directory.")?;
+    .context("Unable to get home directory.")?
+    .canonicalize()?;
 
   #[cfg(target_os = "windows")]
   {
     std::process::Command::new("explorer")
-      .arg(config_dir_path)
+      .arg(dir_path)
       .spawn()?;
   }
 
   #[cfg(target_os = "macos")]
   {
     std::process::Command::new("open")
-      .arg(config_dir_path)
+      .arg(dir_path)
       .arg("-R")
       .spawn()?;
   }
@@ -77,7 +78,7 @@ pub fn open_config_dir(app_handle: AppHandle) -> anyhow::Result<()> {
   #[cfg(target_os = "linux")]
   {
     std::process::Command::new("xdg-open")
-      .arg(config_dir_path)
+      .arg(dir_path)
       .spawn()?;
   }
 
