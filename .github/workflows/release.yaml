@@ -24,6 +24,7 @@ jobs:
   build:
     needs: [next-version]
     uses: ./.github/workflows/build.yaml
+    secrets: inherit
     with:
       version-number: ${{ needs.next-version.outputs.new-release-version }}
 
