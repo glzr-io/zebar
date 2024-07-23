@@ -22,5 +22,7 @@ jobs:
           toolchain: nightly
           components: rustfmt
 
+      - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
+
       - run: pnpm i
       - run: pnpm run lint
