@@ -18,11 +18,18 @@ concurrency:
   group: release
 
 jobs:
+  next-version:
+    uses: semantic-release-action/next-release-version/.github/workflows/next-release-version.yml@3c2d88ce0390012bac0b8383059a0b67d2594dc1
+
   build:
+    needs: [next-version]
     uses: ./.github/workflows/build.yaml
+    secrets: inherit
+    with:
+      version-number: ${{ needs.next-version.outputs.new-release-version }}
 
   release:
-    needs: build
+    needs: [next-version, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,23 +62,28 @@ jobs:
             [
               {
                 "path": "tmp/bundle-x86_64-pc-windows-msvc/tauri.msi",
-                "name": "Zebar_x64_${nextRelease.gitTag}.msi"
+                "name": "zebar-${nextRelease.gitTag}-x64.msi",
+                "label": "${nextRelease.gitTag} Installer (Windows x64)"
               },
               {
-                "path": "tmp/bundle-i686-pc-windows-msvc/tauri.msi",
-                "name": "Zebar_x86_${nextRelease.gitTag}.msi"
+                "path": "tmp/bundle-aarch64-pc-windows-msvc/tauri.msi",
+                "name": "zebar-${nextRelease.gitTag}-arm64.msi",
+                "label": "${nextRelease.gitTag} Installer (Windows arm64)"
               },
               {
                 "path": "tmp/bundle-universal-apple-darwin/tauri.dmg",
-                "name": "Zebar_${nextRelease.gitTag}.dmg"
+                "name": "zebar-${nextRelease.gitTag}.dmg",
+                "label": "${nextRelease.gitTag} Installer (MacOS universal)"
               },
               {
                 "path": "tmp/bundle-x86_64-unknown-linux-gnu/tauri.deb",
-                "name": "Zebar_x64_${nextRelease.gitTag}.deb"
+                "name": "zebar-${nextRelease.gitTag}-x64.deb",
+                "label": "${nextRelease.gitTag} Installer (Linux .deb)"
               },
               {
                 "path": "tmp/bundle-x86_64-unknown-linux-gnu/tauri.AppImage",
-                "name": "Zebar_x64_${nextRelease.gitTag}.AppImage"
+                "name": "zebar-${nextRelease.gitTag}-x64.AppImage",
+                "label": "${nextRelease.gitTag} Installer (Linux AppImage)"
               }
             ]
           npm-publish: true

@@ -12,7 +12,7 @@ pub struct KomorebiVariables {
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiMonitor {
   pub id: isize,
-  pub device_id: Option<String>,
+  pub device_id: String,
   pub focused_workspace_index: usize,
   pub name: String,
   pub size: Rect,
@@ -62,6 +62,7 @@ pub enum KomorebiLayout {
   UltrawideVerticalStack,
   Rows,
   Grid,
+  RightMainVerticalStack,
   Custom,
 }
 
@@ -78,6 +79,9 @@ impl From<Layout> for KomorebiLayout {
           KomorebiLayout::UltrawideVerticalStack
         }
         DefaultLayout::Grid => KomorebiLayout::Grid,
+        DefaultLayout::RightMainVerticalStack => {
+          KomorebiLayout::RightMainVerticalStack
+        }
       },
       _ => KomorebiLayout::Custom,
     }

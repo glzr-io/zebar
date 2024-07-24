@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{sync::Mutex, task::AbortHandle};
 
+use super::{HostProviderConfig, HostVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{HostProviderConfig, HostVariables};
 
 pub struct HostProvider {
   pub config: Arc<HostProviderConfig>,
@@ -54,7 +52,7 @@ impl IntervalProvider for HostProvider {
   async fn get_refreshed_variables(
     _: &HostProviderConfig,
     __: &Mutex<System>,
-  ) -> Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderVariables> {
     Ok(ProviderVariables::Host(HostVariables {
       hostname: System::host_name(),
       os_name: System::name(),

@@ -1,13 +1,13 @@
 use std::{fs, path::PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 /// Reads the config file at `~/.glzr/zebar/config.yaml`.
 pub fn read_file(
   config_path_override: Option<&str>,
   app_handle: AppHandle,
-) -> Result<String> {
+) -> anyhow::Result<String> {
   let default_config_path = app_handle
     .path()
     .resolve(".glzr/zebar/config.yaml", BaseDirectory::Home)
@@ -30,7 +30,7 @@ pub fn read_file(
 fn create_from_sample(
   config_path: &PathBuf,
   app_handle: AppHandle,
-) -> Result<()> {
+) -> anyhow::Result<()> {
   let sample_path = app_handle
     .path()
     .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
@@ -53,23 +53,24 @@ fn create_from_sample(
   Ok(())
 }
 
-pub fn open_config_dir(app_handle: AppHandle) -> Result<()> {
-  let config_dir_path = app_handle
+pub fn open_config_dir(app_handle: &AppHandle) -> anyhow::Result<()> {
+  let dir_path = app_handle
     .path()
     .resolve(".glzr/zebar", BaseDirectory::Home)
-    .context("Unable to get home directory.")?;
+    .context("Unable to get home directory.")?
+    .canonicalize()?;
 
   #[cfg(target_os = "windows")]
   {
     std::process::Command::new("explorer")
-      .arg(config_dir_path)
+      .arg(dir_path)
       .spawn()?;
   }
 
   #[cfg(target_os = "macos")]
   {
     std::process::Command::new("open")
-      .arg(config_dir_path)
+      .arg(dir_path)
       .arg("-R")
       .spawn()?;
   }
@@ -77,7 +78,7 @@ pub fn open_config_dir(app_handle: AppHandle) -> Result<()> {
   #[cfg(target_os = "linux")]
   {
     std::process::Command::new("xdg-open")
-      .arg(config_dir_path)
+      .arg(dir_path)
       .spawn()?;
   }
 

@@ -1,15 +1,14 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use async_trait::async_trait;
 use reqwest::Client;
 use tokio::task::AbortHandle;
 
+use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpVariables};
 
 pub struct IpProvider {
   pub config: Arc<IpProviderConfig>,
@@ -51,7 +50,7 @@ impl IntervalProvider for IpProvider {
   async fn get_refreshed_variables(
     _: &IpProviderConfig,
     http_client: &Client,
-  ) -> Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderVariables> {
     let res = http_client
       .get("https://ipinfo.io/json")
       .send()

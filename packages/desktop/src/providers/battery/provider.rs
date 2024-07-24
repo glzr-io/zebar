@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use async_trait::async_trait;
 use starship_battery::{
   units::{
@@ -11,11 +11,10 @@ use starship_battery::{
 };
 use tokio::task::AbortHandle;
 
+use super::{BatteryProviderConfig, BatteryVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{BatteryProviderConfig, BatteryVariables};
 
 pub struct BatteryProvider {
   pub config: Arc<BatteryProviderConfig>,
@@ -24,7 +23,9 @@ pub struct BatteryProvider {
 }
 
 impl BatteryProvider {
-  pub fn new(config: BatteryProviderConfig) -> Result<BatteryProvider> {
+  pub fn new(
+    config: BatteryProviderConfig,
+  ) -> anyhow::Result<BatteryProvider> {
     let manager = Manager::new()?;
 
     Ok(BatteryProvider {
@@ -36,7 +37,7 @@ impl BatteryProvider {
 
   /// Battery manager from `starship_battery` is not thread-safe, so it
   /// requires its own non-async function.
-  fn get_variables(manager: &Manager) -> Result<BatteryVariables> {
+  fn get_variables(manager: &Manager) -> anyhow::Result<BatteryVariables> {
     let first_battery = manager
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
@@ -85,7 +86,7 @@ impl IntervalProvider for BatteryProvider {
   async fn get_refreshed_variables(
     _: &BatteryProviderConfig,
     battery_manager: &Manager,
-  ) -> Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderVariables> {
     Ok(ProviderVariables::Battery(Self::get_variables(
       battery_manager,
     )?))

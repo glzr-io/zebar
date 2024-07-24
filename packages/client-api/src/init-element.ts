@@ -11,6 +11,7 @@ import {
   getParsedElementConfig,
   getChildConfigs,
   type GlobalConfig,
+  getScriptManager,
 } from './user-config';
 import { getElementProviders } from './providers';
 import type { ElementContext } from './element-context.model';
@@ -36,6 +37,7 @@ export async function initElement(
 ): Promise<ElementContext> {
   try {
     const styleBuilder = getStyleBuilder();
+    const scriptManager = getScriptManager();
     const childConfigs = getChildConfigs(args.rawConfig);
 
     // Create partial element context; `providers` and `parsedConfig` are set later.
@@ -71,11 +73,12 @@ export async function initElement(
     // provider.
     setElementContext('parsedConfig', parsedConfig);
 
+    // Build the CSS for the element.
     runWithOwner(args.owner, () => {
       createEffect(async () => {
         if (parsedConfig.styles) {
           try {
-            styleBuilder.setElementStyles(
+            styleBuilder.buildElementStyles(
               parsedConfig.id,
               parsedConfig.styles,
             );
@@ -85,6 +88,24 @@ export async function initElement(
               error: err,
             });
           }
+        }
+      });
+    });
+
+    // Preload the scripts used for the element's events.
+    runWithOwner(args.owner, () => {
+      createEffect(async () => {
+        try {
+          await Promise.all(
+            parsedConfig.events
+              .map(config => config.fn_path)
+              .map(scriptManager.loadScriptForFn),
+          );
+        } catch (err) {
+          await showErrorDialog({
+            title: `Non-fatal: Error in ${args.type}/${args.id}`,
+            error: err,
+          });
         }
       });
     });

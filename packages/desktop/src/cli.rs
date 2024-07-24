@@ -1,10 +1,11 @@
 use std::process;
 
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+const VERSION: &'static str = env!("VERSION_NUMBER");
+
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None, arg_required_else_help = true)]
+#[clap(author, version = VERSION, about, long_about = None, arg_required_else_help = true)]
 pub struct Cli {
   #[command(subcommand)]
   pub command: CliCommand,
@@ -35,7 +36,7 @@ pub enum CliCommand {
 }
 
 /// Print to stdout/stderror and exit the process.
-pub fn print_and_exit(output: Result<String>) {
+pub fn print_and_exit(output: anyhow::Result<String>) {
   match output {
     Ok(output) => {
       print!("{}", output);
@@ -49,7 +50,9 @@ pub fn print_and_exit(output: Result<String>) {
 }
 
 /// Parses arguments passed to the `open` CLI command into a string tuple.
-fn parse_open_args(input: &str) -> Result<(String, String), String> {
+fn parse_open_args(
+  input: &str,
+) -> anyhow::Result<(String, String), String> {
   let mut parts = input.split('=');
 
   match (parts.next(), parts.next()) {

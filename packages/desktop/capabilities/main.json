@@ -7,6 +7,8 @@
     "app:default",
     "dialog:allow-message",
     "event:default",
+    "path:allow-resolve-directory",
+    "path:default",
     "window:default",
     "window:allow-center",
     "window:allow-close",

@@ -12,16 +12,15 @@ use tokio::{
 };
 use tracing::debug;
 
+use super::{
+  KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
+  KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
+};
 use crate::providers::{
   komorebi::KomorebiVariables,
   manager::{ProviderOutput, VariablesResult},
   provider::Provider,
   variables::ProviderVariables,
-};
-
-use super::{
-  KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
-  KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
 };
 
 const SOCKET_NAME: &str = "zebar.sock";
@@ -146,20 +145,22 @@ impl Provider for KomorebiProvider {
             let reader = BufReader::new(data.try_clone().unwrap());
 
             for line in reader.lines().flatten() {
-              let notification: komorebi_client::Notification =
-                serde_json::from_str(&line).unwrap();
-
-              // Transform and emit the incoming Komorebi state.
-              _ = emit_output_tx
-                .send(ProviderOutput {
-                  config_hash: config_hash.clone(),
-                  variables: VariablesResult::Data(
-                    ProviderVariables::Komorebi(Self::transform_response(
-                      notification.state,
-                    )),
-                  ),
-                })
-                .await;
+              if let Ok(notification) = serde_json::from_str::<
+                komorebi_client::Notification,
+              >(&line)
+              {
+                // Transform and emit the incoming Komorebi state.
+                _ = emit_output_tx
+                  .send(ProviderOutput {
+                    config_hash: config_hash.clone(),
+                    variables: VariablesResult::Data(
+                      ProviderVariables::Komorebi(
+                        Self::transform_response(notification.state),
+                      ),
+                    ),
+                  })
+                  .await;
+              }
             }
           }
           Err(error) => {

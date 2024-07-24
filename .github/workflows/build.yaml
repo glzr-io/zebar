@@ -2,6 +2,9 @@ name: Build
 
 on:
   workflow_call:
+    inputs:
+      version-number:
+        type: string
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -19,14 +22,14 @@ jobs:
           - platform: ubuntu-22.04
             rust-targets: x86_64-unknown-linux-gnu
             tauri-target: x86_64-unknown-linux-gnu
-          # 64-bit Windows
+          # 64-bit Windows (Intel & AMD)
           - platform: windows-latest
             rust-targets: x86_64-pc-windows-msvc
             tauri-target: x86_64-pc-windows-msvc
-          # 32-bit Windows
+          # 64-bit Windows (ARM)
           - platform: windows-latest
-            rust-targets: i686-pc-windows-msvc
-            tauri-target: i686-pc-windows-msvc
+            rust-targets: aarch64-pc-windows-msvc
+            tauri-target: aarch64-pc-windows-msvc
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -34,7 +37,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -48,8 +51,7 @@ jobs:
 
       - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
         with:
-          workspaces: packages/desktop
-          shared-key: ${{ matrix.tauri-target }}-${{ hashFiles('packages/desktop/Cargo.lock') }}
+          shared-key: ${{ matrix.tauri-target }}-${{ hashFiles('Cargo.lock') }}
 
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
@@ -57,11 +59,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: Install dependencies (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          dotnet tool install --global AzureSignTool --version 5.0.0
+
       - run: pnpm i
       - run: pnpm run --filter zebar --filter @zebar/client build
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Set version number
+        run: |
+          jq '.version="${{ inputs.version-number || '0.0.0' }}"' packages/desktop/tauri.conf.json
+
+      - name: Tauri build
+        uses: tauri-apps/tauri-action@v0
         id: tauri
+        env:
+          AZ_VAULT_URL: ${{ secrets.AZ_VAULT_URL }}
+          AZ_CERT_NAME: ${{ secrets.AZ_CERT_NAME }}
+          AZ_CLIENT_ID: ${{ secrets.AZ_CLIENT_ID }}
+          AZ_CLIENT_SECRET: ${{ secrets.AZ_CLIENT_SECRET }}
+          AZ_TENANT_ID: ${{ secrets.AZ_TENANT_ID }}
+          RFC3161_TIMESTAMP_URL: ${{ vars.RFC3161_TIMESTAMP_URL }}
         with:
           projectPath: packages/desktop
           args: --target ${{ matrix.tauri-target }}
@@ -75,7 +94,8 @@ jobs:
           done
         shell: bash
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
         with:
           name: bundle-${{ matrix.tauri-target }}
           if-no-files-found: error

@@ -1,5 +1,3 @@
-import { compileString } from 'sass';
-
 import { createLogger, toCssSelector } from '~/utils';
 
 const logger = createLogger('style-builder');
@@ -12,16 +10,25 @@ let styleElement: HTMLStyleElement | null = null;
  * Abstraction over building CSS from user-defined styles.
  */
 export function getStyleBuilder() {
-  function setGlobalStyles(styles: string) {
+  function buildGlobalStyles(styles: string) {
+    logger.debug(`Updating global CSS:`, styles);
+
     globalStyles = styles;
     buildStyles();
   }
 
-  function setElementStyles(id: string, styles: string) {
-    elementStyles[id] = styles;
+  function buildElementStyles(id: string, styles: string) {
+    // Wrap user-defined styles in a scope.
+    const scopedStyles = `#${toCssSelector(id)} {\n${styles}}`;
+    logger.debug(`Updating element '${id}' CSS:\n`, scopedStyles);
+
+    elementStyles[id] = scopedStyles;
     buildStyles();
   }
 
+  /**
+   * Compile user-defined CSS and add it to the DOM.
+   */
   function buildStyles() {
     if (!styleElement) {
       styleElement = document.createElement('style');
@@ -29,43 +36,12 @@ export function getStyleBuilder() {
       document.head.appendChild(styleElement);
     }
 
-    styleElement.innerHTML = getCompiledCss();
+    const styles = [globalStyles ?? '', ...Object.values(elementStyles)];
+    styleElement.innerHTML = styles.join('\n');
   }
 
   return {
-    setGlobalStyles,
-    setElementStyles,
+    buildGlobalStyles,
+    buildElementStyles,
   };
-}
-
-/**
- * Compile user-defined SCSS to CSS to be added to the DOM.
- */
-function getCompiledCss(): string {
-  try {
-    const styles: string[] = [];
-
-    if (globalStyles) {
-      styles.push(globalStyles);
-    }
-
-    for (const [id, elStyles] of Object.entries(elementStyles)) {
-      styles.push(scopeWith(`#${toCssSelector(id)}`, elStyles));
-    }
-
-    const { css } = compileString(styles.join('\n'));
-    logger.debug('Compiled SCSS into CSS:', css);
-
-    return css;
-  } catch (err) {
-    // Re-throw error with formatted message.
-    throw new Error(`Failed to build CSS: ${(err as Error).message}`);
-  }
-}
-
-/**
- * Wrap user-defined styles in a scope.
- */
-function scopeWith(selector: string, styles: string | undefined) {
-  return styles ? `${selector} { ${styles} }` : '';
 }

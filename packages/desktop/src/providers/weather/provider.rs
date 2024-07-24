@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use reqwest::Client;
 use tokio::task::AbortHandle;
 
-use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
-};
-
 use super::{
   open_meteo_res::OpenMeteoRes, WeatherProviderConfig, WeatherStatus,
   WeatherVariables,
+};
+use crate::providers::{
+  interval_provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct WeatherProvider {
@@ -96,7 +94,7 @@ impl IntervalProvider for WeatherProvider {
   async fn get_refreshed_variables(
     config: &WeatherProviderConfig,
     http_client: &Client,
-  ) -> Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderVariables> {
     let res = http_client
       .get("https://api.open-meteo.com/v1/forecast")
       .query(&[

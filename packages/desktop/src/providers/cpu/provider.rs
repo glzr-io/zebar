@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{sync::Mutex, task::AbortHandle};
 
+use super::{CpuProviderConfig, CpuVariables};
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
 };
-
-use super::{CpuProviderConfig, CpuVariables};
 
 pub struct CpuProvider {
   pub config: Arc<CpuProviderConfig>,
@@ -54,7 +52,7 @@ impl IntervalProvider for CpuProvider {
   async fn get_refreshed_variables(
     _: &CpuProviderConfig,
     sysinfo: &Mutex<System>,
-  ) -> Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderVariables> {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_cpu();
 

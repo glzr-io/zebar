@@ -1,4 +1,4 @@
-import { getCurrent as getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { createEffect, getOwner, runWithOwner } from 'solid-js';
 
 import {
@@ -78,12 +78,12 @@ export async function initWindowAsync(): Promise<WindowContext> {
       owner,
     })) as WindowContext;
 
-    // Set global SCSS/CSS styles.
+    // Set global CSS styles.
     runWithOwner(owner, () => {
       createEffect(async () => {
         if (windowContext.parsedConfig.global_styles) {
           try {
-            styleBuilder.setGlobalStyles(
+            styleBuilder.buildGlobalStyles(
               windowContext.parsedConfig.global_styles,
             );
           } catch (err) {
@@ -103,7 +103,9 @@ export async function initWindowAsync(): Promise<WindowContext> {
         // dependencies are tracked successfully within the effect.
         const styles: Partial<WindowStyles> = {
           zOrder: windowContext.parsedConfig.z_order,
-          showInTaskbar: windowContext.parsedConfig.show_in_taskbar,
+          shownInTaskbar:
+            windowContext.parsedConfig.show_in_taskbar ||
+            windowContext.parsedConfig.shown_in_taskbar,
           resizable: windowContext.parsedConfig.resizable,
         };
 

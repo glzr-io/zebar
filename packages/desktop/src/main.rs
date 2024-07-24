@@ -1,16 +1,9 @@
-#![feature(unix_sigpipe)]
-
 use std::{collections::HashMap, env, sync::Arc};
 
-use anyhow::{Context, Result};
 use clap::Parser;
-use cli::{Cli, CliCommand};
-use monitors::get_monitors_str;
-use providers::{config::ProviderConfig, manager::ProviderManager};
 use serde::Serialize;
 use tauri::{
-  path::BaseDirectory, AppHandle, Manager, RunEvent, State, WebviewUrl,
-  WebviewWindowBuilder, Window,
+  AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, Window,
 };
 use tokio::{
   sync::{
@@ -21,11 +14,20 @@ use tokio::{
 };
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
+
+#[cfg(target_os = "macos")]
 use crate::util::window_ext::WindowExt;
+use crate::{
+  cli::{Cli, CliCommand},
+  monitors::get_monitors_str,
+  providers::{config::ProviderConfig, manager::ProviderManager},
+  sys_tray::setup_sys_tray,
+};
 
 mod cli;
 mod monitors;
 mod providers;
+mod sys_tray;
 mod user_config;
 mod util;
 
@@ -43,7 +45,7 @@ struct OpenWindowArgsMap(Arc<Mutex<HashMap<String, OpenWindowArgs>>>);
 fn read_config_file(
   config_path_override: Option<&str>,
   app_handle: AppHandle,
-) -> Result<String, String> {
+) -> anyhow::Result<String, String> {
   user_config::read_file(config_path_override, app_handle)
     .map_err(|err| err.to_string())
 }
@@ -52,7 +54,7 @@ fn read_config_file(
 async fn get_open_window_args(
   window_label: String,
   open_window_args_map: State<'_, OpenWindowArgsMap>,
-) -> Result<Option<OpenWindowArgs>, String> {
+) -> anyhow::Result<Option<OpenWindowArgs>, String> {
   Ok(
     open_window_args_map
       .0
@@ -69,7 +71,7 @@ async fn listen_provider(
   config: ProviderConfig,
   tracked_access: Vec<String>,
   provider_manager: State<'_, ProviderManager>,
-) -> Result<(), String> {
+) -> anyhow::Result<(), String> {
   provider_manager
     .listen(config_hash, config, tracked_access)
     .await
@@ -80,7 +82,7 @@ async fn listen_provider(
 async fn unlisten_provider(
   config_hash: String,
   provider_manager: State<'_, ProviderManager>,
-) -> Result<(), String> {
+) -> anyhow::Result<(), String> {
   provider_manager
     .unlisten(config_hash)
     .await
@@ -91,7 +93,7 @@ async fn unlisten_provider(
 /// all normal windows (but not the MacOS menu bar). The following instead
 /// sets the z-order of the window to be above the menu bar.
 #[tauri::command]
-fn set_always_on_top(window: Window) -> Result<(), String> {
+fn set_always_on_top(window: Window) -> anyhow::Result<(), String> {
   #[cfg(target_os = "macos")]
   let res = window.set_above_menu_bar();
 
@@ -102,7 +104,6 @@ fn set_always_on_top(window: Window) -> Result<(), String> {
 }
 
 #[tokio::main]
-#[unix_sigpipe = "sig_dfl"]
 async fn main() {
   tracing_subscriber::fmt()
     .with_env_filter(
@@ -113,12 +114,13 @@ async fn main() {
 
   tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-  let app = tauri::Builder::default()
+  tauri::Builder::default()
     .setup(|app| {
       let cli = Cli::parse();
 
-      // Since most Tauri plugins and setup is not needed for the `monitors`
-      // CLI command, the setup is conditional based on the CLI command.
+      // Since most Tauri plugins and setup is not needed for the
+      // `monitors` CLI command, the setup is conditional based on
+      // the CLI command.
       match cli.command {
         CliCommand::Monitors { print0 } => {
           let monitors_str = get_monitors_str(app, print0);
@@ -148,6 +150,9 @@ async fn main() {
           app.handle().plugin(tauri_plugin_http::init())?;
           app.handle().plugin(tauri_plugin_dialog::init())?;
 
+          // Add application icon to system tray.
+          setup_sys_tray(app)?;
+
           providers::manager::init(app)?;
 
           let args_map = OpenWindowArgsMap(Default::default());
@@ -157,9 +162,8 @@ async fn main() {
           let app_handle = app.handle().clone();
 
           // Prevent the app icon from showing up in the dock on MacOS.
-          // TODO: Enable once https://github.com/tauri-apps/tauri/pull/8713 is released.
-          // #[cfg(target_os = "macos")]
-          // app.set_activation_policy(ActivationPolicy::Accessory);
+          #[cfg(target_os = "macos")]
+          app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
           // Handle creation of new windows (both from the initial and
           // subsequent instances of the application)
@@ -175,9 +179,9 @@ async fn main() {
                 window_count, open_args.window_id, open_args.args
               );
 
-              // Window label needs to be globally unique. Hence add a prefix
-              // with the window count to handle cases where multiple of the
-              // same window are opened.
+              // Window label needs to be globally unique. Hence add a
+              // prefix with the window count to handle cases where
+              // multiple of the same window are opened.
               let window_label =
                 format!("{}-{}", window_count, &open_args.window_id);
 
@@ -187,19 +191,6 @@ async fn main() {
                 WebviewUrl::default(),
               )
               .title(format!("Zebar - {}", open_args.window_id))
-              .data_directory(
-                // Set a different data dir for each window. Temporary fix
-                // until #8196 is resolved.
-                // Ref: https://github.com/tauri-apps/tauri/issues/8196
-                app_handle
-                  .path()
-                  .resolve(
-                    format!(".glzr/zebar/tmp-{}", window_count),
-                    BaseDirectory::Home,
-                  )
-                  .context("Unable to get home directory.")
-                  .unwrap(),
-              )
               .inner_size(500., 500.)
               .visible_on_all_workspaces(true)
               .transparent(true)
@@ -230,15 +221,8 @@ async fn main() {
       unlisten_provider,
       set_always_on_top
     ])
-    .build(tauri::generate_context!())
-    .expect("Error while building Tauri application");
-
-  app.run(|_, event| {
-    if let RunEvent::ExitRequested { api, .. } = &event {
-      // Keep the message loop running even if all windows are closed.
-      api.prevent_exit();
-    }
-  })
+    .run(tauri::generate_context!())
+    .expect("Failed to build Tauri application.");
 }
 
 /// Create and emit `OpenWindowArgs` to a channel.
@@ -254,6 +238,6 @@ fn emit_open_args(
   };
 
   if let Err(err) = tx.send(open_args.clone()) {
-    info!("Error emitting window open args: {}", err);
+    info!("Failed to emit window's open args: {}", err);
   };
 }

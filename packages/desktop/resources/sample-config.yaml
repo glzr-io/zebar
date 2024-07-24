@@ -18,16 +18,16 @@ window/bar:
   # Width of the window in physical pixels.
   width: '{{ self.args.MONITOR_WIDTH }}'
   # Height of the window in physical pixels.
-  height: '45'
+  height: '40'
   # X-position of the window in physical pixels.
   position_x: '{{ self.args.MONITOR_X }}'
   # Y-position of the window in physical pixels.
   position_y: '{{ self.args.MONITOR_Y }}'
   # Whether to show the window above/below all others.
   # Allowed values: 'always_on_top', 'always_on_bottom', 'normal'.
-  z_order: 'always_on_top'
+  z_order: 'normal'
   # Whether the window should be shown in the taskbar.
-  show_in_taskbar: false
+  shown_in_taskbar: false
   # Whether the window should have resize handles.
   resizable: false
   # Styles to apply globally within the window. For example, we can use
@@ -35,7 +35,9 @@ window/bar:
   # for a cheatsheet of available Nerdfonts icons.
   global_styles: |
     @import "https://www.nerdfonts.com/assets/css/webfont.css";
-  # CSS/SCSS styles to apply to the root element within the window.
+  # CSS styles to apply to the root element within the window. Using CSS
+  # nesting, we can also target nested elements (e.g. below we set the
+  # color and margin-right of icons).
   styles: |
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -43,13 +45,16 @@ window/bar:
     height: 100%;
     color: #ffffffe6;
     font-family: ui-monospace, monospace;
-    font-size: 13px;
+    font-size: 12px;
     padding: 4px 24px;
     border-bottom: 1px solid #ffffff08;
-    background: linear-gradient(
-      rgba(14, 14, 28, 0.95),
-      rgba(26, 14, 28, 0.85),
-    );
+    background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(4, 1, 18, 0.85));
+
+    i {
+      color: #7481b2e1;
+      margin-right: 7px;
+    }
+
   group/left:
     styles: |
       display: flex;
@@ -76,6 +81,10 @@ window/bar:
           border-radius: 2px;
         }
       providers: ['glazewm']
+      events:
+        - type: 'click'
+          fn_path: 'script.js#invokeMe'
+          selector: '.workspace'
       template: |
         @for (workspace of glazewm.workspacesOnMonitor) {
           <button class="workspace">{{ workspace.name }}</button>
@@ -100,26 +109,22 @@ window/bar:
         margin-left: 20px;
       }
 
-      i {
-        color: #7481b2e1;
-        margin-right: 7px;
-      }
-
     template/network:
       providers: ['network']
       template: |
-        <!-- Ethernet is currently untested and may need to be adjusted. -->
         <!-- Show icon based on signal strength. -->
-        @if (network.defaultInterface.type === 'Ethernet') {
-          @if (network.defaultGateway.isConnected !== true) { <i class="nf-md-ethernet_off"></i> }
-          @else { <i class="nf-md-ethernet_cable"></i> }
+        @if (network.defaultInterface?.type === 'ethernet') {
+          <i class="nf nf-md-ethernet_cable"></i>
+        } @else if (network.defaultInterface?.type === 'wifi') {
+          @if (network.defaultGateway?.signalStrength >= 80) { <i class="nf nf-md-wifi_strength_4"></i> }
+          @else if (network.defaultGateway?.signalStrength >= 65) { <i class="nf nf-md-wifi_strength_3"></i> }
+          @else if (network.defaultGateway?.signalStrength >= 40) { <i class="nf nf-md-wifi_strength_2"></i> }
+          @else if (network.defaultGateway?.signalStrength >= 25) { <i class="nf nf-md-wifi_strength_1"></i> }
+          @else { <i class="nf nf-md-wifi_strength_outline"></i> }
+          {{ network.defaultGateway?.ssid }}
+        } @else {
+          <i class="nf nf-md-wifi_strength_off_outline"></i>
         }
-        @else if (network.defaultGateway.isConnected !== true) { <i class="nf-md-wifi_strength_off_outline"></i> } 
-        @else if (network.defaultGateway.signalStrengthPercent >= 80) { <i class="nf-md-wifi_strength_4"></i> }
-        @else if (network.defaultGateway.signalStrengthPercent >= 65) { <i class="nf-md-wifi_strength_3"></i> } 
-        @else if (network.defaultGateway.signalStrengthPercent >= 40) { <i class="nf-md-wifi_strength_2"></i> }
-        @else if (network.defaultGateway.signalStrengthPercent >= 25) { <i class="nf-md-wifi_strength_1"></i> }
-        @else { <i class="nf-md-wifi_strength_outline"></i> }
 
     template/memory:
       providers: ['memory']

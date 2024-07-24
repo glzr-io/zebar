@@ -1,10 +1,10 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context};
 use tauri::{App, Runtime};
 
 pub fn get_monitors_str<R: Runtime>(
   app: &mut App<R>,
   print0: bool,
-) -> Result<String> {
+) -> anyhow::Result<String> {
   let monitors = app
     .available_monitors()
     .context("Unable to detect monitors")?;

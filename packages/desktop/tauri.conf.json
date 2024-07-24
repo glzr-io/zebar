@@ -15,17 +15,19 @@
   "bundle": {
     "active": true,
     "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "resources/icons/32x32.png",
+      "resources/icons/128x128.png",
+      "resources/icons/128x128@2x.png",
+      "resources/icons/icon.icns",
+      "resources/icons/icon.ico"
     ],
     "shortDescription": "Zebar",
     "category": "Utility",
+    "publisher": "Glzr Software Pte. Ltd.",
     "resources": ["resources/*"],
-    "targets": ["deb", "appimage", "msi", "dmg", "updater"],
+    "targets": ["deb", "appimage", "msi", "dmg"],
     "windows": {
+      "signCommand": "powershell ./resources/scripts/sign.ps1 -FilePath %1",
       "wix": {
         "template": "./installer.wxs"
       }
@@ -34,7 +36,18 @@
   "app": {
     "macOSPrivateApi": true,
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "style-src": "'self' 'unsafe-inline' *",
+        "script-src": "'self' 'unsafe-eval'",
+        "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:6123",
+        "font-src": "'self' *",
+        "img-src": "'self' asset: blob: data: *"
+      },
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/.glzr/zebar/**"]
+      }
     }
   }
 }

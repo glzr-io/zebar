@@ -1,6 +1,5 @@
 use std::{sync::Arc, time::Duration};
 
-use anyhow::Result;
 use async_trait::async_trait;
 use tokio::{
   sync::mpsc::Sender,
@@ -53,7 +52,7 @@ pub trait IntervalProvider {
   async fn get_refreshed_variables(
     config: &Self::Config,
     state: &Self::State,
-  ) -> Result<ProviderVariables>;
+  ) -> anyhow::Result<ProviderVariables>;
 }
 
 #[async_trait]
@@ -116,7 +115,7 @@ impl<T: IntervalProvider + Send> Provider for T {
 }
 
 fn to_variables_result(
-  result: Result<ProviderVariables>,
+  result: anyhow::Result<ProviderVariables>,
 ) -> VariablesResult {
   match result {
     Ok(variables) => VariablesResult::Data(variables),

@@ -3,11 +3,11 @@ use std::{
   time::{Duration, Instant},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context};
 use serde::Serialize;
 use sysinfo::System;
 use sysinfo::Networks;
-use tauri::{App, AppHandle, Manager, Runtime};
+use tauri::{App, AppHandle, Emitter, Manager, Runtime};
 use tokio::{
   sync::{
     mpsc::{self, Sender},
@@ -17,8 +17,6 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-use crate::providers::provider::Provider;
-
 #[cfg(all(windows, target_arch = "x86_64"))]
 use super::komorebi::KomorebiProvider;
 use super::{
@@ -27,6 +25,7 @@ use super::{
   network::NetworkProvider, variables::ProviderVariables,
   weather::WeatherProvider,
 };
+use crate::providers::provider::Provider;
 
 pub struct ListenProviderArgs {
   pub config_hash: String,
@@ -70,14 +69,14 @@ pub struct ProviderManager {
 }
 
 /// Initializes `ProviderManager` in Tauri state.
-pub fn init<R: Runtime>(app: &mut App<R>) -> Result<()> {
+pub fn init<R: Runtime>(app: &mut App<R>) -> anyhow::Result<()> {
   app.manage(ProviderManager::new(app.handle().clone()));
   Ok(())
 }
 
 /// Create a channel for outputting provider variables to client.
 fn handle_provider_emit_output<R: Runtime>(
-  app_handle: (impl Manager<R> + Sync + Send + 'static),
+  app_handle: (impl Emitter<R> + Sync + Send + 'static),
   active_providers: Arc<Mutex<Vec<ProviderRef>>>,
 ) -> Sender<ProviderOutput> {
   let (output_sender, mut output_receiver) =
@@ -196,7 +195,7 @@ fn create_provider(
   config: ProviderConfig,
   sysinfo: Arc<Mutex<System>>,
   netinfo: Arc<Mutex<Networks>>,
-) -> Result<Box<dyn Provider + Send>> {
+) -> anyhow::Result<Box<dyn Provider + Send>> {
   let provider: Box<dyn Provider + Send> = match config {
     ProviderConfig::Battery(config) => {
       Box::new(BatteryProvider::new(config)?)
@@ -283,7 +282,7 @@ impl ProviderManager {
     config_hash: String,
     config: ProviderConfig,
     tracked_access: Vec<String>,
-  ) -> Result<()> {
+  ) -> anyhow::Result<()> {
     self
       .listen_input_tx
       .send(ListenProviderArgs {
@@ -296,7 +295,7 @@ impl ProviderManager {
   }
 
   /// Destroy and clean up a provider with the given config.
-  pub async fn unlisten(&self, config_hash: String) -> Result<()> {
+  pub async fn unlisten(&self, config_hash: String) -> anyhow::Result<()> {
     self
       .unlisten_input_tx
       .send(UnlistenProviderArgs { config_hash })

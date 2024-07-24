@@ -3,7 +3,7 @@ import {
   availableMonitors as getAvailableMonitors,
   currentMonitor as getCurrentMonitor,
   primaryMonitor as getPrimaryMonitor,
-  getCurrent as getCurrentWindow,
+  getCurrentWindow,
 } from '@tauri-apps/api/window';
 import { createStore } from 'solid-js/store';
 
