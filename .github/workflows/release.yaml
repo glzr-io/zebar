@@ -62,27 +62,27 @@ jobs:
             [
               {
                 "path": "tmp/bundle-x86_64-pc-windows-msvc/tauri.msi",
-                "name": "zebar-${nextRelease.gitTag}-x64.msi",
+                "name": "zebar-${nextRelease.gitTag}-opt1-x64.msi",
                 "label": "${nextRelease.gitTag} Installer (Windows x64)"
               },
               {
                 "path": "tmp/bundle-aarch64-pc-windows-msvc/tauri.msi",
-                "name": "zebar-${nextRelease.gitTag}-arm64.msi",
+                "name": "zebar-${nextRelease.gitTag}-opt2-arm64.msi",
                 "label": "${nextRelease.gitTag} Installer (Windows arm64)"
               },
               {
                 "path": "tmp/bundle-universal-apple-darwin/tauri.dmg",
-                "name": "zebar-${nextRelease.gitTag}.dmg",
+                "name": "zebar-${nextRelease.gitTag}-opt3.dmg",
                 "label": "${nextRelease.gitTag} Installer (MacOS universal)"
               },
               {
                 "path": "tmp/bundle-x86_64-unknown-linux-gnu/tauri.deb",
-                "name": "zebar-${nextRelease.gitTag}-x64.deb",
+                "name": "zebar-${nextRelease.gitTag}-opt4-x64.deb",
                 "label": "${nextRelease.gitTag} Installer (Linux .deb)"
               },
               {
                 "path": "tmp/bundle-x86_64-unknown-linux-gnu/tauri.AppImage",
-                "name": "zebar-${nextRelease.gitTag}-x64.AppImage",
+                "name": "zebar-${nextRelease.gitTag}-opt5-x64.AppImage",
                 "label": "${nextRelease.gitTag} Installer (Linux AppImage)"
               }
             ]
