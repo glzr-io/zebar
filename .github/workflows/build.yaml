@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: 9
 
@@ -44,12 +44,12 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - uses: dtolnay/rust-toolchain@be73d7920c329f220ce78e0234b8f96b7ae60248
+      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17
         with:
           toolchain: nightly
           targets: ${{ matrix.rust-targets }}
 
-      - uses: swatinem/rust-cache@988c164c3d0e93c4dbab36aaf5bbeb77425b2894
+      - uses: swatinem/rust-cache@9bdad043e88c75890e36ad3bbc8d27f0090dd609
         with:
           shared-key: ${{ matrix.tauri-target }}-${{ hashFiles('Cargo.lock') }}
 
