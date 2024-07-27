@@ -91,7 +91,7 @@ window/bar:
       providers: ['glazewm']
       events:
         - type: 'click'
-          fn_path: 'script.js#invokeMe'
+          fn_path: 'script.js#focusWorkspace'
           selector: '.workspace'
       template: |
         @for (workspace of glazewm.currentWorkspaces) {
