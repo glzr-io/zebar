@@ -1,16 +1,8 @@
 # Yaml is white-space sensitive (use 2 spaces to indent).
 
 ###
-# Settings to apply to all windows.
-#
-# Docs regarding global: https://some-future-docs-link.com
-global:
-  # Whether to enable the browser devtools.
-  enable_devtools: true
-
-###
 # Define a new window with an id of 'bar'. This window can then be opened
-# via the Zebar cli by running 'zebar open bar'.
+# via the Zebar cli by running 'zebar open bar --args <ARGS...>'.
 #
 # Docs regarding window: https://some-future-docs-link.com
 window/bar:
@@ -43,15 +35,15 @@ window/bar:
     grid-template-columns: 1fr 1fr 1fr;
     align-items: center;
     height: 100%;
-    color: #ffffffe6;
+    color: rgb(255 255 255 / 90%);
     font-family: ui-monospace, monospace;
     font-size: 12px;
     padding: 4px 24px;
-    border-bottom: 1px solid #ffffff08;
-    background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(4, 1, 18, 0.85));
+    border-bottom: 1px solid rgb(255 255 255 / 5%);;
+    background: linear-gradient(rgb(0 0 0 / 90%), rgb(5 2 20 / 85%));
 
     i {
-      color: #7481b2e1;
+      color: rgb(115 130 175 / 95%);
       margin-right: 7px;
     }
 
@@ -72,20 +64,21 @@ window/bar:
         align-items: center;
 
         .workspace {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgb(255 255 255 / 5%);
           margin-right: 4px;
-          width: 30px;
-          height: 100%;
-          color: #ffffffe6;
+          padding: 4px 8px;
+          color: rgb(255 255 255 / 90%);
           border: none;
           border-radius: 2px;
-
-          &.focused {
-            background: rgba(255, 255, 255, 0.1);
-          }
+          cursor: pointer;
 
           &.displayed {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgb(255 255 255 / 15%);
+          }
+
+          &.focused,
+          &:hover {
+            background: rgb(75 115 255 / 50%);
           }
         }
       providers: ['glazewm']
@@ -124,13 +117,27 @@ window/bar:
 
     template/glazewm_other:
       providers: ['glazewm']
+      styles: |
+        .binding-mode,
+        .tiling-direction {
+          background: rgb(255 255 255 / 15%);
+          color: rgb(255 255 255 / 90%);
+          border-radius: 2px;
+          padding: 4px 6px;
+          margin: 0;
+        }
+
       template: |
-        {{ glazewm.bindingModes.join(' ') }}
+        @for (bindingMode of glazewm.bindingModes) {
+          <span class="binding-mode">
+            {{ bindingMode.displayName ?? bindingMode.name }}
+          </span>
+        }
 
         @if (glazewm.tilingDirection === 'horizontal') {
-          <i class="nf nf-md-swap_horizontal"></i>
+          <i class="tiling-direction nf nf-md-swap_horizontal"></i>
         } @else {
-          <i class="nf nf-md-swap_vertical"></i>
+          <i class="tiling-direction nf nf-md-swap_vertical"></i>
         }
 
     template/network:

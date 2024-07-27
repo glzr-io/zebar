@@ -2,6 +2,7 @@ import {
   TilingDirection,
   WmClient,
   WmEventType,
+  type BindingModeConfig,
   type BindingModesChangedEvent,
   type Container,
   type FocusChangedEvent,
@@ -69,7 +70,7 @@ export interface GlazeWmProvider {
   /**
    * Active binding modes;
    */
-  bindingModes: string[];
+  bindingModes: BindingModeConfig[];
 
   /**
    * Focus a workspace by name.
@@ -122,9 +123,7 @@ export async function createGlazeWmProvider(
   ) {
     switch (e.eventType) {
       case WmEventType.BINDING_MODES_CHANGED: {
-        setGlazeWmVariables({
-          bindingModes: e.newBindingModes.map(mode => mode.name),
-        });
+        setGlazeWmVariables({ bindingModes: e.newBindingModes });
         break;
       }
       case WmEventType.FOCUS_CHANGED:
@@ -155,7 +154,7 @@ export async function createGlazeWmProvider(
       ...(await getMonitorState()),
       focusedContainer: focused,
       tilingDirection,
-      bindingModes: bindingModes.map(mode => mode.name),
+      bindingModes,
     };
   }
 
