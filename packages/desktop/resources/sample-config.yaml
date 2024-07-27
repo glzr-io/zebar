@@ -140,11 +140,11 @@ window/bar:
         @if (network.defaultInterface?.type === 'ethernet') {
           <i class="nf nf-md-ethernet_cable"></i>
         } @else if (network.defaultInterface?.type === 'wifi') {
-          @if (network.defaultGateway?.signalStrength >= 80) { <i class="nf nf-md-wifi_strength_4"></i> }
-          @else if (network.defaultGateway?.signalStrength >= 65) { <i class="nf nf-md-wifi_strength_3"></i> }
-          @else if (network.defaultGateway?.signalStrength >= 40) { <i class="nf nf-md-wifi_strength_2"></i> }
-          @else if (network.defaultGateway?.signalStrength >= 25) { <i class="nf nf-md-wifi_strength_1"></i> }
-          @else { <i class="nf nf-md-wifi_strength_outline"></i> }
+          @if (network.defaultGateway?.signalStrength >= 80) {<i class="nf nf-md-wifi_strength_4"></i>}
+          @else if (network.defaultGateway?.signalStrength >= 65) {<i class="nf nf-md-wifi_strength_3"></i>}
+          @else if (network.defaultGateway?.signalStrength >= 40) {<i class="nf nf-md-wifi_strength_2"></i>}
+          @else if (network.defaultGateway?.signalStrength >= 25) {<i class="nf nf-md-wifi_strength_1"></i>}
+          @else {<i class="nf nf-md-wifi_strength_outline"></i>}
           {{ network.defaultGateway?.ssid }}
         } @else {
           <i class="nf nf-md-wifi_strength_off_outline"></i>

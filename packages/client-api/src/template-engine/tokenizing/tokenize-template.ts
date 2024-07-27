@@ -96,36 +96,36 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   function tokenizeDefault() {
-    if (scanner.scan(/\s+/)) {
-      // Ignore whitespace between tokens.
-    } else if (scanner.scan(/@if/)) {
+    if (scanner.scan(/\s*@if/)) {
       pushToken(TokenType.IF_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
-    } else if (scanner.scan(/@else\s+if/)) {
+    } else if (scanner.scan(/\s*@else\s+if/)) {
       pushToken(TokenType.ELSE_IF_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
-    } else if (scanner.scan(/@else/)) {
+    } else if (scanner.scan(/\s*@else/)) {
       pushToken(TokenType.ELSE_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
-    } else if (scanner.scan(/@for/)) {
+    } else if (scanner.scan(/\s*@for/)) {
       pushToken(TokenType.FOR_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
-    } else if (scanner.scan(/@switch/)) {
+    } else if (scanner.scan(/\s*@switch/)) {
       pushToken(TokenType.SWITCH_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
-    } else if (scanner.scan(/@case/)) {
+    } else if (scanner.scan(/\s*@case/)) {
       pushToken(TokenType.SWITCH_CASE_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
-    } else if (scanner.scan(/@default/)) {
+    } else if (scanner.scan(/\s*@default/)) {
       pushToken(TokenType.SWITCH_DEFAULT_STATEMENT);
       pushState(TokenizeStateType.IN_STATEMENT_ARGS);
-    } else if (scanner.scan(/{{/)) {
+    } else if (scanner.scan(/(?:[\n\r\v\f\t]+\s*|){{/)) {
+      // Ignore newlines before interpolation tag. Spaces are not ignored
+      // for when the interpolation tag is mixed in with text tokens.
       pushToken(TokenType.OPEN_INTERPOLATION);
       pushState(TokenizeStateType.IN_INTERPOLATION);
     } else if (scanner.scanUntil(/[\S\s]+?(?={{|@|\})/)) {
       // Search until a close block, the start of a statement, or the start
-      // of an interpolation tag. In a JavaScript regex, the . character
-      // does not match new line characters, so we instead use [\S\s].
+      // of an interpolation tag. In a JavaScript regex, the `.` character
+      // does not match newline characters, so we instead use [\S\s].
       pushToken({
         type: TokenType.TEXT,
         ...scanner.latestMatch!,
@@ -144,7 +144,7 @@ export function tokenizeTemplate(template: string): Token[] {
         closeRegex: /[\S\s]+?(?=\))/,
         activeWrappingSymbol: null,
       });
-    } else if (scanner.scan(/{/)) {
+    } else if (scanner.scan(/{\s*/)) {
       pushToken(TokenType.OPEN_BLOCK);
       stateStack.pop();
       pushState(TokenizeStateType.IN_STATEMENT_BLOCK);
@@ -157,7 +157,7 @@ export function tokenizeTemplate(template: string): Token[] {
   }
 
   function tokenizeStatementBlock() {
-    if (scanner.scan(/}/)) {
+    if (scanner.scan(/}\s*/)) {
       pushToken(TokenType.CLOSE_BLOCK);
       stateStack.pop();
     } else {
@@ -168,7 +168,7 @@ export function tokenizeTemplate(template: string): Token[] {
   function tokenizeInterpolation() {
     if (scanner.scan(/\s+/)) {
       // Ignore whitespace within interpolation tag.
-    } else if (scanner.scan(/}}/)) {
+    } else if (scanner.scan(/}}(?:[\n\r\v\f\t]+\s*|)/)) {
       pushToken(TokenType.CLOSE_INTERPOLATION);
       stateStack.pop();
     } else if (scanner.scan(/[\S\s]*?/)) {
