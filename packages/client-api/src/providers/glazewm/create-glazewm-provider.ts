@@ -1,69 +1,242 @@
+import {
+  TilingDirection,
+  WmClient,
+  WmEventType,
+  type BindingModesChangedEvent,
+  type Container,
+  type FocusChangedEvent,
+  type FocusedContainerMovedEvent,
+  type Monitor,
+  type TilingDirectionChangedEvent,
+  type Workspace,
+  type WorkspaceActivatedEvent,
+  type WorkspaceDeactivatedEvent,
+  type WorkspaceUpdatedEvent,
+} from 'glazewm';
 import { createEffect, on, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { GwmClient, GwmEventType, type Workspace } from 'glazewm';
 
 import { getMonitors } from '~/desktop';
 import type { GlazewmProviderConfig } from '~/user-config';
 import { getCoordinateDistance } from '~/utils';
 
-export async function createGlazewmProvider(
+export interface GlazeWmProvider {
+  /**
+   * Workspace displayed on the current monitor.
+   */
+  displayedWorkspace: Workspace;
+
+  /**
+   * Workspace that currently has focus (on any monitor).
+   */
+  focusedWorkspace: Workspace;
+
+  /**
+   * Workspaces on the current monitor.
+   */
+  currentWorkspaces: Workspace[];
+
+  /**
+   * Workspaces across all monitors.
+   */
+  allWorkspaces: Workspace[];
+
+  /**
+   * All monitors.
+   */
+  allMonitors: Monitor[];
+
+  /**
+   * Monitor that currently has focus.
+   */
+  focusedMonitor: Monitor;
+
+  /**
+   * Monitor that is nearest to this Zebar window.
+   */
+  currentMonitor: Monitor;
+
+  /**
+   * Container that currently has focus (on any monitor).
+   */
+  focusedContainer: Container;
+
+  /**
+   * Tiling direction of the focused container.
+   */
+  tilingDirection: TilingDirection;
+
+  /**
+   * Active binding modes;
+   */
+  bindingModes: string[];
+
+  /**
+   * Focus a workspace by name.
+   */
+  focusWorkspace(name: string): void;
+}
+
+export async function createGlazeWmProvider(
   _: GlazewmProviderConfig,
   owner: Owner,
-) {
+): Promise<GlazeWmProvider> {
   const monitors = await getMonitors();
-  const client = new GwmClient();
+  const client = new WmClient();
 
-  const [glazewmVariables, setGlazewmVariables] = createStore({
-    workspacesOnMonitor: [] as Workspace[],
-    // TODO
-    bindingMode: '',
-  });
-
-  client.onConnect(e => console.log('onOpen', e));
-  client.onMessage(e => console.log('onMessage', e));
-  client.onDisconnect(e => console.log('onClose', e));
-  client.onError(e => console.log('onError', e));
-
-  // Get initial workspaces.
-  await refetch();
+  const [glazeWmVariables, setGlazeWmVariables] = createStore(
+    await getInitialState(),
+  );
 
   await client.subscribeMany(
     [
-      GwmEventType.WORKSPACE_ACTIVATED,
-      GwmEventType.WORKSPACE_DEACTIVATED,
-      GwmEventType.FOCUS_CHANGED,
+      WmEventType.BINDING_MODES_CHANGED,
+      WmEventType.FOCUS_CHANGED,
+      WmEventType.FOCUSED_CONTAINER_MOVED,
+      WmEventType.TILING_DIRECTION_CHANGED,
+      WmEventType.WORKSPACE_ACTIVATED,
+      WmEventType.WORKSPACE_DEACTIVATED,
+      WmEventType.WORKSPACE_UPDATED,
     ],
-    refetch,
+    onEvent,
   );
 
   runWithOwner(owner, () => {
-    createEffect(on(() => monitors.currentMonitor, refetch));
+    createEffect(
+      on(
+        () => monitors.currentMonitor,
+        async () => setGlazeWmVariables({ ...(await getMonitorState()) }),
+      ),
+    );
   });
 
-  async function refetch() {
+  async function onEvent(
+    e:
+      | BindingModesChangedEvent
+      | FocusChangedEvent
+      | FocusedContainerMovedEvent
+      | TilingDirectionChangedEvent
+      | WorkspaceActivatedEvent
+      | WorkspaceDeactivatedEvent
+      | WorkspaceUpdatedEvent,
+  ) {
+    switch (e.eventType) {
+      case WmEventType.BINDING_MODES_CHANGED: {
+        setGlazeWmVariables({
+          bindingModes: e.newBindingModes.map(mode => mode.name),
+        });
+        break;
+      }
+      case WmEventType.FOCUS_CHANGED:
+      case WmEventType.FOCUSED_CONTAINER_MOVED: {
+        setGlazeWmVariables({ focusedContainer: e.focusedContainer });
+        setGlazeWmVariables({ ...(await getMonitorState()) });
+        break;
+      }
+      case WmEventType.TILING_DIRECTION_CHANGED: {
+        setGlazeWmVariables({ tilingDirection: e.newTilingDirection });
+        break;
+      }
+      case WmEventType.WORKSPACE_ACTIVATED:
+      case WmEventType.WORKSPACE_DEACTIVATED:
+      case WmEventType.WORKSPACE_UPDATED: {
+        setGlazeWmVariables({ ...(await getMonitorState()) });
+        break;
+      }
+    }
+  }
+
+  async function getInitialState() {
+    const { focused } = await client.queryFocused();
+    const { bindingModes } = await client.queryBindingModes();
+    const { tilingDirection } = await client.queryTilingDirection();
+
+    return {
+      ...(await getMonitorState()),
+      focusedContainer: focused,
+      tilingDirection,
+      bindingModes: bindingModes.map(mode => mode.name),
+    };
+  }
+
+  async function getMonitorState() {
     const currentPosition = {
       x: monitors.currentMonitor!.x,
       y: monitors.currentMonitor!.y,
     };
 
-    // Get GlazeWM monitor that corresponds to the bar's monitor.
-    const glazewmMonitor = (await client.getMonitors()).reduce((a, b) =>
+    const { monitors: glazeWmMonitors } = await client.queryMonitors();
+
+    // Get GlazeWM monitor that corresponds to the Zebar window's monitor.
+    const currentGlazeWmMonitor = glazeWmMonitors.reduce((a, b) =>
       getCoordinateDistance(currentPosition, a) <
       getCoordinateDistance(currentPosition, b)
         ? a
         : b,
     );
 
-    setGlazewmVariables({
-      workspacesOnMonitor: glazewmMonitor.children.sort(
-        (a, b) => Number(a.name) - Number(b.name),
-      ),
-    });
+    const focusedGlazeWmMonitor = glazeWmMonitors.find(
+      monitor => monitor.hasFocus,
+    );
+
+    const allGlazeWmWorkspaces = glazeWmMonitors.flatMap(
+      monitor => monitor.children,
+    );
+
+    const focusedGlazeWmWorkspace = focusedGlazeWmMonitor?.children.find(
+      workspace => workspace.hasFocus,
+    );
+
+    const displayedGlazeWmWorkspace = currentGlazeWmMonitor.children.find(
+      workspace => workspace.isDisplayed,
+    );
+
+    return {
+      displayedWorkspace: displayedGlazeWmWorkspace!,
+      focusedWorkspace: focusedGlazeWmWorkspace!,
+      currentWorkspaces: currentGlazeWmMonitor.children,
+      allWorkspaces: allGlazeWmWorkspaces,
+      focusedMonitor: focusedGlazeWmMonitor!,
+      currentMonitor: currentGlazeWmMonitor,
+      allMonitors: glazeWmMonitors,
+    };
+  }
+
+  function focusWorkspace(name: string) {
+    client.runCommand(`focus --workspace ${name}`);
   }
 
   return {
-    get workspacesOnMonitor() {
-      return glazewmVariables.workspacesOnMonitor;
+    get displayedWorkspace() {
+      return glazeWmVariables.displayedWorkspace;
     },
+    get focusedWorkspace() {
+      return glazeWmVariables.focusedWorkspace;
+    },
+    get currentWorkspaces() {
+      return glazeWmVariables.currentWorkspaces;
+    },
+    get allWorkspaces() {
+      return glazeWmVariables.allWorkspaces;
+    },
+    get allMonitors() {
+      return glazeWmVariables.allMonitors;
+    },
+    get focusedMonitor() {
+      return glazeWmVariables.focusedMonitor;
+    },
+    get currentMonitor() {
+      return glazeWmVariables.currentMonitor;
+    },
+    get focusedContainer() {
+      return glazeWmVariables.focusedContainer;
+    },
+    get tilingDirection() {
+      return glazeWmVariables.tilingDirection;
+    },
+    get bindingModes() {
+      return glazeWmVariables.bindingModes;
+    },
+    focusWorkspace,
   };
 }

@@ -134,7 +134,7 @@ export async function createKomorebiProvider(
       y: monitors.currentMonitor!.y,
     };
 
-    // Get Komorebi monitor that corresponds to the window's monitor.
+    // Get Komorebi monitor that corresponds to the Zebar window's monitor.
     const currentKomorebiMonitor = state.allMonitors.reduce((a, b) =>
       getCoordinateDistance(currentPosition, {
         x: a.workAreaSize.left,

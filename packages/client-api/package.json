@@ -22,7 +22,7 @@
     "@tauri-apps/api": "2.0.0-beta.15",
     "@tauri-apps/plugin-dialog": "2.0.0-beta.7",
     "@tauri-apps/plugin-shell": "2.0.0-beta.8",
-    "glazewm": "1.1.2",
+    "glazewm": "1.4.1",
     "luxon": "3.4.4",
     "solid-js": "1.8.14",
     "yaml": "2.3.4",

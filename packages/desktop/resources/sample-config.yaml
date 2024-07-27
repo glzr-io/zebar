@@ -66,7 +66,7 @@ window/bar:
       template: |
         <i class="nf nf-fa-windows"></i>
 
-    template/glazewm:
+    template/glazewm_workspaces:
       styles: |
         display: flex;
         align-items: center;
@@ -75,10 +75,18 @@ window/bar:
           background: rgba(255, 255, 255, 0.05);
           margin-right: 4px;
           width: 30px;
-          height: 30px;
+          height: 100%;
           color: #ffffffe6;
           border: none;
           border-radius: 2px;
+
+          &.focused {
+            background: rgba(255, 255, 255, 0.1);
+          }
+
+          &.displayed {
+            background: rgba(255, 255, 255, 0.2);
+          }
         }
       providers: ['glazewm']
       events:
@@ -86,8 +94,13 @@ window/bar:
           fn_path: 'script.js#invokeMe'
           selector: '.workspace'
       template: |
-        @for (workspace of glazewm.workspacesOnMonitor) {
-          <button class="workspace">{{ workspace.name }}</button>
+        @for (workspace of glazewm.currentWorkspaces) {
+          <button
+            class="workspace {{ workspace.hasFocus ? 'focused' : '' }} {{ workspace.isDisplayed ? 'displayed' : '' }}"
+            id="{{ workspace.name }}"
+          >
+            {{ workspace.displayName ?? workspace.name }}
+          </button>
         }
 
   group/center:
@@ -108,6 +121,17 @@ window/bar:
       .template {
         margin-left: 20px;
       }
+
+    template/glazewm_other:
+      providers: ['glazewm']
+      template: |
+        {{ glazewm.bindingModes.join(' ') }}
+
+        @if (glazewm.tilingDirection === 'horizontal') {
+          <i class="nf nf-md-swap_horizontal"></i>
+        } @else {
+          <i class="nf nf-md-swap_vertical"></i>
+        }
 
     template/network:
       providers: ['network']
