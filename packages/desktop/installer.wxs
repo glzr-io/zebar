@@ -127,7 +127,7 @@
       <Directory Id="USER_FOLDER">
         <Directory Id="OrgConfigDir" Name=".glzr">
           <Directory Id="ZebarConfigDir" Name="zebar">
-            <Component Id="StarterConfig" Permanent="yes" Guid="85c365eb-dd72-480d-b974-b07fbe1ecb02">
+            <Component Id="StarterConfig" Permanent="yes" NeverOverwrite="yes" Guid="85c365eb-dd72-480d-b974-b07fbe1ecb02">
               <Condition>ADD_GLAZEWM_STARTER = 1</Condition>
               <File Id="ConfigYaml" Source="../../resources/sample-config.yaml" Name="config.yaml" KeyPath="yes" />
               <File Id="ScriptJs" Source="../../resources/script.js" />
