@@ -52,11 +52,11 @@ And in the Zebar config (if using the default generated one), replace the GlazeW
           height: 30px;
           color: #ffffffe6;
           border: none;
-          border-radius: 2px;
+          border-radius: 2px;         
+        }
 
-          &.active {
-            background: rgba(255, 255, 255, 0.1);
-          }
+        .workspace.active {
+          background: rgba(255, 255, 255, 0.1);
         }
       providers: ['komorebi']
       template: |
