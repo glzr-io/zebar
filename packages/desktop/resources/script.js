@@ -1,3 +1,5 @@
-export function invokeMe(event, context) {
-  console.log('invokeMe', event, context);
+export function focusWorkspace(event, context) {
+  console.log('Focus button clicked!', event, context);
+  const id = event.target.id;
+  context.providers.glazewm.focusWorkspace(id);
 }

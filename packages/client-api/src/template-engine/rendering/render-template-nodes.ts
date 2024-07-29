@@ -162,5 +162,6 @@ export function renderTemplateNodes(
     );
   }
 
-  return visitAll(nodes);
+  // Render and trim any leading/trailing whitespace.
+  return visitAll(nodes).trim();
 }

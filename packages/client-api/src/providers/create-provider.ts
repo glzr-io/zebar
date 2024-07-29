@@ -4,7 +4,7 @@ import { createBatteryProvider } from './battery/create-battery-provider';
 import { createCpuProvider } from './cpu/create-cpu-provider';
 import { createDataProvider } from './data/create-data-provider';
 import { createDateProvider } from './date/create-date-provider';
-import { createGlazewmProvider } from './glazewm/create-glazewm-provider';
+import { createGlazeWmProvider } from './glazewm/create-glazewm-provider';
 import { createHostProvider } from './host/create-host-provider';
 import { createIpProvider } from './ip/create-ip-provider';
 import { createKomorebiProvider } from './komorebi/create-komorebi-provider';
@@ -35,7 +35,7 @@ export async function createProvider(
     case ProviderType.DATE:
       return createDateProvider(config, owner);
     case ProviderType.GLAZEWM:
-      return createGlazewmProvider(config, owner);
+      return createGlazeWmProvider(config, owner);
     case ProviderType.HOST:
       return createHostProvider(config, owner);
     case ProviderType.IP:

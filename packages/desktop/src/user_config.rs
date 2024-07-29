@@ -36,6 +36,11 @@ fn create_from_sample(
     .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
     .context("Unable to resolve sample config resource.")?;
 
+  let sample_script = app_handle
+    .path()
+    .resolve("resources/script.js", BaseDirectory::Resource)
+    .context("Unable to resolve sample script resource.")?;
+
   let dest_dir =
     config_path.parent().context("Invalid config directory.")?;
 
@@ -45,9 +50,15 @@ fn create_from_sample(
   })?;
 
   // Copy over sample config.
-  let dest_path = dest_dir.join("config.yaml");
-  fs::copy(&sample_path, &dest_path).with_context(|| {
-    format!("Unable to write to {}.", dest_path.display())
+  let config_path = dest_dir.join("config.yaml");
+  fs::copy(&sample_path, &config_path).with_context(|| {
+    format!("Unable to write to {}.", config_path.display())
+  })?;
+
+  // Copy over sample script.
+  let script_path = dest_dir.join("script.js");
+  fs::copy(&sample_script, &script_path).with_context(|| {
+    format!("Unable to write to {}.", script_path.display())
   })?;
 
   Ok(())
