@@ -5,6 +5,12 @@ import type { UtilProviderConfig } from '~/user-config';
 
 export interface UtilVariables { }
 
+export enum DataUnit {
+  BITS = 'bits',
+  SI_BYTES = 'si_bytes',
+  IEC_BYTES = 'iec_bytes',
+}
+
 export async function createUtilProvider(
   config: UtilProviderConfig,
   owner: Owner,
@@ -18,25 +24,21 @@ export async function createUtilProvider(
 
   const bitUnits = ['b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Zb', 'Yb'];
   const byteCommonUnits = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const byteIECUnits = [' B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+  const byteIECUnits = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
 
-  function convertBytes(bytes: number, decimals: number, minUnit: string) {
-    let unitIndex = bitUnits.findIndex(u => u === minUnit);
+  function convertBytes(bytes: number, decimals: number = 0, unitType: DataUnit = DataUnit.BITS) {
+    let unitIndex = 1; // Kb/KB/KiB
 
-    if (unitIndex !== -1) {
+    if (unitType === DataUnit.BITS) {
       bytes *= 8;
       return convert(1000, bitUnits, bytes, decimals, unitIndex);
     }
-
-    unitIndex = byteCommonUnits.findIndex(u => u === minUnit);
-
-    if (unitIndex !== -1) {
+    
+    if (unitType === DataUnit.SI_BYTES) {
       return convert(1000, byteCommonUnits, bytes, decimals, unitIndex);
     }
 
-    unitIndex = byteIECUnits.findIndex(u => u === minUnit);
-
-    if (unitIndex !== -1) {
+    if (unitType === DataUnit.IEC_BYTES) {
       return convert(1024, byteIECUnits, bytes, decimals, unitIndex);
     }
 
@@ -60,6 +62,6 @@ export async function createUtilProvider(
   }
 
   return {
-    convertBytes,
+    convertBytes
   };
 }
