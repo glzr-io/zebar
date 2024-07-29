@@ -1,18 +1,18 @@
 import { type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import type { DataProviderConfig } from '~/user-config';
+import type { UtilProviderConfig } from '~/user-config';
 
-export interface DataVariables { }
+export interface UtilVariables { }
 
-export async function createDataProvider(
-  config: DataProviderConfig,
+export async function createUtilProvider(
+  config: UtilProviderConfig,
   owner: Owner,
 ) {
-  const [dataVariables, setDataVariables] =
-    createStore<DataVariables>(getDataVariables());
+  const [utilVariables, setUtilVariables] =
+    createStore<UtilVariables>(getUtilVariables());
 
-  function getDataVariables() {
+  function getUtilVariables() {
     return {};
   }
 

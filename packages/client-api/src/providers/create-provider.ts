@@ -2,7 +2,6 @@ import type { Owner } from 'solid-js';
 
 import { createBatteryProvider } from './battery/create-battery-provider';
 import { createCpuProvider } from './cpu/create-cpu-provider';
-import { createDataProvider } from './data/create-data-provider';
 import { createDateProvider } from './date/create-date-provider';
 import { createGlazeWmProvider } from './glazewm/create-glazewm-provider';
 import { createHostProvider } from './host/create-host-provider';
@@ -12,6 +11,7 @@ import { createMemoryProvider } from './memory/create-memory-provider';
 import { createMonitorsProvider } from './monitors/create-monitors-provider';
 import { createNetworkProvider } from './network/create-network-provider';
 import { createSelfProvider } from './self/create-self-provider';
+import { createUtilProvider } from './util/create-util-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
 import { ProviderType, type ProviderConfig } from '~/user-config';
 import type { ElementContext } from '~/element-context.model';
@@ -30,8 +30,6 @@ export async function createProvider(
       return createBatteryProvider(config, owner);
     case ProviderType.CPU:
       return createCpuProvider(config, owner);
-    case ProviderType.DATA:
-      return createDataProvider(config, owner);
     case ProviderType.DATE:
       return createDateProvider(config, owner);
     case ProviderType.GLAZEWM:
@@ -50,6 +48,8 @@ export async function createProvider(
       return createNetworkProvider(config, owner);
     case ProviderType.SELF:
       return createSelfProvider(elementContext);
+    case ProviderType.UTIL:
+      return createUtilProvider(config, owner);
     case ProviderType.WEATHER:
       return createWeatherProvider(config, owner);
     default:

@@ -1,6 +1,5 @@
 export * from './battery-provider-config.model';
 export * from './cpu-provider-config.model';
-export * from './data-provider-config.model';
 export * from './date-provider-config.model';
 export * from './glazewm-provider-config.model';
 export * from './host-provider-config.model';
@@ -10,4 +9,5 @@ export * from './memory-provider-config.model';
 export * from './monitors-provider-config.model';
 export * from './network-provider-config.model';
 export * from './self-provider-config.model';
+export * from './util-provider-config.model';
 export * from './weather-provider-config.model';
