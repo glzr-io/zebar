@@ -126,7 +126,14 @@ export async function createGlazeWmProvider(
         setGlazeWmVariables({ bindingModes: e.newBindingModes });
         break;
       }
-      case WmEventType.FOCUS_CHANGED:
+      case WmEventType.FOCUS_CHANGED: {
+        setGlazeWmVariables({ focusedContainer: e.focusedContainer });
+        setGlazeWmVariables({ ...(await getMonitorState()) });
+
+        const { tilingDirection } = await client.queryTilingDirection();
+        setGlazeWmVariables({ tilingDirection });
+        break;
+      }
       case WmEventType.FOCUSED_CONTAINER_MOVED: {
         setGlazeWmVariables({ focusedContainer: e.focusedContainer });
         setGlazeWmVariables({ ...(await getMonitorState()) });
@@ -146,13 +153,13 @@ export async function createGlazeWmProvider(
   }
 
   async function getInitialState() {
-    const { focused } = await client.queryFocused();
+    const { focused: focusedContainer } = await client.queryFocused();
     const { bindingModes } = await client.queryBindingModes();
     const { tilingDirection } = await client.queryTilingDirection();
 
     return {
       ...(await getMonitorState()),
-      focusedContainer: focused,
+      focusedContainer,
       tilingDirection,
       bindingModes,
     };
