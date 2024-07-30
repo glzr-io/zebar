@@ -11,6 +11,7 @@ import { createMemoryProvider } from './memory/create-memory-provider';
 import { createMonitorsProvider } from './monitors/create-monitors-provider';
 import { createNetworkProvider } from './network/create-network-provider';
 import { createSelfProvider } from './self/create-self-provider';
+import { createUtilProvider } from './util/create-util-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
 import { ProviderType, type ProviderConfig } from '~/user-config';
 import type { ElementContext } from '~/element-context.model';
@@ -47,6 +48,8 @@ export async function createProvider(
       return createNetworkProvider(config, owner);
     case ProviderType.SELF:
       return createSelfProvider(elementContext);
+    case ProviderType.UTIL:
+      return createUtilProvider(config, owner);
     case ProviderType.WEATHER:
       return createWeatherProvider(config, owner);
     default:

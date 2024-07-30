@@ -7,6 +7,7 @@ export interface NetworkVariables {
   defaultInterface: NetworkInterface | null;
   defaultGateway: NetworkGateway | null;
   interfaces: NetworkInterface[];
+  traffic: NetworkTraffic | null;
 }
 
 export interface NetworkInterface {
@@ -50,6 +51,11 @@ export enum InterfaceType {
   BRIDGE = 'bridge',
 }
 
+export interface NetworkTraffic {
+    received: number | null;
+    transmitted: number | null;
+}
+
 export async function createNetworkProvider(
   config: NetworkProviderConfig,
   owner: Owner,
@@ -68,6 +74,9 @@ export async function createNetworkProvider(
     },
     get interfaces() {
       return networkVariables().interfaces;
+    },
+    get traffic() {
+      return networkVariables().traffic;
     },
   };
 }

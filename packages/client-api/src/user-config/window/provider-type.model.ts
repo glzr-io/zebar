@@ -12,6 +12,7 @@ export enum ProviderType {
   MONITORS = 'monitors',
   NETWORK = 'network',
   SELF = 'self',
+  UTIL = 'util',
   WEATHER = 'weather',
 }
 

@@ -7,6 +7,14 @@ pub struct NetworkVariables {
   pub default_interface: Option<NetworkInterface>,
   pub default_gateway: Option<NetworkGateway>,
   pub interfaces: Vec<NetworkInterface>,
+  pub traffic: NetworkTraffic,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkTraffic {
+  pub received: u64,
+  pub transmitted: u64,
 }
 
 #[derive(Serialize, Debug, Clone)]

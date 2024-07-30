@@ -6,6 +6,7 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use sysinfo::System;
+use sysinfo::Networks;
 use tauri::{App, AppHandle, Emitter, Manager, Runtime};
 use tokio::{
   sync::{
@@ -116,8 +117,9 @@ fn handle_provider_listen_input(
 ) -> Sender<ListenProviderArgs> {
   let (listen_input_tx, mut listen_input_rx) =
     mpsc::channel::<ListenProviderArgs>(1);
-
+    
   let sysinfo = Arc::new(Mutex::new(System::new_all()));
+  let netinfo = Arc::new(Mutex::new(Networks::new_with_refreshed_list()));
 
   task::spawn(async move {
     while let Some(input) = listen_input_rx.recv().await {
@@ -153,7 +155,7 @@ fn handle_provider_listen_input(
       let emit_output_tx = emit_output_tx.clone();
 
       // Attempt to create a new provider.
-      let new_provider = create_provider(input.config, sysinfo.clone());
+      let new_provider = create_provider(input.config, sysinfo.clone(), netinfo.clone());
 
       if let Err(err) = new_provider {
         _ = emit_output_tx
@@ -192,6 +194,7 @@ fn handle_provider_listen_input(
 fn create_provider(
   config: ProviderConfig,
   sysinfo: Arc<Mutex<System>>,
+  netinfo: Arc<Mutex<Networks>>,
 ) -> anyhow::Result<Box<dyn Provider + Send>> {
   let provider: Box<dyn Provider + Send> = match config {
     ProviderConfig::Battery(config) => {
@@ -212,7 +215,7 @@ fn create_provider(
       Box::new(MemoryProvider::new(config, sysinfo))
     }
     ProviderConfig::Network(config) => {
-      Box::new(NetworkProvider::new(config))
+      Box::new(NetworkProvider::new(config, netinfo))
     }
     ProviderConfig::Weather(config) => {
       Box::new(WeatherProvider::new(config))

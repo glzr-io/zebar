@@ -52,11 +52,11 @@ And in the Zebar config (if using the default generated one), replace the GlazeW
           height: 30px;
           color: #ffffffe6;
           border: none;
-          border-radius: 2px;
+          border-radius: 2px;         
+        }
 
-          &.active {
-            background: rgba(255, 255, 255, 0.1);
-          }
+        .workspace.active {
+          background: rgba(255, 255, 255, 0.1);
         }
       providers: ['komorebi']
       template: |
@@ -259,6 +259,7 @@ window/example:
 - [monitors](#Monitors)
 - [network](#Network)
 - [self](#Self)
+- [util](#Util)
 - [weather](#Weather)
 
 ### Battery
@@ -416,9 +417,21 @@ Monitors provider doesn't take any config options.
 
 ### Variables
 
-| Variable     | Description | Return type          | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------ | ----------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `interfaces` | TODO        | `NetworkInterface[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| Variable           | Description                            | Return type          | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------ | -------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultInterface` | TODO                                   | `NetworkInterface`   | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `defaultGateway`   | TODO                                   | `Gateway`            | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `interfaces`       | TODO                                   | `NetworkInterface[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `traffic`          | Returns the network traffic per second | `NetworkTraffic`     | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+### Return types
+
+### NetworkTraffic
+
+| Variable      | Description                   | Return type |
+| ------------- | ----------------------------- | ----------- |
+| `received`    | Received bytes per second.    | `number`    |
+| `transmitted` | Transmitted bytes per second. | `number`    |
 
 ### Self
 
@@ -438,6 +451,14 @@ Self provider doesn't take any config options.
 | `rawConfig`    | Unparsed config for this element.                    | `unknown`                                       | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `parsedConfig` | Parsed config for this element.                      | `WindowConfig \| GroupConfig \| TemplateConfig` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `globalConfig` | Global user config.                                  | `GlobalConfig`                                  | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+## Util
+
+## Functions
+
+| Function       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `convertBytes` | Convert a given number (bytes) into a custom string format. The smallest data unit is Kb/KB/KiB. <br><br>**Parameters**<br><br> - `bytes`: _`number`_ Bytes to convert.<br> - `decimals`: _`number`_ The number of decimals to convert the bytes up to. Default: 0. <br> - `unitType`: _`DataUnit`_ The unit type to convert the bytes to. Default: 'bits'. There are 3 options: <br>&nbsp;&nbsp;1, 'bits': ('b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Zb', 'Yb')<br>&nbsp;&nbsp;2, 'si_bytes': bytes using SI standard ('B', 'KB', 'MB', ... , 'YB')<br>&nbsp;&nbsp;3, 'iec_bytes': bytes using IEC standard ('B', 'KiB', 'MiB', ... , 'YiB').<br><br>**Examples:**<br><br> - `convertBytes(1024, 2, 'bits')` -> `8.19 Kb`<br> - `convertBytes(1024, 2, 'si_bytes')` -> `1.02 KB`<br> - `convertBytes(1024, 2, 'iec_bytes')` -> `1.00 KiB`<br> - `convertBytes(500, 1, 'iec_bytes')` -> `0.5 KiB`<br> - `convertBytes(2000, 2, 'iec_bytes')` -> `1.95 KiB` | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
 ### Weather
 

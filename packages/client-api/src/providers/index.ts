@@ -6,6 +6,7 @@ export * from './ip/create-ip-provider';
 export * from './memory/create-memory-provider';
 export * from './network/create-network-provider';
 export * from './self/create-self-provider';
+export * from './util/create-util-provider';
 export * from './weather/create-weather-provider';
 export * from './create-provider-listener';
 export * from './create-provider';
