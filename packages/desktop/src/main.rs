@@ -192,6 +192,8 @@ async fn main() {
               )
               .title(format!("Zebar - {}", open_args.window_id))
               .inner_size(500., 500.)
+              .focused(false)
+              .skip_taskbar(true)
               .visible_on_all_workspaces(true)
               .transparent(true)
               .shadow(false)
