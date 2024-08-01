@@ -15,13 +15,12 @@ use tokio::{
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
-#[cfg(target_os = "macos")]
-use crate::util::window_ext::WindowExt;
 use crate::{
   cli::{Cli, CliCommand},
   monitors::get_monitors_str,
   providers::{config::ProviderConfig, manager::ProviderManager},
   sys_tray::setup_sys_tray,
+  util::window_ext::WindowExt,
 };
 
 mod cli;
@@ -101,6 +100,23 @@ fn set_always_on_top(window: Window) -> anyhow::Result<(), String> {
   let res = window.set_always_on_top(true);
 
   res.map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn set_skip_taskbar(
+  window: Window,
+  skip: bool,
+) -> anyhow::Result<(), String> {
+  window
+    .set_skip_taskbar(skip)
+    .map_err(|err| err.to_string())?;
+
+  #[cfg(target_os = "windows")]
+  window
+    .set_tool_window(skip)
+    .map_err(|err| err.to_string())?;
+
+  Ok(())
 }
 
 #[tokio::main]
@@ -207,6 +223,11 @@ async fn main() {
                 serde_json::to_string(&open_args).unwrap()
               ));
 
+              // Tauri's `skip_taskbar` option isn't 100% reliable, so we
+              // also set the window as a tool window.
+              #[cfg(target_os = "windows")]
+              let _ = window.as_ref().window().set_tool_window(true);
+
               let mut args_map = args_map_ref.lock().await;
               args_map.insert(window_label, open_args);
             }
@@ -221,7 +242,8 @@ async fn main() {
       get_open_window_args,
       listen_provider,
       unlisten_provider,
-      set_always_on_top
+      set_always_on_top,
+      set_skip_taskbar
     ])
     .run(tauri::generate_context!())
     .expect("Failed to build Tauri application.");

@@ -37,8 +37,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 netdev = "0.24"
 regex = "1"
 
-[target.'cfg(all(target_os = "windows", target_arch = "x86_64"))'.dependencies]
+[target.'cfg(target_os = "windows")'.dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
+windows = { version = "0.57", features = [] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"
