@@ -1,9 +1,6 @@
-import { type Owner } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import type { Owner } from 'solid-js';
 
 import type { UtilProviderConfig } from '~/user-config';
-
-export interface UtilVariables { }
 
 export enum DataUnit {
   BITS = 'bits',
@@ -12,28 +9,47 @@ export enum DataUnit {
 }
 
 export async function createUtilProvider(
-  config: UtilProviderConfig,
-  owner: Owner,
+  _: UtilProviderConfig,
+  __: Owner,
 ) {
-  const [utilVariables, setUtilVariables] =
-    createStore<UtilVariables>(getUtilVariables());
-
-  function getUtilVariables() {
-    return {};
-  }
-
   const bitUnits = ['b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Zb', 'Yb'];
-  const byteCommonUnits = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const byteIECUnits = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
 
-  function convertBytes(bytes: number, decimals: number = 0, unitType: DataUnit = DataUnit.BITS) {
+  const byteCommonUnits = [
+    'B',
+    'KB',
+    'MB',
+    'GB',
+    'TB',
+    'PB',
+    'EB',
+    'ZB',
+    'YB',
+  ];
+
+  const byteIECUnits = [
+    'B',
+    'KiB',
+    'MiB',
+    'GiB',
+    'TiB',
+    'PiB',
+    'EiB',
+    'ZiB',
+    'YiB',
+  ];
+
+  function convertBytes(
+    bytes: number,
+    decimals: number = 0,
+    unitType: DataUnit = DataUnit.BITS,
+  ) {
     let unitIndex = 1; // Kb/KB/KiB
 
     if (unitType === DataUnit.BITS) {
       bytes *= 8;
       return convert(1000, bitUnits, bytes, decimals, unitIndex);
     }
-    
+
     if (unitType === DataUnit.SI_BYTES) {
       return convert(1000, byteCommonUnits, bytes, decimals, unitIndex);
     }
@@ -45,11 +61,17 @@ export async function createUtilProvider(
     return 'NoUnit';
   }
 
-  function convert(k: number, units: string[], bytes: number, decimals: number, unitIndex: number) {
+  function convert(
+    k: number,
+    units: string[],
+    bytes: number,
+    decimals: number,
+    unitIndex: number,
+  ) {
     const dm = decimals < 0 ? 0 : decimals;
 
     if (!+bytes) {
-      return `${0.0.toFixed(dm)} ${units[unitIndex]}`;
+      return `${(0.0).toFixed(dm)} ${units[unitIndex]}`;
     }
 
     let i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -62,6 +84,6 @@ export async function createUtilProvider(
   }
 
   return {
-    convertBytes
+    convertBytes,
   };
 }

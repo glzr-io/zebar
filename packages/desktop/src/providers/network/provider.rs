@@ -1,17 +1,14 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use netdev::interface::get_interfaces;
 use sysinfo::Networks;
-use netdev::interface::{
-   get_interfaces,
-};
 use tokio::{sync::Mutex, task::AbortHandle};
 
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
   InterfaceType, NetworkGateway, NetworkInterface, NetworkProviderConfig,
-  NetworkVariables,
-  NetworkTraffic,
+  NetworkTraffic, NetworkVariables,
 };
 use crate::providers::{
   interval_provider::IntervalProvider, variables::ProviderVariables,
@@ -25,7 +22,10 @@ pub struct NetworkProvider {
 }
 
 impl NetworkProvider {
-  pub fn new(config: NetworkProviderConfig, netinfo: Arc<Mutex<Networks>>,) -> NetworkProvider {
+  pub fn new(
+    config: NetworkProviderConfig,
+    netinfo: Arc<Mutex<Networks>>,
+  ) -> NetworkProvider {
     NetworkProvider {
       config: Arc::new(config),
       abort_handle: None,
@@ -134,9 +134,15 @@ impl IntervalProvider for NetworkProvider {
         .map(Self::transform_interface)
         .collect(),
       traffic: NetworkTraffic {
-        received: to_bytes_per_seconds(get_network_down(&netinfo), config.refresh_interval),
-        transmitted: to_bytes_per_seconds(get_network_up(&netinfo), config.refresh_interval),
-      },     
+        received: to_bytes_per_seconds(
+          get_network_down(&netinfo),
+          config.refresh_interval,
+        ),
+        transmitted: to_bytes_per_seconds(
+          get_network_up(&netinfo),
+          config.refresh_interval,
+        ),
+      },
     };
 
     Ok(ProviderVariables::Network(variables))
@@ -145,26 +151,26 @@ impl IntervalProvider for NetworkProvider {
 
 // Get the total network (down) usage
 fn get_network_down(req_net: &sysinfo::Networks) -> u64 {
-    // Get the total bytes recieved by every network interface
-    let mut received_total: Vec<u64> = Vec::new();
-    for (_interface_name, network) in req_net {
-        received_total.push(network.received() as u64);
-    }
+  // Get the total bytes recieved by every network interface
+  let mut received_total: Vec<u64> = Vec::new();
+  for (_interface_name, network) in req_net {
+    received_total.push(network.received() as u64);
+  }
 
-    received_total.iter().sum()
+  received_total.iter().sum()
 }
 
 // Get the total network (up) usage
 fn get_network_up(req_net: &sysinfo::Networks) -> u64 {
-    // Get the total bytes recieved by every network interface
-    let mut transmitted_total: Vec<u64> = Vec::new();
-    for (_interface_name, network) in req_net {
-        transmitted_total.push(network.transmitted() as u64);
-    }
+  // Get the total bytes recieved by every network interface
+  let mut transmitted_total: Vec<u64> = Vec::new();
+  for (_interface_name, network) in req_net {
+    transmitted_total.push(network.transmitted() as u64);
+  }
 
-    transmitted_total.iter().sum()
+  transmitted_total.iter().sum()
 }
 
 fn to_bytes_per_seconds(input_in_bytes: u64, timespan_in_ms: u64) -> u64 {
-    input_in_bytes / (timespan_in_ms / 1000)
+  input_in_bytes / (timespan_in_ms / 1000)
 }

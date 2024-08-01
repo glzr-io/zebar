@@ -5,8 +5,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use serde::Serialize;
-use sysinfo::System;
-use sysinfo::Networks;
+use sysinfo::{Networks, System};
 use tauri::{App, AppHandle, Emitter, Manager, Runtime};
 use tokio::{
   sync::{
@@ -117,7 +116,7 @@ fn handle_provider_listen_input(
 ) -> Sender<ListenProviderArgs> {
   let (listen_input_tx, mut listen_input_rx) =
     mpsc::channel::<ListenProviderArgs>(1);
-    
+
   let sysinfo = Arc::new(Mutex::new(System::new_all()));
   let netinfo = Arc::new(Mutex::new(Networks::new_with_refreshed_list()));
 
@@ -155,7 +154,8 @@ fn handle_provider_listen_input(
       let emit_output_tx = emit_output_tx.clone();
 
       // Attempt to create a new provider.
-      let new_provider = create_provider(input.config, sysinfo.clone(), netinfo.clone());
+      let new_provider =
+        create_provider(input.config, sysinfo.clone(), netinfo.clone());
 
       if let Err(err) = new_provider {
         _ = emit_output_tx

@@ -52,8 +52,8 @@ export enum InterfaceType {
 }
 
 export interface NetworkTraffic {
-    received: number | null;
-    transmitted: number | null;
+  received: number | null;
+  transmitted: number | null;
 }
 
 export async function createNetworkProvider(
