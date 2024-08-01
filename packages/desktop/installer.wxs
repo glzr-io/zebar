@@ -12,11 +12,10 @@
 <?endif?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <!-- Upgrade code is stable across the product name. -->
   <Product
     Id="*"
     Name="Zebar"
-    UpgradeCode="{{upgrade_code}}"
+    UpgradeCode="570D3DD8-FDBD-5B5C-A519-2FF34BA60B33"
     Language="!(loc.TauriLanguage)"
     Manufacturer="{{manufacturer}}"
     Version="{{version}}"
