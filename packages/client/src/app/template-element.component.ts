@@ -63,7 +63,10 @@ export function TemplateElement(props: TemplateElementProps) {
 
       for (const selectorElement of selectorElements) {
         if (selectorElement) {
-          selectorElement.addEventListener(eventConfig.type, eventCallback);
+          selectorElement.addEventListener(
+            eventConfig.type,
+            eventCallback,
+          );
 
           listeners.push({
             eventType: eventConfig.type,
