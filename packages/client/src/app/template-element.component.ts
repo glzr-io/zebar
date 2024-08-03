@@ -57,18 +57,20 @@ export function TemplateElement(props: TemplateElementProps) {
         scriptManager.callFn(eventConfig.fn_path, event, props.context);
 
       // Default to the root element if no selector is provided.
-      const selectorElement = eventConfig.selector
-        ? element.querySelector(eventConfig.selector)
-        : element;
+      const selectorElements = eventConfig.selector
+        ? Array.from(element.querySelectorAll(eventConfig.selector))
+        : [element];
 
-      if (selectorElement) {
-        selectorElement.addEventListener(eventConfig.type, eventCallback);
+      for (const selectorElement of selectorElements) {
+        if (selectorElement) {
+          selectorElement.addEventListener(eventConfig.type, eventCallback);
 
-        listeners.push({
-          eventType: eventConfig.type,
-          eventCallback,
-          selectorElement,
-        });
+          listeners.push({
+            eventType: eventConfig.type,
+            eventCallback,
+            selectorElement,
+          });
+        }
       }
     });
   }
