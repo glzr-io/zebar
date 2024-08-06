@@ -110,6 +110,7 @@ window/bar:
     styles: |
       justify-self: end;
       display: flex;
+      align-items: center;
 
       .template {
         margin-left: 20px;
@@ -118,6 +119,9 @@ window/bar:
     template/glazewm_other:
       providers: ['glazewm']
       styles: |
+        display: flex;
+        gap: 5px;
+
         .binding-mode,
         .tiling-direction {
           background: rgb(255 255 255 / 15%);
@@ -126,7 +130,14 @@ window/bar:
           padding: 4px 6px;
           margin: 0;
         }
-
+        .tiling-direction {
+          border: 0;
+          cursor: pointer;
+        }
+      events:
+        - type: 'click'
+          fn_path: 'script.js#toggleTilingDirection'
+          selector: '.tiling-direction'
       template: |
         @for (bindingMode of glazewm.bindingModes) {
           <span class="binding-mode">
@@ -135,9 +146,9 @@ window/bar:
         }
 
         @if (glazewm.tilingDirection === 'horizontal') {
-          <i class="tiling-direction nf nf-md-swap_horizontal"></i>
+          <button class="tiling-direction nf nf-md-swap_horizontal"></button>
         } @else {
-          <i class="tiling-direction nf nf-md-swap_vertical"></i>
+          <button class="tiling-direction nf nf-md-swap_vertical"></button>
         }
 
     template/network:
