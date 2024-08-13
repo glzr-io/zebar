@@ -22,11 +22,11 @@ window/bar:
   shown_in_taskbar: false
   # Whether the window should have resize handles.
   resizable: false
-  # Styles to apply globally within the window. For example, we can use
-  # this to import the Nerdfonts icon font. Ref https://www.nerdfonts.com/cheat-sheet
-  # for a cheatsheet of available Nerdfonts icons.
+  # Styles to apply globally within the window. For example, replace the default UI font.
   global_styles: |
-    @import "https://www.nerdfonts.com/assets/css/webfont.css";
+    :root {
+      --zb-font: ui-monospace, monospace;
+    }
   # CSS styles to apply to the root element within the window. Using CSS
   # nesting, we can also target nested elements (e.g. below we set the
   # color and margin-right of icons).
@@ -36,7 +36,7 @@ window/bar:
     align-items: center;
     height: 100%;
     color: rgb(255 255 255 / 90%);
-    font-family: ui-monospace, monospace;
+    font-family: var(--zb-font);
     font-size: 12px;
     padding: 4px 24px;
     border-bottom: 1px solid rgb(255 255 255 / 5%);;
