@@ -5,6 +5,7 @@ import {
   toCssSelector,
   getScriptManager,
 } from 'zebar';
+import morphdom from 'morphdom';
 
 export interface TemplateElementProps {
   context: ElementContext;
@@ -27,14 +28,47 @@ export function TemplateElement(props: TemplateElementProps) {
   // Currently active event listeners.
   let listeners: ElementEventListener[] = [];
 
-  // Update the HTML element when the template changes.
   createEffect(() => {
-    // @ts-ignore - TODO
-    element.innerHTML = config.template;
+    // Subsequent template updates after the initial render
+
+    // Since templates do not include the root template element,
+    // copy the existing one without its children.
+    const templateRoot = element.cloneNode(false) as Element;
+
+    // Insert the template into the cloned root element
+    templateRoot.innerHTML = (config as any).template;
+
+    try {
+      // Reconcile the DOM with the updated template
+      // @ts-ignore - TODO: fix config.template type
+      morphdom(element, templateRoot, {
+        // Don't morph fromNode or toNode, only their children
+        childrenOnly: true,
+      });
+    } catch (error) {
+      // TODO - add error handling for reconciliation here
+      logger.error(
+        `Failed to reconciliate ${props.context.id} template:`,
+        error,
+      );
+    }
+
     updateEventListeners();
   });
 
-  onMount(() => logger.debug('Mounted'));
+  onMount(() => {
+    logger.debug('Mounted');
+    try {
+      // Initial render, set innerHTML to the template
+      // @ts-ignore - TODO: fix config.template type
+      element.innerHTML = config.template;
+    } catch (error) {
+      logger.error(
+        `Initial render of ${[props.context.id]} failed:`,
+        error,
+      );
+    }
+  });
   onCleanup(() => logger.debug('Cleanup'));
 
   function createRootElement() {
