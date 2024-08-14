@@ -8,6 +8,7 @@
     "wait:client-api": "wait-on ../client-api/dist/index.d.ts"
   },
   "dependencies": {
+    "morphdom": "2.7.4",
     "solid-js": "1.8.14",
     "zebar": "workspace:*"
   },
