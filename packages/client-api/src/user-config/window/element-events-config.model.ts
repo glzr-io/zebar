@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FnPathSchema } from '../shared';
 import type { Prettify } from '~/utils';
 
 /**
@@ -108,12 +109,7 @@ export const ElementEventsConfigSchema = z
   .array(
     z.object({
       type: z.enum(HTML_EVENTS),
-      fn_path: z
-        .string()
-        .regex(
-          /^(.+)#([a-zA-Z_$][a-zA-Z0-9_$]*)$/,
-          "Invalid function path. Needs to be in format 'path/to/my-script.js#functionName'.",
-        ),
+      fn_path: FnPathSchema,
       selector: z.string().optional(),
     }),
   )

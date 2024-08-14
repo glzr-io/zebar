@@ -1,5 +1,6 @@
 export * from './battery/create-battery-provider';
 export * from './cpu/create-cpu-provider';
+export * from './custom/create-custom-provider';
 export * from './date/create-date-provider';
 export * from './glazewm/create-glazewm-provider';
 export * from './ip/create-ip-provider';

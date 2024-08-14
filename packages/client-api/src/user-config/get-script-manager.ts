@@ -1,7 +1,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { join, homeDir } from '@tauri-apps/api/path';
 
-import { createLogger } from '~/utils';
+import { createLogger, type PickPartial } from '~/utils';
 import type { ElementContext } from '../element-context.model';
 
 const logger = createLogger('script-manager');
@@ -34,7 +34,7 @@ async function loadScriptForFn(fnPath: string): Promise<any> {
 async function callFn(
   fnPath: string,
   event: Event,
-  context: ElementContext,
+  context: PickPartial<ElementContext, 'parsedConfig' | 'providers'>,
 ): Promise<any> {
   const { modulePath, functionName } = parseFnPath(fnPath);
   const foundModule = await resolveModule(modulePath);

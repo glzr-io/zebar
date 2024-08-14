@@ -3,6 +3,7 @@ import { z } from 'zod';
 export enum ProviderType {
   BATTERY = 'battery',
   CPU = 'cpu',
+  CUSTOM = 'custom',
   DATE = 'date',
   GLAZEWM = 'glazewm',
   HOST = 'host',
