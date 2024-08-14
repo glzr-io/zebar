@@ -5,5 +5,6 @@ export * from './create-getter-proxy';
 export * from './create-logger';
 export * from './create-string-scanner';
 export * from './get-coordinate-distance';
+export * from './is-event-target';
 export * from './simple-hash';
 export * from './to-css-selector';
