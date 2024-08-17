@@ -78,7 +78,7 @@ export interface GlazeWmProvider {
   focusWorkspace(name: string): void;
 
   /**
-   * Toggle tiling direction
+   * Toggle tiling direction.
    */
   toggleTilingDirection(): void;
 }

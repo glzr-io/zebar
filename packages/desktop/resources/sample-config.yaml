@@ -119,9 +119,6 @@ window/bar:
     template/glazewm_other:
       providers: ['glazewm']
       styles: |
-        display: flex;
-        gap: 5px;
-
         .binding-mode,
         .tiling-direction {
           background: rgb(255 255 255 / 15%);
@@ -130,10 +127,12 @@ window/bar:
           padding: 4px 6px;
           margin: 0;
         }
+
         .tiling-direction {
           border: 0;
           cursor: pointer;
         }
+
       events:
         - type: 'click'
           fn_path: 'script.js#toggleTilingDirection'
