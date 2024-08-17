@@ -123,9 +123,9 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
-  // State should always be up to date.
-  fn min_refresh_interval(&self) -> Duration {
-    Duration::MAX
+  fn min_refresh_interval(&self) -> Option<Duration> {
+    // State should always be up to date.
+    None
   }
 
   async fn on_start(

@@ -7,20 +7,25 @@ use super::provider_ref::ProviderOutput;
 
 #[async_trait]
 pub trait Provider {
+  /// Callback for when the provider is started.
   async fn on_start(
     &mut self,
     config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
   );
 
+  /// Callback for when the provider is refreshed.
   async fn on_refresh(
     &mut self,
     config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
   );
 
+  /// Callback for when the provider is stopped.
   async fn on_stop(&mut self);
 
-  // TODO: Change to `Option<Duration>`.
-  fn min_refresh_interval(&self) -> Duration;
+  /// Minimum interval between refreshes.
+  ///
+  /// Affects how the provider output is cached.
+  fn min_refresh_interval(&self) -> Option<Duration>;
 }

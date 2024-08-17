@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use anyhow::bail;
 use serde::Serialize;
 use tokio::{sync::mpsc, task};
-use tracing::{info, warn};
+use tracing::info;
 
 #[cfg(windows)]
 use super::komorebi::KomorebiProvider;
@@ -18,12 +18,17 @@ use super::{
 #[derive(Debug, Clone)]
 pub struct ProviderRef {
   pub config_hash: String,
-  pub min_refresh_interval: Duration,
-  pub prev_refresh: Option<Instant>,
-  pub prev_output: Option<Box<ProviderOutput>>,
+  pub min_refresh_interval: Option<Duration>,
+  pub cache: Option<ProviderCache>,
   pub emit_output_tx: mpsc::Sender<ProviderOutput>,
   pub refresh_tx: mpsc::Sender<()>,
   pub stop_tx: mpsc::Sender<()>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProviderCache {
+  pub timestamp: Instant,
+  pub output: Box<ProviderOutput>,
 }
 
 /// Output emitted to frontend clients.
@@ -84,8 +89,7 @@ impl ProviderRef {
     Ok(Self {
       config_hash,
       min_refresh_interval,
-      prev_refresh: None,
-      prev_output: None,
+      cache: None,
       emit_output_tx,
       refresh_tx,
       stop_tx,
@@ -162,31 +166,36 @@ impl ProviderRef {
 
   /// Updates cache with the given output.
   pub fn update_cache(&mut self, output: Box<ProviderOutput>) {
-    self.prev_refresh = Some(Instant::now());
-    self.prev_output = Some(output);
+    self.cache = Some(ProviderCache {
+      timestamp: Instant::now(),
+      output,
+    });
   }
 
   /// Refreshes the provider.
   ///
   /// Since the previous output of providers is cached, if within the
   /// minimum refresh interval, send the previous output.
-  pub async fn refresh(&self) {
-    match (self.prev_refresh, self.prev_output.clone()) {
-      (Some(prev_refresh), Some(prev_output))
-        if prev_refresh.elapsed() < self.min_refresh_interval =>
-      {
-        _ = self.emit_output_tx.send(*prev_output).await
+  pub async fn refresh(&self) -> anyhow::Result<()> {
+    let min_refresh_interval =
+      self.min_refresh_interval.unwrap_or(Duration::MAX);
+
+    match &self.cache {
+      Some(cache) if cache.timestamp.elapsed() >= min_refresh_interval => {
+        self.emit_output_tx.send(*cache.output.clone()).await?;
       }
-      _ => _ = self.refresh_tx.send(()).await,
-    }
+      _ => self.refresh_tx.send(()).await?,
+    };
+
+    Ok(())
   }
 
   /// Stops the given provider.
   ///
   /// This triggers any necessary cleanup.
-  pub async fn stop(&self) {
-    if let Err(err) = self.stop_tx.send(()).await {
-      warn!("Error stopping provider: {:?}", err);
-    }
+  pub async fn stop(&self) -> anyhow::Result<()> {
+    self.stop_tx.send(()).await?;
+
+    Ok(())
   }
 }

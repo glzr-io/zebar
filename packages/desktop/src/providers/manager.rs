@@ -97,7 +97,10 @@ impl ProviderManager {
     // If a provider with the given config already exists, refresh it
     // and return early.
     if let Some(found_provider) = providers.get(&config_hash) {
-      found_provider.refresh().await;
+      if let Err(err) = found_provider.refresh().await {
+        warn!("Error refreshing provider: {:?}", err);
+      }
+
       return Ok(());
     };
 
@@ -118,7 +121,9 @@ impl ProviderManager {
     let mut providers = self.providers.lock().await;
 
     if let Some(found_provider) = providers.get_mut(&config_hash) {
-      found_provider.stop().await;
+      if let Err(err) = found_provider.stop().await {
+        warn!("Error stopping provider: {:?}", err);
+      }
     }
 
     providers.remove(&config_hash);

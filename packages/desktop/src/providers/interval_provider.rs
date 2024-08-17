@@ -36,8 +36,8 @@ pub trait IntervalProvider {
   type State: Sync + Send + 'static;
 
   /// Default to 2 seconds as the minimum refresh interval.
-  fn min_refresh_interval(&self) -> Duration {
-    Duration::from_secs(2)
+  fn min_refresh_interval(&self) -> Option<Duration> {
+    Some(Duration::from_secs(2))
   }
 
   fn config(&self) -> Arc<Self::Config>;
@@ -56,7 +56,7 @@ pub trait IntervalProvider {
 
 #[async_trait]
 impl<T: IntervalProvider + Send> Provider for T {
-  fn min_refresh_interval(&self) -> Duration {
+  fn min_refresh_interval(&self) -> Option<Duration> {
     T::min_refresh_interval(self)
   }
 
