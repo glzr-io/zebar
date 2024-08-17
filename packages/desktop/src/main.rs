@@ -1,7 +1,9 @@
 use std::{collections::HashMap, env, sync::Arc};
 
 use clap::Parser;
-use providers::{config::ProviderConfig, manager::init_provider_manager};
+use providers::{
+  config::ProviderConfig, provider_manager::init_provider_manager,
+};
 use serde::Serialize;
 use tauri::{
   AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, Window,
@@ -19,7 +21,7 @@ use tracing_subscriber::EnvFilter;
 use crate::{
   cli::{Cli, CliCommand},
   monitors::get_monitors_str,
-  providers::manager::ProviderManager,
+  providers::provider_manager::ProviderManager,
   sys_tray::setup_sys_tray,
   util::window_ext::WindowExt,
 };

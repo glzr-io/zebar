@@ -9,9 +9,10 @@ use tracing::info;
 use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, manager::SharedProviderState,
-  memory::MemoryProvider, network::NetworkProvider, provider::Provider,
-  variables::ProviderVariables, weather::WeatherProvider,
+  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
+  network::NetworkProvider, provider::Provider,
+  provider_manager::SharedProviderState, variables::ProviderVariables,
+  weather::WeatherProvider,
 };
 
 /// Reference to an active provider.
