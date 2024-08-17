@@ -9,7 +9,7 @@ use super::{
   WeatherVariables,
 };
 use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct WeatherProvider {

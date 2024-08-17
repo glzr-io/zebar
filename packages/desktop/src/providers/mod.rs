@@ -2,7 +2,6 @@ pub mod battery;
 pub mod config;
 pub mod cpu;
 pub mod host;
-pub mod interval_provider;
 pub mod ip;
 #[cfg(windows)]
 pub mod komorebi;
