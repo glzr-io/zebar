@@ -1,6 +1,9 @@
 use std::{collections::HashMap, env, sync::Arc};
 
 use clap::Parser;
+use providers::{
+  config::ProviderConfig, provider_manager::init_provider_manager,
+};
 use serde::Serialize;
 use tauri::{
   AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, Window,
@@ -18,7 +21,7 @@ use tracing_subscriber::EnvFilter;
 use crate::{
   cli::{Cli, CliCommand},
   monitors::get_monitors_str,
-  providers::{config::ProviderConfig, manager::ProviderManager},
+  providers::provider_manager::ProviderManager,
   sys_tray::setup_sys_tray,
   util::window_ext::WindowExt,
 };
@@ -72,7 +75,7 @@ async fn listen_provider(
   provider_manager: State<'_, ProviderManager>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .listen(config_hash, config, tracked_access)
+    .create(config_hash, config, tracked_access)
     .await
     .map_err(|err| err.to_string())
 }
@@ -83,7 +86,7 @@ async fn unlisten_provider(
   provider_manager: State<'_, ProviderManager>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .unlisten(config_hash)
+    .destroy(config_hash)
     .await
     .map_err(|err| err.to_string())
 }
@@ -169,7 +172,7 @@ async fn main() {
           // Add application icon to system tray.
           setup_sys_tray(app)?;
 
-          providers::manager::init(app)?;
+          init_provider_manager(app);
 
           let args_map = OpenWindowArgsMap(Default::default());
           let args_map_ref = args_map.0.clone();

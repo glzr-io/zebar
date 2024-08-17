@@ -11,7 +11,7 @@ use super::{
   NetworkTraffic, NetworkVariables,
 };
 use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct NetworkProvider {

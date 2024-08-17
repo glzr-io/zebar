@@ -6,7 +6,7 @@ use tokio::{sync::Mutex, task::AbortHandle};
 
 use super::{CpuProviderConfig, CpuVariables};
 use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct CpuProvider {

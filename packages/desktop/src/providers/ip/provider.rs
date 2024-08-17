@@ -7,7 +7,7 @@ use tokio::task::AbortHandle;
 
 use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpVariables};
 use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct IpProvider {
