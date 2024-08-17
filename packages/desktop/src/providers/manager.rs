@@ -23,13 +23,18 @@ pub fn init_provider_manager<R: Runtime>(app: &mut App<R>) {
   app.manage(manager);
 }
 
+/// State shared between providers.
+pub struct SharedProviderState {
+  pub sysinfo: Arc<Mutex<System>>,
+  pub netinfo: Arc<Mutex<Networks>>,
+}
+
 /// Manages the creation and cleanup of providers.
 pub struct ProviderManager {
   emit_output_tx: mpsc::Sender<ProviderOutput>,
   emit_output_rx: Option<mpsc::Receiver<ProviderOutput>>,
   providers: Arc<Mutex<HashMap<String, ProviderRef>>>,
-  sysinfo: Arc<Mutex<System>>,
-  netinfo: Arc<Mutex<Networks>>,
+  shared_state: SharedProviderState,
 }
 
 impl ProviderManager {
@@ -41,8 +46,10 @@ impl ProviderManager {
       emit_output_tx,
       emit_output_rx: Some(emit_output_rx),
       providers: Arc::new(Mutex::new(HashMap::new())),
-      sysinfo: Arc::new(Mutex::new(System::new_all())),
-      netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
+      shared_state: SharedProviderState {
+        sysinfo: Arc::new(Mutex::new(System::new_all())),
+        netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
+      },
     }
   }
 
@@ -98,8 +105,7 @@ impl ProviderManager {
       config_hash.clone(),
       config,
       self.emit_output_tx.clone(),
-      self.sysinfo.clone(),
-      self.netinfo.clone(),
+      &self.shared_state,
     )?;
 
     providers.insert(config_hash, provider_ref);

@@ -1,23 +1,16 @@
-use std::{
-  sync::Arc,
-  time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use anyhow::bail;
 use serde::Serialize;
-use sysinfo::{Networks, System};
-use tokio::{
-  sync::{mpsc, Mutex},
-  task,
-};
+use tokio::{sync::mpsc, task};
 use tracing::warn;
 
 #[cfg(windows)]
 use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, provider::Provider,
+  host::HostProvider, ip::IpProvider, manager::SharedProviderState,
+  memory::MemoryProvider, network::NetworkProvider, provider::Provider,
   variables::ProviderVariables, weather::WeatherProvider,
 };
 
@@ -67,11 +60,9 @@ impl ProviderRef {
     config_hash: String,
     config: ProviderConfig,
     emit_output_tx: mpsc::Sender<ProviderOutput>,
-    sysinfo: Arc<Mutex<System>>,
-    netinfo: Arc<Mutex<Networks>>,
+    shared_state: &SharedProviderState,
   ) -> anyhow::Result<Self> {
-    let mut provider =
-      Self::create_provider(config, sysinfo.clone(), netinfo.clone())?;
+    let mut provider = Self::create_provider(config, shared_state)?;
 
     let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
     let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
@@ -104,18 +95,17 @@ impl ProviderRef {
 
   fn create_provider(
     config: ProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
-    netinfo: Arc<Mutex<Networks>>,
+    shared_state: &SharedProviderState,
   ) -> anyhow::Result<Box<dyn Provider + Send>> {
     let provider: Box<dyn Provider + Send> = match config {
       ProviderConfig::Battery(config) => {
         Box::new(BatteryProvider::new(config)?)
       }
       ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, sysinfo))
+        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
       }
       ProviderConfig::Host(config) => {
-        Box::new(HostProvider::new(config, sysinfo))
+        Box::new(HostProvider::new(config, shared_state.sysinfo.clone()))
       }
       ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
       #[cfg(windows)]
@@ -123,11 +113,12 @@ impl ProviderRef {
         Box::new(KomorebiProvider::new(config))
       }
       ProviderConfig::Memory(config) => {
-        Box::new(MemoryProvider::new(config, sysinfo))
+        Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
       }
-      ProviderConfig::Network(config) => {
-        Box::new(NetworkProvider::new(config, netinfo))
-      }
+      ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
+        config,
+        shared_state.netinfo.clone(),
+      )),
       ProviderConfig::Weather(config) => {
         Box::new(WeatherProvider::new(config))
       }
