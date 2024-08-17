@@ -8,8 +8,7 @@ use tokio::{
 };
 
 use super::{
-  provider::Provider,
-  provider_ref::{ProviderOutput, VariablesResult},
+  provider::Provider, provider_ref::ProviderOutput,
   variables::ProviderVariables,
 };
 
@@ -63,13 +62,14 @@ impl<T: IntervalProvider + Send> Provider for T {
 
   async fn on_start(
     &mut self,
-    config_hash: String,
+    config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
     let config = self.config();
     let state = self.state();
+    let config_hash = config_hash.to_string();
 
-    let forever = task::spawn(async move {
+    let interval_task = task::spawn(async move {
       let mut interval =
         time::interval(Duration::from_millis(config.refresh_interval()));
 
@@ -80,29 +80,32 @@ impl<T: IntervalProvider + Send> Provider for T {
         _ = emit_output_tx
           .send(ProviderOutput {
             config_hash: config_hash.clone(),
-            variables: to_variables_result(
-              T::get_refreshed_variables(&config, &state).await,
-            ),
+            variables: T::get_refreshed_variables(&config, &state)
+              .await
+              .into(),
           })
           .await;
       }
     });
 
-    self.set_abort_handle(forever.abort_handle());
-    _ = forever.await;
+    self.set_abort_handle(interval_task.abort_handle());
+    _ = interval_task.await;
   }
 
   async fn on_refresh(
     &mut self,
-    config_hash: String,
+    config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
     _ = emit_output_tx
       .send(ProviderOutput {
-        config_hash,
-        variables: to_variables_result(
-          T::get_refreshed_variables(&self.config(), &self.state()).await,
-        ),
+        config_hash: config_hash.to_string(),
+        variables: T::get_refreshed_variables(
+          &self.config(),
+          &self.state(),
+        )
+        .await
+        .into(),
       })
       .await;
   }
@@ -111,14 +114,5 @@ impl<T: IntervalProvider + Send> Provider for T {
     if let Some(handle) = &self.abort_handle() {
       handle.abort();
     }
-  }
-}
-
-fn to_variables_result(
-  result: anyhow::Result<ProviderVariables>,
-) -> VariablesResult {
-  match result {
-    Ok(variables) => VariablesResult::Data(variables),
-    Err(err) => VariablesResult::Error(err.to_string()),
   }
 }

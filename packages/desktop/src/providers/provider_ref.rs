@@ -6,7 +6,10 @@ use std::{
 use anyhow::bail;
 use serde::Serialize;
 use sysinfo::{Networks, System};
-use tokio::sync::{mpsc, Mutex};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task,
+};
 use tracing::warn;
 
 #[cfg(windows)]
@@ -21,15 +24,16 @@ use super::{
 /// Reference to an active provider.
 #[derive(Debug, Clone)]
 pub struct ProviderRef {
-  config_hash: String,
-  min_refresh_interval: Duration,
-  prev_refresh: Option<Instant>,
-  prev_output: Option<Box<ProviderOutput>>,
-  refresh_tx: mpsc::Sender<()>,
-  stop_tx: mpsc::Sender<()>,
+  pub config_hash: String,
+  pub min_refresh_interval: Duration,
+  pub prev_refresh: Option<Instant>,
+  pub prev_output: Option<Box<ProviderOutput>>,
+  pub emit_output_tx: mpsc::Sender<ProviderOutput>,
+  pub refresh_tx: mpsc::Sender<()>,
+  pub stop_tx: mpsc::Sender<()>,
 }
 
-/// Output sent via IPC to the frontend.
+/// Output emitted to frontend clients.
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderOutput {
@@ -37,7 +41,10 @@ pub struct ProviderOutput {
   pub variables: VariablesResult,
 }
 
-/// Result from a provider.
+/// Provider variable output emitted to frontend clients.
+///
+/// This is used instead of a normal `Result` type to serialize it in a
+/// nicer way.
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum VariablesResult {
@@ -45,8 +52,55 @@ pub enum VariablesResult {
   Error(String),
 }
 
+/// Implements conversion from an `anyhow::Result`.
+impl From<anyhow::Result<ProviderVariables>> for VariablesResult {
+  fn from(result: anyhow::Result<ProviderVariables>) -> Self {
+    match result {
+      Ok(data) => VariablesResult::Data(data),
+      Err(err) => VariablesResult::Error(err.to_string()),
+    }
+  }
+}
+
 impl ProviderRef {
-  pub fn new() -> Self {}
+  pub fn new(
+    config_hash: String,
+    config: ProviderConfig,
+    emit_output_tx: mpsc::Sender<ProviderOutput>,
+    sysinfo: Arc<Mutex<System>>,
+    netinfo: Arc<Mutex<Networks>>,
+  ) -> anyhow::Result<Self> {
+    let mut provider =
+      Self::create_provider(config, sysinfo.clone(), netinfo.clone())?;
+
+    let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
+    let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
+
+    let min_refresh_interval = provider.min_refresh_interval();
+    let config_hash_clone = config_hash.clone();
+    let emit_output_tx_clone = emit_output_tx.clone();
+
+    task::spawn(async move {
+      provider
+        .start(
+          &config_hash_clone,
+          emit_output_tx_clone,
+          refresh_rx,
+          stop_rx,
+        )
+        .await
+    });
+
+    Ok(Self {
+      config_hash,
+      min_refresh_interval,
+      prev_refresh: None,
+      prev_output: None,
+      emit_output_tx,
+      refresh_tx,
+      stop_tx,
+    })
+  }
 
   fn create_provider(
     config: ProviderConfig,
@@ -64,7 +118,7 @@ impl ProviderRef {
         Box::new(HostProvider::new(config, sysinfo))
       }
       ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
-      #[cfg(all(windows, target_arch = "x86_64"))]
+      #[cfg(windows)]
       ProviderConfig::Komorebi(config) => {
         Box::new(KomorebiProvider::new(config))
       }
@@ -82,6 +136,27 @@ impl ProviderRef {
     };
 
     Ok(provider)
+  }
+
+  /// Updates cache with the given output.
+  pub fn update_cache(&mut self, output: Box<ProviderOutput>) {
+    self.prev_refresh = Some(Instant::now());
+    self.prev_output = Some(output);
+  }
+
+  /// Refreshes the provider.
+  ///
+  /// Since the previous output of providers is cached, if within the
+  /// minimum refresh interval, send the previous output.
+  pub async fn refresh(&self) {
+    match (self.prev_refresh, self.prev_output.clone()) {
+      (Some(prev_refresh), Some(prev_output))
+        if prev_refresh.elapsed() < self.min_refresh_interval =>
+      {
+        _ = self.emit_output_tx.send(*prev_output).await
+      }
+      _ => _ = self.refresh_tx.send(()).await,
+    }
   }
 
   /// Stops the given provider.

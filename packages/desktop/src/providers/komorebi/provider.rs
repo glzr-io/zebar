@@ -18,8 +18,8 @@ use super::{
 };
 use crate::providers::{
   komorebi::KomorebiVariables,
-  manager::{ProviderOutput, VariablesResult},
   provider::Provider,
+  provider_ref::{ProviderOutput, VariablesResult},
   variables::ProviderVariables,
 };
 
@@ -130,9 +130,11 @@ impl Provider for KomorebiProvider {
 
   async fn on_start(
     &mut self,
-    config_hash: String,
+    config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
+    let config_hash = config_hash.to_string();
+
     let task_handle = task::spawn(async move {
       let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
       debug!("Connected to Komorebi socket.");
@@ -166,7 +168,7 @@ impl Provider for KomorebiProvider {
           Err(error) => {
             _ = emit_output_tx
               .send(ProviderOutput {
-                config_hash: config_hash.clone(),
+                config_hash: config_hash.to_string(),
                 variables: VariablesResult::Error(error.to_string()),
               })
               .await;
@@ -181,7 +183,7 @@ impl Provider for KomorebiProvider {
 
   async fn on_refresh(
     &mut self,
-    _config_hash: String,
+    _config_hash: &str,
     _emit_output_tx: Sender<ProviderOutput>,
   ) {
     // No-op.
