@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use anyhow::bail;
 use serde::Serialize;
 use tokio::{sync::mpsc, task};
-use tracing::warn;
+use tracing::{info, warn};
 
 #[cfg(windows)]
 use super::komorebi::KomorebiProvider;
@@ -62,7 +62,7 @@ impl ProviderRef {
     emit_output_tx: mpsc::Sender<ProviderOutput>,
     shared_state: &SharedProviderState,
   ) -> anyhow::Result<Self> {
-    let mut provider = Self::create_provider(config, shared_state)?;
+    let provider = Self::create_provider(config, shared_state)?;
 
     let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
     let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
@@ -72,14 +72,13 @@ impl ProviderRef {
     let emit_output_tx_clone = emit_output_tx.clone();
 
     task::spawn(async move {
-      provider
-        .start(
-          &config_hash_clone,
-          emit_output_tx_clone,
-          refresh_rx,
-          stop_rx,
-        )
-        .await
+      Self::start_provider(
+        provider,
+        config_hash_clone,
+        emit_output_tx_clone,
+        refresh_rx,
+        stop_rx,
+      )
     });
 
     Ok(Self {
@@ -91,6 +90,38 @@ impl ProviderRef {
       refresh_tx,
       stop_tx,
     })
+  }
+
+  /// Starts the provider.
+  async fn start_provider(
+    mut provider: Box<dyn Provider + Send>,
+    config_hash: String,
+    emit_output_tx: mpsc::Sender<ProviderOutput>,
+    mut refresh_rx: mpsc::Receiver<()>,
+    mut stop_rx: mpsc::Receiver<()>,
+  ) {
+    info!("Starting provider: {}", config_hash);
+    provider
+      .on_start(&config_hash, emit_output_tx.clone())
+      .await;
+
+    // Loop to avoid exiting the select on refresh.
+    loop {
+      tokio::select! {
+        // On refresh, re-emit provider variables and continue looping.
+        Some(_) = refresh_rx.recv() => {
+          info!("Refreshing provider: {}", config_hash);
+          _ = provider.on_refresh(&config_hash, emit_output_tx.clone()).await;
+        },
+
+        // On stop, perform any necessary clean up and exit the loop.
+        Some(_) = stop_rx.recv() => {
+          info!("Stopping provider: {}", config_hash);
+          _ = provider.on_stop().await;
+          break;
+        },
+      }
+    }
   }
 
   fn create_provider(
