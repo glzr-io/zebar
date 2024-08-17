@@ -24,6 +24,7 @@ pub trait Provider {
 
   async fn on_stop(&mut self);
 
+  // TODO: Remove this.
   async fn start(
     &mut self,
     config_hash: String,
@@ -31,22 +32,14 @@ pub trait Provider {
     mut refresh_rx: Receiver<()>,
     mut stop_rx: Receiver<()>,
   ) {
-    let mut has_started = false;
+    info!("Starting provider: {}", config_hash);
+    self
+      .on_start(config_hash.clone(), emit_output_tx.clone())
+      .await;
 
     // Loop to avoid exiting the select on refresh.
     loop {
-      let config_hash = config_hash.clone();
-      let emit_output_tx = emit_output_tx.clone();
-
       tokio::select! {
-        // Default match arm which handles initialization of the provider.
-        // This has a precondition to avoid running again on refresh.
-        _ = {
-          info!("Starting provider: {}", config_hash);
-          has_started = true;
-          self.on_start(config_hash.clone(), emit_output_tx.clone())
-        }, if !has_started => break,
-
         // On refresh, re-emit provider variables and continue looping.
         Some(_) = refresh_rx.recv() => {
           info!("Refreshing provider: {}", config_hash);

@@ -18,7 +18,7 @@ use tracing_subscriber::EnvFilter;
 use crate::{
   cli::{Cli, CliCommand},
   monitors::get_monitors_str,
-  providers::{config::ProviderConfig, manager::ProviderManager},
+  providers::{manager::ProviderManager, provider_ref::ProviderConfig},
   sys_tray::setup_sys_tray,
   util::window_ext::WindowExt,
 };
@@ -169,7 +169,7 @@ async fn main() {
           // Add application icon to system tray.
           setup_sys_tray(app)?;
 
-          providers::manager::init(app)?;
+          providers::manager::init(app);
 
           let args_map = OpenWindowArgsMap(Default::default());
           let args_map_ref = args_map.0.clone();

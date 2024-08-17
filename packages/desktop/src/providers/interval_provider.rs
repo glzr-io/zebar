@@ -8,8 +8,8 @@ use tokio::{
 };
 
 use super::{
-  manager::{ProviderOutput, VariablesResult},
   provider::Provider,
+  provider_ref::{ProviderOutput, VariablesResult},
   variables::ProviderVariables,
 };
 
