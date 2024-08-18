@@ -7,7 +7,7 @@ use super::{
   language::Language, LanguageProviderConfig, LanguageVariables,
 };
 use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderVariables
 };
 
 pub struct LanguageProvider {
