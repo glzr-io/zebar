@@ -1,65 +1,140 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::info;
+use tokio::{
+  sync::mpsc::Sender,
+  task::{self, AbortHandle},
+  time,
+};
 
-use super::manager::ProviderOutput;
+use super::{provider_ref::ProviderOutput, variables::ProviderVariables};
 
 #[async_trait]
 pub trait Provider {
-  fn min_refresh_interval(&self) -> Duration;
+  /// Callback for when the provider is started.
+  async fn on_start(
+    &mut self,
+    config_hash: &str,
+    emit_output_tx: Sender<ProviderOutput>,
+  );
+
+  /// Callback for when the provider is refreshed.
+  async fn on_refresh(
+    &mut self,
+    config_hash: &str,
+    emit_output_tx: Sender<ProviderOutput>,
+  );
+
+  /// Callback for when the provider is stopped.
+  async fn on_stop(&mut self);
+
+  /// Minimum interval between refreshes.
+  ///
+  /// Affects how the provider output is cached.
+  fn min_refresh_interval(&self) -> Option<Duration>;
+}
+
+#[async_trait]
+pub trait IntervalProvider {
+  type Config: Sync + Send + 'static + IntervalConfig;
+  type State: Sync + Send + 'static;
+
+  /// Default to 2 seconds as the minimum refresh interval.
+  fn min_refresh_interval(&self) -> Option<Duration> {
+    Some(Duration::from_secs(2))
+  }
+
+  fn config(&self) -> Arc<Self::Config>;
+
+  fn state(&self) -> Arc<Self::State>;
+
+  fn abort_handle(&self) -> &Option<AbortHandle>;
+
+  fn set_abort_handle(&mut self, abort_handle: AbortHandle);
+
+  async fn get_refreshed_variables(
+    config: &Self::Config,
+    state: &Self::State,
+  ) -> anyhow::Result<ProviderVariables>;
+}
+
+#[async_trait]
+impl<T: IntervalProvider + Send> Provider for T {
+  fn min_refresh_interval(&self) -> Option<Duration> {
+    T::min_refresh_interval(self)
+  }
 
   async fn on_start(
     &mut self,
-    config_hash: String,
+    config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
-  );
+  ) {
+    let config = self.config();
+    let state = self.state();
+    let config_hash = config_hash.to_string();
+
+    let interval_task = task::spawn(async move {
+      let mut interval =
+        time::interval(Duration::from_millis(config.refresh_interval()));
+
+      loop {
+        // The first tick fires immediately.
+        interval.tick().await;
+
+        _ = emit_output_tx
+          .send(ProviderOutput {
+            config_hash: config_hash.clone(),
+            variables: T::get_refreshed_variables(&config, &state)
+              .await
+              .into(),
+          })
+          .await;
+      }
+    });
+
+    self.set_abort_handle(interval_task.abort_handle());
+    _ = interval_task.await;
+  }
 
   async fn on_refresh(
     &mut self,
-    config_hash: String,
+    config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
-  );
-
-  async fn on_stop(&mut self);
-
-  async fn start(
-    &mut self,
-    config_hash: String,
-    emit_output_tx: Sender<ProviderOutput>,
-    mut refresh_rx: Receiver<()>,
-    mut stop_rx: Receiver<()>,
   ) {
-    let mut has_started = false;
+    _ = emit_output_tx
+      .send(ProviderOutput {
+        config_hash: config_hash.to_string(),
+        variables: T::get_refreshed_variables(
+          &self.config(),
+          &self.state(),
+        )
+        .await
+        .into(),
+      })
+      .await;
+  }
 
-    // Loop to avoid exiting the select on refresh.
-    loop {
-      let config_hash = config_hash.clone();
-      let emit_output_tx = emit_output_tx.clone();
-
-      tokio::select! {
-        // Default match arm which handles initialization of the provider.
-        // This has a precondition to avoid running again on refresh.
-        _ = {
-          info!("Starting provider: {}", config_hash);
-          has_started = true;
-          self.on_start(config_hash.clone(), emit_output_tx.clone())
-        }, if !has_started => break,
-
-        // On refresh, re-emit provider variables and continue looping.
-        Some(_) = refresh_rx.recv() => {
-          info!("Refreshing provider: {}", config_hash);
-          _ = self.on_refresh(config_hash, emit_output_tx).await;
-        },
-
-        // On stop, perform any necessary clean up and exit the loop.
-        Some(_) = stop_rx.recv() => {
-          info!("Stopping provider: {}", config_hash);
-          _ = self.on_stop().await;
-          break;
-        },
-      }
+  async fn on_stop(&mut self) {
+    if let Some(handle) = &self.abort_handle() {
+      handle.abort();
     }
   }
+}
+
+/// Require interval providers to have a refresh interval in their config.
+pub trait IntervalConfig {
+  fn refresh_interval(&self) -> u64;
+}
+
+#[macro_export]
+macro_rules! impl_interval_config {
+  ($struct_name:ident) => {
+    use crate::providers::provider::IntervalConfig;
+
+    impl IntervalConfig for $struct_name {
+      fn refresh_interval(&self) -> u64 {
+        self.refresh_interval
+      }
+    }
+  };
 }

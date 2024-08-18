@@ -6,7 +6,7 @@ use tokio::{sync::Mutex, task::AbortHandle};
 
 use super::{MemoryProviderConfig, MemoryVariables};
 use crate::providers::{
-  interval_provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct MemoryProvider {

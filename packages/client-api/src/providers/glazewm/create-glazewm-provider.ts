@@ -76,6 +76,11 @@ export interface GlazeWmProvider {
    * Focus a workspace by name.
    */
   focusWorkspace(name: string): void;
+
+  /**
+   * Toggle tiling direction.
+   */
+  toggleTilingDirection(): void;
 }
 
 export async function createGlazeWmProvider(
@@ -212,6 +217,10 @@ export async function createGlazeWmProvider(
     client.runCommand(`focus --workspace ${name}`);
   }
 
+  function toggleTilingDirection() {
+    client.runCommand('toggle-tiling-direction');
+  }
+
   return {
     get displayedWorkspace() {
       return glazeWmVariables.displayedWorkspace;
@@ -244,5 +253,6 @@ export async function createGlazeWmProvider(
       return glazeWmVariables.bindingModes;
     },
     focusWorkspace,
+    toggleTilingDirection,
   };
 }
