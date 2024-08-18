@@ -8,7 +8,11 @@ use tracing::info;
 #[cfg(windows)]
 use super::komorebi::KomorebiProvider;
 use super::{
-  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider, host::HostProvider, ip::IpProvider, language::LanguageProvider, memory::MemoryProvider, network::NetworkProvider, provider::Provider, provider_manager::SharedProviderState, variables::ProviderVariables, weather::WeatherProvider
+  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
+  host::HostProvider, ip::IpProvider, language::LanguageProvider,
+  memory::MemoryProvider, network::NetworkProvider, provider::Provider,
+  provider_manager::SharedProviderState, variables::ProviderVariables,
+  weather::WeatherProvider,
 };
 
 /// Reference to an active provider.

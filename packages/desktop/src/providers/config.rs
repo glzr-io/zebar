@@ -3,7 +3,10 @@ use serde::Deserialize;
 #[cfg(windows)]
 use super::komorebi::KomorebiProviderConfig;
 use super::{
-  battery::BatteryProviderConfig, cpu::CpuProviderConfig, host::HostProviderConfig, ip::IpProviderConfig, language::LanguageProviderConfig, memory::MemoryProviderConfig, network::NetworkProviderConfig, weather::WeatherProviderConfig
+  battery::BatteryProviderConfig, cpu::CpuProviderConfig,
+  host::HostProviderConfig, ip::IpProviderConfig,
+  language::LanguageProviderConfig, memory::MemoryProviderConfig,
+  network::NetworkProviderConfig, weather::WeatherProviderConfig,
 };
 
 #[derive(Deserialize, Debug)]

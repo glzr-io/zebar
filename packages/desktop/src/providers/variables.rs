@@ -3,7 +3,9 @@ use serde::Serialize;
 #[cfg(windows)]
 use super::komorebi::KomorebiVariables;
 use super::{
-  battery::BatteryVariables, cpu::CpuVariables, host::HostVariables, ip::IpVariables, language::LanguageVariables, memory::MemoryVariables, network::NetworkVariables, weather::WeatherVariables
+  battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
+  ip::IpVariables, language::LanguageVariables, memory::MemoryVariables,
+  network::NetworkVariables, weather::WeatherVariables,
 };
 
 #[derive(Serialize, Debug, Clone)]
@@ -19,5 +21,5 @@ pub enum ProviderVariables {
   Network(NetworkVariables),
   Weather(WeatherVariables),
   #[cfg(all(windows, target_arch = "x86_64"))]
-  Language(LanguageVariables)
+  Language(LanguageVariables),
 }

@@ -7,7 +7,7 @@ use super::{
   language::Language, LanguageProviderConfig, LanguageVariables,
 };
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables
+  provider::IntervalProvider, variables::ProviderVariables,
 };
 
 pub struct LanguageProvider {
@@ -17,9 +17,7 @@ pub struct LanguageProvider {
 }
 
 impl LanguageProvider {
-  pub fn new(
-    config: LanguageProviderConfig,
-  ) -> LanguageProvider {
+  pub fn new(config: LanguageProviderConfig) -> LanguageProvider {
     LanguageProvider {
       config: Arc::new(config),
       abort_handle: None,
