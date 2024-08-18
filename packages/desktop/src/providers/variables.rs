@@ -4,7 +4,8 @@ use serde::Serialize;
 use super::komorebi::KomorebiOutput;
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, host::HostOutput, ip::IpOutput,
-  memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
+  language::LanguageVariables, memory::MemoryOutput,
+  network::NetworkOutput, weather::WeatherOutput,
 };
 
 #[derive(Serialize, Debug, Clone)]
@@ -19,4 +20,6 @@ pub enum ProviderOutput {
   Memory(MemoryOutput),
   Network(NetworkOutput),
   Weather(WeatherOutput),
+  #[cfg(windows)]
+  Language(LanguageVariables),
 }

@@ -5,6 +5,8 @@ mod host;
 mod ip;
 #[cfg(windows)]
 mod komorebi;
+#[cfg(windows)]
+mod language;
 mod memory;
 mod network;
 mod provider;
