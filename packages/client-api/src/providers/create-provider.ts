@@ -13,6 +13,7 @@ import { createNetworkProvider } from './network/create-network-provider';
 import { createSelfProvider } from './self/create-self-provider';
 import { createUtilProvider } from './util/create-util-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
+import { createLanguageProvider } from './language/create-language-provider';
 import { ProviderType, type ProviderConfig } from '~/user-config';
 import type { ElementContext } from '~/element-context.model';
 import type { PickPartial } from '~/utils';
@@ -52,6 +53,8 @@ export async function createProvider(
       return createUtilProvider(config, owner);
     case ProviderType.WEATHER:
       return createWeatherProvider(config, owner);
+    case ProviderType.LANGUAGE:
+      return createLanguageProvider(config, owner);
     default:
       throw new Error('Not a supported provider type.');
   }

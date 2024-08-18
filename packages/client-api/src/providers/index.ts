@@ -11,3 +11,4 @@ export * from './weather/create-weather-provider';
 export * from './create-provider-listener';
 export * from './create-provider';
 export * from './get-element-providers';
+export * from './language/create-language-provider';

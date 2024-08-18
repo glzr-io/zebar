@@ -15,6 +15,7 @@ import {
   SelfProviderConfigSchema,
   UtilProviderConfigSchema,
   WeatherProviderConfigSchema,
+  LanguageProviderConfigSchema,
 } from './providers';
 
 export const ProviderConfigSchema = z.union([
@@ -31,6 +32,7 @@ export const ProviderConfigSchema = z.union([
   SelfProviderConfigSchema,
   UtilProviderConfigSchema,
   WeatherProviderConfigSchema,
+  LanguageProviderConfigSchema,
 ]);
 
 export type ProviderConfig = Prettify<

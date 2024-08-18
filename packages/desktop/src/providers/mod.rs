@@ -12,3 +12,5 @@ pub mod network;
 pub mod provider;
 pub mod variables;
 pub mod weather;
+#[cfg(all(windows, target_arch = "x86_64"))]
+pub mod language;

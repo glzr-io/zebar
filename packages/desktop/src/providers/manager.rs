@@ -19,10 +19,7 @@ use tracing::{info, warn};
 #[cfg(all(windows, target_arch = "x86_64"))]
 use super::komorebi::KomorebiProvider;
 use super::{
-  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, variables::ProviderVariables,
-  weather::WeatherProvider,
+  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider, host::HostProvider, language::LanguageProvider, ip::IpProvider, memory::MemoryProvider, network::NetworkProvider, variables::ProviderVariables, weather::WeatherProvider
 };
 use crate::providers::provider::Provider;
 
@@ -219,6 +216,9 @@ fn create_provider(
     }
     ProviderConfig::Weather(config) => {
       Box::new(WeatherProvider::new(config))
+    }
+    ProviderConfig::Language(config) => {
+      Box::new(LanguageProvider::new(config))
     }
     #[allow(unreachable_patterns)]
     _ => bail!("Provider not supported on this operating system."),

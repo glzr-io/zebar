@@ -14,6 +14,7 @@ export enum ProviderType {
   SELF = 'self',
   UTIL = 'util',
   WEATHER = 'weather',
+  LANGUAGE = 'language',
 }
 
 export const ProviderTypeSchema = z.nativeEnum(ProviderType);
