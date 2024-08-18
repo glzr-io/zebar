@@ -14,9 +14,9 @@ use tracing::{info, warn};
 use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
-  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
-  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
-  SharedProviderState,
+  ip::IpProvider, language::LanguageProvider, memory::MemoryProvider,
+  network::NetworkProvider, weather::WeatherProvider, Provider,
+  ProviderConfig, ProviderOutput, SharedProviderState,
 };
 
 /// Reference to an active provider.
@@ -182,6 +182,9 @@ impl ProviderRef {
       )),
       ProviderConfig::Weather(config) => {
         Box::new(WeatherProvider::new(config))
+      }
+      ProviderConfig::Language(config) => {
+        Box::new(LanguageProvider::new(config))
       }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),
