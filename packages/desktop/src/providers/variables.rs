@@ -1,12 +1,11 @@
 use serde::Serialize;
 
-#[cfg(windows)]
-use super::komorebi::KomorebiOutput;
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, host::HostOutput, ip::IpOutput,
-  language::LanguageVariables, memory::MemoryOutput,
-  network::NetworkOutput, weather::WeatherOutput,
+  memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
 };
+#[cfg(windows)]
+use super::{komorebi::KomorebiOutput, language::LanguageVariables};
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]

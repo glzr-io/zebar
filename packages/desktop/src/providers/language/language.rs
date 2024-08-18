@@ -1,4 +1,10 @@
-use windows::Win32::{Globalization::{LCIDToLocaleName, LOCALE_ALLOW_NEUTRAL_NAMES}, System::SystemServices::LOCALE_NAME_MAX_LENGTH, UI::{Input::KeyboardAndMouse::*, TextServices::HKL, WindowsAndMessaging::*}};
+use windows::Win32::{
+  Globalization::{LCIDToLocaleName, LOCALE_ALLOW_NEUTRAL_NAMES},
+  System::SystemServices::LOCALE_NAME_MAX_LENGTH,
+  UI::{
+    Input::KeyboardAndMouse::*, TextServices::HKL, WindowsAndMessaging::*,
+  },
+};
 
 pub struct Language {}
 
@@ -28,7 +34,8 @@ impl Language {
 
     let mut actual_name = String::from("unknown");
     if result > 0 {
-      actual_name = String::from_utf16_lossy(&locale_name[..result as usize]);
+      actual_name =
+        String::from_utf16_lossy(&locale_name[..result as usize]);
     }
 
     actual_name

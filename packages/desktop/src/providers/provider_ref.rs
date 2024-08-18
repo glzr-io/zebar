@@ -10,14 +10,14 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-#[cfg(windows)]
-use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
-  ip::IpProvider, language::LanguageProvider, memory::MemoryProvider,
-  network::NetworkProvider, weather::WeatherProvider, Provider,
-  ProviderConfig, ProviderOutput, SharedProviderState,
+  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
+  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
+  SharedProviderState,
 };
+#[cfg(windows)]
+use super::{komorebi::KomorebiProvider, language::LanguageProvider};
 
 /// Reference to an active provider.
 pub struct ProviderRef {
