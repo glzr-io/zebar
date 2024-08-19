@@ -20,6 +20,6 @@ pub enum ProviderVariables {
   Memory(MemoryVariables),
   Network(NetworkVariables),
   Weather(WeatherVariables),
-  #[cfg(all(windows, target_arch = "x86_64"))]
+  #[cfg(windows)]
   Language(LanguageVariables),
 }
