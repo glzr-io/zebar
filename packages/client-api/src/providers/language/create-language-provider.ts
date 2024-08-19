@@ -11,14 +11,14 @@ export async function createLanguageProvider(
   config: LanguageProviderConfig,
   owner: Owner,
 ) {
-  const ipVariables = await createProviderListener<
+  const languageVariables = await createProviderListener<
     LanguageProviderConfig,
     LanguageVariables
   >(config, owner);
 
   return {
     get language() {
-      return ipVariables().language;
+      return languageVariables().language;
     },
   };
 }
