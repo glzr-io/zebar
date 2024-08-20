@@ -1,10 +1,14 @@
-use std::env;
+#![feature(async_closure)]
+use std::{collections::HashMap, env, hash::Hash};
 
 use clap::Parser;
 use cli::OpenWindowArgs;
 use providers::config::ProviderConfig;
 use tauri::{AppHandle, Manager, State, Window};
-use tokio::sync::mpsc::{self};
+use tokio::{
+  sync::mpsc::{self},
+  task,
+};
 use tracing::{level_filters::LevelFilter, warn};
 use tracing_subscriber::EnvFilter;
 use window_factory::{WindowFactory, WindowState};
@@ -41,6 +45,15 @@ async fn get_open_window_args(
 ) -> anyhow::Result<Option<WindowState>, String> {
   Ok(window_factory.state_by_window_label(window_label).await)
 }
+
+// #[tauri::command]
+// async fn open_window(
+//   window_name: String,
+//   args: HashMap<String, String>,
+//   window_factory: State<'_, WindowFactory>,
+// ) -> anyhow::Result<Option<WindowState>, String> {
+//   Ok(window_factory.open(window_label))
+// }
 
 #[tauri::command]
 async fn listen_provider(
@@ -121,25 +134,28 @@ async fn main() {
           cli::print_and_exit(monitors_str);
           Ok(())
         }
-        CliCommand::Open(args) => {
-          let (open_tx, open_rx) =
-            mpsc::unbounded_channel::<OpenWindowArgs>();
-
+        CliCommand::Open(open_args) => {
           // If this is not the first instance of the app, this will emit
           // within the original instance and exit immediately.
-          let open_tx_clone = open_tx.clone();
           app.handle().plugin(tauri_plugin_single_instance::init(
-            move |_, args, _| {
+            move |app, args, _| {
               let cli = Cli::parse_from(args);
 
               // CLI command is guaranteed to be an open command here.
               if let CliCommand::Open(args) = cli.command {
-                if let Err(err) = open_tx_clone.send(args) {
-                  warn!("Failed to emit window's open args: {}", err);
-                };
+                app.state::<WindowFactory>().open(app, args);
               }
             },
           ))?;
+
+          // Prevent windows from showing up in the dock on MacOS.
+          #[cfg(target_os = "macos")]
+          app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+          // Initializes `WindowFactory` in Tauri state.
+          let window_factory = WindowFactory::new();
+          window_factory.open(app.handle(), open_args);
+          app.manage(window_factory);
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
@@ -149,11 +165,6 @@ async fn main() {
           let mut manager = ProviderManager::new();
           manager.init(app.handle());
           app.manage(manager);
-
-          // Initializes `WindowFactory` in Tauri state.
-          let mut window_factory = WindowFactory::new(open_tx, open_rx);
-          window_factory.init(app.handle(), args);
-          app.manage(window_factory);
 
           // Add application icon to system tray.
           setup_sys_tray(app)?;
