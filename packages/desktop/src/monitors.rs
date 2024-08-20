@@ -1,9 +1,11 @@
 use anyhow::{bail, Context};
 use tauri::{App, Runtime};
 
+use crate::cli::OutputMonitorsArgs;
+
 pub fn get_monitors_str<R: Runtime>(
   app: &mut App<R>,
-  print0: bool,
+  args: OutputMonitorsArgs,
 ) -> anyhow::Result<String> {
   let monitors = app
     .available_monitors()
@@ -26,7 +28,7 @@ pub fn get_monitors_str<R: Runtime>(
       monitor.scale_factor()
     );
 
-    monitors_str += match print0 {
+    monitors_str += match args.print0 {
       true => "\0",
       false => "\n",
     };

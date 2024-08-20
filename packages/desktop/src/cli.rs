@@ -1,6 +1,6 @@
 use std::process;
 
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 const VERSION: &'static str = env!("VERSION_NUMBER");
 
@@ -14,25 +14,31 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
   /// Open a window by its ID (eg. `zebar open bar`).
-  Open {
-    /// ID of the window to open (eg. `bar`).
-    window_id: String,
-
-    /// Arguments to pass to the window.
-    ///
-    /// These become available via the `self` provider.
-    #[clap(short, long, num_args = 1.., value_parser=parse_open_args)]
-    args: Option<Vec<(String, String)>>,
-  },
+  Open(OpenWindowArgs),
   /// Output available monitors.
-  Monitors {
-    /// Use ASCII NUL character (character code 0) instead of newlines
-    /// for delimiting monitors.
-    ///
-    /// Useful for piping to `xargs -0`.
-    #[clap(short, long)]
-    print0: bool,
-  },
+  Monitors(OutputMonitorsArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct OpenWindowArgs {
+  /// ID of the window to open (eg. `bar`).
+  pub window_id: String,
+
+  /// Arguments to pass to the window.
+  ///
+  /// These become available via the `self` provider.
+  #[clap(short, long, num_args = 1.., value_parser=parse_open_args)]
+  pub args: Option<Vec<(String, String)>>,
+}
+
+#[derive(Args, Debug)]
+pub struct OutputMonitorsArgs {
+  /// Use ASCII NUL character (character code 0) instead of newlines
+  /// for delimiting monitors.
+  ///
+  /// Useful for piping to `xargs -0`.
+  #[clap(short, long)]
+  pub print0: bool,
 }
 
 /// Print to stdout/stderror and exit the process.

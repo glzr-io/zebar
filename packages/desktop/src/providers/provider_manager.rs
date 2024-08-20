@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use sysinfo::{Networks, System};
-use tauri::{App, AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Runtime};
 use tokio::{
   sync::{
     mpsc::{self},
@@ -15,13 +15,6 @@ use super::{
   config::ProviderConfig,
   provider_ref::{ProviderOutput, ProviderRef},
 };
-
-/// Initializes `ProviderManager` in Tauri state.
-pub fn init_provider_manager<R: Runtime>(app: &mut App<R>) {
-  let mut manager = ProviderManager::new();
-  manager.start(app.handle());
-  app.manage(manager);
-}
 
 /// State shared between providers.
 pub struct SharedProviderState {
@@ -55,7 +48,7 @@ impl ProviderManager {
 
   /// Starts listening for provider outputs and emits them to frontend
   /// clients.
-  pub fn start<R: Runtime>(&mut self, app_handle: &AppHandle<R>) {
+  pub fn init<R: Runtime>(&mut self, app_handle: &AppHandle<R>) {
     let mut emit_output_rx = self.emit_output_rx.take().unwrap();
     let providers = self.providers.clone();
     let app_handle = app_handle.clone();

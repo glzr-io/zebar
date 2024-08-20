@@ -1,22 +1,13 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::env;
 
 use clap::Parser;
-use providers::{
-  config::ProviderConfig, provider_manager::init_provider_manager,
-};
-use serde::Serialize;
-use tauri::{
-  AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder, Window,
-};
-use tokio::{
-  sync::{
-    mpsc::{self, UnboundedSender},
-    Mutex,
-  },
-  task,
-};
-use tracing::{info, level_filters::LevelFilter};
+use cli::OpenWindowArgs;
+use providers::config::ProviderConfig;
+use tauri::{AppHandle, Manager, State, Window};
+use tokio::sync::mpsc::{self};
+use tracing::{level_filters::LevelFilter, warn};
 use tracing_subscriber::EnvFilter;
+use window_factory::{WindowFactory, WindowState};
 
 use crate::{
   cli::{Cli, CliCommand},
@@ -32,16 +23,7 @@ mod providers;
 mod sys_tray;
 mod user_config;
 mod util;
-
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct OpenWindowArgs {
-  window_id: String,
-  args: HashMap<String, String>,
-  env: HashMap<String, String>,
-}
-
-struct OpenWindowArgsMap(Arc<Mutex<HashMap<String, OpenWindowArgs>>>);
+mod window_factory;
 
 #[tauri::command]
 fn read_config_file(
@@ -55,16 +37,9 @@ fn read_config_file(
 #[tauri::command]
 async fn get_open_window_args(
   window_label: String,
-  open_window_args_map: State<'_, OpenWindowArgsMap>,
-) -> anyhow::Result<Option<OpenWindowArgs>, String> {
-  Ok(
-    open_window_args_map
-      .0
-      .lock()
-      .await
-      .get(&window_label)
-      .map(|open_args| open_args.clone()),
-  )
+  window_factory: State<'_, WindowFactory>,
+) -> anyhow::Result<Option<WindowState>, String> {
+  Ok(window_factory.state_by_window_label(window_label).await)
 }
 
 #[tauri::command]
@@ -141,100 +116,47 @@ async fn main() {
       // `monitors` CLI command, the setup is conditional based on
       // the CLI command.
       match cli.command {
-        CliCommand::Monitors { print0 } => {
-          let monitors_str = get_monitors_str(app, print0);
+        CliCommand::Monitors(args) => {
+          let monitors_str = get_monitors_str(app, args);
           cli::print_and_exit(monitors_str);
           Ok(())
         }
-        CliCommand::Open { window_id, args } => {
-          let (tx, mut rx) = mpsc::unbounded_channel::<OpenWindowArgs>();
-          let tx_clone = tx.clone();
+        CliCommand::Open(args) => {
+          let (open_tx, open_rx) =
+            mpsc::unbounded_channel::<OpenWindowArgs>();
 
           // If this is not the first instance of the app, this will emit
-          // to the original instance and exit immediately.
+          // within the original instance and exit immediately.
+          let open_tx_clone = open_tx.clone();
           app.handle().plugin(tauri_plugin_single_instance::init(
             move |_, args, _| {
               let cli = Cli::parse_from(args);
 
               // CLI command is guaranteed to be an open command here.
-              if let CliCommand::Open { window_id, args } = cli.command {
-                emit_open_args(window_id, args, tx.clone());
+              if let CliCommand::Open(args) = cli.command {
+                if let Err(err) = open_tx_clone.send(args) {
+                  warn!("Failed to emit window's open args: {}", err);
+                };
               }
             },
           ))?;
-
-          emit_open_args(window_id, args, tx_clone);
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
           app.handle().plugin(tauri_plugin_dialog::init())?;
 
+          // Initializes `ProviderManager` in Tauri state.
+          let mut manager = ProviderManager::new();
+          manager.init(app.handle());
+          app.manage(manager);
+
+          // Initializes `WindowFactory` in Tauri state.
+          let mut window_factory = WindowFactory::new(open_tx, open_rx);
+          window_factory.init(app.handle(), args);
+          app.manage(window_factory);
+
           // Add application icon to system tray.
           setup_sys_tray(app)?;
-
-          init_provider_manager(app);
-
-          let args_map = OpenWindowArgsMap(Default::default());
-          let args_map_ref = args_map.0.clone();
-          app.manage(args_map);
-
-          let app_handle = app.handle().clone();
-
-          // Prevent the app icon from showing up in the dock on MacOS.
-          #[cfg(target_os = "macos")]
-          app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-
-          // Handle creation of new windows (both from the initial and
-          // subsequent instances of the application)
-          _ = task::spawn(async move {
-            let window_count = Arc::new(Mutex::new(0));
-
-            while let Some(open_args) = rx.recv().await {
-              let mut window_count = window_count.lock().await;
-              *window_count += 1;
-
-              info!(
-                "Creating window #{} '{}' with args: {:#?}",
-                window_count, open_args.window_id, open_args.args
-              );
-
-              // Window label needs to be globally unique. Hence add a
-              // prefix with the window count to handle cases where
-              // multiple of the same window are opened.
-              let window_label =
-                format!("{}-{}", window_count, &open_args.window_id);
-
-              let window = WebviewWindowBuilder::new(
-                &app_handle,
-                &window_label,
-                WebviewUrl::default(),
-              )
-              .title(format!("Zebar - {}", open_args.window_id))
-              .inner_size(500., 500.)
-              .focused(false)
-              .skip_taskbar(true)
-              .visible_on_all_workspaces(true)
-              .transparent(true)
-              .shadow(false)
-              .decorations(false)
-              .resizable(false)
-              .build()
-              .unwrap();
-
-              _ = window.eval(&format!(
-                "window.__ZEBAR_OPEN_ARGS={}",
-                serde_json::to_string(&open_args).unwrap()
-              ));
-
-              // Tauri's `skip_taskbar` option isn't 100% reliable, so we
-              // also set the window as a tool window.
-              #[cfg(target_os = "windows")]
-              let _ = window.as_ref().window().set_tool_window(true);
-
-              let mut args_map = args_map_ref.lock().await;
-              args_map.insert(window_label, open_args);
-            }
-          });
 
           Ok(())
         }
@@ -250,21 +172,4 @@ async fn main() {
     ])
     .run(tauri::generate_context!())
     .expect("Failed to build Tauri application.");
-}
-
-/// Create and emit `OpenWindowArgs` to a channel.
-fn emit_open_args(
-  window_id: String,
-  args: Option<Vec<(String, String)>>,
-  tx: UnboundedSender<OpenWindowArgs>,
-) {
-  let open_args = OpenWindowArgs {
-    window_id,
-    args: args.unwrap_or(vec![]).into_iter().collect(),
-    env: env::vars().collect(),
-  };
-
-  if let Err(err) = tx.send(open_args.clone()) {
-    info!("Failed to emit window's open args: {}", err);
-  };
 }
