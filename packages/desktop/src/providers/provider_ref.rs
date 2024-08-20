@@ -85,6 +85,7 @@ impl ProviderRef {
         refresh_rx,
         stop_rx,
       )
+      .await;
     });
 
     Ok(Self {
@@ -127,6 +128,8 @@ impl ProviderRef {
         },
       }
     }
+
+    info!("Provider stopped: {}", config_hash);
   }
 
   fn create_provider(
