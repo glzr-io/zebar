@@ -7,10 +7,7 @@ use std::{
 };
 
 use serde::Serialize;
-use tauri::{
-  App, AppHandle, Emitter, Manager, Runtime, WebviewUrl,
-  WebviewWindowBuilder,
-};
+use tauri::{AppHandle, Runtime, WebviewUrl, WebviewWindowBuilder};
 use tokio::{
   sync::{
     mpsc::{self},
@@ -18,7 +15,7 @@ use tokio::{
   },
   task,
 };
-use tracing::{info, warn};
+use tracing::{error, info};
 
 use crate::{cli::OpenWindowArgs, util::window_ext::WindowExt};
 
@@ -71,12 +68,20 @@ impl WindowFactory {
     self.open_tx.send(args).unwrap();
 
     task::spawn(async move {
-      while let Some(args) = open_rx.recv().await {
-        let count = window_count.fetch_add(1, Ordering::Relaxed) + 1;
+      while let Some(open_args) = open_rx.recv().await {
+        let new_count = window_count.fetch_add(1, Ordering::Relaxed) + 1;
 
-        if let Ok(state) = Self::open(app_handle.clone(), args, count) {
-          let mut windows = windows.lock().await;
-          windows.insert(state.window_id.clone(), state);
+        let open_res =
+          Self::open(app_handle.clone(), open_args, new_count);
+
+        match open_res {
+          Ok(state) => {
+            let mut windows = windows.lock().await;
+            windows.insert(state.window_id.clone(), state);
+          }
+          Err(err) => {
+            error!("Failed to open window: {:?}", err);
+          }
         }
       }
     });
@@ -84,25 +89,28 @@ impl WindowFactory {
 
   pub fn open<R: Runtime>(
     app_handle: AppHandle<R>,
-    args: OpenWindowArgs,
+    open_args: OpenWindowArgs,
     window_count: u32,
   ) -> anyhow::Result<WindowState> {
+    let args = open_args.args.unwrap_or(vec![]).into_iter().collect();
+
     info!(
       "Creating window #{} '{}' with args: {:#?}",
-      window_count, args.window_id, args.args
+      window_count, open_args.window_id, args
     );
 
     // Window label needs to be globally unique. Hence add a prefix with
     // the window count to handle cases where multiple of the same window
     // are opened.
-    let window_label = format!("{}-{}", window_count, &args.window_id);
+    let window_label =
+      format!("{}-{}", window_count, &open_args.window_id);
 
     let window = WebviewWindowBuilder::new(
       &app_handle,
       &window_label,
       WebviewUrl::default(),
     )
-    .title(format!("Zebar - {}", args.window_id))
+    .title(format!("Zebar - {}", open_args.window_id))
     .inner_size(500., 500.)
     .focused(false)
     .skip_taskbar(true)
@@ -111,13 +119,12 @@ impl WindowFactory {
     .shadow(false)
     .decorations(false)
     .resizable(false)
-    .build()
-    .unwrap();
+    .build()?;
 
     let state = WindowState {
-      window_id: args.window_id.clone(),
+      window_id: open_args.window_id.clone(),
       window_label: window_label.clone(),
-      args: args.args.unwrap_or(vec![]).into_iter().collect(),
+      args,
       env: std::env::vars().collect(),
     };
 
