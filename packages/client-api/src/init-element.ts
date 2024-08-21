@@ -17,7 +17,7 @@ import { getElementProviders } from './providers';
 import type { ElementContext } from './element-context.model';
 import { ElementType } from './element-type.model';
 import { createLogger, type PickPartial } from './utils';
-import { showErrorDialog } from './desktop';
+import { openWindow, showErrorDialog } from './desktop';
 
 const logger = createLogger('init-element');
 
@@ -50,6 +50,7 @@ export async function initElement(
       globalConfig: args.globalConfig,
       args: args.args,
       env: args.env,
+      openWindow,
       initChildElement,
       providers: undefined,
       parsedConfig: undefined,

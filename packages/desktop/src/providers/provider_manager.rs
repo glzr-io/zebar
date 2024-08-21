@@ -85,11 +85,12 @@ impl ProviderManager {
     config: ProviderConfig,
     _tracked_access: Vec<String>,
   ) -> anyhow::Result<()> {
-    let mut providers = self.providers.lock().await;
+    let found_provider =
+      { self.providers.lock().await.get(&config_hash).cloned() };
 
     // If a provider with the given config already exists, refresh it
     // and return early.
-    if let Some(found_provider) = providers.get(&config_hash) {
+    if let Some(found_provider) = found_provider {
       if let Err(err) = found_provider.refresh().await {
         warn!("Error refreshing provider: {:?}", err);
       }
@@ -104,6 +105,7 @@ impl ProviderManager {
       &self.shared_state,
     )?;
 
+    let mut providers = self.providers.lock().await;
     providers.insert(config_hash, provider_ref);
 
     Ok(())

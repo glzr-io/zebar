@@ -1,15 +1,11 @@
 #![feature(async_closure)]
-use std::{collections::HashMap, env, hash::Hash};
+use std::{collections::HashMap, env};
 
 use clap::Parser;
 use cli::OpenWindowArgs;
 use providers::config::ProviderConfig;
 use tauri::{AppHandle, Manager, State, Window};
-use tokio::{
-  sync::mpsc::{self},
-  task,
-};
-use tracing::{level_filters::LevelFilter, warn};
+use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use window_factory::{WindowFactory, WindowState};
 
@@ -46,14 +42,19 @@ async fn get_open_window_args(
   Ok(window_factory.state_by_window_label(window_label).await)
 }
 
-// #[tauri::command]
-// async fn open_window(
-//   window_name: String,
-//   args: HashMap<String, String>,
-//   window_factory: State<'_, WindowFactory>,
-// ) -> anyhow::Result<Option<WindowState>, String> {
-//   Ok(window_factory.open(window_label))
-// }
+#[tauri::command]
+fn open_window(
+  window_id: String,
+  args: HashMap<String, String>,
+  window_factory: State<'_, WindowFactory>,
+) -> anyhow::Result<(), String> {
+  window_factory.try_open(OpenWindowArgs {
+    window_id,
+    args: Some(args.into_iter().collect()),
+  });
+
+  Ok(())
+}
 
 #[tauri::command]
 async fn listen_provider(
@@ -143,7 +144,7 @@ async fn main() {
 
               // CLI command is guaranteed to be an open command here.
               if let CliCommand::Open(args) = cli.command {
-                app.state::<WindowFactory>().open(app, args);
+                app.state::<WindowFactory>().try_open(args);
               }
             },
           ))?;
@@ -152,16 +153,17 @@ async fn main() {
           #[cfg(target_os = "macos")]
           app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-          // Initializes `WindowFactory` in Tauri state.
-          let window_factory = WindowFactory::new();
-          window_factory.open(app.handle(), open_args);
+          // Open window with the given args and initialize `WindowFactory`
+          // in Tauri state.
+          let window_factory = WindowFactory::new(app.handle());
+          window_factory.try_open(open_args);
           app.manage(window_factory);
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
           app.handle().plugin(tauri_plugin_dialog::init())?;
 
-          // Initializes `ProviderManager` in Tauri state.
+          // Initialize `ProviderManager` in Tauri state.
           let mut manager = ProviderManager::new();
           manager.init(app.handle());
           app.manage(manager);
@@ -176,6 +178,7 @@ async fn main() {
     .invoke_handler(tauri::generate_handler![
       read_config_file,
       get_open_window_args,
+      open_window,
       listen_provider,
       unlisten_provider,
       set_always_on_top,
