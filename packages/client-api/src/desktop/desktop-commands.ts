@@ -19,7 +19,7 @@ export function readConfigFile(): Promise<string> {
 /**
  * Get args used to open the window with the {@link windowLabel}.
  */
-export function getOpenWindowArgs(
+export function getInitialState(
   windowLabel: string,
 ): Promise<OpenWindowArgs | null> {
   return invoke<OpenWindowArgs | null>('get_open_window_args', {

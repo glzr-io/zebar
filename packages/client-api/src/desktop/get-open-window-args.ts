@@ -2,7 +2,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { createStore } from 'solid-js/store';
 
 import type { OpenWindowArgs } from './shared';
-import { getOpenWindowArgs } from './desktop-commands';
+import { getInitialState } from './desktop-commands';
 
 const [openWindowArgs, setOpenWindowArgs] = createStore({
   value: null as OpenWindowArgs | null,
@@ -15,9 +15,9 @@ export async function _getOpenWindowArgs() {
 }
 
 async function fetchOpenWindowArgs() {
-  if (window.__ZEBAR_OPEN_ARGS) {
-    return window.__ZEBAR_OPEN_ARGS;
+  if (window.__ZEBAR_INITIAL_STATE) {
+    return window.__ZEBAR_INITIAL_STATE;
   }
 
-  return getOpenWindowArgs(await getCurrentWindow().label);
+  return getInitialState(await getCurrentWindow().label);
 }

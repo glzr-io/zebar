@@ -1,7 +1,7 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { getOwner } from 'solid-js';
+import { createRoot, getOwner, runWithOwner } from 'solid-js';
 
-import { getOpenWindowArgs, openWindow, showErrorDialog } from './desktop';
+import { getInitialState, openWindow, showErrorDialog } from './desktop';
 import { createLogger } from '~/utils';
 import type { ZebarContext } from './zebar-context.model';
 
@@ -18,38 +18,48 @@ export function init(callback: (context: ZebarContext) => void) {
  * Handles initialization.
  */
 export async function initAsync(): Promise<ZebarContext> {
-  try {
-    // TODO: Create new root if owner is null.
-    const owner = getOwner()!;
+  return withReactiveContext(async () => {
+    try {
+      const currentWindow = getCurrentWindow();
+      const initialState =
+        window.__ZEBAR_INITIAL_STATE ??
+        (await getInitialState(currentWindow.label));
 
-    const windowState =
-      window.__ZEBAR_OPEN_ARGS ??
-      (await getOpenWindowArgs(getCurrentWindow().label));
+      await currentWindow.show();
 
-    return {
-      config: windowState.config,
-      providers: windowState.providers,
-      openWindow,
       // @ts-ignore - TODO
-      currentWindow: {},
-      // @ts-ignore - TODO
-      allWindows: [],
-      // @ts-ignore - TODO
-      currentMonitor: {},
-      // @ts-ignore - TODO
-      allMonitors: [],
-    };
-  } catch (err) {
-    logger.error('Failed to initialize window:', err);
+      return {
+        config: initialState.config,
+        providers: initialState.providers,
+        openWindow,
+        currentWindow: {},
+        allWindows: [],
+        currentMonitor: {},
+        allMonitors: [],
+      } as ZebarContext;
+    } catch (err) {
+      logger.error('Failed to initialize window:', err);
 
-    await showErrorDialog({
-      title: 'Failed to initialize window',
-      error: err,
-    });
+      await showErrorDialog({
+        title: 'Failed to initialize window',
+        error: err,
+      });
 
-    // Error during window initialization is unrecoverable, so we close
-    // the window.
-    getCurrentWindow().close();
-    throw err;
-  }
+      // Error during window initialization is unrecoverable, so we close
+      // the window.
+      getCurrentWindow().close();
+      throw err;
+    }
+  });
+}
+
+/**
+ * Runs callback in a reactive context (allows for SolidJS reactivity).
+ */
+function withReactiveContext<T>(callback: () => T) {
+  const owner = getOwner();
+
+  return owner
+    ? (runWithOwner(owner, callback) as T)
+    : createRoot(callback);
 }
