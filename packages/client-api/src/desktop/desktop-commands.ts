@@ -27,6 +27,13 @@ export function getOpenWindowArgs(
   });
 }
 
+export function openWindow(
+  windowId: string,
+  args: Record<string, string> = {},
+): Promise<void> {
+  return invoke<void>('open_window', { windowId, args });
+}
+
 // TODO: Add support for only fetching selected variables.
 export function listenProvider(args: {
   configHash: string;
