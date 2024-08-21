@@ -1,0 +1,48 @@
+# Allowed values: 'window', 'component'
+type: 'window'
+# Whether to show the window above/below all others.
+# Allowed values: 'always_on_top', 'always_on_bottom', 'normal'.
+z_order: 'normal'
+# Whether the window should be shown in the taskbar.
+shown_in_taskbar: false
+# Whether the window should have resize handles.
+resizable: false
+html_url: 'index.html'
+# Where to place the window.
+positions:
+  # The monitor index to place the window on.
+  # Allowed values: 0, 1, 2, 3, etc. OR 'all'.
+  - monitor_index: 0
+    # Allowed values: 'top', 'bottom', 'left', 'right'.
+    position: 'top'
+    offset_x: 20
+    offset_y: 20
+inputs:
+  - type: 'number'
+    name: 'CPU high threshold'
+    value: 50
+  - type: 'color'
+    name: 'background'
+    value: '#fff'
+  - type: 'component'
+    name: 'clock_component'
+  - type: 'component_list'
+    name: 'left_group'
+    value:
+      [
+        { type: 'component', name: 'logo_component' },
+        { type: 'component', name: 'glazewm_workspaces_component' },
+      ]
+# # Problems with current:
+# #  * start script (ideally someone just launches Zebar from start menu).
+# #  * reacting to monitor removals/additions.
+# #  * improvements to rendering.
+# #    * nested structure kind of sucks. a template file would be better (e.g. a `zhtml` file).
+# #    * however, a template file means re-rendering the entire template string.
+# #    * the more optimizations that we make, the closer we get to essentially creating a frontend framework.
+
+### Needed for MVP:
+# 1. Config above without component support (including monitor positioning).
+# 2. No UI.
+# 3. Load windows via system tray.
+# 4. Traverse yaml files in `~/.glzr/zebar`
