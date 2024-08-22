@@ -19,10 +19,9 @@ import { createStore } from 'solid-js/store';
 
 import { getMonitors } from '~/desktop';
 import { getCoordinateDistance } from '~/utils';
-import { ProviderType } from '../provider-type.model';
 
 export interface GlazeWmProviderConfig {
-  type: ProviderType.GLAZEWM;
+  type: 'glazewm';
 }
 
 export interface GlazeWmProvider {

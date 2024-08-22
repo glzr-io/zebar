@@ -1,10 +1,9 @@
 import type { Owner } from 'solid-js';
 
 import { createProviderListener } from '../create-provider-listener';
-import { ProviderType } from '../provider-type.model';
 
 export interface CpuProviderConfig {
-  type: ProviderType.CPU;
+  type: 'cpu';
 
   /**
    * How often this provider refreshes in milliseconds.

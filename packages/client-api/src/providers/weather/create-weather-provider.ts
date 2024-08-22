@@ -6,10 +6,9 @@ import {
 } from '../ip/create-ip-provider';
 import { WeatherStatus } from './weather-status.enum';
 import { createProviderListener } from '../create-provider-listener';
-import { ProviderType } from '../provider-type.model';
 
 export interface WeatherProviderConfig {
-  type: ProviderType.WEATHER;
+  type: 'weather';
 
   /**
    * Latitude to retrieve weather for. If not provided, latitude is instead
@@ -60,7 +59,7 @@ export async function createWeatherProvider(
       ipProvider ??
       (ipProvider = await createIpProvider(
         {
-          type: ProviderType.IP,
+          type: 'ip',
           refreshInterval: 60 * 60 * 1000,
         },
         owner,

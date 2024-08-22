@@ -2,10 +2,8 @@ import { DateTime } from 'luxon';
 import { type Owner, onCleanup, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import type { ProviderType } from '../provider-type.model';
-
 export interface DateProviderConfig {
-  type: ProviderType.DATE;
+  type: 'date';
 
   /**
    * How often this provider refreshes in milliseconds.

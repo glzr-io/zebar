@@ -1,10 +1,9 @@
 import type { Owner } from 'solid-js';
 
 import { createProviderListener } from '../create-provider-listener';
-import type { ProviderType } from '../provider-type.model';
 
 export interface BatteryProviderConfig {
-  type: ProviderType.BATTERY;
+  type: 'battery';
 
   /**
    * How often this provider refreshes in milliseconds.

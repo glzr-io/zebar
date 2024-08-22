@@ -2,178 +2,96 @@ import type { Owner } from 'solid-js';
 
 import {
   createBatteryProvider,
-  type BatteryProvider,
+  type BatteryProviderConfig,
 } from './battery/create-battery-provider';
 import {
   createCpuProvider,
-  type CpuProvider,
+  type CpuProviderConfig,
 } from './cpu/create-cpu-provider';
 import {
   createDateProvider,
-  type DateProvider,
+  type DateProviderConfig,
 } from './date/create-date-provider';
 import {
   createGlazeWmProvider,
-  type GlazeWmProvider,
+  type GlazeWmProviderConfig,
 } from './glazewm/create-glazewm-provider';
 import {
   createHostProvider,
-  type HostProvider,
+  type HostProviderConfig,
 } from './host/create-host-provider';
 import {
   createIpProvider,
-  type IpProvider,
+  type IpProviderConfig,
 } from './ip/create-ip-provider';
 import {
   createKomorebiProvider,
-  type KomorebiProvider,
+  type KomorebiProviderConfig,
 } from './komorebi/create-komorebi-provider';
 import {
   createMemoryProvider,
-  type MemoryProvider,
+  type MemoryProviderConfig,
 } from './memory/create-memory-provider';
 import {
   createNetworkProvider,
-  type NetworkProvider,
+  type NetworkProviderConfig,
 } from './network/create-network-provider';
 import {
   createUtilProvider,
-  type UtilProvider,
+  type UtilProviderConfig,
 } from './util/create-util-provider';
 import {
   createWeatherProvider,
-  type WeatherProvider,
+  type WeatherProviderConfig,
 } from './weather/create-weather-provider';
-import type { ProviderConfig } from './provider-config.model';
-import { ProviderType } from './provider-type.model';
 
-// type ProviderTypeToProvider = {
-//   [ProviderType.BATTERY]: BatteryProvider;
-//   [ProviderType.CPU]: CpuProvider;
-//   [ProviderType.DATE]: DateProvider;
-//   [ProviderType.GLAZEWM]: GlazeWmProvider;
-//   [ProviderType.HOST]: HostProvider;
-//   [ProviderType.IP]: IpProvider;
-//   [ProviderType.KOMOREBI]: KomorebiProvider;
-//   [ProviderType.MEMORY]: MemoryProvider;
-//   [ProviderType.NETWORK]: NetworkProvider;
-//   [ProviderType.UTIL]: UtilProvider;
-//   [ProviderType.WEATHER]: WeatherProvider;
-// };
+export type ProviderConfig =
+  | BatteryProviderConfig
+  | CpuProviderConfig
+  | DateProviderConfig
+  | GlazeWmProviderConfig
+  | HostProviderConfig
+  | IpProviderConfig
+  | KomorebiProviderConfig
+  | MemoryProviderConfig
+  | NetworkProviderConfig
+  | UtilProviderConfig
+  | WeatherProviderConfig;
 
-async function aa() {
-  const xx = await createProvider({ type: ProviderType.UTIL }, {} as any);
-}
+export type ProviderType = ProviderConfig['type'];
 
-// const createProviderMap = {
-//   [ProviderType.BATTERY]: createBatteryProvider,
-//   [ProviderType.CPU]: createCpuProvider,
-//   [ProviderType.DATE]: createDateProvider,
-//   [ProviderType.GLAZEWM]: createGlazeWmProvider,
-//   [ProviderType.HOST]: createHostProvider,
-//   [ProviderType.IP]: createIpProvider,
-//   [ProviderType.KOMOREBI]: createKomorebiProvider,
-//   [ProviderType.MEMORY]: createMemoryProvider,
-//   [ProviderType.NETWORK]: createNetworkProvider,
-//   [ProviderType.UTIL]: createUtilProvider,
-//   [ProviderType.WEATHER]: createWeatherProvider,
-// } as const;
-
-// type ProviderCreator<T extends ProviderConfig, K> = (
-//   config: T,
-//   owner: Owner,
-// ) => Promise<K>;
-
-// type ProviderCreators = {
-//   [T in ProviderType]: ProviderCreator<
-//     Extract<ProviderConfig, { type: K }>
-//   >;
-// };
-
-// const providerCreators: ProviderCreators = {
-//   [ProviderType.BATTERY]: createBatteryProvider,
-//   [ProviderType.CPU]: createCpuProvider,
-//   [ProviderType.DATE]: createDateProvider,
-//   [ProviderType.GLAZEWM]: createGlazeWmProvider,
-//   [ProviderType.HOST]: createHostProvider,
-//   [ProviderType.IP]: createIpProvider,
-//   [ProviderType.KOMOREBI]: createKomorebiProvider,
-//   [ProviderType.MEMORY]: createMemoryProvider,
-//   [ProviderType.NETWORK]: createNetworkProvider,
-//   [ProviderType.UTIL]: createUtilProvider,
-//   [ProviderType.WEATHER]: createWeatherProvider,
-// };
-
-// export async function createProvider<T extends ProviderConfig>(
-//   config: T,
-//   owner: Owner,
-// ): Promise<ReturnType<ProviderCreators[T['type']]>> {
-//   const creator = providerCreators[config.type] as ProviderCreator<T>;
-
-//   if (!creator) {
-//     throw new Error('Not a supported provider type.');
-//   }
-
-//   return creator(config, owner);
-// }
-
-// ): Promise<ProviderTypeToProvider[T['type']]> {
-// ) {
-//   const createProviderMap = {
-//     [ProviderType.BATTERY]: createBatteryProvider,
-//     [ProviderType.CPU]: createCpuProvider,
-//     [ProviderType.DATE]: createDateProvider,
-//     [ProviderType.GLAZEWM]: createGlazeWmProvider,
-//     [ProviderType.HOST]: createHostProvider,
-//     [ProviderType.IP]: createIpProvider,
-//     [ProviderType.KOMOREBI]: createKomorebiProvider,
-//     [ProviderType.MEMORY]: createMemoryProvider,
-//     [ProviderType.NETWORK]: createNetworkProvider,
-//     [ProviderType.UTIL]: createUtilProvider,
-//     [ProviderType.WEATHER]: createWeatherProvider,
-//   } as const;
-
-//   return createProviderMap[config.type](config as any, owner);
-//   // const providerFn = createProviderMap[config.type] as (
-//   //   config: any,
-//   //   owner: Owner,
-//   // ) => Promise<ProviderTypeToProvider[T['type']]>;
-
-//   // if (!providerFn) {
-//   //   throw new Error('Not a supported provider type.');
-//   // }
-
-//   // return providerFn(config, owner);
-// }
-
-const providerCreators = {
-  [ProviderType.BATTERY]: createBatteryProvider,
-  [ProviderType.CPU]: createCpuProvider,
-  [ProviderType.DATE]: createDateProvider,
-  [ProviderType.GLAZEWM]: createGlazeWmProvider,
-  [ProviderType.HOST]: createHostProvider,
-  [ProviderType.IP]: createIpProvider,
-  [ProviderType.KOMOREBI]: createKomorebiProvider,
-  [ProviderType.MEMORY]: createMemoryProvider,
-  [ProviderType.NETWORK]: createNetworkProvider,
-  [ProviderType.UTIL]: createUtilProvider,
-  [ProviderType.WEATHER]: createWeatherProvider,
+const createProviderMap = {
+  battery: createBatteryProvider,
+  cpu: createCpuProvider,
+  date: createDateProvider,
+  glazewm: createGlazeWmProvider,
+  host: createHostProvider,
+  ip: createIpProvider,
+  komorebi: createKomorebiProvider,
+  memory: createMemoryProvider,
+  network: createNetworkProvider,
+  util: createUtilProvider,
+  weather: createWeatherProvider,
 } as const;
 
-type ProviderCreatorMap = typeof providerCreators;
-type ProviderConfigType = ProviderConfig & {
-  type: keyof ProviderCreatorMap;
-};
+type ProviderMap = typeof createProviderMap;
 
-export async function createProvider<T extends ProviderConfigType>(
+/**
+ * Utility type to get the return value of a provider.
+ *
+ * @example `Provider<'battery'> = BatteryProvider`
+ */
+type Provider<T extends ProviderType> = ReturnType<ProviderMap[T]>;
+
+export async function createProvider<T extends ProviderConfig>(
   config: T,
   owner: Owner,
-): Promise<ReturnType<ProviderCreatorMap[T['type']]>> {
-  const creator = providerCreators[config.type];
+): Promise<Provider<T['type']>> {
+  const providerFn = createProviderMap[config.type];
 
-  if (!creator) {
+  if (!providerFn) {
     throw new Error('Not a supported provider type.');
   }
 
-  return creator(config as any, owner) as any;
+  return providerFn(config as any, owner) as Provider<T['type']>;
 }

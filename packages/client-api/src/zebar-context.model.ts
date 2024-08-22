@@ -1,7 +1,7 @@
 import { Window as TauriWindow } from '@tauri-apps/api/window';
 
 import type { WindowConfig, WindowZOrder } from '~/user-config';
-import type { ProviderConfig } from './providers/provider-config.model';
+import type { ProviderConfig } from './providers';
 
 export interface ZebarContext<TProviders = {}> {
   /**

@@ -1,9 +1,7 @@
 import type { Owner } from 'solid-js';
 
-import type { ProviderType } from '../provider-type.model';
-
 export interface UtilProviderConfig {
-  type: ProviderType.UTIL;
+  type: 'util';
 }
 
 export interface UtilProvider {

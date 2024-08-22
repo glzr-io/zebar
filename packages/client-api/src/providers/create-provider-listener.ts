@@ -13,7 +13,7 @@ import {
   unlistenProvider,
 } from '~/desktop';
 import { simpleHash } from '~/utils';
-import type { ProviderConfig } from './provider-config.model';
+import type { ProviderConfig } from './create-provider';
 
 /**
  * Utility for listening to a provider of a given config type.

@@ -4,10 +4,9 @@ import { createStore } from 'solid-js/store';
 import { createProviderListener } from '../create-provider-listener';
 import { getMonitors } from '~/desktop';
 import { getCoordinateDistance } from '~/utils';
-import { ProviderType } from '../provider-type.model';
 
 export interface KomorebiProviderConfig {
-  type: ProviderType.KOMOREBI;
+  type: 'komorebi';
 }
 
 export interface KomorebiProvider {

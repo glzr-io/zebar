@@ -1,10 +1,9 @@
 import type { Owner } from 'solid-js';
 
 import { createProviderListener } from '../create-provider-listener';
-import type { ProviderType } from '../provider-type.model';
 
 export interface HostProviderConfig {
-  type: ProviderType.HOST;
+  type: 'host';
 
   /**
    * How often this provider refreshes in milliseconds.
