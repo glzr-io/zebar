@@ -14,11 +14,15 @@ launch_options:
   # Whether the window should have resize handles.
   resizable: false
 
+  # Whether the window frame should be transparent.
+  transparent: true
+
   # Where to place the window.
   placement:
     # The monitor index to place the window on.
     # Allowed values: 0, 1, 2, 3, etc. or 'all'.
     - monitor: 0
+
       # Anchor-point of the window.
       # Allowed values: either 'center' or combinations of 'top', 'center',
       # 'bottom' and 'left', 'center', 'right'.

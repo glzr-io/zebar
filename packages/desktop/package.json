@@ -3,10 +3,9 @@
   "version": "0.0.0",
   "scripts": {
     "build": "npm run tauri build -- --verbose",
-    "dev": "npm run -s monitors -- --print0 | xargs -0 -P 99 -I % sh -c 'npm run tauri dev -- -- -- open bar --args %'",
+    "dev": "npm run tauri dev",
     "format": "cargo fmt",
     "lint": "cargo fmt --check",
-    "monitors": "cargo run --no-default-features --quiet -- monitors",
     "tauri": "tauri"
   },
   "dependencies": {},
