@@ -6,10 +6,13 @@ import type { ProviderType } from '../provider-type.model';
 export interface IpProviderConfig {
   type: ProviderType.IP;
 
-  refresh_interval: number;
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
 }
 
-export interface IpVariables {
+export interface IpProvider {
   address: string;
   approxCity: string;
   approxCountry: string;
@@ -23,7 +26,7 @@ export async function createIpProvider(
 ) {
   const ipVariables = await createProviderListener<
     IpProviderConfig,
-    IpVariables
+    IpProvider
   >(config, owner);
 
   return {

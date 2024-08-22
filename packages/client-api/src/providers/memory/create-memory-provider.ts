@@ -6,10 +6,13 @@ import type { ProviderType } from '../provider-type.model';
 export interface MemoryProviderConfig {
   type: ProviderType.MEMORY;
 
-  refresh_interval: number;
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
 }
 
-export interface MemoryVariables {
+export interface MemoryProvider {
   usage: number;
   freeMemory: number;
   usedMemory: number;
@@ -25,7 +28,7 @@ export async function createMemoryProvider(
 ) {
   const memoryVariables = await createProviderListener<
     MemoryProviderConfig,
-    MemoryVariables
+    MemoryProvider
   >(config, owner);
 
   return {

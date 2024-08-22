@@ -10,11 +10,6 @@ export interface KomorebiProviderConfig {
   type: ProviderType.KOMOREBI;
 }
 
-interface KomorebiResponse {
-  allMonitors: KomorebiMonitor[];
-  focusedMonitorIndex: number;
-}
-
 export interface KomorebiProvider {
   /**
    * Workspace displayed on the current monitor.
@@ -50,6 +45,11 @@ export interface KomorebiProvider {
    * Monitor that is nearest to this Zebar window.
    */
   currentMonitor: KomorebiMonitor;
+}
+
+interface KomorebiResponse {
+  allMonitors: KomorebiMonitor[];
+  focusedMonitorIndex: number;
 }
 
 export interface KomorebiMonitor {

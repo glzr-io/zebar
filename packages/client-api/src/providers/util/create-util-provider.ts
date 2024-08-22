@@ -6,6 +6,14 @@ export interface UtilProviderConfig {
   type: ProviderType.UTIL;
 }
 
+export interface UtilProvider {
+  convertBytes(
+    bytes: number,
+    decimals?: number,
+    unitType?: DataUnit,
+  ): string;
+}
+
 export enum DataUnit {
   BITS = 'bits',
   SI_BYTES = 'si_bytes',
@@ -15,7 +23,7 @@ export enum DataUnit {
 export async function createUtilProvider(
   _: UtilProviderConfig,
   __: Owner,
-) {
+): Promise<UtilProvider> {
   const bitUnits = ['b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Zb', 'Yb'];
 
   const byteCommonUnits = [

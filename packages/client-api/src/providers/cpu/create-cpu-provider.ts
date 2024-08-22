@@ -6,10 +6,13 @@ import { ProviderType } from '../provider-type.model';
 export interface CpuProviderConfig {
   type: ProviderType.CPU;
 
-  refresh_interval: number;
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
 }
 
-export interface CpuVariables {
+export interface CpuProvider {
   frequency: number;
   usage: number;
   logicalCoreCount: number;
@@ -23,7 +26,7 @@ export async function createCpuProvider(
 ) {
   const cpuVariables = await createProviderListener<
     CpuProviderConfig,
-    CpuVariables
+    CpuProvider
   >(config, owner);
 
   return {

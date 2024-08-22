@@ -6,10 +6,13 @@ import type { ProviderType } from '../provider-type.model';
 export interface HostProviderConfig {
   type: ProviderType.HOST;
 
-  refresh_interval: number;
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
 }
 
-export interface HostVariables {
+export interface HostProvider {
   hostname: string | null;
   osName: string | null;
   osVersion: string | null;
@@ -24,7 +27,7 @@ export async function createHostProvider(
 ) {
   const hostVariables = await createProviderListener<
     HostProviderConfig,
-    HostVariables
+    HostProvider
   >(config, owner);
 
   return {

@@ -6,10 +6,13 @@ import type { ProviderType } from '../provider-type.model';
 export interface NetworkProviderConfig {
   type: ProviderType.NETWORK;
 
-  refresh_interval: number;
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
 }
 
-export interface NetworkVariables {
+export interface NetworkProvider {
   defaultInterface: NetworkInterface | null;
   defaultGateway: NetworkGateway | null;
   interfaces: NetworkInterface[];
@@ -68,7 +71,7 @@ export async function createNetworkProvider(
 ) {
   const networkVariables = await createProviderListener<
     NetworkProviderConfig,
-    NetworkVariables
+    NetworkProvider
   >(config, owner);
 
   return {

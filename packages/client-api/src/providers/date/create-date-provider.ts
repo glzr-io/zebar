@@ -7,7 +7,10 @@ import type { ProviderType } from '../provider-type.model';
 export interface DateProviderConfig {
   type: ProviderType.DATE;
 
-  refresh_interval: number;
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
 
   /**
    * Either a UTC offset (eg. `UTC+8`) or an IANA timezone (eg.
@@ -27,7 +30,7 @@ export interface DateProviderConfig {
   locale?: string;
 }
 
-export interface DateVariables {
+export interface DateProvider {
   /**
    * Current date/time as a JavaScript `Date` object. Uses `new Date()` under
    * the hood.
@@ -45,7 +48,23 @@ export interface DateVariables {
    * `2017-04-22T20:47:05.335-04:00`). Uses `date.toISOString()` under the hood.
    **/
   iso: string;
+
+  /**
+   * Format a given date/time into a custom string format.
+   *
+   * Refer to [table of tokens](https://moment.github.io/luxon/#/formatting?id=table-of-tokens)
+   * for available date/time tokens.
+   *
+   * @example
+   * `toFormat(now, 'yyyy LLL dd')` -> `2023 Feb 13`
+   * `toFormat(now, "HH 'hours and' mm 'minutes'")` -> `20 hours and 55 minutes`
+   * @param now Date/time as milliseconds since epoch.
+   * @param format Custom string format.
+   */
+  toFormat(now: number, format: string): string;
 }
+
+type DateVariables = Omit<DateProvider, 'toFormat'>;
 
 export async function createDateProvider(
   config: DateProviderConfig,
@@ -56,7 +75,7 @@ export async function createDateProvider(
 
   const interval = setInterval(
     () => setDateVariables(getDateVariables()),
-    config.refresh_interval,
+    config.refreshInterval,
   );
 
   runWithOwner(owner, () => {

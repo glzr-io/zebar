@@ -6,10 +6,13 @@ import type { ProviderType } from '../provider-type.model';
 export interface BatteryProviderConfig {
   type: ProviderType.BATTERY;
 
-  refresh_interval: number;
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
 }
 
-export interface BatteryVariables {
+export interface BatteryProvider {
   chargePercent: number;
   cycleCount: number;
   healthPercent: number;
@@ -27,7 +30,7 @@ export async function createBatteryProvider(
 ) {
   const batteryVariables = await createProviderListener<
     BatteryProviderConfig,
-    BatteryVariables
+    BatteryProvider
   >(config, owner);
 
   return {

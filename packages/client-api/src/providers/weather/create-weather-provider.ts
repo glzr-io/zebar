@@ -1,7 +1,7 @@
 import type { Owner } from 'solid-js';
 
 import {
-  type IpVariables,
+  type IpProvider,
   createIpProvider,
 } from '../ip/create-ip-provider';
 import { WeatherStatus } from './weather-status.enum';
@@ -26,10 +26,10 @@ export interface WeatherProviderConfig {
   /**
    * How often this provider refreshes in milliseconds.
    */
-  refresh_interval?: number;
+  refreshInterval?: number;
 }
 
-export interface WeatherVariables {
+export interface WeatherProvider {
   isDaytime: boolean;
   status: WeatherStatus;
   celsiusTemp: number;
@@ -41,17 +41,18 @@ export async function createWeatherProvider(
   config: WeatherProviderConfig,
   owner: Owner,
 ) {
-  let ipProvider: IpVariables | null = null;
+  let ipProvider: IpProvider | null = null;
 
-  const mergedConfig = {
+  const mergedConfig: WeatherProviderConfig = {
     ...config,
+    refreshInterval: config.refreshInterval ?? 60 * 60 * 1000,
     longitude: config.longitude ?? (await getIpProvider()).approxLongitude,
     latitude: config.latitude ?? (await getIpProvider()).approxLatitude,
   };
 
   const weatherVariables = await createProviderListener<
     WeatherProviderConfig,
-    WeatherVariables
+    WeatherProvider
   >(mergedConfig, owner);
 
   async function getIpProvider() {
@@ -60,7 +61,7 @@ export async function createWeatherProvider(
       (ipProvider = await createIpProvider(
         {
           type: ProviderType.IP,
-          refresh_interval: 60 * 60 * 1000,
+          refreshInterval: 60 * 60 * 1000,
         },
         owner,
       ))
