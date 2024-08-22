@@ -11,7 +11,7 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 use tokio::{sync::Mutex, task};
 use tracing::{error, info};
 
-use crate::{cli::OpenWindowArgs, util::window_ext::WindowExt};
+use crate::util::WindowExt;
 
 /// Manages the creation of Zebar windows.
 pub struct WindowFactory {
@@ -38,7 +38,8 @@ impl WindowFactory {
     }
   }
 
-  pub fn try_open(&self, open_args: OpenWindowArgs) {
+  /// TODO: Pass in `WindowConfig`.
+  pub fn try_open(&self) {
     let app_handle = self.app_handle.clone();
     let window_states = self.window_states.clone();
     let app_handle = app_handle.clone();
@@ -48,7 +49,7 @@ impl WindowFactory {
       // Increment number of windows.
       let new_count = window_count.fetch_add(1, Ordering::Relaxed) + 1;
 
-      let open_res = Self::open(&app_handle, open_args, new_count);
+      let open_res = Self::open(&app_handle, new_count);
 
       match open_res {
         Ok(state) => {
@@ -64,47 +65,36 @@ impl WindowFactory {
 
   fn open(
     app_handle: &AppHandle,
-    open_args: OpenWindowArgs,
     window_count: u32,
   ) -> anyhow::Result<WindowState> {
-    let args = open_args.args.unwrap_or(vec![]).into_iter().collect();
-
-    info!(
-      "Creating window #{} '{}' with args: {:#?}",
-      window_count, open_args.config_path, args
-    );
-
-    // Window label needs to be globally unique. Hence add a prefix with
-    // the window count to handle cases where multiple of the same window
-    // are opened.
-    let window_label =
-      format!("{}-{}", window_count, &open_args.config_path);
+    info!("Creating window #{}", window_count);
 
     let window = WebviewWindowBuilder::new(
       app_handle,
-      &window_label,
+      // Window label needs to be globally unique.
+      window_count.to_string(),
       WebviewUrl::default(),
     )
-    .title(format!("Zebar - {}", open_args.config_path))
+    .title("Zebar")
     .inner_size(500., 500.)
     .focused(false)
     .skip_taskbar(true)
     .visible_on_all_workspaces(true)
-    .transparent(true)
+    .transparent(false)
     .shadow(false)
     .decorations(false)
     .resizable(false)
     .build()?;
 
     let state = WindowState {
-      window_id: open_args.config_path.clone(),
-      window_label: window_label.clone(),
-      args,
+      window_id: window_count.to_string(),
+      window_label: window_count.to_string(),
+      args: HashMap::new(),
       env: std::env::vars().collect(),
     };
 
     _ = window.eval(&format!(
-      "window.__ZEBAR_OPEN_ARGS={}",
+      "window.__ZEBAR_INITIAL_STATE={}",
       serde_json::to_string(&state)?
     ));
 

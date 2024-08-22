@@ -30,10 +30,11 @@ pub struct WindowLaunchOptions {
   transparent: bool,
 
   /// Where to place the window.
-  placement: WindowPlacement,
+  placement: Vec<WindowPlacement>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WindowZOrder {
   AlwaysOnBottom,
   AlwaysOnTop,
@@ -62,6 +63,7 @@ pub struct WindowPlacement {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WindowAnchor {
   TopLeft,
   TopCenter,
@@ -108,7 +110,7 @@ pub fn read_file(
 /// Initialize config at the given path from the sample config resource.
 fn create_from_sample(
   config_path: &PathBuf,
-  app_handle: AppHandle,
+  app_handle: &AppHandle,
 ) -> anyhow::Result<()> {
   let sample_path = app_handle
     .path()

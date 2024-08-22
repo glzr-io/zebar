@@ -37,10 +37,8 @@ fn open_window(
   args: HashMap<String, String>,
   window_factory: State<'_, WindowFactory>,
 ) -> anyhow::Result<(), String> {
-  window_factory.try_open(OpenWindowArgs {
-    config_path,
-    args: Some(args.into_iter().collect()),
-  });
+  // TODO: Pass in `WindowConfig`.
+  window_factory.try_open();
 
   Ok(())
 }
@@ -145,7 +143,7 @@ fn start_app(cli: Cli) {
 
           // CLI command is guaranteed to be an open command here.
           if let CliCommand::Open(args) = cli.command {
-            app.state::<WindowFactory>().try_open(args);
+            app.state::<WindowFactory>().try_open();
           }
         },
       ))?;
@@ -159,7 +157,7 @@ fn start_app(cli: Cli) {
       // Open window with the given args and initialize
       // `WindowFactory` in Tauri state.
       let window_factory = WindowFactory::new(app.handle());
-      window_factory.try_open(open_args);
+      window_factory.try_open();
       app.manage(window_factory);
 
       app.handle().plugin(tauri_plugin_shell::init())?;

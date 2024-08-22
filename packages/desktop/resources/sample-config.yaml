@@ -29,10 +29,10 @@ launch_options:
       anchor: 'top left'
 
       # Offset from the anchor-point.
-      offset_x: 20
+      offset_x: '20px'
 
       # Offset from the anchor-point.
-      offset_y: 20
+      offset_y: '20px'
 
       # Width of the window in % or physical pixels.
       width: '100%'
