@@ -1,7 +1,13 @@
 import type { Owner } from 'solid-js';
 
-import type { NetworkProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
+import type { ProviderType } from '../provider-type.model';
+
+export interface NetworkProviderConfig {
+  type: ProviderType.NETWORK;
+
+  refresh_interval: number;
+}
 
 export interface NetworkVariables {
   defaultInterface: NetworkInterface | null;

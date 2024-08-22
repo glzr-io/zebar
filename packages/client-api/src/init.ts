@@ -29,7 +29,9 @@ export async function initAsync(): Promise<ZebarContext> {
 
       // @ts-ignore - TODO
       return {
+        // @ts-ignore - TODO
         config: initialState.config,
+        // @ts-ignore - TODO
         providers: initialState.providers,
         openWindow,
         createProvider: () => {},

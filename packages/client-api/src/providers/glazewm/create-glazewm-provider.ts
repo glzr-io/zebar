@@ -18,8 +18,12 @@ import { createEffect, on, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
 import { getMonitors } from '~/desktop';
-import type { GlazewmProviderConfig } from '~/user-config';
 import { getCoordinateDistance } from '~/utils';
+import { ProviderType } from '../provider-type.model';
+
+export interface GlazeWmProviderConfig {
+  type: ProviderType.GLAZEWM;
+}
 
 export interface GlazeWmProvider {
   /**
@@ -84,7 +88,7 @@ export interface GlazeWmProvider {
 }
 
 export async function createGlazeWmProvider(
-  _: GlazewmProviderConfig,
+  _: GlazeWmProviderConfig,
   owner: Owner,
 ): Promise<GlazeWmProvider> {
   const monitors = await getMonitors();

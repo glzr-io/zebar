@@ -1,6 +1,10 @@
 import type { Owner } from 'solid-js';
 
-import type { UtilProviderConfig } from '~/user-config';
+import type { ProviderType } from '../provider-type.model';
+
+export interface UtilProviderConfig {
+  type: ProviderType.UTIL;
+}
 
 export enum DataUnit {
   BITS = 'bits',

@@ -1,7 +1,13 @@
 import type { Owner } from 'solid-js';
 
-import type { MemoryProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
+import type { ProviderType } from '../provider-type.model';
+
+export interface MemoryProviderConfig {
+  type: ProviderType.MEMORY;
+
+  refresh_interval: number;
+}
 
 export interface MemoryVariables {
   usage: number;

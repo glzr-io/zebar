@@ -1,10 +1,14 @@
 import { createEffect, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 
-import type { KomorebiProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
 import { getMonitors } from '~/desktop';
 import { getCoordinateDistance } from '~/utils';
+import { ProviderType } from '../provider-type.model';
+
+export interface KomorebiProviderConfig {
+  type: ProviderType.KOMOREBI;
+}
 
 interface KomorebiResponse {
   allMonitors: KomorebiMonitor[];

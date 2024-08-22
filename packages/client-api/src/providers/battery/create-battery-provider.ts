@@ -1,7 +1,13 @@
 import type { Owner } from 'solid-js';
 
-import type { BatteryProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
+import type { ProviderType } from '../provider-type.model';
+
+export interface BatteryProviderConfig {
+  type: ProviderType.BATTERY;
+
+  refresh_interval: number;
+}
 
 export interface BatteryVariables {
   chargePercent: number;

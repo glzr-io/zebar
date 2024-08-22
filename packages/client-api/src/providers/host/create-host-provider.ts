@@ -1,7 +1,13 @@
 import type { Owner } from 'solid-js';
 
-import type { HostProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
+import type { ProviderType } from '../provider-type.model';
+
+export interface HostProviderConfig {
+  type: ProviderType.HOST;
+
+  refresh_interval: number;
+}
 
 export interface HostVariables {
   hostname: string | null;

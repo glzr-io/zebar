@@ -9,7 +9,6 @@ export enum ProviderType {
   IP = 'ip',
   KOMOREBI = 'komorebi',
   MEMORY = 'memory',
-  MONITORS = 'monitors',
   NETWORK = 'network',
   UTIL = 'util',
   WEATHER = 'weather',

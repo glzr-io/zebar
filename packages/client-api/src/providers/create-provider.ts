@@ -8,7 +8,6 @@ import { createHostProvider } from './host/create-host-provider';
 import { createIpProvider } from './ip/create-ip-provider';
 import { createKomorebiProvider } from './komorebi/create-komorebi-provider';
 import { createMemoryProvider } from './memory/create-memory-provider';
-import { createMonitorsProvider } from './monitors/create-monitors-provider';
 import { createNetworkProvider } from './network/create-network-provider';
 import { createUtilProvider } from './util/create-util-provider';
 import { createWeatherProvider } from './weather/create-weather-provider';
@@ -36,8 +35,6 @@ export async function createProvider(
       return createKomorebiProvider(config, owner);
     case ProviderType.MEMORY:
       return createMemoryProvider(config, owner);
-    case ProviderType.MONITORS:
-      return createMonitorsProvider(config, owner);
     case ProviderType.NETWORK:
       return createNetworkProvider(config, owner);
     case ProviderType.UTIL:

@@ -1,7 +1,13 @@
 import type { Owner } from 'solid-js';
 
-import type { CpuProviderConfig } from '~/user-config';
 import { createProviderListener } from '../create-provider-listener';
+import { ProviderType } from '../provider-type.model';
+
+export interface CpuProviderConfig {
+  type: ProviderType.CPU;
+
+  refresh_interval: number;
+}
 
 export interface CpuVariables {
   frequency: number;

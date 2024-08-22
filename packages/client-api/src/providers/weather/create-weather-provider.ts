@@ -1,12 +1,33 @@
 import type { Owner } from 'solid-js';
 
-import { ProviderType, type WeatherProviderConfig } from '~/user-config';
 import {
   type IpVariables,
   createIpProvider,
 } from '../ip/create-ip-provider';
 import { WeatherStatus } from './weather-status.enum';
 import { createProviderListener } from '../create-provider-listener';
+import { ProviderType } from '../provider-type.model';
+
+export interface WeatherProviderConfig {
+  type: ProviderType.WEATHER;
+
+  /**
+   * Latitude to retrieve weather for. If not provided, latitude is instead
+   * estimated based on public IP.
+   */
+  latitude?: number;
+
+  /**
+   * Longitude to retrieve weather for. If not provided, longitude is instead
+   * estimated based on public IP.
+   */
+  longitude?: number;
+
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refresh_interval?: number;
+}
 
 export interface WeatherVariables {
   isDaytime: boolean;

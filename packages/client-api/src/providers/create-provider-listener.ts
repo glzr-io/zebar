@@ -12,8 +12,8 @@ import {
   listenProvider,
   unlistenProvider,
 } from '~/desktop';
-import type { ProviderConfig } from '~/user-config';
 import { simpleHash } from '~/utils';
+import type { ProviderConfig } from './provider-config.model';
 
 /**
  * Utility for listening to a provider of a given config type.
