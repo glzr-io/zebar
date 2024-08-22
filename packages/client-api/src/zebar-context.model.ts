@@ -1,6 +1,7 @@
 import { Window as TauriWindow } from '@tauri-apps/api/window';
 
 import type { WindowConfig, WindowZOrder } from '~/user-config';
+import type { ProviderConfig } from './providers/provider-config.model';
 
 export interface ZebarContext<TProviders = {}> {
   /**
@@ -28,6 +29,14 @@ export interface ZebarContext<TProviders = {}> {
     configPath: string,
     args?: Record<string, string>,
   ) => Promise<void>;
+
+  /**
+   * Initializes a provider.
+   *
+   * If an existing provider with the same config exists, that provider
+   * instance will be re-used.
+   */
+  createProvider: (providerConfig: ProviderConfig) => Promise<void>;
 }
 
 export interface ZebarWindow {

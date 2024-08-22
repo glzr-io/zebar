@@ -76,6 +76,7 @@ export async function invoke<T>(
 
     return response;
   } catch (err) {
+    logger.error(`Command '${command}' failed: ${err}`);
     throw new Error(`Command '${command}' failed: ${err}`);
   }
 }

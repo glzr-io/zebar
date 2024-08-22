@@ -32,6 +32,7 @@ export async function initAsync(): Promise<ZebarContext> {
         config: initialState.config,
         providers: initialState.providers,
         openWindow,
+        createProvider: () => {},
         currentWindow: {},
         allWindows: [],
         currentMonitor: {},
