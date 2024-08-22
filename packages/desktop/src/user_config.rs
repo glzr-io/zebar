@@ -1,13 +1,85 @@
 use std::{fs, path::PathBuf};
 
 use anyhow::Context;
+use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
+
+use crate::util::LengthValue;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WindowConfig {
+  /// Entry point HTML file.
+  html_path: String,
+
+  /// Default options for when the window is opened.
+  launch_options: WindowLaunchOptions,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WindowLaunchOptions {
+  /// Whether to show the window above/below all others.
+  z_order: WindowZOrder,
+
+  /// Whether the window should be shown in the taskbar.
+  shown_in_taskbar: bool,
+
+  /// Whether the window should have resize handles.
+  resizable: bool,
+
+  /// Whether the window frame should be transparent.
+  transparent: bool,
+
+  /// Where to place the window.
+  placement: WindowPlacement,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum WindowZOrder {
+  AlwaysOnBottom,
+  AlwaysOnTop,
+  Normal,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WindowPlacement {
+  /// The monitor index to place the window on.
+  monitor: u32,
+
+  /// Anchor-point of the window.
+  anchor: WindowAnchor,
+
+  /// Offset from the anchor-point.
+  offset_x: LengthValue,
+
+  /// Offset from the anchor-point.
+  offset_y: LengthValue,
+
+  /// Width of the window in % or physical pixels.
+  width: LengthValue,
+
+  /// Height of the window in % or physical pixels.
+  height: LengthValue,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum WindowAnchor {
+  TopLeft,
+  TopCenter,
+  TopRight,
+  CenterLeft,
+  Center,
+  CenterCenter,
+  CenterRight,
+  BottomLeft,
+  BottomCenter,
+  BottomRight,
+}
 
 /// Reads the config file at `~/.glzr/zebar/config.yaml`.
 pub fn read_file(
   config_path_override: Option<&str>,
-  app_handle: AppHandle,
-) -> anyhow::Result<String> {
+  app_handle: &AppHandle,
+) -> anyhow::Result<WindowConfig> {
   let default_config_path = app_handle
     .path()
     .resolve(".glzr/zebar/config.yaml", BaseDirectory::Home)
@@ -23,7 +95,14 @@ pub fn read_file(
     create_from_sample(&config_path, app_handle)?;
   }
 
-  fs::read_to_string(&config_path).context("Unable to read config file.")
+  let config_str = fs::read_to_string(&config_path)
+    .context("Unable to read config file.")?;
+
+  // TODO: Improve error formatting of serde_yaml errors. Something
+  // similar to https://github.com/AlexanderThaller/format_serde_error
+  let config_value = serde_yaml::from_str(&config_str)?;
+
+  Ok(config_value)
 }
 
 /// Initialize config at the given path from the sample config resource.

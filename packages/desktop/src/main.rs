@@ -2,19 +2,17 @@
 use std::{collections::HashMap, env};
 
 use clap::Parser;
-use cli::{OpenWindowArgs, OutputMonitorsArgs};
-use providers::config::ProviderConfig;
-use tauri::{AppHandle, Manager, State, Window};
+use tauri::{Manager, State, Window};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
-use window_factory::{WindowFactory, WindowState};
 
 use crate::{
-  cli::{Cli, CliCommand},
+  cli::{Cli, CliCommand, OpenWindowArgs, OutputMonitorsArgs},
   monitors::get_monitors_str,
-  providers::provider_manager::ProviderManager,
+  providers::{config::ProviderConfig, provider_manager::ProviderManager},
   sys_tray::setup_sys_tray,
-  util::window_ext::WindowExt,
+  util::WindowExt,
+  window_factory::{WindowFactory, WindowState},
 };
 
 mod cli;
@@ -24,15 +22,6 @@ mod sys_tray;
 mod user_config;
 mod util;
 mod window_factory;
-
-#[tauri::command]
-fn read_config_file(
-  config_path_override: Option<&str>,
-  app_handle: AppHandle,
-) -> anyhow::Result<String, String> {
-  user_config::read_file(config_path_override, app_handle)
-    .map_err(|err| err.to_string())
-}
 
 #[tauri::command]
 async fn get_open_window_args(
@@ -161,6 +150,8 @@ fn start_app(cli: Cli) {
         },
       ))?;
 
+      let config = user_config::read_file(None, app.handle())?;
+
       // Prevent windows from showing up in the dock on MacOS.
       #[cfg(target_os = "macos")]
       app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -186,7 +177,6 @@ fn start_app(cli: Cli) {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      read_config_file,
       get_open_window_args,
       open_window,
       listen_provider,
