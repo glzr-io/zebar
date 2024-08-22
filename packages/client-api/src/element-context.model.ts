@@ -50,6 +50,14 @@ interface BaseElementContext<C extends ElementConfig, P = {}> {
   providers: P;
 
   /**
+   * Opens a new window by its ID.
+   */
+  openWindow: (
+    windowId: string,
+    args?: Record<string, string>,
+  ) => Promise<void>;
+
+  /**
    * Initializes a child group or template element.
    * @internal
    */
