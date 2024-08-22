@@ -1,18 +1,13 @@
 import { Window as TauriWindow } from '@tauri-apps/api/window';
 
 import type { WindowConfig, WindowZOrder } from '~/user-config';
-import type { ProviderConfig } from './providers';
+import type { ProviderConfig, ProviderOutput } from './providers';
 
-export interface ZebarContext<TProviders = {}> {
+export interface ZebarContext {
   /**
    * Parsed window config.
    */
   config: WindowConfig;
-
-  /**
-   * Map of this element's providers and their variables.
-   */
-  providers: TProviders;
 
   currentWindow: ZebarWindow;
 
@@ -25,10 +20,10 @@ export interface ZebarContext<TProviders = {}> {
   /**
    * Opens a new window by a relative path to its config file.
    */
-  openWindow: (
+  openWindow(
     configPath: string,
     args?: Record<string, string>,
-  ) => Promise<void>;
+  ): Promise<void>;
 
   /**
    * Initializes a provider.
@@ -36,7 +31,9 @@ export interface ZebarContext<TProviders = {}> {
    * If an existing provider with the same config exists, that provider
    * instance will be re-used.
    */
-  createProvider: (providerConfig: ProviderConfig) => Promise<void>;
+  createProvider<T extends ProviderConfig>(
+    providerConfig: T,
+  ): ProviderOutput<T['type']>;
 }
 
 export interface ZebarWindow {

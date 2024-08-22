@@ -4,7 +4,7 @@ import { createRoot, getOwner, runWithOwner } from 'solid-js';
 import { getInitialState, openWindow, showErrorDialog } from './desktop';
 import { createLogger } from '~/utils';
 import type { ZebarContext } from './zebar-context.model';
-import { createStore } from 'solid-js/store';
+import { createProvider } from './providers';
 
 const logger = createLogger('init-window');
 
@@ -22,25 +22,21 @@ export async function initAsync(): Promise<ZebarContext> {
   return withReactiveContext(async () => {
     try {
       const currentWindow = getCurrentWindow();
+
       const initialState =
         window.__ZEBAR_INITIAL_STATE ??
         (await getInitialState(currentWindow.label));
 
-      const providers = createStore([]);
-
       await currentWindow.show();
-
-      function createProvider() {
-        // TODO
-      }
 
       // @ts-ignore - TODO
       return {
         // @ts-ignore - TODO
         config: initialState.config,
-        providers,
         openWindow,
-        createProvider: () => {},
+        createProvider: config => {
+          return createProvider(config, getOwner()!);
+        },
         currentWindow: {},
         allWindows: [],
         currentMonitor: {},

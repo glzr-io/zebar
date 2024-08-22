@@ -81,17 +81,19 @@ type ProviderMap = typeof createProviderMap;
  *
  * @example `Provider<'battery'> = BatteryProvider`
  */
-type Provider<T extends ProviderType> = ReturnType<ProviderMap[T]>;
+export type ProviderOutput<T extends ProviderType> = ReturnType<
+  ProviderMap[T]
+>;
 
-export async function createProvider<T extends ProviderConfig>(
+export function createProvider<T extends ProviderConfig>(
   config: T,
   owner: Owner,
-): Promise<Provider<T['type']>> {
+): ProviderOutput<T['type']> {
   const providerFn = createProviderMap[config.type];
 
   if (!providerFn) {
     throw new Error('Not a supported provider type.');
   }
 
-  return providerFn(config as any, owner) as Provider<T['type']>;
+  return providerFn(config as any, owner) as ProviderOutput<T['type']>;
 }
