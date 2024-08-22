@@ -106,18 +106,26 @@ impl ProviderRef {
     mut refresh_rx: mpsc::Receiver<()>,
     mut stop_rx: mpsc::Receiver<()>,
   ) {
-    info!("Starting provider: {}", config_hash);
-    provider
-      .on_start(&config_hash, emit_output_tx.clone())
-      .await;
+    let mut has_started = false;
 
     // Loop to avoid exiting the select on refresh.
     loop {
+      let config_hash = config_hash.clone();
+      let emit_output_tx = emit_output_tx.clone();
+
       tokio::select! {
+        // Default match arm which handles initialization of the provider.
+        // This has a precondition to avoid running again on refresh.
+        _ = {
+          info!("Starting provider: {}", config_hash);
+          has_started = true;
+          provider.on_start(&config_hash, emit_output_tx.clone())
+        }, if !has_started => break,
+
         // On refresh, re-emit provider variables and continue looping.
         Some(_) = refresh_rx.recv() => {
           info!("Refreshing provider: {}", config_hash);
-          _ = provider.on_refresh(&config_hash, emit_output_tx.clone()).await;
+          _ = provider.on_refresh(&config_hash, emit_output_tx).await;
         },
 
         // On stop, perform any necessary clean up and exit the loop.
