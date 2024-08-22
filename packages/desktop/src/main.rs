@@ -2,7 +2,7 @@
 use std::{collections::HashMap, env};
 
 use clap::Parser;
-use cli::OpenWindowArgs;
+use cli::{OpenWindowArgs, OutputMonitorsArgs};
 use providers::config::ProviderConfig;
 use tauri::{AppHandle, Manager, State, Window};
 use tracing::level_filters::LevelFilter;
@@ -44,12 +44,12 @@ async fn get_open_window_args(
 
 #[tauri::command]
 fn open_window(
-  window_id: String,
+  config_path: String,
   args: HashMap<String, String>,
   window_factory: State<'_, WindowFactory>,
 ) -> anyhow::Result<(), String> {
   window_factory.try_open(OpenWindowArgs {
-    window_id,
+    config_path,
     args: Some(args.into_iter().collect()),
   });
 
@@ -111,8 +111,31 @@ fn set_skip_taskbar(
   Ok(())
 }
 
+/// Main entry point for the application.
+///
+/// Conditionally starts Zebar or runs a CLI command based on the given
+/// subcommand.
 #[tokio::main]
 async fn main() {
+  let cli = Cli::parse();
+
+  match cli.command {
+    CliCommand::Monitors(args) => output_monitors(args),
+    _ => start_app(cli),
+  }
+}
+
+/// Prints available monitors to console.
+fn output_monitors(args: OutputMonitorsArgs) {
+  tauri::Builder::default().setup(|app| {
+    let monitors_str = get_monitors_str(app, args);
+    cli::print_and_exit(monitors_str);
+    Ok(())
+  });
+}
+
+/// Starts Zebar - either with a specific window or all windows.
+fn start_app(cli: Cli) {
   tracing_subscriber::fmt()
     .with_env_filter(
       EnvFilter::from_env("LOG_LEVEL")
@@ -124,56 +147,43 @@ async fn main() {
 
   tauri::Builder::default()
     .setup(|app| {
-      let cli = Cli::parse();
+      // If this is not the first instance of the app, this will
+      // emit within the original instance and exit
+      // immediately.
+      app.handle().plugin(tauri_plugin_single_instance::init(
+        move |app, args, _| {
+          let cli = Cli::parse_from(args);
 
-      // Since most Tauri plugins and setup is not needed for the
-      // `monitors` CLI command, the setup is conditional based on
-      // the CLI command.
-      match cli.command {
-        CliCommand::Monitors(args) => {
-          let monitors_str = get_monitors_str(app, args);
-          cli::print_and_exit(monitors_str);
-          Ok(())
-        }
-        CliCommand::Open(open_args) => {
-          // If this is not the first instance of the app, this will emit
-          // within the original instance and exit immediately.
-          app.handle().plugin(tauri_plugin_single_instance::init(
-            move |app, args, _| {
-              let cli = Cli::parse_from(args);
+          // CLI command is guaranteed to be an open command here.
+          if let CliCommand::Open(args) = cli.command {
+            app.state::<WindowFactory>().try_open(args);
+          }
+        },
+      ))?;
 
-              // CLI command is guaranteed to be an open command here.
-              if let CliCommand::Open(args) = cli.command {
-                app.state::<WindowFactory>().try_open(args);
-              }
-            },
-          ))?;
+      // Prevent windows from showing up in the dock on MacOS.
+      #[cfg(target_os = "macos")]
+      app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-          // Prevent windows from showing up in the dock on MacOS.
-          #[cfg(target_os = "macos")]
-          app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+      // Open window with the given args and initialize
+      // `WindowFactory` in Tauri state.
+      let window_factory = WindowFactory::new(app.handle());
+      window_factory.try_open(open_args);
+      app.manage(window_factory);
 
-          // Open window with the given args and initialize `WindowFactory`
-          // in Tauri state.
-          let window_factory = WindowFactory::new(app.handle());
-          window_factory.try_open(open_args);
-          app.manage(window_factory);
+      app.handle().plugin(tauri_plugin_shell::init())?;
+      app.handle().plugin(tauri_plugin_http::init())?;
+      app.handle().plugin(tauri_plugin_dialog::init())?;
 
-          app.handle().plugin(tauri_plugin_shell::init())?;
-          app.handle().plugin(tauri_plugin_http::init())?;
-          app.handle().plugin(tauri_plugin_dialog::init())?;
+      // Initialize `ProviderManager` in Tauri state.
+      let mut manager = ProviderManager::new();
+      manager.init(app.handle());
+      app.manage(manager);
 
-          // Initialize `ProviderManager` in Tauri state.
-          let mut manager = ProviderManager::new();
-          manager.init(app.handle());
-          app.manage(manager);
+      // Add application icon to system tray.
+      setup_sys_tray(app)?;
 
-          // Add application icon to system tray.
-          setup_sys_tray(app)?;
-
-          Ok(())
-        }
-      }
+      Ok(())
     })
     .invoke_handler(tauri::generate_handler![
       read_config_file,

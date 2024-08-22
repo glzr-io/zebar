@@ -13,22 +13,25 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum CliCommand {
-  /// Open a window by its ID (eg. `zebar open bar`).
+  /// Open a window by its relative file path within the Zebar config
+  /// directory (e.g. `zebar open ./material/config.yaml`).
+  ///
+  /// Starts Zebar if it is not already running.
   Open(OpenWindowArgs),
+
+  /// Open all default windows.
+  ///
+  /// Starts Zebar if it is not already running.
+  OpenAll,
+
   /// Output available monitors.
   Monitors(OutputMonitorsArgs),
 }
 
 #[derive(Args, Debug)]
 pub struct OpenWindowArgs {
-  /// ID of the window to open (eg. `bar`).
-  pub window_id: String,
-
-  /// Arguments to pass to the window.
-  ///
-  /// These become available via the `self` provider.
-  #[clap(short, long, num_args = 1.., value_parser=parse_open_args)]
-  pub args: Option<Vec<(String, String)>>,
+  /// Relative file path within the Zebar config directory.
+  pub config_path: String,
 }
 
 #[derive(Args, Debug)]

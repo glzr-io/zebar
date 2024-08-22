@@ -71,21 +71,21 @@ impl WindowFactory {
 
     info!(
       "Creating window #{} '{}' with args: {:#?}",
-      window_count, open_args.window_id, args
+      window_count, open_args.config_path, args
     );
 
     // Window label needs to be globally unique. Hence add a prefix with
     // the window count to handle cases where multiple of the same window
     // are opened.
     let window_label =
-      format!("{}-{}", window_count, &open_args.window_id);
+      format!("{}-{}", window_count, &open_args.config_path);
 
     let window = WebviewWindowBuilder::new(
       app_handle,
       &window_label,
       WebviewUrl::default(),
     )
-    .title(format!("Zebar - {}", open_args.window_id))
+    .title(format!("Zebar - {}", open_args.config_path))
     .inner_size(500., 500.)
     .focused(false)
     .skip_taskbar(true)
@@ -97,7 +97,7 @@ impl WindowFactory {
     .build()?;
 
     let state = WindowState {
-      window_id: open_args.window_id.clone(),
+      window_id: open_args.config_path.clone(),
       window_label: window_label.clone(),
       args,
       env: std::env::vars().collect(),
