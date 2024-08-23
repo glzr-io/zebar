@@ -137,8 +137,7 @@ fn start_app(cli: Cli) {
 
   tauri::Builder::default()
     .setup(|app| {
-      let mut config = Config::new(app.handle())?;
-      config.read()?;
+      let config = Config::new(app.handle())?;
       println!("{:?}", config);
       app.manage(config);
 

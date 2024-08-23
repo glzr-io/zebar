@@ -6,6 +6,7 @@ use std::{
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
+use tracing::{info, warn};
 
 use crate::util::LengthValue;
 
@@ -96,7 +97,7 @@ pub struct Config {
   pub config_dir: PathBuf,
 
   /// Global settings.
-  // pub settings: SettingsConfig,
+  pub settings: SettingsConfig,
 
   /// List of window configs.
   pub window_configs: Vec<WindowConfigEntry>,
@@ -109,7 +110,8 @@ pub struct WindowConfigEntry {
 }
 
 impl Config {
-  /// Creates a new `Config` instance.
+  /// Reads the config files within the config directory and creates a new
+  /// `Config` instance.
   pub fn new(app_handle: &AppHandle) -> anyhow::Result<Self> {
     let config_dir = app_handle
       .path()
@@ -117,23 +119,75 @@ impl Config {
       .context("Unable to get home directory.")?
       .canonicalize()?;
 
+    let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
+    let window_configs = Self::read_window_configs(&config_dir)?;
+
     Ok(Self {
       config_dir,
-      window_configs: Vec::new(),
+      settings,
+      window_configs,
     })
   }
 
-  /// Reads the config files within the config directory.
-  pub fn read(&mut self) -> anyhow::Result<()> {
-    self.window_configs = Self::aggregate_configs(&self.config_dir)?;
-    Ok(())
+  /// Re-evaluates config files within the config directory.
+  // pub fn reload(&mut self) -> anyhow::Result<()> {
+  //   self.settings = Self::read_settings_or_init(&self.config_dir)?;
+  //   self.window_configs = Self::read_window_configs(&self.config_dir)?;
+  //   Ok(())
+  // }
+
+  /// Reads the global settings file or initializes it with the starter.
+  ///
+  /// Returns the parsed `SettingsConfig`.
+  fn read_settings_or_init(
+    app_handle: &AppHandle,
+    dir: &PathBuf,
+  ) -> anyhow::Result<SettingsConfig> {
+    let settings = Self::read_settings(&dir)?;
+
+    match settings {
+      Some(settings) => Ok(settings),
+      None => {
+        Self::create_from_starter(app_handle, dir)?;
+        Ok(Self::read_settings(&dir)?.unwrap())
+      }
+    }
+  }
+
+  /// Reads the global settings file.
+  ///
+  /// Returns the parsed `SettingsConfig` if found.
+  fn read_settings(
+    dir: &PathBuf,
+  ) -> anyhow::Result<Option<SettingsConfig>> {
+    let settings_path = dir.join("settings.json");
+
+    match settings_path.exists() {
+      true => {
+        let content =
+          fs::read_to_string(&settings_path).with_context(|| {
+            format!("Failed to read file: {}", settings_path.display())
+          })?;
+
+        let settings =
+          serde_json::from_str(&content).with_context(|| {
+            format!(
+              "Failed to parse JSON from file: {}",
+              settings_path.display()
+            )
+          })?;
+
+        Ok(Some(settings))
+      }
+      false => Ok(None),
+    }
   }
 
   /// Recursively aggregates all valid window configs in the given
-  /// directory and its subdirectories.
+  /// directory.
   ///
   /// Returns a list of `ConfigEntry` instances.
-  fn aggregate_configs(
+  fn read_window_configs(
     dir: &PathBuf,
   ) -> anyhow::Result<Vec<WindowConfigEntry>> {
     let mut configs = Vec::new();
@@ -147,14 +201,18 @@ impl Config {
       let path = entry.path();
 
       if path.is_dir() {
-        // Recursively aggregate configs on subdirectories.
-        configs.extend(Self::aggregate_configs(&path)?);
+        // Recursively aggregate configs in subdirectories.
+        configs.extend(Self::read_window_configs(&path)?);
       } else if Self::is_json(&path) {
         if let Ok(config) = Self::process_file(&path) {
+          info!("Found valid window config at: {}", path.display());
           configs.push(WindowConfigEntry {
             config,
             path: path.clone(),
           });
+        } else {
+          // TODO: Show error dialog.
+          warn!("Failed to process file: {}", path.display());
         }
       }
     }
@@ -182,40 +240,38 @@ impl Config {
     Ok(config)
   }
 
-  /// Initialize config at the given path from the sample config resource.
-  fn create_from_sample(
-    &self,
+  /// Initialize config at the given path from the starter resource.
+  fn create_from_starter(
     app_handle: &AppHandle,
+    config_dir: &PathBuf,
   ) -> anyhow::Result<()> {
-    let sample_path = app_handle
+    let starter_path = app_handle
       .path()
-      .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
+      .resolve("resources/config", BaseDirectory::Resource)
       .context("Unable to resolve sample config resource.")?;
 
-    let sample_script = app_handle
-      .path()
-      .resolve("resources/script.js", BaseDirectory::Resource)
-      .context("Unable to resolve sample script resource.")?;
-
-    let dest_dir =
-      config_path.parent().context("Invalid config directory.")?;
-
     // Create the destination directory.
-    std::fs::create_dir_all(&dest_dir).with_context(|| {
-      format!("Unable to create directory {}.", &config_path.display())
+    fs::create_dir_all(&config_dir).with_context(|| {
+      format!("Unable to create directory {}.", &config_dir.display())
     })?;
 
-    // Copy over sample config.
-    let config_path = dest_dir.join("config.yaml");
-    fs::copy(&sample_path, &config_path).with_context(|| {
-      format!("Unable to write to {}.", config_path.display())
-    })?;
+    Self::copy_dir_all(&starter_path, config_dir)?;
 
-    // Copy over sample script.
-    let script_path = dest_dir.join("script.js");
-    fs::copy(&sample_script, &script_path).with_context(|| {
-      format!("Unable to write to {}.", script_path.display())
-    })?;
+    Ok(())
+  }
+
+  fn copy_dir_all(src: &PathBuf, dest: &PathBuf) -> anyhow::Result<()> {
+    fs::create_dir_all(&dest)?;
+
+    for entry in fs::read_dir(src)? {
+      let entry = entry?;
+
+      if entry.file_type()?.is_dir() {
+        Self::copy_dir_all(&entry.path(), &dest.join(entry.file_name()))?;
+      } else {
+        fs::copy(entry.path(), dest.join(entry.file_name()))?;
+      }
+    }
 
     Ok(())
   }
