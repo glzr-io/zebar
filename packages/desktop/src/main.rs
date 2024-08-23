@@ -138,7 +138,6 @@ fn start_app(cli: Cli) {
   tauri::Builder::default()
     .setup(|app| {
       let config = Config::new(app.handle())?;
-      println!("{:?}", config);
       app.manage(config);
 
       // If this is not the first instance of the app, this will

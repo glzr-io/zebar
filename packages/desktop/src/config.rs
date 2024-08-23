@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Context;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tracing::{info, warn};
 
@@ -93,6 +93,9 @@ pub enum WindowAnchor {
 
 #[derive(Debug)]
 pub struct Config {
+  /// Handle to the Tauri application.
+  app_handle: AppHandle,
+
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
@@ -123,6 +126,7 @@ impl Config {
     let window_configs = Self::read_window_configs(&config_dir)?;
 
     Ok(Self {
+      app_handle: app_handle.clone(),
       config_dir,
       settings,
       window_configs,
@@ -130,11 +134,14 @@ impl Config {
   }
 
   /// Re-evaluates config files within the config directory.
-  // pub fn reload(&mut self) -> anyhow::Result<()> {
-  //   self.settings = Self::read_settings_or_init(&self.config_dir)?;
-  //   self.window_configs = Self::read_window_configs(&self.config_dir)?;
-  //   Ok(())
-  // }
+  pub fn reload(&mut self) -> anyhow::Result<()> {
+    self.settings =
+      Self::read_settings_or_init(&self.app_handle, &self.config_dir)?;
+
+    self.window_configs = Self::read_window_configs(&self.config_dir)?;
+
+    Ok(())
+  }
 
   /// Reads the global settings file or initializes it with the starter.
   ///
@@ -163,23 +170,8 @@ impl Config {
     let settings_path = dir.join("settings.json");
 
     match settings_path.exists() {
-      true => {
-        let content =
-          fs::read_to_string(&settings_path).with_context(|| {
-            format!("Failed to read file: {}", settings_path.display())
-          })?;
-
-        let settings =
-          serde_json::from_str(&content).with_context(|| {
-            format!(
-              "Failed to parse JSON from file: {}",
-              settings_path.display()
-            )
-          })?;
-
-        Ok(Some(settings))
-      }
       false => Ok(None),
+      true => Self::read_and_parse_json(&settings_path),
     }
   }
 
@@ -204,8 +196,9 @@ impl Config {
         // Recursively aggregate configs in subdirectories.
         configs.extend(Self::read_window_configs(&path)?);
       } else if Self::is_json(&path) {
-        if let Ok(config) = Self::process_file(&path) {
+        if let Ok(config) = Self::read_and_parse_json(&path) {
           info!("Found valid window config at: {}", path.display());
+
           configs.push(WindowConfigEntry {
             config,
             path: path.clone(),
@@ -225,19 +218,21 @@ impl Config {
     path.extension().and_then(|ext| ext.to_str()) == Some("json")
   }
 
-  /// Processes a single JSON file, reading its contents and parsing it.
+  /// Reads a JSON file and parses it into the specified type.
   ///
-  /// Returns the parsed `WindowConfig` if successful.
-  fn process_file(path: &PathBuf) -> anyhow::Result<WindowConfig> {
+  /// Returns the parsed type `T` if successful.
+  fn read_and_parse_json<T: DeserializeOwned>(
+    path: &PathBuf,
+  ) -> anyhow::Result<T> {
     let content = fs::read_to_string(path).with_context(|| {
       format!("Failed to read file: {}", path.display())
     })?;
 
-    let config = serde_json::from_str(&content).with_context(|| {
+    let parsed = serde_json::from_str(&content).with_context(|| {
       format!("Failed to parse JSON from file: {}", path.display())
     })?;
 
-    Ok(config)
+    Ok(parsed)
   }
 
   /// Initialize config at the given path from the starter resource.
