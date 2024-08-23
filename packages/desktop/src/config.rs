@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tracing::{info, warn};
 
-use crate::util::{copy_dir_all, read_and_parse_json, LengthValue};
+use crate::common::{copy_dir_all, read_and_parse_json, LengthValue};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

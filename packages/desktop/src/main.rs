@@ -9,19 +9,19 @@ use tracing_subscriber::EnvFilter;
 
 use crate::{
   cli::{Cli, CliCommand, OutputMonitorsArgs},
+  common::WindowExt,
   monitors::get_monitors_str,
   providers::{config::ProviderConfig, provider_manager::ProviderManager},
   sys_tray::setup_sys_tray,
-  util::WindowExt,
   window_factory::{WindowFactory, WindowState},
 };
 
 mod cli;
+mod common;
 mod config;
 mod monitors;
 mod providers;
 mod sys_tray;
-mod util;
 mod window_factory;
 
 #[tauri::command]

@@ -11,7 +11,7 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 use tokio::{sync::Mutex, task};
 use tracing::{error, info};
 
-use crate::util::WindowExt;
+use crate::common::WindowExt;
 
 /// Manages the creation of Zebar windows.
 pub struct WindowFactory {
