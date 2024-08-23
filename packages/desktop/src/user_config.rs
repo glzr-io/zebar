@@ -10,6 +10,7 @@ use tauri::{path::BaseDirectory, AppHandle, Manager};
 use crate::util::LengthValue;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WindowConfig {
   /// Entry point HTML file.
   html_path: String,
@@ -19,6 +20,7 @@ pub struct WindowConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WindowLaunchOptions {
   /// Whether to show the window above/below all others.
   z_order: WindowZOrder,
@@ -45,6 +47,7 @@ pub enum WindowZOrder {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WindowPlacement {
   /// The monitor index to place the window on.
   monitor: u32,
@@ -82,9 +85,6 @@ pub enum WindowAnchor {
 
 #[derive(Debug)]
 pub struct Config {
-  /// Handle to the Tauri application.
-  // app_handle: AppHandle,
-
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
@@ -114,10 +114,7 @@ impl Config {
 
   /// Reads the config files within the config directory.
   pub fn read(&mut self) -> anyhow::Result<()> {
-    // let mut configs = Vec::new();
-    // Self::traverse_directory(self.config_dir, &mut configs)?;
     self.config_entries = Self::aggregate_configs(&self.config_dir)?;
-
     Ok(())
   }
 

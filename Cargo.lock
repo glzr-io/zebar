@@ -6514,7 +6514,6 @@ dependencies = [
  "reqwest 0.11.27",
  "serde",
  "serde_json",
- "serde_yaml",
  "starship-battery",
  "sysinfo",
  "tauri",
