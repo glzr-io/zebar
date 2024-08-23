@@ -108,7 +108,7 @@ pub struct Config {
   pub window_configs: Vec<WindowConfigEntry>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WindowConfigEntry {
   pub path: PathBuf,
   pub config: WindowConfig,

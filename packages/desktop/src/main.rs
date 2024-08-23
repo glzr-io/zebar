@@ -39,12 +39,12 @@ async fn open_window(
   config: State<'_, Config>,
   window_factory: State<'_, WindowFactory>,
 ) -> anyhow::Result<(), String> {
-  let window_config = config
-    .window_config_by_path(&config_path)
-    .map_err(|err| err.to_string())?
-    .context("Window config not found.")?;
+  // let window_config = config
+  //   .window_config_by_path(&config_path)
+  //   .map_err(|err| err.to_string())?
+  //   .context("Window config not found.")?;
 
-  window_factory.open_one(window_config);
+  // window_factory.open_one(window_config);
 
   Ok(())
 }
@@ -141,6 +141,10 @@ fn start_app(cli: Cli) {
   tauri::Builder::default()
     .setup(|app| {
       let config = Config::new(app.handle())?;
+
+      let window_factory = WindowFactory::new(app.handle());
+      window_factory.open_all(config.window_configs.clone());
+
       app.manage(config);
 
       // If this is not the first instance of the app, this will
@@ -152,7 +156,7 @@ fn start_app(cli: Cli) {
 
           // CLI command is guaranteed to be an open command here.
           if let CliCommand::Open(args) = cli.command {
-            app.state::<WindowFactory>().open_one();
+            // app.state::<WindowFactory>().open_one();
           }
         },
       ))?;
@@ -163,8 +167,6 @@ fn start_app(cli: Cli) {
 
       // Open window with the given args and initialize
       // `WindowFactory` in Tauri state.
-      let window_factory = WindowFactory::new(app.handle());
-      window_factory.open_one();
       app.manage(window_factory);
 
       app.handle().plugin(tauri_plugin_shell::init())?;

@@ -11,7 +11,10 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 use tokio::{sync::Mutex, task};
 use tracing::{error, info};
 
-use crate::{common::WindowExt, config::WindowConfig};
+use crate::{
+  common::WindowExt,
+  config::{Config, WindowConfig, WindowConfigEntry},
+};
 
 /// Manages the creation of Zebar windows.
 pub struct WindowFactory {
@@ -51,13 +54,13 @@ impl WindowFactory {
     }
   }
 
-  pub fn open_all(&self, configs: Vec<WindowConfig>) {
-    for config in configs {
+  pub fn open_all(&self, config_entires: Vec<WindowConfigEntry>) {
+    for config in config_entires {
       self.open_one(config);
     }
   }
 
-  pub fn open_one(&self, config: WindowConfig) {
+  pub fn open_one(&self, config_entry: WindowConfigEntry) {
     let app_handle = self.app_handle.clone();
     let window_states = self.window_states.clone();
     let window_count = self.window_count.clone();
@@ -66,7 +69,8 @@ impl WindowFactory {
       // Increment number of windows.
       let new_count = window_count.fetch_add(1, Ordering::Relaxed) + 1;
 
-      let open_res = Self::create_window(&app_handle, new_count, config);
+      let open_res =
+        Self::create_window(&app_handle, new_count, config_entry);
 
       match open_res {
         Ok(state) => {
@@ -83,15 +87,17 @@ impl WindowFactory {
   fn create_window(
     app_handle: &AppHandle,
     window_count: u32,
-    config: WindowConfig,
+    config_entry: WindowConfigEntry,
   ) -> anyhow::Result<WindowState> {
     info!("Creating window #{}", window_count);
+    let WindowConfigEntry { config, path } = config_entry;
 
+    // Note that window label needs to be globally unique.
     let window = WebviewWindowBuilder::new(
       app_handle,
-      // Window label needs to be globally unique.
       window_count.to_string(),
-      WebviewUrl::default(),
+      // WebviewUrl::App("http://asset.localhost/C:%5CUsers%5Clarsb%5Crepos%5Czebar%5Cpackages%5Cdesktop%5Cresources%5Cconfig%5Cstarter%5Cglazewm.html".into()),
+      WebviewUrl::App("http://asset.localhost/C:%5CUsers%5Clarsb%5C.glzr%5Czebar%5Cstarter%5Cglazewm.html".into()),
     )
     .title("Zebar")
     .inner_size(500., 500.)
@@ -106,7 +112,8 @@ impl WindowFactory {
 
     let state = WindowState {
       window_id: window_count.to_string(),
-      config,
+      config: config.clone(),
+      config_path: path.to_string_lossy().into(),
     };
 
     _ = window.eval(&format!(
