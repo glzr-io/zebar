@@ -13,29 +13,29 @@ use crate::util::LengthValue;
 #[serde(rename_all = "camelCase")]
 pub struct WindowConfig {
   /// Entry point HTML file.
-  html_path: String,
+  pub html_path: String,
 
   /// Default options for when the window is opened.
-  launch_options: WindowLaunchOptions,
+  pub launch_options: WindowLaunchOptions,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowLaunchOptions {
   /// Whether to show the window above/below all others.
-  z_order: WindowZOrder,
+  pub z_order: WindowZOrder,
 
   /// Whether the window should be shown in the taskbar.
-  shown_in_taskbar: bool,
+  pub shown_in_taskbar: bool,
 
   /// Whether the window should have resize handles.
-  resizable: bool,
+  pub resizable: bool,
 
   /// Whether the window frame should be transparent.
-  transparent: bool,
+  pub transparent: bool,
 
   /// Where to place the window.
-  placement: Vec<WindowPlacement>,
+  pub placement: Vec<WindowPlacement>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -50,22 +50,22 @@ pub enum WindowZOrder {
 #[serde(rename_all = "camelCase")]
 pub struct WindowPlacement {
   /// The monitor index to place the window on.
-  monitor: u32,
+  pub monitor: u32,
 
   /// Anchor-point of the window.
-  anchor: WindowAnchor,
+  pub anchor: WindowAnchor,
 
   /// Offset from the anchor-point.
-  offset_x: LengthValue,
+  pub offset_x: LengthValue,
 
   /// Offset from the anchor-point.
-  offset_y: LengthValue,
+  pub offset_y: LengthValue,
 
   /// Width of the window in % or physical pixels.
-  width: LengthValue,
+  pub width: LengthValue,
 
   /// Height of the window in % or physical pixels.
-  height: LengthValue,
+  pub height: LengthValue,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -94,8 +94,8 @@ pub struct Config {
 
 #[derive(Debug)]
 pub struct ConfigEntry {
-  path: PathBuf,
-  config: WindowConfig,
+  pub path: PathBuf,
+  pub config: WindowConfig,
 }
 
 impl Config {
@@ -153,24 +153,6 @@ impl Config {
           == Some("json"),
     )
   }
-
-  // fn traverse_directory(
-  //   dir: &PathBuf,
-  //   config_entries: &mut Vec<ConfigEntry>,
-  // ) -> anyhow::Result<()> {
-  //   for entry in fs::read_dir(dir)? {
-  //     let entry = entry?;
-  //     let path = entry.path();
-  //     if path.is_dir() {
-  //       Self::traverse_directory(&path, config_entries)?;
-  //     } else if Self::is_json_file(&entry)? {
-  //       if let Ok(config_entry) = Self::process_file(entry) {
-  //         config_entries.push(config_entry);
-  //       }
-  //     }
-  //   }
-  //   Ok(())
-  // }
 
   fn process_file(entry: &PathBuf) -> anyhow::Result<WindowConfig> {
     let content = fs::read_to_string(entry)?;

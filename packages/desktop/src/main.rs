@@ -1,14 +1,14 @@
 #![feature(async_closure)]
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, env};
 
 use clap::Parser;
+use config::Config;
 use tauri::{Manager, State, Window};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
-use user_config::Config;
 
 use crate::{
-  cli::{Cli, CliCommand, OpenWindowArgs, OutputMonitorsArgs},
+  cli::{Cli, CliCommand, OutputMonitorsArgs},
   monitors::get_monitors_str,
   providers::{config::ProviderConfig, provider_manager::ProviderManager},
   sys_tray::setup_sys_tray,
@@ -17,10 +17,10 @@ use crate::{
 };
 
 mod cli;
+mod config;
 mod monitors;
 mod providers;
 mod sys_tray;
-mod user_config;
 mod util;
 mod window_factory;
 
