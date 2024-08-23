@@ -4,11 +4,11 @@ use std::{
 };
 
 use anyhow::Context;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tracing::{info, warn};
 
-use crate::util::LengthValue;
+use crate::util::{copy_dir_all, read_and_parse_json, LengthValue};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -171,7 +171,7 @@ impl Config {
 
     match settings_path.exists() {
       false => Ok(None),
-      true => Self::read_and_parse_json(&settings_path),
+      true => read_and_parse_json(&settings_path),
     }
   }
 
@@ -196,7 +196,7 @@ impl Config {
         // Recursively aggregate configs in subdirectories.
         configs.extend(Self::read_window_configs(&path)?);
       } else if Self::is_json(&path) {
-        if let Ok(config) = Self::read_and_parse_json(&path) {
+        if let Ok(config) = read_and_parse_json(&path) {
           info!("Found valid window config at: {}", path.display());
 
           configs.push(WindowConfigEntry {
@@ -218,23 +218,6 @@ impl Config {
     path.extension().and_then(|ext| ext.to_str()) == Some("json")
   }
 
-  /// Reads a JSON file and parses it into the specified type.
-  ///
-  /// Returns the parsed type `T` if successful.
-  fn read_and_parse_json<T: DeserializeOwned>(
-    path: &PathBuf,
-  ) -> anyhow::Result<T> {
-    let content = fs::read_to_string(path).with_context(|| {
-      format!("Failed to read file: {}", path.display())
-    })?;
-
-    let parsed = serde_json::from_str(&content).with_context(|| {
-      format!("Failed to parse JSON from file: {}", path.display())
-    })?;
-
-    Ok(parsed)
-  }
-
   /// Initialize config at the given path from the starter resource.
   fn create_from_starter(
     app_handle: &AppHandle,
@@ -250,23 +233,7 @@ impl Config {
       format!("Unable to create directory {}.", &config_dir.display())
     })?;
 
-    Self::copy_dir_all(&starter_path, config_dir)?;
-
-    Ok(())
-  }
-
-  fn copy_dir_all(src: &PathBuf, dest: &PathBuf) -> anyhow::Result<()> {
-    fs::create_dir_all(&dest)?;
-
-    for entry in fs::read_dir(src)? {
-      let entry = entry?;
-
-      if entry.file_type()?.is_dir() {
-        Self::copy_dir_all(&entry.path(), &dest.join(entry.file_name()))?;
-      } else {
-        fs::copy(entry.path(), dest.join(entry.file_name()))?;
-      }
-    }
+    copy_dir_all(&starter_path, config_dir)?;
 
     Ok(())
   }
