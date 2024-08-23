@@ -15,8 +15,15 @@ use crate::util::WindowExt;
 
 /// Manages the creation of Zebar windows.
 pub struct WindowFactory {
+  /// Handle to the Tauri application.
   app_handle: AppHandle,
+
+  /// Running total of windows created.
+  ///
+  /// Used to generate unique window labels.
   window_count: Arc<AtomicU32>,
+
+  /// Map of window labels to window states.
   window_states: Arc<Mutex<HashMap<String, WindowState>>>,
 }
 

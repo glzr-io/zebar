@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+  fs::{self, DirEntry},
+  path::PathBuf,
+};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -77,102 +80,174 @@ pub enum WindowAnchor {
   BottomRight,
 }
 
-/// Reads the config file at `~/.glzr/zebar/config.yaml`.
-pub fn read_file(
-  config_path_override: Option<&str>,
-  app_handle: &AppHandle,
-) -> anyhow::Result<WindowConfig> {
-  let default_config_path = app_handle
-    .path()
-    .resolve(".glzr/zebar/config.yaml", BaseDirectory::Home)
-    .context("Unable to get home directory.")?;
+#[derive(Debug)]
+pub struct Config {
+  /// Handle to the Tauri application.
+  // app_handle: AppHandle,
 
-  let config_path = match config_path_override {
-    Some(val) => PathBuf::from(val),
-    None => default_config_path,
-  };
+  /// Directory where config files are stored.
+  pub config_dir: PathBuf,
 
-  // Create new config file from sample if it doesn't exist.
-  if !config_path.exists() {
-    create_from_sample(&config_path, app_handle)?;
-  }
-
-  let config_str = fs::read_to_string(&config_path)
-    .context("Unable to read config file.")?;
-
-  // TODO: Improve error formatting of serde_yaml errors. Something
-  // similar to https://github.com/AlexanderThaller/format_serde_error
-  let config_value = serde_yaml::from_str(&config_str)?;
-
-  Ok(config_value)
+  /// Config entries.
+  pub config_entries: Vec<ConfigEntry>,
 }
 
-/// Initialize config at the given path from the sample config resource.
-fn create_from_sample(
-  config_path: &PathBuf,
-  app_handle: &AppHandle,
-) -> anyhow::Result<()> {
-  let sample_path = app_handle
-    .path()
-    .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
-    .context("Unable to resolve sample config resource.")?;
-
-  let sample_script = app_handle
-    .path()
-    .resolve("resources/script.js", BaseDirectory::Resource)
-    .context("Unable to resolve sample script resource.")?;
-
-  let dest_dir =
-    config_path.parent().context("Invalid config directory.")?;
-
-  // Create the destination directory.
-  std::fs::create_dir_all(&dest_dir).with_context(|| {
-    format!("Unable to create directory {}.", &config_path.display())
-  })?;
-
-  // Copy over sample config.
-  let config_path = dest_dir.join("config.yaml");
-  fs::copy(&sample_path, &config_path).with_context(|| {
-    format!("Unable to write to {}.", config_path.display())
-  })?;
-
-  // Copy over sample script.
-  let script_path = dest_dir.join("script.js");
-  fs::copy(&sample_script, &script_path).with_context(|| {
-    format!("Unable to write to {}.", script_path.display())
-  })?;
-
-  Ok(())
+#[derive(Debug)]
+pub struct ConfigEntry {
+  path: PathBuf,
+  config: WindowConfig,
 }
 
-pub fn open_config_dir(app_handle: &AppHandle) -> anyhow::Result<()> {
-  let dir_path = app_handle
-    .path()
-    .resolve(".glzr/zebar", BaseDirectory::Home)
-    .context("Unable to get home directory.")?
-    .canonicalize()?;
+impl Config {
+  /// Creates a new `Config` instance.
+  pub fn new(app_handle: &AppHandle) -> anyhow::Result<Self> {
+    let config_dir = app_handle
+      .path()
+      .resolve(".glzr/zebar", BaseDirectory::Home)
+      .context("Unable to get home directory.")?;
 
-  #[cfg(target_os = "windows")]
-  {
-    std::process::Command::new("explorer")
-      .arg(dir_path)
-      .spawn()?;
+    Ok(Self {
+      config_dir,
+      config_entries: Vec::new(),
+    })
   }
 
-  #[cfg(target_os = "macos")]
-  {
-    std::process::Command::new("open")
-      .arg(dir_path)
-      .arg("-R")
-      .spawn()?;
+  /// Reads the config files within the config directory.
+  pub fn read(&mut self) -> anyhow::Result<()> {
+    // let mut configs = Vec::new();
+    // Self::traverse_directory(self.config_dir, &mut configs)?;
+    self.config_entries = Self::aggregate_configs(&self.config_dir)?;
+
+    Ok(())
   }
 
-  #[cfg(target_os = "linux")]
-  {
-    std::process::Command::new("xdg-open")
-      .arg(dir_path)
-      .spawn()?;
+  fn aggregate_configs(dir: &PathBuf) -> anyhow::Result<Vec<ConfigEntry>> {
+    let mut configs = Vec::new();
+
+    for entry in fs::read_dir(dir).with_context(|| {
+      format!("Failed to read directory: {}", dir.display())
+    })? {
+      let entry = entry?;
+      let path = entry.path();
+
+      if path.is_dir() {
+        // Recursively call aggregate_configs on subdirectories
+        configs.extend(Self::aggregate_configs(&path)?);
+      } else if path.extension().and_then(|ext| ext.to_str())
+        == Some("json")
+      {
+        if let Ok(config) = Self::process_file(&path) {
+          configs.push(ConfigEntry {
+            config,
+            path: path.clone(),
+          });
+        }
+      }
+    }
+
+    Ok(configs)
   }
 
-  Ok(())
+  fn is_json_file(entry: &DirEntry) -> anyhow::Result<bool> {
+    let file_type = entry.file_type()?;
+    Ok(
+      file_type.is_file()
+        && entry.path().extension().and_then(|ext| ext.to_str())
+          == Some("json"),
+    )
+  }
+
+  // fn traverse_directory(
+  //   dir: &PathBuf,
+  //   config_entries: &mut Vec<ConfigEntry>,
+  // ) -> anyhow::Result<()> {
+  //   for entry in fs::read_dir(dir)? {
+  //     let entry = entry?;
+  //     let path = entry.path();
+  //     if path.is_dir() {
+  //       Self::traverse_directory(&path, config_entries)?;
+  //     } else if Self::is_json_file(&entry)? {
+  //       if let Ok(config_entry) = Self::process_file(entry) {
+  //         config_entries.push(config_entry);
+  //       }
+  //     }
+  //   }
+  //   Ok(())
+  // }
+
+  fn process_file(entry: &PathBuf) -> anyhow::Result<WindowConfig> {
+    let content = fs::read_to_string(entry)?;
+    let config = serde_json::from_str(&content)?;
+    Ok(config)
+  }
+
+  /// Initialize config at the given path from the sample config resource.
+  fn create_from_sample(
+    config_path: &PathBuf,
+    app_handle: &AppHandle,
+  ) -> anyhow::Result<()> {
+    let sample_path = app_handle
+      .path()
+      .resolve("resources/sample-config.yaml", BaseDirectory::Resource)
+      .context("Unable to resolve sample config resource.")?;
+
+    let sample_script = app_handle
+      .path()
+      .resolve("resources/script.js", BaseDirectory::Resource)
+      .context("Unable to resolve sample script resource.")?;
+
+    let dest_dir =
+      config_path.parent().context("Invalid config directory.")?;
+
+    // Create the destination directory.
+    std::fs::create_dir_all(&dest_dir).with_context(|| {
+      format!("Unable to create directory {}.", &config_path.display())
+    })?;
+
+    // Copy over sample config.
+    let config_path = dest_dir.join("config.yaml");
+    fs::copy(&sample_path, &config_path).with_context(|| {
+      format!("Unable to write to {}.", config_path.display())
+    })?;
+
+    // Copy over sample script.
+    let script_path = dest_dir.join("script.js");
+    fs::copy(&sample_script, &script_path).with_context(|| {
+      format!("Unable to write to {}.", script_path.display())
+    })?;
+
+    Ok(())
+  }
+
+  pub fn open_config_dir(app_handle: &AppHandle) -> anyhow::Result<()> {
+    let dir_path = app_handle
+      .path()
+      .resolve(".glzr/zebar", BaseDirectory::Home)
+      .context("Unable to get home directory.")?
+      .canonicalize()?;
+
+    #[cfg(target_os = "windows")]
+    {
+      std::process::Command::new("explorer")
+        .arg(dir_path)
+        .spawn()?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+      std::process::Command::new("open")
+        .arg(dir_path)
+        .arg("-R")
+        .spawn()?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+      std::process::Command::new("xdg-open")
+        .arg(dir_path)
+        .spawn()?;
+    }
+
+    Ok(())
+  }
 }

@@ -1,5 +1,5 @@
 # Entry point HTML file.
-html_path: './index.html'
+html_path: './glazewm.html'
 
 # Default options for when the window is opened.
 # These can be overridden when opening the window programmatically.

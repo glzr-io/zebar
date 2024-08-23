@@ -1,4 +1,4 @@
 /* @refresh reload */
 import { init } from 'zebar';
 
-init({ includeNormalizeCss: true });
+init({ includeDefaultCss: true });

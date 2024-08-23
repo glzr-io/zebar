@@ -5,8 +5,6 @@ use tauri::{
 };
 use tracing::{error, info};
 
-use crate::user_config::open_config_dir;
-
 pub fn setup_sys_tray(app: &mut tauri::App) -> anyhow::Result<TrayIcon> {
   let icon_image = app
     .default_window_icon()
@@ -25,9 +23,9 @@ pub fn setup_sys_tray(app: &mut tauri::App) -> anyhow::Result<TrayIcon> {
     .on_menu_event(move |app, event| match event.id().as_ref() {
       "show_config_folder" => {
         info!("Opening config folder from system tray.");
-        if let Err(err) = open_config_dir(app) {
-          error!("Failed to open config folder: {}", err);
-        }
+        // if let Err(err) = open_config_dir(app) {
+        //   error!("Failed to open config folder: {}", err);
+        // }
       }
       "exit" => {
         info!("Exiting through system tray.");

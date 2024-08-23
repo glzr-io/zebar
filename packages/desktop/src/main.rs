@@ -1,10 +1,11 @@
 #![feature(async_closure)]
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, sync::Arc};
 
 use clap::Parser;
 use tauri::{Manager, State, Window};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
+use user_config::Config;
 
 use crate::{
   cli::{Cli, CliCommand, OpenWindowArgs, OutputMonitorsArgs},
@@ -27,7 +28,9 @@ mod window_factory;
 async fn get_open_window_args(
   window_label: String,
   window_factory: State<'_, WindowFactory>,
+  config: State<'_, Config>,
 ) -> anyhow::Result<Option<WindowState>, String> {
+  println!("{:?}", config.config_dir);
   Ok(window_factory.state_by_window_label(window_label).await)
 }
 
@@ -134,6 +137,11 @@ fn start_app(cli: Cli) {
 
   tauri::Builder::default()
     .setup(|app| {
+      let mut config = Config::new(app.handle())?;
+      config.read()?;
+      println!("{:?}", config);
+      app.manage(config);
+
       // If this is not the first instance of the app, this will
       // emit within the original instance and exit
       // immediately.
@@ -147,8 +155,6 @@ fn start_app(cli: Cli) {
           }
         },
       ))?;
-
-      let config = user_config::read_file(None, app.handle())?;
 
       // Prevent windows from showing up in the dock on MacOS.
       #[cfg(target_os = "macos")]
