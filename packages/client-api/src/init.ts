@@ -1,7 +1,13 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { join } from '@tauri-apps/api/path';
 import { createRoot, getOwner, runWithOwner } from 'solid-js';
 
-import { getInitialState, openWindow, showErrorDialog } from './desktop';
+import {
+  getWindowState,
+  openWindow,
+  setWindowZOrder,
+  showErrorDialog,
+} from './desktop';
 import { createLogger } from '~/utils';
 import type { ZebarContext } from './zebar-context.model';
 import { createProvider } from './providers';
@@ -32,9 +38,9 @@ export async function init(
     try {
       const currentWindow = getCurrentWindow();
 
-      const initialState =
+      const windowState =
         window.__ZEBAR_INITIAL_STATE ??
-        (await getInitialState(currentWindow.label));
+        (await getWindowState(currentWindow.label));
 
       // Load default CSS unless explicitly disabled.
       if (options?.includeDefaultCss !== false) {
@@ -45,13 +51,25 @@ export async function init(
 
       // @ts-ignore - TODO
       return {
-        // @ts-ignore - TODO
-        config: initialState.config,
-        openWindow,
+        openWindow: async (configPath: string) => {
+          const absolutePath = await join(
+            windowState.windowId,
+            '../',
+            configPath,
+          );
+
+          return openWindow(absolutePath);
+        },
         createProvider: config => {
           return createProvider(config, getOwner()!);
         },
-        currentWindow: {},
+        currentWindow: {
+          ...windowState,
+          tauri: currentWindow,
+          setZOrder: zOrder => {
+            return setWindowZOrder(currentWindow, zOrder);
+          },
+        },
         allWindows: [],
         currentMonitor: {},
         allMonitors: [],

@@ -32,12 +32,6 @@ pub enum CliCommand {
 pub struct OpenWindowArgs {
   /// Relative file path within the Zebar config directory.
   pub config_path: String,
-
-  /// Arguments to pass to the window.
-  ///
-  /// These become available via the `self` provider.
-  #[clap(short, long, num_args = 1.., value_parser=parse_open_args)]
-  pub args: Option<Vec<(String, String)>>,
 }
 
 #[derive(Args, Debug)]
@@ -61,17 +55,5 @@ pub fn print_and_exit(output: anyhow::Result<String>) {
       eprintln!("Error: {}", err);
       process::exit(1);
     }
-  }
-}
-
-/// Parses arguments passed to the `open` CLI command into a string tuple.
-fn parse_open_args(
-  input: &str,
-) -> anyhow::Result<(String, String), String> {
-  let mut parts = input.split('=');
-
-  match (parts.next(), parts.next()) {
-    (Some(key), Some(value)) => Ok((key.into(), value.into())),
-    _ => Err("Arguments must be of format KEY1=VAL1".into()),
   }
 }

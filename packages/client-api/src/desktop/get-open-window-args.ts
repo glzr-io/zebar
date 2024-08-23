@@ -1,6 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
-import { getInitialState } from './desktop-commands';
+import { getWindowState } from './desktop-commands';
 
 let promise: Promise<any> | null = null;
 
@@ -13,5 +13,5 @@ async function fetchOpenWindowArgs() {
     return window.__ZEBAR_INITIAL_STATE;
   }
 
-  return getInitialState(getCurrentWindow().label);
+  return getWindowState(getCurrentWindow().label);
 }

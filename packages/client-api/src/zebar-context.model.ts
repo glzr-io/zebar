@@ -37,8 +37,11 @@ export interface ZebarContext {
 }
 
 export interface ZebarWindow {
+  windowId: string;
+  config: WindowConfig;
+  configPath: string;
   tauri: TauriWindow;
-  setZOrder: (zOrder: WindowZOrder) => Promise<void>;
+  setZOrder(zOrder: WindowZOrder): Promise<void>;
 }
 
 export interface Monitor {

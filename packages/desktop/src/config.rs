@@ -230,6 +230,23 @@ impl Config {
     Ok(())
   }
 
+  /// Returns the window config at the given absolute path.
+  pub fn window_config_by_path(
+    &self,
+    config_path: &str,
+  ) -> anyhow::Result<Option<WindowConfig>> {
+    let config_pathbuf = PathBuf::from(config_path).canonicalize()?;
+
+    let config_entry = self
+      .window_configs
+      .iter()
+      .find(|entry| entry.path == config_pathbuf);
+
+    let config = config_entry.map(|entry| entry.config.clone());
+
+    Ok(config)
+  }
+
   /// Opens the config directory in the OS-dependent file explorer.
   pub fn open_config_dir(&self) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]

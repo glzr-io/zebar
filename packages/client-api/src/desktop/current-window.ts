@@ -66,7 +66,10 @@ export async function setWindowStyles(styles: Partial<WindowStyles>) {
   ]);
 }
 
-async function setWindowZOrder(window: Window, zOrder?: WindowZOrder) {
+export async function setWindowZOrder(
+  window: Window,
+  zOrder?: WindowZOrder,
+) {
   if (zOrder === 'always_on_bottom') {
     await window.setAlwaysOnBottom(true);
   } else if (zOrder === 'always_on_top') {

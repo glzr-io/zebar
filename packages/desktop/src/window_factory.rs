@@ -11,7 +11,7 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 use tokio::{sync::Mutex, task};
 use tracing::{error, info};
 
-use crate::common::WindowExt;
+use crate::{common::WindowExt, config::WindowConfig};
 
 /// Manages the creation of Zebar windows.
 pub struct WindowFactory {
@@ -30,10 +30,16 @@ pub struct WindowFactory {
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowState {
+  /// Unique identifier for the window.
+  ///
+  /// Used as the window label.
   pub window_id: String,
-  pub window_label: String,
-  pub args: HashMap<String, String>,
-  pub env: HashMap<String, String>,
+
+  /// User-defined config for the window.
+  pub config: WindowConfig,
+
+  /// Absolute path to the window's config file.
+  pub config_path: String,
 }
 
 impl WindowFactory {
@@ -45,23 +51,27 @@ impl WindowFactory {
     }
   }
 
-  /// TODO: Pass in `WindowConfig`.
-  pub fn try_open(&self) {
+  pub fn open_all(&self, configs: Vec<WindowConfig>) {
+    for config in configs {
+      self.open_one(config);
+    }
+  }
+
+  pub fn open_one(&self, config: WindowConfig) {
     let app_handle = self.app_handle.clone();
     let window_states = self.window_states.clone();
-    let app_handle = app_handle.clone();
     let window_count = self.window_count.clone();
 
     task::spawn(async move {
       // Increment number of windows.
       let new_count = window_count.fetch_add(1, Ordering::Relaxed) + 1;
 
-      let open_res = Self::open(&app_handle, new_count);
+      let open_res = Self::create_window(&app_handle, new_count, config);
 
       match open_res {
         Ok(state) => {
           let mut window_states = window_states.lock().await;
-          window_states.insert(state.window_label.clone(), state);
+          window_states.insert(state.window_id.clone(), state);
         }
         Err(err) => {
           error!("Failed to open window: {:?}", err);
@@ -70,9 +80,10 @@ impl WindowFactory {
     });
   }
 
-  fn open(
+  fn create_window(
     app_handle: &AppHandle,
     window_count: u32,
+    config: WindowConfig,
   ) -> anyhow::Result<WindowState> {
     info!("Creating window #{}", window_count);
 
@@ -95,9 +106,7 @@ impl WindowFactory {
 
     let state = WindowState {
       window_id: window_count.to_string(),
-      window_label: window_count.to_string(),
-      args: HashMap::new(),
-      env: std::env::vars().collect(),
+      config,
     };
 
     _ = window.eval(&format!(
@@ -113,11 +122,8 @@ impl WindowFactory {
     Ok(state)
   }
 
-  /// Gets an open window's state by a given window label.
-  pub async fn state_by_window_label(
-    &self,
-    window_label: String,
-  ) -> Option<WindowState> {
-    self.window_states.lock().await.get(&window_label).cloned()
+  /// Gets an open window's state by a given window ID.
+  pub async fn state_by_id(&self, window_id: &str) -> Option<WindowState> {
+    self.window_states.lock().await.get(window_id).cloned()
   }
 }

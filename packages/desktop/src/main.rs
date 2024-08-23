@@ -1,6 +1,7 @@
 #![feature(async_closure)]
-use std::{collections::HashMap, env};
+use std::env;
 
+use anyhow::Context;
 use clap::Parser;
 use config::Config;
 use tauri::{Manager, State, Window};
@@ -25,23 +26,25 @@ mod sys_tray;
 mod window_factory;
 
 #[tauri::command]
-async fn get_open_window_args(
-  window_label: String,
+async fn get_window_state(
+  window_id: String,
   window_factory: State<'_, WindowFactory>,
-  config: State<'_, Config>,
 ) -> anyhow::Result<Option<WindowState>, String> {
-  println!("{:?}", config.config_dir);
-  Ok(window_factory.state_by_window_label(window_label).await)
+  Ok(window_factory.state_by_id(&window_id).await)
 }
 
 #[tauri::command]
-fn open_window(
+async fn open_window(
   config_path: String,
-  args: HashMap<String, String>,
+  config: State<'_, Config>,
   window_factory: State<'_, WindowFactory>,
 ) -> anyhow::Result<(), String> {
-  // TODO: Pass in `WindowConfig`.
-  window_factory.try_open();
+  let window_config = config
+    .window_config_by_path(&config_path)
+    .map_err(|err| err.to_string())?
+    .context("Window config not found.")?;
+
+  window_factory.open_one(window_config);
 
   Ok(())
 }
@@ -149,7 +152,7 @@ fn start_app(cli: Cli) {
 
           // CLI command is guaranteed to be an open command here.
           if let CliCommand::Open(args) = cli.command {
-            app.state::<WindowFactory>().try_open();
+            app.state::<WindowFactory>().open_one();
           }
         },
       ))?;
@@ -161,7 +164,7 @@ fn start_app(cli: Cli) {
       // Open window with the given args and initialize
       // `WindowFactory` in Tauri state.
       let window_factory = WindowFactory::new(app.handle());
-      window_factory.try_open();
+      window_factory.open_one();
       app.manage(window_factory);
 
       app.handle().plugin(tauri_plugin_shell::init())?;
@@ -179,7 +182,7 @@ fn start_app(cli: Cli) {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      get_open_window_args,
+      get_window_state,
       open_window,
       listen_provider,
       unlisten_provider,
