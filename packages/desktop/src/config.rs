@@ -1,5 +1,5 @@
 use std::{
-  fs::{self, DirEntry},
+  fs::{self},
   path::PathBuf,
 };
 
@@ -8,6 +8,13 @@ use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
 use crate::util::LengthValue;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsConfig {
+  /// Relative paths to Zebar window configs to launch on start.
+  pub launch_on_start: Vec<String>,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,12 +95,15 @@ pub struct Config {
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
-  /// Config entries.
-  pub config_entries: Vec<ConfigEntry>,
+  /// Global settings.
+  // pub settings: SettingsConfig,
+
+  /// List of window configs.
+  pub window_configs: Vec<WindowConfigEntry>,
 }
 
 #[derive(Debug)]
-pub struct ConfigEntry {
+pub struct WindowConfigEntry {
   pub path: PathBuf,
   pub config: WindowConfig,
 }
@@ -104,37 +114,44 @@ impl Config {
     let config_dir = app_handle
       .path()
       .resolve(".glzr/zebar", BaseDirectory::Home)
-      .context("Unable to get home directory.")?;
+      .context("Unable to get home directory.")?
+      .canonicalize()?;
 
     Ok(Self {
       config_dir,
-      config_entries: Vec::new(),
+      window_configs: Vec::new(),
     })
   }
 
   /// Reads the config files within the config directory.
   pub fn read(&mut self) -> anyhow::Result<()> {
-    self.config_entries = Self::aggregate_configs(&self.config_dir)?;
+    self.window_configs = Self::aggregate_configs(&self.config_dir)?;
     Ok(())
   }
 
-  fn aggregate_configs(dir: &PathBuf) -> anyhow::Result<Vec<ConfigEntry>> {
+  /// Recursively aggregates all valid window configs in the given
+  /// directory and its subdirectories.
+  ///
+  /// Returns a list of `ConfigEntry` instances.
+  fn aggregate_configs(
+    dir: &PathBuf,
+  ) -> anyhow::Result<Vec<WindowConfigEntry>> {
     let mut configs = Vec::new();
 
-    for entry in fs::read_dir(dir).with_context(|| {
+    let entries = fs::read_dir(dir).with_context(|| {
       format!("Failed to read directory: {}", dir.display())
-    })? {
+    })?;
+
+    for entry in entries {
       let entry = entry?;
       let path = entry.path();
 
       if path.is_dir() {
-        // Recursively call aggregate_configs on subdirectories
+        // Recursively aggregate configs on subdirectories.
         configs.extend(Self::aggregate_configs(&path)?);
-      } else if path.extension().and_then(|ext| ext.to_str())
-        == Some("json")
-      {
+      } else if Self::is_json(&path) {
         if let Ok(config) = Self::process_file(&path) {
-          configs.push(ConfigEntry {
+          configs.push(WindowConfigEntry {
             config,
             path: path.clone(),
           });
@@ -145,24 +162,29 @@ impl Config {
     Ok(configs)
   }
 
-  fn is_json_file(entry: &DirEntry) -> anyhow::Result<bool> {
-    let file_type = entry.file_type()?;
-    Ok(
-      file_type.is_file()
-        && entry.path().extension().and_then(|ext| ext.to_str())
-          == Some("json"),
-    )
+  /// Returns whether the given path is a JSON file.
+  fn is_json(path: &PathBuf) -> bool {
+    path.extension().and_then(|ext| ext.to_str()) == Some("json")
   }
 
-  fn process_file(entry: &PathBuf) -> anyhow::Result<WindowConfig> {
-    let content = fs::read_to_string(entry)?;
-    let config = serde_json::from_str(&content)?;
+  /// Processes a single JSON file, reading its contents and parsing it.
+  ///
+  /// Returns the parsed `WindowConfig` if successful.
+  fn process_file(path: &PathBuf) -> anyhow::Result<WindowConfig> {
+    let content = fs::read_to_string(path).with_context(|| {
+      format!("Failed to read file: {}", path.display())
+    })?;
+
+    let config = serde_json::from_str(&content).with_context(|| {
+      format!("Failed to parse JSON from file: {}", path.display())
+    })?;
+
     Ok(config)
   }
 
   /// Initialize config at the given path from the sample config resource.
   fn create_from_sample(
-    config_path: &PathBuf,
+    &self,
     app_handle: &AppHandle,
   ) -> anyhow::Result<()> {
     let sample_path = app_handle
@@ -198,24 +220,19 @@ impl Config {
     Ok(())
   }
 
-  pub fn open_config_dir(app_handle: &AppHandle) -> anyhow::Result<()> {
-    let dir_path = app_handle
-      .path()
-      .resolve(".glzr/zebar", BaseDirectory::Home)
-      .context("Unable to get home directory.")?
-      .canonicalize()?;
-
+  /// Opens the config directory in the OS-dependent file explorer.
+  pub fn open_config_dir(&self) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
     {
       std::process::Command::new("explorer")
-        .arg(dir_path)
+        .arg(self.config_dir.clone())
         .spawn()?;
     }
 
     #[cfg(target_os = "macos")]
     {
       std::process::Command::new("open")
-        .arg(dir_path)
+        .arg(self.config_dir.clone())
         .arg("-R")
         .spawn()?;
     }
@@ -223,7 +240,7 @@ impl Config {
     #[cfg(target_os = "linux")]
     {
       std::process::Command::new("xdg-open")
-        .arg(dir_path)
+        .arg(self.config_dir.clone())
         .spawn()?;
     }
 
