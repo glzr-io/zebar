@@ -1,3 +1,4 @@
 /* @refresh reload */
-import './normalize.css';
-import './index.css';
+import { init } from 'zebar';
+
+init({ includeNormalizeCss: true });

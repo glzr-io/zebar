@@ -8,17 +8,26 @@ import { createProvider } from './providers';
 
 const logger = createLogger('init-window');
 
-/**
- * Handles initialization.
- */
-export function init(callback: (context: ZebarContext) => void) {
-  initAsync().then(callback);
+export interface ZebarInitOptions {
+  /**
+   * Whether to add basic default CSS in the window.
+   *
+   * Includes:
+   * - Setting box-sizing to border-box
+   * - Disabling overscroll
+   * - [normalize.css](https://github.com/necolas/normalize.css)
+   *
+   * Defaults to `true`.
+   */
+  includeDefaultCss?: boolean;
 }
 
 /**
  * Handles initialization.
  */
-export async function initAsync(): Promise<ZebarContext> {
+export async function init(
+  options?: ZebarInitOptions,
+): Promise<ZebarContext> {
   return withReactiveContext(async () => {
     try {
       const currentWindow = getCurrentWindow();
@@ -26,6 +35,11 @@ export async function initAsync(): Promise<ZebarContext> {
       const initialState =
         window.__ZEBAR_INITIAL_STATE ??
         (await getInitialState(currentWindow.label));
+
+      // Load default CSS unless explicitly disabled.
+      if (options?.includeDefaultCss !== false) {
+        import('./zebar.css');
+      }
 
       await currentWindow.show();
 

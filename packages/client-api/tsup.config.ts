@@ -25,6 +25,8 @@ const CI =
 export default defineConfig(config => {
   const watching = !!config.watch;
 
+  config.injectStyle = true;
+
   const parsed_options = preset.parsePresetOptions(
     preset_options,
     watching,
