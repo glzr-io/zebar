@@ -19,18 +19,35 @@ pub fn read_and_parse_json<T: DeserializeOwned>(
   Ok(parsed)
 }
 
+/// Returns whether the given path is a JSON file.
+pub fn is_json(path: &PathBuf) -> bool {
+  path.extension().and_then(|ext| ext.to_str()) == Some("json")
+}
+
 /// Recursively copies a directory and all its contents to a new file
 /// location.
-pub fn copy_dir_all(src: &PathBuf, dest: &PathBuf) -> anyhow::Result<()> {
-  fs::create_dir_all(&dest)?;
+///
+/// Optionally replaces existing files in the destination directory if
+/// `override_existing` is `true`.
+pub fn copy_dir_all(
+  src_dir: &PathBuf,
+  dest_dir: &PathBuf,
+  override_existing: bool,
+) -> anyhow::Result<()> {
+  fs::create_dir_all(&dest_dir)?;
 
-  for entry in fs::read_dir(src)? {
+  for entry in fs::read_dir(src_dir)? {
     let entry = entry?;
+    let path = entry.path();
 
     if entry.file_type()?.is_dir() {
-      copy_dir_all(&entry.path(), &dest.join(entry.file_name()))?;
-    } else {
-      fs::copy(entry.path(), dest.join(entry.file_name()))?;
+      copy_dir_all(
+        &path,
+        &dest_dir.join(entry.file_name()),
+        override_existing,
+      )?;
+    } else if override_existing || !path.exists() {
+      fs::copy(path, dest_dir.join(entry.file_name()))?;
     }
   }
 

@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tracing::{info, warn};
 
-use crate::common::{copy_dir_all, read_and_parse_json, LengthValue};
+use crate::common::{
+  copy_dir_all, is_json, read_and_parse_json, LengthValue,
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -195,7 +197,7 @@ impl Config {
       if path.is_dir() {
         // Recursively aggregate configs in subdirectories.
         configs.extend(Self::read_window_configs(&path)?);
-      } else if Self::is_json(&path) {
+      } else if is_json(&path) {
         if let Ok(config) = read_and_parse_json(&path) {
           info!("Found valid window config at: {}", path.display());
 
@@ -213,11 +215,6 @@ impl Config {
     Ok(configs)
   }
 
-  /// Returns whether the given path is a JSON file.
-  fn is_json(path: &PathBuf) -> bool {
-    path.extension().and_then(|ext| ext.to_str()) == Some("json")
-  }
-
   /// Initialize config at the given path from the starter resource.
   fn create_from_starter(
     app_handle: &AppHandle,
@@ -226,14 +223,9 @@ impl Config {
     let starter_path = app_handle
       .path()
       .resolve("resources/config", BaseDirectory::Resource)
-      .context("Unable to resolve sample config resource.")?;
+      .context("Unable to resolve starter config resource.")?;
 
-    // Create the destination directory.
-    fs::create_dir_all(&config_dir).with_context(|| {
-      format!("Unable to create directory {}.", &config_dir.display())
-    })?;
-
-    copy_dir_all(&starter_path, config_dir)?;
+    copy_dir_all(&starter_path, config_dir, false)?;
 
     Ok(())
   }
