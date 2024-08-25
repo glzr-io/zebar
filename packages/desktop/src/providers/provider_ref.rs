@@ -183,6 +183,7 @@ impl ProviderRef {
       ProviderConfig::Weather(config) => {
         Box::new(WeatherProvider::new(config))
       }
+      #[cfg(windows)]
       ProviderConfig::Language(config) => {
         Box::new(LanguageProvider::new(config))
       }
