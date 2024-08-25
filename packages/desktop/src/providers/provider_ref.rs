@@ -7,9 +7,11 @@ use tracing::info;
 
 #[cfg(windows)]
 use super::komorebi::KomorebiProvider;
+#[cfg(windows)]
+use super::language::LanguageProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, language::LanguageProvider,
+  host::HostProvider, ip::IpProvider,
   memory::MemoryProvider, network::NetworkProvider, provider::Provider,
   provider_manager::SharedProviderState, variables::ProviderVariables,
   weather::WeatherProvider,
@@ -169,6 +171,7 @@ impl ProviderRef {
       ProviderConfig::Weather(config) => {
         Box::new(WeatherProvider::new(config))
       }
+      #[cfg(windows)]
       ProviderConfig::Language(config) => {
         Box::new(LanguageProvider::new(config))
       }

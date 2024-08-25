@@ -2,9 +2,11 @@ use serde::Serialize;
 
 #[cfg(windows)]
 use super::komorebi::KomorebiVariables;
+#[cfg(windows)]
+use super::language::LanguageVariables;
 use super::{
   battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
-  ip::IpVariables, language::LanguageVariables, memory::MemoryVariables,
+  ip::IpVariables, memory::MemoryVariables,
   network::NetworkVariables, weather::WeatherVariables,
 };
 
