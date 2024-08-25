@@ -6,8 +6,8 @@ use super::komorebi::KomorebiVariables;
 use super::language::LanguageVariables;
 use super::{
   battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
-  ip::IpVariables, memory::MemoryVariables,
-  network::NetworkVariables, weather::WeatherVariables,
+  ip::IpVariables, memory::MemoryVariables, network::NetworkVariables,
+  weather::WeatherVariables,
 };
 
 #[derive(Serialize, Debug, Clone)]

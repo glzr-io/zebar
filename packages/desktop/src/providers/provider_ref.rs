@@ -11,8 +11,8 @@ use super::komorebi::KomorebiProvider;
 use super::language::LanguageProvider;
 use super::{
   battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider,
-  memory::MemoryProvider, network::NetworkProvider, provider::Provider,
+  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
+  network::NetworkProvider, provider::Provider,
   provider_manager::SharedProviderState, variables::ProviderVariables,
   weather::WeatherProvider,
 };
