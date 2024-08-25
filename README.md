@@ -309,6 +309,8 @@ window/example:
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
 | `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `1000`        |
+| `timezone`         | Timezone either as UTC-Offset or ANA timezone      | `string`    | `local`       |
+| `locale`           | ISO-639-1 local that affects the output of toFormat  | `string`    |       |
 
 ### Variables
 
