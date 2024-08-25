@@ -51,10 +51,10 @@ export async function createDateProvider(
   }
 
   function toFormat(now: number, format: string) {
-    const dateTime = DateTime.fromMillis(now);
+    let dateTime = DateTime.fromMillis(now);
 
     if (config.timezone) {
-      dateTime.setZone(config.timezone);
+      dateTime = dateTime.setZone(config.timezone);
     }
 
     return dateTime.toFormat(format, { locale: config.locale });
