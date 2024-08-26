@@ -1,6 +1,7 @@
 #![feature(async_closure)]
-use std::env;
+use std::{env, sync::Arc};
 
+use anyhow::Context;
 use clap::Parser;
 use tauri::{Manager, State, Window};
 use tracing::{error, level_filters::LevelFilter};
@@ -27,7 +28,7 @@ mod window_factory;
 #[tauri::command]
 async fn get_window_state(
   window_id: String,
-  window_factory: State<'_, WindowFactory>,
+  window_factory: State<'_, Arc<WindowFactory>>,
 ) -> anyhow::Result<Option<WindowState>, String> {
   Ok(window_factory.state_by_id(&window_id).await)
 }
@@ -35,15 +36,16 @@ async fn get_window_state(
 #[tauri::command]
 async fn open_window(
   config_path: String,
-  config: State<'_, Config>,
-  window_factory: State<'_, WindowFactory>,
+  config: State<'_, Arc<Config>>,
+  window_factory: State<'_, Arc<WindowFactory>>,
 ) -> anyhow::Result<(), String> {
-  // let window_config = config
-  //   .window_config_by_path(&config_path)
-  //   .map_err(|err| err.to_string())?
-  //   .context("Window config not found.")?;
+  let window_config = config
+    .window_config_by_abs_path(&config_path)
+    .map_err(|err| err.to_string())?
+    .context("Window config not found.")
+    .map_err(|err| err.to_string())?;
 
-  // window_factory.open_one(window_config);
+  window_factory.open_one(window_config);
 
   Ok(())
 }
@@ -53,7 +55,7 @@ async fn listen_provider(
   config_hash: String,
   config: ProviderConfig,
   tracked_access: Vec<String>,
-  provider_manager: State<'_, ProviderManager>,
+  provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
     .create(config_hash, config, tracked_access)
@@ -64,7 +66,7 @@ async fn listen_provider(
 #[tauri::command]
 async fn unlisten_provider(
   config_hash: String,
-  provider_manager: State<'_, ProviderManager>,
+  provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
     .destroy(config_hash)
@@ -151,24 +153,41 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
   tauri::async_runtime::set(tokio::runtime::Handle::current());
 
   tauri::Builder::default()
-    .setup(|app| {
-      let config = Config::new(app.handle())?;
+    .setup(move |app| {
+      let config = Arc::new(Config::new(app.handle())?);
+      app.manage(config.clone());
 
-      let window_factory = WindowFactory::new(app.handle());
-      window_factory.open_all(config.window_configs.clone());
+      let window_factory = Arc::new(WindowFactory::new(app.handle()));
 
-      app.manage(config);
-
-      // If this is not the first instance of the app, this will
-      // emit within the original instance and exit
-      // immediately.
+      // If this is not the first instance of the app, this will emit
+      // within the original instance and exit immediately.
+      let config_clone = config.clone();
+      let window_factory_clone = window_factory.clone();
       app.handle().plugin(tauri_plugin_single_instance::init(
-        move |app, args, _| {
+        move |_, args, _| {
           let cli = Cli::parse_from(args);
 
-          // CLI command is guaranteed to be an open command here.
+          // CLI command is guaranteed to be one of the open commands here.
           if let CliCommand::Open(args) = cli.command() {
-            // app.state::<WindowFactory>().open_one();
+            let window_config_res = config_clone
+              .window_config_by_rel_path(&args.config_path)
+              .and_then(|res| {
+                res.ok_or_else(|| {
+                  anyhow::anyhow!(
+                    "Window config not found at {}.",
+                    args.config_path
+                  )
+                })
+              });
+
+            match window_config_res {
+              Ok(window_config) => {
+                window_factory_clone.open_one(window_config);
+              }
+              Err(err) => {
+                error!("{:?}", err);
+              }
+            }
           }
         },
       ))?;
@@ -177,8 +196,23 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       #[cfg(target_os = "macos")]
       app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-      // Open window with the given args and initialize
-      // `WindowFactory` in Tauri state.
+      match cli.command() {
+        CliCommand::Open(args) => {
+          let window_config = config
+            .window_config_by_rel_path(&args.config_path)?
+            .with_context(|| {
+              format!("Window config not found at {}.", args.config_path)
+            })?;
+
+          window_factory.open_one(window_config);
+        }
+        _ => {
+          window_factory.open_all(config.window_configs.clone());
+        }
+      }
+
+      // Open window with the given args and initialize `WindowFactory` in
+      // Tauri state.
       app.manage(window_factory);
 
       app.handle().plugin(tauri_plugin_shell::init())?;

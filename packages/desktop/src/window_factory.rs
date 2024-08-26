@@ -54,12 +54,14 @@ impl WindowFactory {
     }
   }
 
+  /// Opens all windows in given config entries.
   pub fn open_all(&self, config_entires: Vec<WindowConfigEntry>) {
     for config in config_entires {
       self.open_one(config);
     }
   }
 
+  /// Opens a single window from a given config entry.
   pub fn open_one(&self, config_entry: WindowConfigEntry) {
     let app_handle = self.app_handle.clone();
     let window_states = self.window_states.clone();
@@ -84,6 +86,8 @@ impl WindowFactory {
     });
   }
 
+  /// Spawns a new webview window with properties from the given config
+  /// entry.
   fn create_window(
     app_handle: &AppHandle,
     window_count: u32,

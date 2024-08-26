@@ -251,11 +251,20 @@ impl Config {
     Ok(())
   }
 
-  /// Returns the window config at the given absolute path.
-  pub fn window_config_by_path(
+  /// Returns the window config at the given relative path.
+  pub fn window_config_by_rel_path(
     &self,
     config_path: &str,
-  ) -> anyhow::Result<Option<WindowConfig>> {
+  ) -> anyhow::Result<Option<WindowConfigEntry>> {
+    let config_path = self.config_dir.join(config_path);
+    self.window_config_by_abs_path(&config_path.to_string_lossy())
+  }
+
+  /// Returns the window config at the given absolute path.
+  pub fn window_config_by_abs_path(
+    &self,
+    config_path: &str,
+  ) -> anyhow::Result<Option<WindowConfigEntry>> {
     let formatted_config_path =
       PathBuf::from(config_path).canonicalize_pretty()?;
 
@@ -264,9 +273,7 @@ impl Config {
       .iter()
       .find(|entry| entry.config_path == formatted_config_path);
 
-    let config = config_entry.map(|entry| entry.config.clone());
-
-    Ok(config)
+    Ok(config_entry.cloned())
   }
 
   /// Opens the config directory in the OS-dependent file explorer.
