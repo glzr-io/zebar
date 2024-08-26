@@ -18,6 +18,7 @@ pub struct Monitor {
 }
 
 impl MonitorState {
+  /// Creates a new `MonitorState` instance.
   pub fn new(app_handle: &AppHandle) -> Self {
     let monitors = app_handle
       .available_monitors()
@@ -42,6 +43,7 @@ impl MonitorState {
     }
   }
 
+  /// Returns a string representation of the monitors.
   pub fn output_str(
     &self,
     args: OutputMonitorsArgs,

@@ -3,7 +3,7 @@ use std::env;
 
 use clap::Parser;
 use config::Config;
-use monitors::MonitorState;
+use monitor_state::MonitorState;
 use tauri::{Manager, State, Window};
 use tracing::{error, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
@@ -19,7 +19,7 @@ use crate::{
 mod cli;
 mod common;
 mod config;
-mod monitors;
+mod monitor_state;
 mod providers;
 mod sys_tray;
 mod window_factory;

@@ -211,7 +211,7 @@ impl Config {
         configs.extend(Self::read_window_configs(&path)?);
       } else if is_json(&path) {
         if let Ok(config) = read_and_parse_json::<WindowConfig>(&path) {
-          info!("Found valid window config at: {}", path.display());
+          let config_path = path.canonicalize_pretty()?;
 
           let html_path = path
             .parent()
@@ -219,9 +219,11 @@ impl Config {
             .join(&config.html_path)
             .canonicalize_pretty()?;
 
+          info!("Found valid window config at: {}", config_path);
+
           configs.push(WindowConfigEntry {
             config,
-            config_path: path.canonicalize_pretty()?,
+            config_path,
             html_path,
           });
         } else {
