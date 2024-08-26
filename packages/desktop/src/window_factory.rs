@@ -7,13 +7,13 @@ use std::{
 };
 
 use serde::Serialize;
-use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Url, WebviewUrl, WebviewWindowBuilder};
 use tokio::{sync::Mutex, task};
 use tracing::{error, info};
 
 use crate::{
   common::WindowExt,
-  config::{Config, WindowConfig, WindowConfigEntry},
+  config::{WindowConfig, WindowConfigEntry},
 };
 
 /// Manages the creation of Zebar windows.
@@ -96,18 +96,23 @@ impl WindowFactory {
     let window = WebviewWindowBuilder::new(
       app_handle,
       window_count.to_string(),
-      // WebviewUrl::App("http://asset.localhost/C:%5CUsers%5Clarsb%5Crepos%5Czebar%5Cpackages%5Cdesktop%5Cresources%5Cconfig%5Cstarter%5Cglazewm.html".into()),
-      WebviewUrl::App("http://asset.localhost/C:%5CUsers%5Clarsb%5C.glzr%5Czebar%5Cstarter%5Cglazewm.html".into()),
+      WebviewUrl::App(
+        format!(
+          "http://asset.localhost/{}",
+          "C:\\Users\\larsb\\.glzr\\zebar\\starter\\glazewm.html"
+        )
+        .into(),
+      ),
     )
     .title("Zebar")
     .inner_size(500., 500.)
-    .focused(false)
-    .skip_taskbar(true)
+    .focused(config.launch_options.focused)
+    .skip_taskbar(!config.launch_options.shown_in_taskbar)
     .visible_on_all_workspaces(true)
-    .transparent(false)
+    .transparent(config.launch_options.transparent)
     .shadow(false)
     .decorations(false)
-    .resizable(false)
+    .resizable(config.launch_options.resizable)
     .build()?;
 
     let state = WindowState {
@@ -124,7 +129,10 @@ impl WindowFactory {
     // Tauri's `skip_taskbar` option isn't 100% reliable, so we
     // also set the window as a tool window.
     #[cfg(target_os = "windows")]
-    let _ = window.as_ref().window().set_tool_window(true);
+    let _ = window
+      .as_ref()
+      .window()
+      .set_tool_window(!config.launch_options.shown_in_taskbar);
 
     Ok(state)
   }

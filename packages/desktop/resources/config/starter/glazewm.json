@@ -4,6 +4,7 @@
   "launchOptions": {
     "zOrder": "normal",
     "shownInTaskbar": false,
+    "focused": false,
     "resizable": false,
     "transparent": true,
     "placement": [

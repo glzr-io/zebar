@@ -38,16 +38,12 @@ pub fn copy_dir_all(
 
   for entry in fs::read_dir(src_dir)? {
     let entry = entry?;
-    let path = entry.path();
+    let dest_path = dest_dir.join(entry.file_name());
 
     if entry.file_type()?.is_dir() {
-      copy_dir_all(
-        &path,
-        &dest_dir.join(entry.file_name()),
-        override_existing,
-      )?;
-    } else if override_existing || !path.exists() {
-      fs::copy(path, dest_dir.join(entry.file_name()))?;
+      copy_dir_all(&entry.path(), &dest_path, override_existing)?;
+    } else if override_existing || !dest_path.exists() {
+      fs::copy(entry.path(), dest_path)?;
     }
   }
 

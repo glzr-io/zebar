@@ -38,6 +38,9 @@ pub struct WindowLaunchOptions {
   /// Whether the window should be shown in the taskbar.
   pub shown_in_taskbar: bool,
 
+  /// Whether the window should be focused when opened.
+  pub focused: bool,
+
   /// Whether the window should have resize handles.
   pub resizable: bool,
 
@@ -110,7 +113,10 @@ pub struct Config {
 
 #[derive(Clone, Debug)]
 pub struct WindowConfigEntry {
+  /// Absolute path to the window config file.
   pub path: PathBuf,
+
+  /// Parsed window config.
   pub config: WindowConfig,
 }
 
@@ -158,7 +164,11 @@ impl Config {
       Some(settings) => Ok(settings),
       None => {
         Self::create_from_starter(app_handle, dir)?;
-        Ok(Self::read_settings(&dir)?.unwrap())
+
+        Ok(
+          Self::read_settings(&dir)?
+            .context("Failed to create settings config.")?,
+        )
       }
     }
   }
