@@ -1,17 +1,16 @@
 #![feature(async_closure)]
 use std::env;
 
-use anyhow::Context;
 use clap::Parser;
 use config::Config;
+use monitors::MonitorState;
 use tauri::{Manager, State, Window};
-use tracing::level_filters::LevelFilter;
+use tracing::{error, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
   cli::{Cli, CliCommand, OutputMonitorsArgs},
   common::WindowExt,
-  monitors::get_monitors_str,
   providers::{config::ProviderConfig, provider_manager::ProviderManager},
   sys_tray::setup_sys_tray,
   window_factory::{WindowFactory, WindowState},
@@ -109,26 +108,39 @@ fn set_skip_taskbar(
 /// Conditionally starts Zebar or runs a CLI command based on the given
 /// subcommand.
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
   let cli = Cli::parse();
 
   match cli.command {
     CliCommand::Monitors(args) => output_monitors(args),
-    _ => start_app(cli),
+    _ => {
+      let start_res = start_app(cli);
+
+      // If unable to start Zebar, the error is fatal and a message dialog
+      // is shown.
+      if let Err(err) = &start_res {
+        // TODO: Show error dialog.
+        error!("{:?}", err);
+      };
+
+      start_res
+    }
   }
 }
 
 /// Prints available monitors to console.
-fn output_monitors(args: OutputMonitorsArgs) {
-  tauri::Builder::default().setup(|app| {
-    let monitors_str = get_monitors_str(app, args);
-    cli::print_and_exit(monitors_str);
+fn output_monitors(args: OutputMonitorsArgs) -> anyhow::Result<()> {
+  let _ = tauri::Builder::default().setup(|app| {
+    let monitors = MonitorState::new(app.handle());
+    cli::print_and_exit(monitors.output_str(args));
     Ok(())
   });
+
+  Ok(())
 }
 
 /// Starts Zebar - either with a specific window or all windows.
-fn start_app(cli: Cli) {
+fn start_app(cli: Cli) -> anyhow::Result<()> {
   tracing_subscriber::fmt()
     .with_env_filter(
       EnvFilter::from_env("LOG_LEVEL")
@@ -191,6 +203,7 @@ fn start_app(cli: Cli) {
       set_always_on_top,
       set_skip_taskbar
     ])
-    .run(tauri::generate_context!())
-    .expect("Failed to build Tauri application.");
+    .run(tauri::generate_context!())?;
+
+  Ok(())
 }

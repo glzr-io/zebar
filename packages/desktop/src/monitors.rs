@@ -1,38 +1,74 @@
-use anyhow::{bail, Context};
-use tauri::{App, Runtime};
+use anyhow::bail;
+use tauri::AppHandle;
 
 use crate::cli::OutputMonitorsArgs;
 
-pub fn get_monitors_str<R: Runtime>(
-  app: &mut App<R>,
-  args: OutputMonitorsArgs,
-) -> anyhow::Result<String> {
-  let monitors = app
-    .available_monitors()
-    .context("Unable to detect monitors")?;
+pub struct MonitorState {
+  app_handle: AppHandle,
+  monitors: Vec<Monitor>,
+}
 
-  if monitors.len() == 0 {
-    bail!("No monitors found")
+pub struct Monitor {
+  name: Option<String>,
+  x: i32,
+  y: i32,
+  width: u32,
+  height: u32,
+  scale_factor: f64,
+}
+
+impl MonitorState {
+  pub fn new(app_handle: &AppHandle) -> Self {
+    let monitors = app_handle
+      .available_monitors()
+      .map(|monitors| {
+        monitors
+          .into_iter()
+          .map(|monitor| Monitor {
+            name: monitor.name().cloned(),
+            x: monitor.position().x,
+            y: monitor.position().y,
+            width: monitor.size().width,
+            height: monitor.size().height,
+            scale_factor: monitor.scale_factor(),
+          })
+          .collect()
+      })
+      .unwrap_or(Vec::new());
+
+    Self {
+      app_handle: app_handle.clone(),
+      monitors,
+    }
   }
 
-  let mut monitors_str = String::new();
+  pub fn output_str(
+    &self,
+    args: OutputMonitorsArgs,
+  ) -> anyhow::Result<String> {
+    if self.monitors.len() == 0 {
+      bail!("No monitors found")
+    }
 
-  for monitor in monitors {
-    monitors_str += &format!(
+    let mut monitors_str = String::new();
+
+    for monitor in &self.monitors {
+      monitors_str += &format!(
       "MONITOR_NAME=\"{}\" MONITOR_X=\"{}\" MONITOR_Y=\"{}\" MONITOR_WIDTH=\"{}\" MONITOR_HEIGHT=\"{}\" MONITOR_SCALE_FACTOR=\"{}\"",
-      monitor.name().context("Unable to read monitor name")?,
-      monitor.position().x,
-      monitor.position().y,
-      monitor.size().width,
-      monitor.size().height,
-      monitor.scale_factor()
+      monitor.name.clone().unwrap_or("".into()),
+      monitor.x,
+      monitor.y,
+      monitor.width,
+      monitor.height,
+      monitor.scale_factor
     );
 
-    monitors_str += match args.print0 {
-      true => "\0",
-      false => "\n",
-    };
-  }
+      monitors_str += match args.print0 {
+        true => "\0",
+        false => "\n",
+      };
+    }
 
-  Ok(monitors_str)
+    Ok(monitors_str)
+  }
 }
