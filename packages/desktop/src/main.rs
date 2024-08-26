@@ -154,6 +154,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 
   tauri::Builder::default()
     .setup(move |app| {
+      // Initialize `Config` in Tauri state.
       let config = Arc::new(Config::new(app.handle())?);
       app.manage(config.clone());
 
@@ -196,7 +197,8 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       #[cfg(target_os = "macos")]
       app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-      match cli.command() {
+      // Get window configs to open on start.
+      let window_configs = match cli.command() {
         CliCommand::Open(args) => {
           let window_config = config
             .window_config_by_rel_path(&args.config_path)?
@@ -204,15 +206,14 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
               format!("Window config not found at {}.", args.config_path)
             })?;
 
-          window_factory.open_one(window_config);
+          vec![window_config]
         }
-        _ => {
-          window_factory.open_all(config.window_configs.clone());
-        }
-      }
+        _ => config.window_configs.clone(),
+      };
 
-      // Open window with the given args and initialize `WindowFactory` in
-      // Tauri state.
+      window_factory.open_all(window_configs);
+
+      // Initialize `WindowFactory` in Tauri state.
       app.manage(window_factory);
 
       app.handle().plugin(tauri_plugin_shell::init())?;
