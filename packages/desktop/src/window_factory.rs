@@ -7,7 +7,7 @@ use std::{
 };
 
 use serde::Serialize;
-use tauri::{AppHandle, Url, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 use tokio::{sync::Mutex, task};
 use tracing::{error, info};
 
@@ -89,19 +89,20 @@ impl WindowFactory {
     window_count: u32,
     config_entry: WindowConfigEntry,
   ) -> anyhow::Result<WindowState> {
-    info!("Creating window #{}", window_count);
-    let WindowConfigEntry { config, path } = config_entry;
+    let WindowConfigEntry {
+      config,
+      config_path,
+      html_path,
+    } = config_entry;
+
+    info!("Creating window #{} from {}", window_count, config_path);
 
     // Note that window label needs to be globally unique.
     let window = WebviewWindowBuilder::new(
       app_handle,
       window_count.to_string(),
       WebviewUrl::App(
-        format!(
-          "http://asset.localhost/{}",
-          "C:\\Users\\larsb\\.glzr\\zebar\\starter\\glazewm.html"
-        )
-        .into(),
+        format!("http://asset.localhost/{}", html_path).into(),
       ),
     )
     .title("Zebar")
@@ -118,7 +119,7 @@ impl WindowFactory {
     let state = WindowState {
       window_id: window_count.to_string(),
       config: config.clone(),
-      config_path: path.to_string_lossy().into(),
+      config_path: config_path.clone(),
     };
 
     _ = window.eval(&format!(

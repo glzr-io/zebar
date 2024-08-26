@@ -9,7 +9,7 @@ use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tracing::{info, warn};
 
 use crate::common::{
-  copy_dir_all, is_json, read_and_parse_json, LengthValue,
+  copy_dir_all, is_json, read_and_parse_json, LengthValue, PathExt,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -113,8 +113,11 @@ pub struct Config {
 
 #[derive(Clone, Debug)]
 pub struct WindowConfigEntry {
-  /// Absolute path to the window config file.
-  pub path: PathBuf,
+  /// Canonicalized absolute path to the window config file.
+  pub config_path: String,
+
+  /// Canonicalized absolute path to the window's HTML file.
+  pub html_path: String,
 
   /// Parsed window config.
   pub config: WindowConfig,
@@ -127,8 +130,7 @@ impl Config {
     let config_dir = app_handle
       .path()
       .resolve(".glzr/zebar", BaseDirectory::Home)
-      .context("Unable to get home directory.")?
-      .canonicalize()?;
+      .context("Unable to get home directory.")?;
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
     let window_configs = Self::read_window_configs(&config_dir)?;
@@ -208,12 +210,19 @@ impl Config {
         // Recursively aggregate configs in subdirectories.
         configs.extend(Self::read_window_configs(&path)?);
       } else if is_json(&path) {
-        if let Ok(config) = read_and_parse_json(&path) {
+        if let Ok(config) = read_and_parse_json::<WindowConfig>(&path) {
           info!("Found valid window config at: {}", path.display());
+
+          let html_path = path
+            .parent()
+            .context("Invalid parent directory.")?
+            .join(&config.html_path)
+            .canonicalize_pretty()?;
 
           configs.push(WindowConfigEntry {
             config,
-            path: path.clone(),
+            config_path: path.canonicalize_pretty()?,
+            html_path,
           });
         } else {
           // TODO: Show error dialog.
@@ -245,12 +254,13 @@ impl Config {
     &self,
     config_path: &str,
   ) -> anyhow::Result<Option<WindowConfig>> {
-    let config_pathbuf = PathBuf::from(config_path).canonicalize()?;
+    let formatted_config_path =
+      PathBuf::from(config_path).canonicalize_pretty()?;
 
     let config_entry = self
       .window_configs
       .iter()
-      .find(|entry| entry.path == config_pathbuf);
+      .find(|entry| entry.config_path == formatted_config_path);
 
     let config = config_entry.map(|entry| entry.config.clone());
 
