@@ -4,17 +4,25 @@ use clap::{Args, Parser, Subcommand};
 
 const VERSION: &'static str = env!("VERSION_NUMBER");
 
-#[derive(Parser, Debug)]
-#[clap(author, version = VERSION, about, long_about = None, arg_required_else_help = true)]
+#[derive(Clone, Debug, Parser)]
+#[clap(author, version = VERSION, about, long_about = None)]
 pub struct Cli {
   #[command(subcommand)]
-  pub command: CliCommand,
+  command: Option<CliCommand>,
 }
 
-#[derive(Subcommand, Debug)]
+impl Cli {
+  pub fn command(&self) -> CliCommand {
+    self.command.clone().unwrap_or(CliCommand::Empty)
+  }
+}
+
+#[derive(Clone, Debug, Subcommand)]
 pub enum CliCommand {
-  /// Open a window by its relative file path within the Zebar config
-  /// directory (e.g. `zebar open ./material/config.yaml`).
+  /// Open a window by its config path.
+  ///
+  /// Config path is relative within the Zebar config directory (e.g.
+  /// `zebar open ./material/config.yaml`).
   ///
   /// Starts Zebar if it is not already running.
   Open(OpenWindowArgs),
@@ -26,15 +34,22 @@ pub enum CliCommand {
 
   /// Output available monitors.
   Monitors(OutputMonitorsArgs),
+
+  /// Used when Zebar is launched with no arguments.
+  ///
+  /// If Zebar is already running, this command will no-op, otherwise it
+  /// will start Zebar and open all default windows.
+  #[clap(hide = true)]
+  Empty,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Clone, Debug)]
 pub struct OpenWindowArgs {
   /// Relative file path within the Zebar config directory.
   pub config_path: String,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Clone, Debug)]
 pub struct OutputMonitorsArgs {
   /// Use ASCII NUL character (character code 0) instead of newlines
   /// for delimiting monitors.
@@ -44,7 +59,7 @@ pub struct OutputMonitorsArgs {
   pub print0: bool,
 }
 
-/// Print to stdout/stderror and exit the process.
+/// Prints to stdout/stderror and exits the process.
 pub fn print_and_exit(output: anyhow::Result<String>) {
   match output {
     Ok(output) => {

@@ -2,8 +2,6 @@
 use std::env;
 
 use clap::Parser;
-use config::Config;
-use monitor_state::MonitorState;
 use tauri::{Manager, State, Window};
 use tracing::{error, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
@@ -11,6 +9,8 @@ use tracing_subscriber::EnvFilter;
 use crate::{
   cli::{Cli, CliCommand, OutputMonitorsArgs},
   common::WindowExt,
+  config::Config,
+  monitor_state::MonitorState,
   providers::{config::ProviderConfig, provider_manager::ProviderManager},
   sys_tray::setup_sys_tray,
   window_factory::{WindowFactory, WindowState},
@@ -111,7 +111,7 @@ fn set_skip_taskbar(
 async fn main() -> anyhow::Result<()> {
   let cli = Cli::parse();
 
-  match cli.command {
+  match cli.command() {
     CliCommand::Monitors(args) => output_monitors(args),
     _ => {
       let start_res = start_app(cli);
@@ -167,7 +167,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           let cli = Cli::parse_from(args);
 
           // CLI command is guaranteed to be an open command here.
-          if let CliCommand::Open(args) = cli.command {
+          if let CliCommand::Open(args) = cli.command() {
             // app.state::<WindowFactory>().open_one();
           }
         },
