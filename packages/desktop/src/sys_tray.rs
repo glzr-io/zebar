@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use tauri::{
   menu::MenuBuilder,
@@ -5,6 +7,8 @@ use tauri::{
   AppHandle,
 };
 use tracing::{error, info};
+
+use crate::config::Config;
 
 const SHOW_CONFIG_FOLDER_ID: &str = "show_config_folder";
 const EXIT_ID: &str = "exit";
@@ -14,7 +18,10 @@ pub struct SysTray {}
 
 impl SysTray {
   /// Creates a new system tray icon for Zebar.
-  pub fn new(app_handle: &AppHandle) -> anyhow::Result<TrayIcon> {
+  pub fn new(
+    app_handle: &AppHandle,
+    config: Arc<Config>,
+  ) -> anyhow::Result<TrayIcon> {
     let icon_image = app_handle
       .default_window_icon()
       .context("No icon defined in Tauri config.")?;
@@ -32,9 +39,10 @@ impl SysTray {
       .on_menu_event(move |app, event| match event.id().as_ref() {
         SHOW_CONFIG_FOLDER_ID => {
           info!("Opening config folder from system tray.");
-          // if let Err(err) = open_config_dir(app) {
-          //   error!("Failed to open config folder: {}", err);
-          // }
+
+          if let Err(err) = config.open_config_dir() {
+            error!("Failed to open config folder: {}", err);
+          }
         }
         EXIT_ID => {
           info!("Exiting through system tray.");

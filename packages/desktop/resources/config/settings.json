@@ -1,4 +1,4 @@
 {
   "$schema": "TODO",
-  "launchOnStart": ["starter/glazewm.json"]
+  "startupConfigs": ["starter/glazewm.json"]
 }

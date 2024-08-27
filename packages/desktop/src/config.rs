@@ -15,8 +15,8 @@ use crate::common::{
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsConfig {
-  /// Relative paths to Zebar window configs to launch on start.
-  pub launch_on_start: Vec<String>,
+  /// Relative paths to window configs to launch on startup.
+  pub startup_configs: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -258,6 +258,23 @@ impl Config {
     copy_dir_all(&starter_path, config_dir, false)?;
 
     Ok(())
+  }
+
+  /// Returns the window configs to open on startup.
+  pub fn startup_window_configs(
+    &self,
+  ) -> anyhow::Result<Vec<WindowConfigEntry>> {
+    self
+      .settings
+      .startup_configs
+      .iter()
+      .map(|config_path| {
+        self
+          .window_config_by_rel_path(config_path)
+          .unwrap_or(None)
+          .context("Failed to get window config.")
+      })
+      .try_collect()
   }
 
   /// Returns the window config at the given relative path.

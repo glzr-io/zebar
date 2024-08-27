@@ -1,4 +1,5 @@
 #![feature(async_closure)]
+#![feature(iterator_try_collect)]
 use std::{env, sync::Arc};
 
 use anyhow::Context;
@@ -139,7 +140,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 
           vec![window_config]
         }
-        _ => config.window_configs.clone(),
+        _ => config.startup_window_configs()?,
       };
 
       task::spawn(async move {
@@ -159,7 +160,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       app.manage(manager);
 
       // Add application icon to system tray.
-      let _ = SysTray::new(app.handle());
+      let _ = SysTray::new(app.handle(), config);
 
       Ok(())
     })
