@@ -48,7 +48,7 @@ pub struct WindowLaunchOptions {
   pub transparent: bool,
 
   /// Where to place the window.
-  pub placement: Vec<WindowPlacement>,
+  pub placements: Vec<WindowPlacement>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -62,9 +62,6 @@ pub enum WindowZOrder {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowPlacement {
-  /// The monitor index to place the window on.
-  pub monitor: u32,
-
   /// Anchor-point of the window.
   pub anchor: WindowAnchor,
 
@@ -79,6 +76,9 @@ pub struct WindowPlacement {
 
   /// Height of the window in % or physical pixels.
   pub height: LengthValue,
+
+  /// Monitor(s) to place the window on.
+  pub monitor_selection: MonitorSelection,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -94,6 +94,16 @@ pub enum WindowAnchor {
   BottomLeft,
   BottomCenter,
   BottomRight,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum MonitorSelection {
+  All,
+  Primary,
+  Secondary,
+  Index(usize),
+  Name(String),
 }
 
 #[derive(Debug)]

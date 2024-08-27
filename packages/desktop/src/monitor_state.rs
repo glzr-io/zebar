@@ -1,7 +1,7 @@
 use anyhow::bail;
 use tauri::AppHandle;
 
-use crate::cli::OutputMonitorsArgs;
+use crate::{cli::OutputMonitorsArgs, config::MonitorSelection};
 
 pub struct MonitorState {
   /// Handle to the Tauri application.
@@ -12,12 +12,13 @@ pub struct MonitorState {
 }
 
 pub struct Monitor {
-  name: Option<String>,
-  x: i32,
-  y: i32,
-  width: u32,
-  height: u32,
-  scale_factor: f64,
+  pub name: Option<String>,
+  pub is_primary: bool,
+  pub x: i32,
+  pub y: i32,
+  pub width: u32,
+  pub height: u32,
+  pub scale_factor: f64,
 }
 
 impl MonitorState {
@@ -32,6 +33,8 @@ impl MonitorState {
   /// Returns a vector of available monitors sorted from left-to-right and
   /// top-to-bottom.
   fn monitors(app_handle: &AppHandle) -> Vec<Monitor> {
+    let mut primary_monitor = app_handle.primary_monitor().unwrap_or(None);
+
     let mut monitors = app_handle
       .available_monitors()
       .map(|monitors| {
@@ -39,6 +42,10 @@ impl MonitorState {
           .into_iter()
           .map(|monitor| Monitor {
             name: monitor.name().cloned(),
+            is_primary: primary_monitor
+              .as_ref()
+              .map(|m| m.name() == monitor.name())
+              .unwrap_or(false),
             x: monitor.position().x,
             y: monitor.position().y,
             width: monitor.size().width,
@@ -90,5 +97,32 @@ impl MonitorState {
     }
 
     Ok(monitors_str)
+  }
+
+  pub fn monitors_by_selection(
+    &self,
+    monitor_selection: &MonitorSelection,
+  ) -> Vec<&Monitor> {
+    match monitor_selection {
+      MonitorSelection::All => self.monitors.iter().collect(),
+      MonitorSelection::Primary => self
+        .monitors
+        .iter()
+        .filter(|monitor| monitor.is_primary)
+        .collect(),
+      MonitorSelection::Secondary => self
+        .monitors
+        .iter()
+        .filter(|monitor| !monitor.is_primary)
+        .collect(),
+      MonitorSelection::Index(index) => {
+        self.monitors.get(*index).into_iter().collect()
+      }
+      MonitorSelection::Name(name) => self
+        .monitors
+        .iter()
+        .filter(|monitor| monitor.name.as_deref() == Some(name))
+        .collect(),
+    }
   }
 }
