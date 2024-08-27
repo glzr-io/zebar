@@ -4,6 +4,7 @@ use std::{env, sync::Arc};
 use anyhow::Context;
 use clap::Parser;
 use tauri::Manager;
+use tokio::task;
 use tracing::{error, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
@@ -108,7 +109,10 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 
             match window_config_res {
               Ok(window_config) => {
-                window_factory_clone.open_one(window_config);
+                let window_factory_clone = window_factory_clone.clone();
+                task::spawn(async move {
+                  window_factory_clone.open_one(window_config).await;
+                });
               }
               Err(err) => {
                 error!("{:?}", err);
@@ -136,7 +140,10 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
         _ => config.window_configs.clone(),
       };
 
-      window_factory.open_all(window_configs);
+      let window_factory_clone = window_factory.clone();
+      task::spawn(async move {
+        window_factory_clone.open_all(window_configs).await;
+      });
 
       // Initialize `WindowFactory` in Tauri state.
       app.manage(window_factory);
