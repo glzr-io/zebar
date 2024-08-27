@@ -26,6 +26,7 @@ pub struct ProviderRef {
   pub stop_tx: mpsc::Sender<()>,
 }
 
+/// Cache for provider output.
 #[derive(Debug, Clone)]
 pub struct ProviderCache {
   pub timestamp: Instant,
@@ -62,6 +63,7 @@ impl From<anyhow::Result<ProviderVariables>> for VariablesResult {
 }
 
 impl ProviderRef {
+  /// Creates a new `ProviderRef` instance.
   pub fn new(
     config_hash: String,
     config: ProviderConfig,
@@ -69,24 +71,18 @@ impl ProviderRef {
     shared_state: &SharedProviderState,
   ) -> anyhow::Result<Self> {
     let provider = Self::create_provider(config, shared_state)?;
+    let min_refresh_interval = provider.min_refresh_interval();
 
     let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
     let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
 
-    let min_refresh_interval = provider.min_refresh_interval();
-    let config_hash_clone = config_hash.clone();
-    let emit_output_tx_clone = emit_output_tx.clone();
-
-    task::spawn(async move {
-      Self::start_provider(
-        provider,
-        config_hash_clone,
-        emit_output_tx_clone,
-        refresh_rx,
-        stop_rx,
-      )
-      .await;
-    });
+    Self::start_provider(
+      provider,
+      config_hash.clone(),
+      emit_output_tx.clone(),
+      refresh_rx,
+      stop_rx,
+    );
 
     Ok(Self {
       config_hash,
@@ -98,46 +94,48 @@ impl ProviderRef {
     })
   }
 
-  /// Starts the provider.
-  async fn start_provider(
+  /// Starts the provider in a separate task.
+  fn start_provider(
     mut provider: Box<dyn Provider + Send>,
     config_hash: String,
     emit_output_tx: mpsc::Sender<ProviderOutput>,
     mut refresh_rx: mpsc::Receiver<()>,
     mut stop_rx: mpsc::Receiver<()>,
   ) {
-    let mut has_started = false;
+    task::spawn(async move {
+      let mut has_started = false;
 
-    // Loop to avoid exiting the select on refresh.
-    loop {
-      let config_hash = config_hash.clone();
-      let emit_output_tx = emit_output_tx.clone();
+      // Loop to avoid exiting the select on refresh.
+      loop {
+        let config_hash = config_hash.clone();
+        let emit_output_tx = emit_output_tx.clone();
 
-      tokio::select! {
-        // Default match arm which handles initialization of the provider.
-        // This has a precondition to avoid running again on refresh.
-        _ = {
-          info!("Starting provider: {}", config_hash);
-          has_started = true;
-          provider.on_start(&config_hash, emit_output_tx.clone())
-        }, if !has_started => break,
+        tokio::select! {
+          // Default match arm which handles initialization of the provider.
+          // This has a precondition to avoid running again on refresh.
+          _ = {
+            info!("Starting provider: {}", config_hash);
+            has_started = true;
+            provider.on_start(&config_hash, emit_output_tx.clone())
+          }, if !has_started => break,
 
-        // On refresh, re-emit provider variables and continue looping.
-        Some(_) = refresh_rx.recv() => {
-          info!("Refreshing provider: {}", config_hash);
-          _ = provider.on_refresh(&config_hash, emit_output_tx).await;
-        },
+          // On refresh, re-emit provider variables and continue looping.
+          Some(_) = refresh_rx.recv() => {
+            info!("Refreshing provider: {}", config_hash);
+            _ = provider.on_refresh(&config_hash, emit_output_tx).await;
+          },
 
-        // On stop, perform any necessary clean up and exit the loop.
-        Some(_) = stop_rx.recv() => {
-          info!("Stopping provider: {}", config_hash);
-          _ = provider.on_stop().await;
-          break;
-        },
+          // On stop, perform any necessary clean up and exit the loop.
+          Some(_) = stop_rx.recv() => {
+            info!("Stopping provider: {}", config_hash);
+            _ = provider.on_stop().await;
+            break;
+          },
+        }
       }
-    }
 
-    info!("Provider stopped: {}", config_hash);
+      info!("Provider stopped: {}", config_hash);
+    });
   }
 
   fn create_provider(

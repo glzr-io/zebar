@@ -155,9 +155,8 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       app.handle().plugin(tauri_plugin_dialog::init())?;
 
       // Initialize `ProviderManager` in Tauri state.
-      let mut manager = ProviderManager::new();
-      manager.init(app.handle());
-      app.manage(Arc::new(manager));
+      let manager = Arc::new(ProviderManager::new(app.handle()));
+      app.manage(manager);
 
       // Add application icon to system tray.
       let _ = SysTray::new(app.handle());

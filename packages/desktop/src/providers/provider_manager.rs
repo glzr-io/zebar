@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use sysinfo::{Networks, System};
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter};
 use tokio::{
   sync::{
     mpsc::{self},
@@ -25,20 +25,21 @@ pub struct SharedProviderState {
 /// Manages the creation and cleanup of providers.
 pub struct ProviderManager {
   emit_output_tx: mpsc::Sender<ProviderOutput>,
-  emit_output_rx: Option<mpsc::Receiver<ProviderOutput>>,
   providers: Arc<Mutex<HashMap<String, ProviderRef>>>,
   shared_state: SharedProviderState,
 }
 
 impl ProviderManager {
-  pub fn new() -> Self {
+  pub fn new(app_handle: &AppHandle) -> Self {
     let (emit_output_tx, emit_output_rx) =
       mpsc::channel::<ProviderOutput>(1);
 
+    let providers = Arc::new(Mutex::new(HashMap::new()));
+    Self::start_listener(app_handle, emit_output_rx, providers.clone());
+
     Self {
       emit_output_tx,
-      emit_output_rx: Some(emit_output_rx),
-      providers: Arc::new(Mutex::new(HashMap::new())),
+      providers,
       shared_state: SharedProviderState {
         sysinfo: Arc::new(Mutex::new(System::new_all())),
         netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
@@ -48,9 +49,11 @@ impl ProviderManager {
 
   /// Starts listening for provider outputs and emits them to frontend
   /// clients.
-  pub fn init<R: Runtime>(&mut self, app_handle: &AppHandle<R>) {
-    let mut emit_output_rx = self.emit_output_rx.take().unwrap();
-    let providers = self.providers.clone();
+  fn start_listener(
+    app_handle: &AppHandle,
+    mut emit_output_rx: mpsc::Receiver<ProviderOutput>,
+    providers: Arc<Mutex<HashMap<String, ProviderRef>>>,
+  ) {
     let app_handle = app_handle.clone();
 
     task::spawn(async move {
