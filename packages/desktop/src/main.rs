@@ -83,8 +83,10 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       let monitor_state = Arc::new(MonitorState::new(app.handle()));
       app.manage(monitor_state.clone());
 
+      // Initialize `WindowFactory` in Tauri state.
       let window_factory =
         Arc::new(WindowFactory::new(app.handle(), monitor_state));
+      app.manage(window_factory.clone());
 
       // If this is not the first instance of the app, this will emit
       // within the original instance and exit immediately.
@@ -111,7 +113,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
               Ok(window_config) => {
                 let window_factory_clone = window_factory_clone.clone();
                 task::spawn(async move {
-                  window_factory_clone.open_one(window_config).await;
+                  window_factory_clone.open(window_config).await;
                 });
               }
               Err(err) => {
@@ -140,13 +142,13 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
         _ => config.window_configs.clone(),
       };
 
-      let window_factory_clone = window_factory.clone();
       task::spawn(async move {
-        window_factory_clone.open_all(window_configs).await;
+        for window_config in window_configs {
+          if let Err(err) = window_factory.open(window_config).await {
+            error!("Failed to open window: {:?}", err);
+          }
+        }
       });
-
-      // Initialize `WindowFactory` in Tauri state.
-      app.manage(window_factory);
 
       app.handle().plugin(tauri_plugin_shell::init())?;
       app.handle().plugin(tauri_plugin_http::init())?;
@@ -155,7 +157,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       // Initialize `ProviderManager` in Tauri state.
       let mut manager = ProviderManager::new();
       manager.init(app.handle());
-      app.manage(manager);
+      app.manage(Arc::new(manager));
 
       // Add application icon to system tray.
       setup_sys_tray(app)?;

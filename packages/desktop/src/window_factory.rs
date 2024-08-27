@@ -9,7 +9,7 @@ use std::{
 use serde::Serialize;
 use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 use tokio::sync::Mutex;
-use tracing::{error, info};
+use tracing::info;
 
 use crate::{
   common::WindowExt,
@@ -60,6 +60,7 @@ pub struct WindowPlacement {
 }
 
 impl WindowFactory {
+  /// Creates a new `WindowFactory` instance.
   pub fn new(
     app_handle: &AppHandle,
     monitor_state: Arc<MonitorState>,
@@ -72,17 +73,8 @@ impl WindowFactory {
     }
   }
 
-  /// Opens all windows in given config entries.
-  pub async fn open_all(&self, config_entires: Vec<WindowConfigEntry>) {
-    for config in config_entires {
-      if let Err(err) = self.open_one(config).await {
-        error!("Failed to open window: {:?}", err);
-      }
-    }
-  }
-
   /// Opens windows from a given config entry.
-  pub async fn open_one(
+  pub async fn open(
     &self,
     config_entry: WindowConfigEntry,
   ) -> anyhow::Result<()> {

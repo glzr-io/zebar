@@ -33,7 +33,7 @@ impl MonitorState {
   /// Returns a vector of available monitors sorted from left-to-right and
   /// top-to-bottom.
   fn monitors(app_handle: &AppHandle) -> Vec<Monitor> {
-    let mut primary_monitor = app_handle.primary_monitor().unwrap_or(None);
+    let primary_monitor = app_handle.primary_monitor().unwrap_or(None);
 
     let mut monitors = app_handle
       .available_monitors()

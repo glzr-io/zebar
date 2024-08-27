@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use tauri::{State, Window};
 
 use crate::{
@@ -26,13 +25,15 @@ pub async fn open_window(
 ) -> anyhow::Result<(), String> {
   let window_config = config
     .window_config_by_abs_path(&config_path)
-    .map_err(|err| err.to_string())?
-    .context("Window config not found.")
+    .and_then(|opt| {
+      opt.ok_or_else(|| anyhow::anyhow!("Window config not found."))
+    })
     .map_err(|err| err.to_string())?;
 
-  window_factory.open_one(window_config).await;
-
-  Ok(())
+  window_factory
+    .open(window_config)
+    .await
+    .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
