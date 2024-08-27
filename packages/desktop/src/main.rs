@@ -13,7 +13,7 @@ use crate::{
   config::Config,
   monitor_state::MonitorState,
   providers::provider_manager::ProviderManager,
-  sys_tray::setup_sys_tray,
+  sys_tray::SysTray,
   window_factory::WindowFactory,
 };
 
@@ -160,7 +160,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       app.manage(Arc::new(manager));
 
       // Add application icon to system tray.
-      setup_sys_tray(app)?;
+      let _ = SysTray::new(app.handle());
 
       Ok(())
     })
