@@ -78,7 +78,12 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       let config = Arc::new(Config::new(app.handle())?);
       app.manage(config.clone());
 
-      let window_factory = Arc::new(WindowFactory::new(app.handle()));
+      // Initialize `MonitorState` in Tauri state.
+      let monitor_state = Arc::new(MonitorState::new(app.handle()));
+      app.manage(monitor_state.clone());
+
+      let window_factory =
+        Arc::new(WindowFactory::new(app.handle(), monitor_state));
 
       // If this is not the first instance of the app, this will emit
       // within the original instance and exit immediately.

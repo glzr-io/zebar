@@ -4,7 +4,10 @@ use tauri::AppHandle;
 use crate::cli::OutputMonitorsArgs;
 
 pub struct MonitorState {
+  /// Handle to the Tauri application.
   app_handle: AppHandle,
+
+  /// Available monitors sorted from left-to-right and top-to-bottom.
   monitors: Vec<Monitor>,
 }
 
@@ -20,7 +23,16 @@ pub struct Monitor {
 impl MonitorState {
   /// Creates a new `MonitorState` instance.
   pub fn new(app_handle: &AppHandle) -> Self {
-    let monitors = app_handle
+    Self {
+      app_handle: app_handle.clone(),
+      monitors: Self::monitors(app_handle),
+    }
+  }
+
+  /// Returns a vector of available monitors sorted from left-to-right and
+  /// top-to-bottom.
+  fn monitors(app_handle: &AppHandle) -> Vec<Monitor> {
+    let mut monitors = app_handle
       .available_monitors()
       .map(|monitors| {
         monitors
@@ -37,10 +49,16 @@ impl MonitorState {
       })
       .unwrap_or(Vec::new());
 
-    Self {
-      app_handle: app_handle.clone(),
-      monitors,
-    }
+    // Sort monitors from left-to-right, top-to-bottom.
+    monitors.sort_by(|monitor_a, monitor_b| {
+      if monitor_a.x == monitor_b.x {
+        monitor_a.y.cmp(&monitor_b.y)
+      } else {
+        monitor_a.x.cmp(&monitor_b.x)
+      }
+    });
+
+    monitors
   }
 
   /// Returns a string representation of the monitors.

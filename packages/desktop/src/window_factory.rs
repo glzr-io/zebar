@@ -14,12 +14,16 @@ use tracing::{error, info};
 use crate::{
   common::WindowExt,
   config::{WindowConfig, WindowConfigEntry},
+  monitor_state::MonitorState,
 };
 
 /// Manages the creation of Zebar windows.
 pub struct WindowFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
+
+  /// Reference to `MonitorState` for window positioning.
+  monitor_state: Arc<MonitorState>,
 
   /// Running total of windows created.
   ///
@@ -43,12 +47,19 @@ pub struct WindowState {
 
   /// Absolute path to the window's config file.
   pub config_path: String,
+
+  /// Absolute path to the window's HTML file.
+  pub html_path: String,
 }
 
 impl WindowFactory {
-  pub fn new(app_handle: &AppHandle) -> Self {
+  pub fn new(
+    app_handle: &AppHandle,
+    monitor_state: Arc<MonitorState>,
+  ) -> Self {
     Self {
       app_handle: app_handle.clone(),
+      monitor_state,
       window_count: Arc::new(AtomicU32::new(0)),
       window_states: Arc::new(Mutex::new(HashMap::new())),
     }
@@ -124,6 +135,7 @@ impl WindowFactory {
       window_id: window_count.to_string(),
       config: config.clone(),
       config_path: config_path.clone(),
+      html_path: html_path.clone(),
     };
 
     _ = window.eval(&format!(
