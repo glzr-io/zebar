@@ -30,7 +30,7 @@ pub async fn open_window(
     .context("Window config not found.")
     .map_err(|err| err.to_string())?;
 
-  window_factory.open_one(window_config);
+  window_factory.open_one(window_config).await;
 
   Ok(())
 }

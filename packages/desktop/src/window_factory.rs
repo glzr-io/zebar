@@ -13,7 +13,7 @@ use tracing::{error, info};
 
 use crate::{
   common::WindowExt,
-  config::{WindowConfig, WindowConfigEntry},
+  config::{WindowAnchor, WindowConfig, WindowConfigEntry},
   monitor_state::MonitorState,
 };
 
@@ -75,84 +75,74 @@ impl WindowFactory {
   /// Opens all windows in given config entries.
   pub async fn open_all(&self, config_entires: Vec<WindowConfigEntry>) {
     for config in config_entires {
-      self.open_one(config).await;
-    }
-  }
-
-  /// Opens a single window from a given config entry.
-  pub async fn open_one(&self, config_entry: WindowConfigEntry) {
-    let new_count = self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
-
-    // Create the window and add it to the window states map.
-    match self.create_window(new_count, config_entry) {
-      Ok(state) => {
-        let mut window_states = self.window_states.lock().await;
-        window_states.insert(state.window_id.clone(), state);
-      }
-      Err(err) => {
+      if let Err(err) = self.open_one(config).await {
         error!("Failed to open window: {:?}", err);
       }
     }
   }
 
-  /// Spawns a new webview window with properties from the given config
-  /// entry.
-  fn create_window(
+  /// Opens windows from a given config entry.
+  pub async fn open_one(
     &self,
-    window_count: u32,
     config_entry: WindowConfigEntry,
-  ) -> anyhow::Result<WindowState> {
+  ) -> anyhow::Result<()> {
     let WindowConfigEntry {
       config,
       config_path,
       html_path,
     } = &config_entry;
 
-    info!("Creating window #{} from {}", window_count, config_path);
+    for placement in self.window_placements(config) {
+      let new_count =
+        self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
 
-    let window_placements = self.window_placements(config);
+      info!("Creating window #{} from {}", new_count, config_path);
 
-    // Note that window label needs to be globally unique.
-    let window = WebviewWindowBuilder::new(
-      &self.app_handle,
-      window_count.to_string(),
-      WebviewUrl::App(
-        format!("http://asset.localhost/{}", html_path).into(),
-      ),
-    )
-    .title("Zebar")
-    .inner_size(500., 500.)
-    .position(500., 500.)
-    .focused(config.launch_options.focused)
-    .skip_taskbar(!config.launch_options.shown_in_taskbar)
-    .visible_on_all_workspaces(true)
-    .transparent(config.launch_options.transparent)
-    .shadow(false)
-    .decorations(false)
-    .resizable(config.launch_options.resizable)
-    .build()?;
+      // Note that window label needs to be globally unique.
+      let window = WebviewWindowBuilder::new(
+        &self.app_handle,
+        new_count.to_string(),
+        WebviewUrl::App(
+          format!("http://asset.localhost/{}", html_path).into(),
+        ),
+      )
+      .title("Zebar")
+      .inner_size(placement.width, placement.height)
+      .position(placement.x, placement.y)
+      .focused(config.launch_options.focused)
+      .skip_taskbar(!config.launch_options.shown_in_taskbar)
+      .visible_on_all_workspaces(true)
+      .transparent(config.launch_options.transparent)
+      .shadow(false)
+      .decorations(false)
+      .resizable(config.launch_options.resizable)
+      .build()?;
 
-    let state = WindowState {
-      window_id: window_count.to_string(),
-      config: config.clone(),
-      config_path: config_path.clone(),
-      html_path: html_path.clone(),
-    };
+      let state = WindowState {
+        window_id: new_count.to_string(),
+        config: config.clone(),
+        config_path: config_path.clone(),
+        html_path: html_path.clone(),
+      };
 
-    _ = window.eval(&format!(
-      "window.__ZEBAR_INITIAL_STATE={}",
-      serde_json::to_string(&state)?
-    ));
+      _ = window.eval(&format!(
+        "window.__ZEBAR_INITIAL_STATE={}",
+        serde_json::to_string(&state)?
+      ));
 
-    // Tauri's `skip_taskbar` option isn't 100% reliable, so we
-    // also set the window as a tool window.
-    #[cfg(target_os = "windows")]
-    let _ = window
-      .as_ref()
-      .window()
-      .set_tool_window(!config.launch_options.shown_in_taskbar);
+      // Tauri's `skip_taskbar` option isn't 100% reliable, so we
+      // also set the window as a tool window.
+      #[cfg(target_os = "windows")]
+      let _ = window
+        .as_ref()
+        .window()
+        .set_tool_window(!config.launch_options.shown_in_taskbar);
 
-    Ok(state)
+      let mut window_states = self.window_states.lock().await;
+      window_states.insert(state.window_id.clone(), state);
+    }
+
+    Ok(())
   }
 
   /// Returns coordinates for window placement based on the given config.
@@ -162,17 +152,51 @@ impl WindowFactory {
   ) -> Vec<WindowPlacement> {
     let mut placements = vec![];
 
-    for entry in config.launch_options.placements.iter() {
+    for placement in config.launch_options.placements.iter() {
       let monitors = self
         .monitor_state
-        .monitors_by_selection(&entry.monitor_selection);
+        .monitors_by_selection(&placement.monitor_selection);
 
       for monitor in monitors {
+        let (anchor_x, anchor_y) = match placement.anchor {
+          WindowAnchor::TopLeft => (monitor.x, monitor.y),
+          WindowAnchor::TopCenter => {
+            (monitor.x + (monitor.width as i32 / 2), monitor.y)
+          }
+          WindowAnchor::TopRight => {
+            (monitor.x + monitor.width as i32, monitor.y)
+          }
+          WindowAnchor::CenterLeft => {
+            (monitor.x, monitor.y + (monitor.height as i32 / 2))
+          }
+          WindowAnchor::Center => (
+            monitor.x + (monitor.width as i32 / 2),
+            monitor.y + (monitor.height as i32 / 2),
+          ),
+          WindowAnchor::CenterRight => (
+            monitor.x + monitor.width as i32,
+            monitor.y + (monitor.height as i32 / 2),
+          ),
+          WindowAnchor::BottomLeft => {
+            (monitor.x, monitor.y + monitor.height as i32)
+          }
+          WindowAnchor::BottomCenter => (
+            monitor.x + (monitor.width as i32 / 2),
+            monitor.y + monitor.height as i32,
+          ),
+          WindowAnchor::BottomRight => (
+            monitor.x + monitor.width as i32,
+            monitor.y + monitor.height as i32,
+          ),
+        };
+
         let placement = WindowPlacement {
-          width: entry.width.to_px(monitor.width),
-          height: entry.height.to_px(monitor.height),
-          x: monitor.x + entry.x,
-          y: monitor.y + entry.y,
+          width: placement.width.to_px(monitor.width as i32) as f64,
+          height: placement.height.to_px(monitor.height as i32) as f64,
+          x: (anchor_x + placement.offset_x.to_px(monitor.width as i32))
+            as f64,
+          y: (anchor_y + placement.offset_y.to_px(monitor.height as i32))
+            as f64,
         };
 
         placements.push(placement);

@@ -89,7 +89,6 @@ pub enum WindowAnchor {
   TopRight,
   CenterLeft,
   Center,
-  CenterCenter,
   CenterRight,
   BottomLeft,
   BottomCenter,
