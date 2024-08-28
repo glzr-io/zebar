@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::{bail, Context};
 use tauri::{
@@ -101,21 +101,32 @@ impl SysTray {
     config: Arc<Config>,
     window_factory: Arc<WindowFactory>,
   ) -> anyhow::Result<Menu<Wry>> {
+    let window_states = window_factory.states_by_config_path().await;
+
     let mut tray_menu = MenuBuilder::new(app_handle)
-      .item(&Self::configs_menu(app_handle, config.clone())?)
+      .item(&Self::configs_menu(
+        app_handle,
+        config.clone(),
+        &window_states,
+      )?)
       .text(MenuEvent::ShowConfigFolder, "Show config folder")
       .separator();
-
-    let window_states = window_factory.states_by_config_path().await;
 
     // Add submenus for currently active windows.
     if !window_states.is_empty() {
       for (config_path, states) in window_states {
+        let label = format!(
+          "({}) {}",
+          states.len(),
+          Self::format_config_path(&config_path, &config.config_dir)
+        );
+
         tray_menu = tray_menu.item(&Self::config_menu(
           app_handle,
           config.clone(),
           &config_path,
-          Some(&states),
+          &label,
+          &states,
         )?);
       }
 
@@ -161,6 +172,7 @@ impl SysTray {
   fn configs_menu(
     app_handle: &AppHandle,
     config: Arc<Config>,
+    window_states: &HashMap<String, Vec<WindowState>>,
   ) -> anyhow::Result<Submenu<Wry>> {
     let configs_menu = SubmenuBuilder::new(app_handle, "Window configs");
 
@@ -169,11 +181,19 @@ impl SysTray {
       .window_configs
       .iter()
       .try_fold(configs_menu, |menu, window_config| {
+        let label = Self::format_config_path(
+          &window_config.config_path,
+          &config.config_dir,
+        );
+
         let item = Self::config_menu(
           app_handle,
           config.clone(),
           &window_config.config_path,
-          None,
+          &label,
+          window_states
+            .get(&window_config.config_path)
+            .unwrap_or(&vec![]),
         )?;
 
         anyhow::Ok(menu.item(&item))
@@ -188,15 +208,15 @@ impl SysTray {
     app_handle: &AppHandle,
     config: Arc<Config>,
     config_path: &str,
-    window_states: Option<&Vec<WindowState>>,
+    label: &str,
+    window_states: &Vec<WindowState>,
   ) -> anyhow::Result<Submenu<Wry>> {
-    // TODO: Get whether it's enabled.
     let enabled_item = CheckMenuItem::with_id(
       app_handle,
       MenuEvent::EnableWindowConfig(config_path.to_string()),
       "Enabled",
       true,
-      true,
+      !window_states.is_empty(),
       None::<&str>,
     )?;
 
@@ -209,14 +229,6 @@ impl SysTray {
       true,
       None::<&str>,
     )?;
-
-    let formatted_path =
-      Self::format_config_path(config_path, &config.config_dir);
-
-    let label = match window_states {
-      Some(states) => format!("({}) {}", states.len(), formatted_path),
-      None => formatted_path,
-    };
 
     let config_menu = SubmenuBuilder::new(app_handle, label)
       .item(&enabled_item)
