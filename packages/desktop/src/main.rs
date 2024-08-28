@@ -104,7 +104,9 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
               // here.
               if let CliCommand::Open(args) = cli.command() {
                 let window_config_res = config_clone
-                  .window_config_by_rel_path(&args.config_path)
+                  .window_config_by_path(
+                    &config_clone.join_path(&args.config_path),
+                  )
                   .and_then(|res| {
                     res.ok_or_else(|| {
                       anyhow::anyhow!(
@@ -138,7 +140,9 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           let window_configs = match cli.command() {
             CliCommand::Open(args) => {
               let window_config = config
-                .window_config_by_rel_path(&args.config_path)?
+                .window_config_by_path(
+                  &config.join_path(&args.config_path),
+                )?
                 .with_context(|| {
                   format!(
                     "Window config not found at {}.",

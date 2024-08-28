@@ -133,8 +133,9 @@ pub struct WindowConfigEntry {
 }
 
 impl Config {
-  /// Reads the config files within the config directory and creates a new
-  /// `Config` instance.
+  /// Reads the config files within the config directory.
+  ///
+  /// Returns a new `Config` instance.
   pub fn new(app_handle: &AppHandle) -> anyhow::Result<Self> {
     let config_dir = app_handle
       .path()
@@ -245,7 +246,7 @@ impl Config {
     Ok(configs)
   }
 
-  /// Initialize config at the given path from the starter resource.
+  /// Initializes config at the given path from the starter resource.
   fn create_from_starter(
     app_handle: &AppHandle,
     config_dir: &PathBuf,
@@ -270,24 +271,26 @@ impl Config {
       .iter()
       .map(|config_path| {
         self
-          .window_config_by_rel_path(config_path)
+          .window_config_by_path(&self.join_path(config_path))
           .unwrap_or(None)
           .context("Failed to get window config.")
       })
       .try_collect()
   }
 
-  /// Returns the window config at the given relative path.
-  pub fn window_config_by_rel_path(
-    &self,
-    config_path: &str,
-  ) -> anyhow::Result<Option<WindowConfigEntry>> {
-    let config_path = self.config_dir.join(config_path);
-    self.window_config_by_abs_path(&config_path.to_string_lossy())
+  /// Joins the given path with the config directory path.
+  ///
+  /// Returns an absolute path.
+  pub fn join_path(&self, config_path: &str) -> String {
+    self
+      .config_dir
+      .join(config_path)
+      .to_string_lossy()
+      .to_string()
   }
 
   /// Returns the window config at the given absolute path.
-  pub fn window_config_by_abs_path(
+  pub fn window_config_by_path(
     &self,
     config_path: &str,
   ) -> anyhow::Result<Option<WindowConfigEntry>> {

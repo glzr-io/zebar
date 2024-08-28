@@ -24,7 +24,7 @@ pub async fn open_window(
   window_factory: State<'_, Arc<WindowFactory>>,
 ) -> anyhow::Result<(), String> {
   let window_config = config
-    .window_config_by_abs_path(&config_path)
+    .window_config_by_path(&config_path)
     .and_then(|opt| {
       opt.ok_or_else(|| anyhow::anyhow!("Window config not found."))
     })

@@ -10,16 +10,16 @@ use tauri::{
 use tracing::{error, info};
 
 use crate::{
-  config::{Config, WindowConfig, WindowConfigEntry},
-  window_factory::WindowFactory,
+  config::Config,
+  window_factory::{WindowFactory, WindowState},
 };
 
 #[derive(Debug, Clone)]
 enum MenuEvent {
   ShowConfigFolder,
   Exit,
-  EnableWindowConfig(usize),
-  StartupWindowConfig(usize),
+  EnableWindowConfig(String),
+  StartupWindowConfig(String),
 }
 
 impl ToString for MenuEvent {
@@ -42,9 +42,9 @@ impl FromStr for MenuEvent {
     } else if event == "exit" {
       Ok(MenuEvent::Exit)
     } else if let Some(id) = event.strip_prefix("enable_") {
-      Ok(MenuEvent::EnableWindowConfig(id.parse()?))
+      Ok(MenuEvent::EnableWindowConfig(id.to_string()))
     } else if let Some(id) = event.strip_prefix("startup_") {
-      Ok(MenuEvent::StartupWindowConfig(id.parse()?))
+      Ok(MenuEvent::StartupWindowConfig(id.to_string()))
     } else {
       bail!("Invalid menu event: {}", event)
     }
@@ -108,18 +108,14 @@ impl SysTray {
 
     let window_states = window_factory.states_by_config_path().await;
 
-    // If there are active windows, add them to the menu.
+    // Add submenus for currently active windows.
     if !window_states.is_empty() {
-      for (id, state) in window_states {
-        let config_path =
-          Self::format_config_path(&id, &config.config_dir);
-        let label = format!("({}) {}", state.len(), config_path);
-
+      for (config_path, states) in window_states {
         tray_menu = tray_menu.item(&Self::config_menu(
           app_handle,
-          &state.get(0).unwrap().config,
-          0,
-          &label,
+          config.clone(),
+          &config_path,
+          Some(&states),
         )?);
       }
 
@@ -172,18 +168,12 @@ impl SysTray {
     let configs_menu = config
       .window_configs
       .iter()
-      .enumerate()
-      .try_fold(configs_menu, |menu, (index, window_config)| {
-        let label = Self::format_config_path(
-          &window_config.config_path,
-          &config.config_dir,
-        );
-
+      .try_fold(configs_menu, |menu, window_config| {
         let item = Self::config_menu(
           app_handle,
-          &window_config.config,
-          index,
-          &label,
+          config.clone(),
+          &window_config.config_path,
+          None,
         )?;
 
         anyhow::Ok(menu.item(&item))
@@ -196,14 +186,14 @@ impl SysTray {
   /// Creates and returns a submenu for the given window config.
   fn config_menu(
     app_handle: &AppHandle,
-    config: &WindowConfig,
-    index: usize,
-    label: &str,
+    config: Arc<Config>,
+    config_path: &str,
+    window_states: Option<&Vec<WindowState>>,
   ) -> anyhow::Result<Submenu<Wry>> {
     // TODO: Get whether it's enabled.
     let enabled_item = CheckMenuItem::with_id(
       app_handle,
-      MenuEvent::EnableWindowConfig(index),
+      MenuEvent::EnableWindowConfig(config_path.to_string()),
       "Enabled",
       true,
       true,
@@ -213,12 +203,20 @@ impl SysTray {
     // TODO: Get whether it's launched on startup.
     let startup_item = CheckMenuItem::with_id(
       app_handle,
-      MenuEvent::StartupWindowConfig(index),
+      MenuEvent::StartupWindowConfig(config_path.to_string()),
       "Launch on startup",
       true,
       true,
       None::<&str>,
     )?;
+
+    let formatted_path =
+      Self::format_config_path(config_path, &config.config_dir);
+
+    let label = match window_states {
+      Some(states) => format!("({}) {}", states.len(), formatted_path),
+      None => formatted_path,
+    };
 
     let config_menu = SubmenuBuilder::new(app_handle, label)
       .item(&enabled_item)
