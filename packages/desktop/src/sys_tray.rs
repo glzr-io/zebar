@@ -1,6 +1,6 @@
-use std::{fmt, path::PathBuf, str::FromStr, sync::Arc};
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
@@ -15,39 +15,35 @@ use crate::config::{Config, WindowConfigEntry};
 enum MenuEvent {
   ShowConfigFolder,
   Exit,
-  EnableWindowConfig(String),
-  StartupWindowConfig(String),
+  EnableWindowConfig(usize),
+  StartupWindowConfig(usize),
 }
 
-impl fmt::Display for MenuEvent {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl ToString for MenuEvent {
+  fn to_string(&self) -> String {
     match self {
-      MenuEvent::ShowConfigFolder => write!(f, "show_config_folder"),
-      MenuEvent::Exit => write!(f, "exit"),
-      MenuEvent::EnableWindowConfig(id) => {
-        write!(f, "enable_window_config_{}", id)
-      }
-      MenuEvent::StartupWindowConfig(id) => {
-        write!(f, "startup_window_config_{}", id)
-      }
+      MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
+      MenuEvent::Exit => "exit".to_string(),
+      MenuEvent::EnableWindowConfig(id) => format!("enable_{}", id),
+      MenuEvent::StartupWindowConfig(id) => format!("startup_{}", id),
     }
   }
 }
 
 impl FromStr for MenuEvent {
-  type Err = String;
+  type Err = anyhow::Error;
 
   fn from_str(event: &str) -> Result<Self, Self::Err> {
     if event == "show_config_folder" {
       Ok(MenuEvent::ShowConfigFolder)
     } else if event == "exit" {
       Ok(MenuEvent::Exit)
-    } else if let Some(id) = event.strip_prefix("enable_window_config_") {
-      Ok(MenuEvent::EnableWindowConfig(id.to_string()))
-    } else if let Some(id) = event.strip_prefix("startup_window_config_") {
-      Ok(MenuEvent::StartupWindowConfig(id.to_string()))
+    } else if let Some(id) = event.strip_prefix("enable_") {
+      Ok(MenuEvent::EnableWindowConfig(id.parse()?))
+    } else if let Some(id) = event.strip_prefix("startup_") {
+      Ok(MenuEvent::StartupWindowConfig(id.parse()?))
     } else {
-      Err(format!("Invalid menu event: {}", event))
+      bail!("Invalid menu event: {}", event)
     }
   }
 }
@@ -68,10 +64,9 @@ impl SysTray {
       .menu(&Self::tray_menu(app_handle, config.clone())?)
       .tooltip(tooltip)
       .on_menu_event(move |app, event| {
-        if let Ok(event) = MenuEvent::from_str(&event.id().as_ref()) {
-          Self::handle_menu_event(event, app, config.clone());
-        } else {
-          warn!("Unknown menu event: {}", event.id().as_ref());
+        match MenuEvent::from_str(event.id.as_ref()) {
+          Ok(event) => Self::handle_menu_event(event, app, config.clone()),
+          Err(err) => warn!("{:?}", err),
         }
       })
       .build(app_handle)?;
@@ -140,15 +135,18 @@ impl SysTray {
     let configs_menu = config
       .window_configs
       .iter()
-      .fold(configs_menu, |menu, window_config| {
-        menu.text(
-          window_config.config_path.clone(),
-          Self::format_config_path(
-            &window_config.config_path,
-            &config.config_dir,
-          ),
-        )
-      })
+      .enumerate()
+      .try_fold(configs_menu, |menu, (index, window_config)| {
+        let label = Self::format_config_path(
+          &window_config.config_path,
+          &config.config_dir,
+        );
+
+        let item =
+          Self::config_menu(app_handle, window_config, index, &label)?;
+
+        anyhow::Ok(menu.item(&item))
+      })?
       .build()?;
 
     Ok(configs_menu)
@@ -158,22 +156,30 @@ impl SysTray {
   fn config_menu(
     app_handle: &AppHandle,
     config_entry: &WindowConfigEntry,
+    index: usize,
+    label: &str,
   ) -> anyhow::Result<Submenu<Wry>> {
     // TODO: Get whether it's enabled.
-    let enabled_item =
-      CheckMenuItem::new(app_handle, "Enabled", true, true, None::<&str>)?;
+    let enabled_item = CheckMenuItem::with_id(
+      app_handle,
+      MenuEvent::EnableWindowConfig(index),
+      "Enabled",
+      true,
+      true,
+      None::<&str>,
+    )?;
 
     // TODO: Get whether it's launched on startup.
-    let startup_item = CheckMenuItem::new(
+    let startup_item = CheckMenuItem::with_id(
       app_handle,
+      MenuEvent::StartupWindowConfig(index),
       "Launch on startup",
       true,
       true,
       None::<&str>,
     )?;
 
-    // TODO: Show the label for the config.
-    let config_menu = SubmenuBuilder::new(app_handle, "Window config")
+    let config_menu = SubmenuBuilder::new(app_handle, label)
       .item(&enabled_item)
       .item(&startup_item)
       .build()?;
