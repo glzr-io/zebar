@@ -1,12 +1,12 @@
 #![feature(async_closure)]
 #![feature(iterator_try_collect)]
 
-use std::{env, sync::Arc};
+use std::{env, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use clap::Parser;
 use tauri::{async_runtime::block_on, Manager};
-use tokio::task;
+use tokio::{task, time::sleep};
 use tracing::{error, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
@@ -100,35 +100,40 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
             move |_, args, _| {
               let cli = Cli::parse_from(args);
 
+              // TODO: Improve this.
+              let config_clone = config_clone.clone();
+              let window_factory_clone = window_factory_clone.clone();
+
               // CLI command is guaranteed to be one of the open commands
               // here.
-              if let CliCommand::Open(args) = cli.command() {
-                let window_config_res = config_clone
-                  .window_config_by_path(
-                    &config_clone.join_path(&args.config_path),
-                  )
-                  .and_then(|res| {
-                    res.ok_or_else(|| {
-                      anyhow::anyhow!(
-                        "Window config not found at {}.",
-                        args.config_path
-                      )
-                    })
-                  });
-
-                match window_config_res {
-                  Ok(window_config) => {
-                    let window_factory_clone =
-                      window_factory_clone.clone();
-                    task::spawn(async move {
-                      window_factory_clone.open(window_config).await;
+              task::spawn(async move {
+                if let CliCommand::Open(args) = cli.command() {
+                  let window_config_res = config_clone
+                    .window_config_by_path(
+                      &config_clone.join_path(&args.config_path),
+                    )
+                    .await
+                    .and_then(|res| {
+                      res.ok_or_else(|| {
+                        anyhow::anyhow!(
+                          "Window config not found at {}.",
+                          args.config_path
+                        )
+                      })
                     });
-                  }
-                  Err(err) => {
-                    error!("{:?}", err);
+
+                  match window_config_res {
+                    Ok(window_config) => {
+                      let window_factory_clone =
+                        window_factory_clone.clone();
+                      window_factory_clone.open(window_config).await;
+                    }
+                    Err(err) => {
+                      error!("{:?}", err);
+                    }
                   }
                 }
-              }
+              });
             },
           ))?;
 
@@ -142,7 +147,8 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
               let window_config = config
                 .window_config_by_path(
                   &config.join_path(&args.config_path),
-                )?
+                )
+                .await?
                 .with_context(|| {
                   format!(
                     "Window config not found at {}.",
@@ -152,7 +158,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 
               vec![window_config]
             }
-            _ => config.startup_window_configs()?,
+            _ => config.startup_window_configs().await?,
           };
 
           for window_config in window_configs {
@@ -171,7 +177,15 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 
           // Add application icon to system tray.
           let _ =
-            SysTray::new(app.handle(), config, window_factory).await?;
+            SysTray::new(app.handle(), config.clone(), window_factory)
+              .await?;
+
+          // TODO: Remove this test.
+          tokio::spawn(async move {
+            sleep(Duration::from_secs(60)).await;
+            println!("Reloading config...");
+            config.reload().await.unwrap();
+          });
 
           Ok(())
         })

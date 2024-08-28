@@ -25,6 +25,7 @@ pub async fn open_window(
 ) -> anyhow::Result<(), String> {
   let window_config = config
     .window_config_by_path(&config_path)
+    .await
     .and_then(|opt| {
       opt.ok_or_else(|| anyhow::anyhow!("Window config not found."))
     })

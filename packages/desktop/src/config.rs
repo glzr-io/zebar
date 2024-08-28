@@ -1,11 +1,13 @@
 use std::{
   fs::{self},
   path::PathBuf,
+  sync::Arc,
 };
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
+use tokio::sync::{broadcast, Mutex};
 use tracing::{info, warn};
 
 use crate::common::{
@@ -114,10 +116,16 @@ pub struct Config {
   pub config_dir: PathBuf,
 
   /// Global settings.
-  pub settings: SettingsConfig,
+  pub settings: Arc<Mutex<SettingsConfig>>,
 
   /// List of window configs.
-  pub window_configs: Vec<WindowConfigEntry>,
+  pub window_configs: Arc<Mutex<Vec<WindowConfigEntry>>>,
+
+  _changes_rx:
+    broadcast::Receiver<(SettingsConfig, Vec<WindowConfigEntry>)>,
+
+  pub changes_tx:
+    broadcast::Sender<(SettingsConfig, Vec<WindowConfigEntry>)>,
 }
 
 #[derive(Clone, Debug)]
@@ -144,21 +152,35 @@ impl Config {
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
     let window_configs = Self::read_window_configs(&config_dir)?;
+    let (changes_tx, _changes_rx) = broadcast::channel(16);
 
     Ok(Self {
       app_handle: app_handle.clone(),
       config_dir,
-      settings,
-      window_configs,
+      settings: Arc::new(Mutex::new(settings)),
+      window_configs: Arc::new(Mutex::new(window_configs)),
+      changes_tx,
+      _changes_rx,
     })
   }
 
   /// Re-evaluates config files within the config directory.
-  pub fn reload(&mut self) -> anyhow::Result<()> {
-    self.settings =
+  pub async fn reload(&self) -> anyhow::Result<()> {
+    let new_settings =
       Self::read_settings_or_init(&self.app_handle, &self.config_dir)?;
+    let new_window_configs = Self::read_window_configs(&self.config_dir)?;
 
-    self.window_configs = Self::read_window_configs(&self.config_dir)?;
+    {
+      let mut settings = self.settings.lock().await;
+      *settings = new_settings.clone();
+    }
+
+    {
+      let mut window_configs = self.window_configs.lock().await;
+      *window_configs = new_window_configs.clone();
+    }
+
+    self.changes_tx.send((new_settings, new_window_configs))?;
 
     Ok(())
   }
@@ -261,21 +283,30 @@ impl Config {
     Ok(())
   }
 
+  pub async fn window_configs(&self) -> Vec<WindowConfigEntry> {
+    self.window_configs.lock().await.clone()
+  }
+
   /// Returns the window configs to open on startup.
-  pub fn startup_window_configs(
+  pub async fn startup_window_configs(
     &self,
   ) -> anyhow::Result<Vec<WindowConfigEntry>> {
-    self
-      .settings
-      .startup_configs
-      .iter()
-      .map(|config_path| {
-        self
-          .window_config_by_path(&self.join_path(config_path))
-          .unwrap_or(None)
-          .context("Failed to get window config.")
-      })
-      .try_collect()
+    let startup_configs =
+      { self.settings.lock().await.startup_configs.clone() };
+
+    let mut result = Vec::new();
+
+    for config_path in startup_configs {
+      let config = self
+        .window_config_by_path(&self.join_path(&config_path))
+        .await
+        .unwrap_or(None)
+        .context("Failed to get window config.")?;
+
+      result.push(config);
+    }
+
+    Ok(result)
   }
 
   /// Joins the given path with the config directory path.
@@ -290,15 +321,15 @@ impl Config {
   }
 
   /// Returns the window config at the given absolute path.
-  pub fn window_config_by_path(
+  pub async fn window_config_by_path(
     &self,
     config_path: &str,
   ) -> anyhow::Result<Option<WindowConfigEntry>> {
     let formatted_config_path =
       PathBuf::from(config_path).canonicalize_pretty()?;
 
-    let config_entry = self
-      .window_configs
+    let window_configs = self.window_configs.lock().await;
+    let config_entry = window_configs
       .iter()
       .find(|entry| entry.config_path == formatted_config_path);
 

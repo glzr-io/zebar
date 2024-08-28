@@ -56,6 +56,7 @@ pub struct SysTray {
   app_handle: AppHandle,
   config: Arc<Config>,
   window_factory: Arc<WindowFactory>,
+  tray_icon: Option<TrayIcon>,
 }
 
 impl SysTray {
@@ -64,14 +65,18 @@ impl SysTray {
     app_handle: &AppHandle,
     config: Arc<Config>,
     window_factory: Arc<WindowFactory>,
-  ) -> anyhow::Result<SysTray> {
-    let sys_tray = Self {
+  ) -> anyhow::Result<Arc<SysTray>> {
+    let mut sys_tray = Self {
       app_handle: app_handle.clone(),
       config,
       window_factory,
+      tray_icon: None,
     };
 
-    sys_tray.create_tray_icon().await?;
+    sys_tray.tray_icon = Some(sys_tray.create_tray_icon().await?);
+
+    let sys_tray = Arc::new(sys_tray);
+    sys_tray.clone().start_listener();
 
     Ok(sys_tray)
   }
@@ -94,9 +99,25 @@ impl SysTray {
         if let Err(err) = event_res {
           error!("{:?}", err);
         }
-      });
+      })
+      .build(&self.app_handle)?;
 
-    Ok(tray_icon.build(&self.app_handle)?)
+    Ok(tray_icon)
+  }
+
+  fn start_listener(self: Arc<Self>) {
+    let config = self.config.clone();
+    let mut changes_rx = config.changes_tx.subscribe();
+
+    tokio::spawn(async move {
+      tokio::select! {
+        Ok(_) = changes_rx.recv() => {
+          if let Some(tray_icon) = self.tray_icon.as_ref() {
+            tray_icon.set_menu(Some(self.create_tray_menu().await.unwrap()));
+          }
+        }
+      }
+    });
   }
 
   /// Returns the image to use for the system tray icon.
@@ -113,7 +134,7 @@ impl SysTray {
     let window_states = self.window_factory.states_by_config_path().await;
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
-      .item(&self.create_configs_menu(&window_states)?)
+      .item(&self.create_configs_menu(&window_states).await?)
       .text(MenuEvent::ShowConfigFolder, "Show config folder")
       .separator();
 
@@ -172,7 +193,7 @@ impl SysTray {
   }
 
   /// Creates and returns a submenu for the window configs.
-  fn create_configs_menu(
+  async fn create_configs_menu(
     &self,
     window_states: &HashMap<String, Vec<WindowState>>,
   ) -> anyhow::Result<Submenu<Wry>> {
@@ -180,7 +201,7 @@ impl SysTray {
       SubmenuBuilder::new(&self.app_handle, "Window configs");
 
     // Add each window config to the menu.
-    for window_config in &self.config.window_configs {
+    for window_config in &self.config.window_configs().await {
       let label = Self::format_config_path(
         &window_config.config_path,
         &self.config.config_dir,
