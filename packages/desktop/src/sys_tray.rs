@@ -9,7 +9,10 @@ use tauri::{
 };
 use tracing::{error, info};
 
-use crate::config::{Config, WindowConfigEntry};
+use crate::{
+  config::{Config, WindowConfig, WindowConfigEntry},
+  window_factory::WindowFactory,
+};
 
 #[derive(Debug, Clone)]
 enum MenuEvent {
@@ -53,15 +56,20 @@ pub struct SysTray {}
 
 impl SysTray {
   /// Creates a new system tray icon for Zebar.
-  pub fn new(
+  pub async fn new(
     app_handle: &AppHandle,
     config: Arc<Config>,
+    window_factory: Arc<WindowFactory>,
   ) -> anyhow::Result<TrayIcon> {
     let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
 
+    let tray_menu =
+      Self::tray_menu(app_handle, config.clone(), window_factory.clone())
+        .await?;
+
     let tray_icon = TrayIconBuilder::with_id("tray")
       .icon(Self::icon_image(app_handle)?)
-      .menu(&Self::tray_menu(app_handle, config.clone())?)
+      .menu(&tray_menu)
       .tooltip(tooltip)
       .on_menu_event(move |app, event| {
         let event = MenuEvent::from_str(event.id.as_ref());
@@ -88,18 +96,39 @@ impl SysTray {
   }
 
   /// Creates and returns the main system tray menu.
-  fn tray_menu(
+  async fn tray_menu(
     app_handle: &AppHandle,
     config: Arc<Config>,
+    window_factory: Arc<WindowFactory>,
   ) -> anyhow::Result<Menu<Wry>> {
-    let tray_menu = MenuBuilder::new(app_handle)
-      .item(&Self::configs_menu(app_handle, config)?)
+    let mut tray_menu = MenuBuilder::new(app_handle)
+      .item(&Self::configs_menu(app_handle, config.clone())?)
       .text(MenuEvent::ShowConfigFolder, "Show config folder")
-      .separator()
-      .text(MenuEvent::Exit, "Exit")
-      .build()?;
+      .separator();
 
-    Ok(tray_menu)
+    let window_states = window_factory.states_by_config_path().await;
+
+    // If there are active windows, add them to the menu.
+    if !window_states.is_empty() {
+      for (id, state) in window_states {
+        let config_path =
+          Self::format_config_path(&id, &config.config_dir);
+        let label = format!("({}) {}", state.len(), config_path);
+
+        tray_menu = tray_menu.item(&Self::config_menu(
+          app_handle,
+          &state.get(0).unwrap().config,
+          0,
+          &label,
+        )?);
+      }
+
+      tray_menu = tray_menu.separator();
+    }
+
+    tray_menu = tray_menu.text(MenuEvent::Exit, "Exit");
+
+    Ok(tray_menu.build()?)
   }
 
   /// Callback for system tray menu events.
@@ -150,8 +179,12 @@ impl SysTray {
           &config.config_dir,
         );
 
-        let item =
-          Self::config_menu(app_handle, window_config, index, &label)?;
+        let item = Self::config_menu(
+          app_handle,
+          &window_config.config,
+          index,
+          &label,
+        )?;
 
         anyhow::Ok(menu.item(&item))
       })?
@@ -163,7 +196,7 @@ impl SysTray {
   /// Creates and returns a submenu for the given window config.
   fn config_menu(
     app_handle: &AppHandle,
-    config_entry: &WindowConfigEntry,
+    config: &WindowConfig,
     index: usize,
     label: &str,
   ) -> anyhow::Result<Submenu<Wry>> {

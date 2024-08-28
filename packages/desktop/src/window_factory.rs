@@ -198,8 +198,25 @@ impl WindowFactory {
     placements
   }
 
-  /// Gets an open window's state by a given window ID.
+  /// Returns window state by a given window ID.
   pub async fn state_by_id(&self, window_id: &str) -> Option<WindowState> {
     self.window_states.lock().await.get(window_id).cloned()
+  }
+
+  /// Returns window states grouped by their config paths.
+  pub async fn states_by_config_path(
+    &self,
+  ) -> HashMap<String, Vec<WindowState>> {
+    self.window_states.lock().await.values().fold(
+      HashMap::new(),
+      |mut acc, state| {
+        acc
+          .entry(state.config_path.clone())
+          .or_insert_with(Vec::new)
+          .push(state.clone());
+
+        acc
+      },
+    )
   }
 }
