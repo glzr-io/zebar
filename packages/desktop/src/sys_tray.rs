@@ -7,7 +7,7 @@ use tauri::{
   tray::{TrayIcon, TrayIconBuilder},
   AppHandle, Wry,
 };
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use crate::config::{Config, WindowConfigEntry};
 
@@ -64,9 +64,14 @@ impl SysTray {
       .menu(&Self::tray_menu(app_handle, config.clone())?)
       .tooltip(tooltip)
       .on_menu_event(move |app, event| {
-        match MenuEvent::from_str(event.id.as_ref()) {
-          Ok(event) => Self::handle_menu_event(event, app, config.clone()),
-          Err(err) => warn!("{:?}", err),
+        let event = MenuEvent::from_str(event.id.as_ref());
+
+        let event_res = event.map(|event| {
+          Self::handle_menu_event(event, app, config.clone())
+        });
+
+        if let Err(err) = event_res {
+          error!("{:?}", err);
         }
       })
       .build(app_handle)?;
@@ -102,26 +107,29 @@ impl SysTray {
     event: MenuEvent,
     app_handle: &AppHandle,
     config: Arc<Config>,
-  ) {
+  ) -> anyhow::Result<()> {
     match event {
       MenuEvent::ShowConfigFolder => {
         info!("Opening config folder from system tray.");
 
-        if let Err(err) = config.open_config_dir() {
-          error!("Failed to open config folder: {}", err);
-        }
+        config
+          .open_config_dir()
+          .context("Failed to open config folder.")?;
       }
       MenuEvent::Exit => {
         info!("Exiting through system tray.");
+
         app_handle.exit(0)
       }
       MenuEvent::EnableWindowConfig(id) => {
-        info!("Window config enabled: {}", id);
+        info!("Window config at index {} enabled.", id);
       }
       MenuEvent::StartupWindowConfig(id) => {
-        info!("Window config set to launch on startup: {}", id);
+        info!("Window config at index {} set to launch on startup.", id);
       }
-    }
+    };
+
+    Ok(())
   }
 
   /// Creates and returns a submenu for the window configs.
