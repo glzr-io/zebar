@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 use tauri::{
-  menu::MenuBuilder,
+  menu::{MenuBuilder, Submenu, SubmenuBuilder},
   tray::{TrayIcon, TrayIconBuilder},
-  AppHandle,
+  AppHandle, Wry,
 };
 use tracing::{error, info};
 
@@ -27,6 +27,7 @@ impl SysTray {
       .context("No icon defined in Tauri config.")?;
 
     let tray_menu = MenuBuilder::new(app_handle)
+      .item(&Self::configs_menu(app_handle, config.clone())?)
       .text(SHOW_CONFIG_FOLDER_ID, "Show config folder")
       .separator()
       .text(EXIT_ID, "Exit")
@@ -55,5 +56,45 @@ impl SysTray {
       .build(app_handle)?;
 
     Ok(tray_icon)
+  }
+
+  /// Creates a submenu for the window configs.
+  fn configs_menu(
+    app_handle: &AppHandle,
+    config: Arc<Config>,
+  ) -> anyhow::Result<Submenu<Wry>> {
+    let configs_menu = SubmenuBuilder::new(app_handle, "Window configs");
+
+    // Add each window config to the menu.
+    let configs_menu = config
+      .window_configs
+      .iter()
+      .fold(configs_menu, |menu, window_config| {
+        menu.text(
+          window_config.config_path.clone(),
+          Self::format_config_path(
+            &window_config.config_path,
+            &config.config_dir,
+          ),
+        )
+      })
+      .build()?;
+
+    Ok(configs_menu)
+  }
+
+  /// Formats the config path for display in the system tray.
+  fn format_config_path(
+    config_path: &str,
+    config_dir: &PathBuf,
+  ) -> String {
+    let config_pathbuf = PathBuf::from(config_path);
+
+    config_pathbuf
+      .strip_prefix(config_dir)
+      .unwrap_or(&config_pathbuf)
+      .with_extension("")
+      .to_string_lossy()
+      .to_string()
   }
 }
