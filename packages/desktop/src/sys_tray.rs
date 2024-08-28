@@ -2,54 +2,52 @@ use std::{fmt, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::Context;
 use tauri::{
-  menu::{CheckMenuItem, MenuBuilder, Submenu, SubmenuBuilder},
+  image::Image,
+  menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
   tray::{TrayIcon, TrayIconBuilder},
   AppHandle, Wry,
 };
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::config::{Config, WindowConfigEntry};
 
 #[derive(Debug, Clone)]
-enum MenuId {
+enum MenuEvent {
   ShowConfigFolder,
   Exit,
   EnableWindowConfig(String),
   StartupWindowConfig(String),
 }
 
-impl fmt::Display for MenuId {
+impl fmt::Display for MenuEvent {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      MenuId::ShowConfigFolder => write!(f, "show_config_folder"),
-      MenuId::Exit => write!(f, "exit"),
-      MenuId::EnableWindowConfig(path) => {
-        write!(f, "enable_window_config_{}", path)
+      MenuEvent::ShowConfigFolder => write!(f, "show_config_folder"),
+      MenuEvent::Exit => write!(f, "exit"),
+      MenuEvent::EnableWindowConfig(id) => {
+        write!(f, "enable_window_config_{}", id)
       }
-      MenuId::StartupWindowConfig(path) => {
-        write!(f, "startup_window_config_{}", path)
+      MenuEvent::StartupWindowConfig(id) => {
+        write!(f, "startup_window_config_{}", id)
       }
     }
   }
 }
 
-impl FromStr for MenuId {
+impl FromStr for MenuEvent {
   type Err = String;
 
-  fn from_str(id_str: &str) -> Result<Self, Self::Err> {
-    if id_str == "show_config_folder" {
-      Ok(MenuId::ShowConfigFolder)
-    } else if id_str == "exit" {
-      Ok(MenuId::Exit)
-    } else if let Some(path) = id_str.strip_prefix("enable_window_config_")
-    {
-      Ok(MenuId::EnableWindowConfig(path.to_string()))
-    } else if let Some(path) =
-      id_str.strip_prefix("startup_window_config_")
-    {
-      Ok(MenuId::StartupWindowConfig(path.to_string()))
+  fn from_str(event: &str) -> Result<Self, Self::Err> {
+    if event == "show_config_folder" {
+      Ok(MenuEvent::ShowConfigFolder)
+    } else if event == "exit" {
+      Ok(MenuEvent::Exit)
+    } else if let Some(id) = event.strip_prefix("enable_window_config_") {
+      Ok(MenuEvent::EnableWindowConfig(id.to_string()))
+    } else if let Some(id) = event.strip_prefix("startup_window_config_") {
+      Ok(MenuEvent::StartupWindowConfig(id.to_string()))
     } else {
-      Err(format!("Invalid menu ID: {}", id_str))
+      Err(format!("Invalid menu event: {}", event))
     }
   }
 }
@@ -63,44 +61,17 @@ impl SysTray {
     app_handle: &AppHandle,
     config: Arc<Config>,
   ) -> anyhow::Result<TrayIcon> {
-    let icon_image = app_handle
-      .default_window_icon()
-      .context("No icon defined in Tauri config.")?;
-
-    let tray_menu = MenuBuilder::new(app_handle)
-      .item(&Self::configs_menu(app_handle, config.clone())?)
-      .text(MenuId::ShowConfigFolder, "Show config folder")
-      .separator()
-      .text(MenuId::Exit, "Exit")
-      .build()?;
+    let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
 
     let tray_icon = TrayIconBuilder::with_id("tray")
-      .icon(icon_image.clone())
-      .menu(&tray_menu)
-      .tooltip(format!("Zebar v{}", env!("VERSION_NUMBER")))
+      .icon(Self::icon_image(app_handle)?)
+      .menu(&Self::tray_menu(app_handle, config.clone())?)
+      .tooltip(tooltip)
       .on_menu_event(move |app, event| {
-        if let Ok(event) = MenuId::from_str(&event.id().0) {
-          match event {
-            MenuId::ShowConfigFolder => {
-              info!("Opening config folder from system tray.");
-
-              if let Err(err) = config.open_config_dir() {
-                error!("Failed to open config folder: {}", err);
-              }
-            }
-            MenuId::Exit => {
-              info!("Exiting through system tray.");
-              app.exit(0)
-            }
-            MenuId::EnableWindowConfig(id) => {
-              info!("Window config enabled: {}", id);
-            }
-            MenuId::StartupWindowConfig(id) => {
-              info!("Window config set to launch on startup: {}", id);
-            }
-          }
+        if let Ok(event) = MenuEvent::from_str(&event.id().as_ref()) {
+          Self::handle_menu_event(event, app, config.clone());
         } else {
-          println!("Unknown menu event: {}", event.id().0);
+          warn!("Unknown menu event: {}", event.id().as_ref());
         }
       })
       .build(app_handle)?;
@@ -108,7 +79,57 @@ impl SysTray {
     Ok(tray_icon)
   }
 
-  /// Creates a submenu for the window configs.
+  /// Returns the image to use for the system tray icon.
+  fn icon_image(app_handle: &AppHandle) -> anyhow::Result<Image> {
+    app_handle
+      .default_window_icon()
+      .cloned()
+      .context("No icon defined in Tauri config.")
+  }
+
+  /// Creates and returns the main system tray menu.
+  fn tray_menu(
+    app_handle: &AppHandle,
+    config: Arc<Config>,
+  ) -> anyhow::Result<Menu<Wry>> {
+    let tray_menu = MenuBuilder::new(app_handle)
+      .item(&Self::configs_menu(app_handle, config)?)
+      .text(MenuEvent::ShowConfigFolder, "Show config folder")
+      .separator()
+      .text(MenuEvent::Exit, "Exit")
+      .build()?;
+
+    Ok(tray_menu)
+  }
+
+  /// Callback for system tray menu events.
+  fn handle_menu_event(
+    event: MenuEvent,
+    app_handle: &AppHandle,
+    config: Arc<Config>,
+  ) {
+    match event {
+      MenuEvent::ShowConfigFolder => {
+        info!("Opening config folder from system tray.");
+
+        if let Err(err) = config.open_config_dir() {
+          error!("Failed to open config folder: {}", err);
+        }
+      }
+      MenuEvent::Exit => {
+        info!("Exiting through system tray.");
+        app_handle.exit(0)
+      }
+      MenuEvent::EnableWindowConfig(id) => {
+        info!("Window config enabled: {}", id);
+      }
+      MenuEvent::StartupWindowConfig(id) => {
+        info!("Window config set to launch on startup: {}", id);
+      }
+    }
+  }
+
+  /// Creates and returns a submenu for the window configs.
   fn configs_menu(
     app_handle: &AppHandle,
     config: Arc<Config>,
@@ -133,6 +154,7 @@ impl SysTray {
     Ok(configs_menu)
   }
 
+  /// Creates and returns a submenu for the given window config.
   fn config_menu(
     app_handle: &AppHandle,
     config_entry: &WindowConfigEntry,
