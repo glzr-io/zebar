@@ -159,8 +159,8 @@ impl Config {
       config_dir,
       settings: Arc::new(Mutex::new(settings)),
       window_configs: Arc::new(Mutex::new(window_configs)),
-      changes_tx,
       _changes_rx,
+      changes_tx,
     })
   }
 

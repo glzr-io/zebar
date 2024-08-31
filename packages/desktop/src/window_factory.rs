@@ -8,7 +8,7 @@ use std::{
 
 use serde::Serialize;
 use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
 use tracing::info;
 
 use crate::{
@@ -21,6 +21,10 @@ use crate::{
 pub struct WindowFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
+
+  _changes_rx: broadcast::Receiver<HashMap<String, WindowState>>,
+
+  pub changes_tx: broadcast::Sender<HashMap<String, WindowState>>,
 
   /// Reference to `MonitorState` for window positioning.
   monitor_state: Arc<MonitorState>,
@@ -65,8 +69,12 @@ impl WindowFactory {
     app_handle: &AppHandle,
     monitor_state: Arc<MonitorState>,
   ) -> Self {
+    let (changes_tx, _changes_rx) = broadcast::channel(16);
+
     Self {
       app_handle: app_handle.clone(),
+      _changes_rx,
+      changes_tx,
       monitor_state,
       window_count: Arc::new(AtomicU32::new(0)),
       window_states: Arc::new(Mutex::new(HashMap::new())),

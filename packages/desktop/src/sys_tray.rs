@@ -106,14 +106,21 @@ impl SysTray {
   }
 
   fn start_listener(self: Arc<Self>) {
-    let config = self.config.clone();
-    let mut changes_rx = config.changes_tx.subscribe();
+    let mut config_changes_rx = self.config.changes_tx.subscribe();
+    // TODO: Add `changes_tx` to `WindowFactory`.
+    let mut window_changes_rx = self.window_factory.changes_tx.subscribe();
 
     tokio::spawn(async move {
-      tokio::select! {
-        Ok(_) = changes_rx.recv() => {
-          if let Some(tray_icon) = self.tray_icon.as_ref() {
-            tray_icon.set_menu(Some(self.create_tray_menu().await.unwrap()));
+      loop {
+        tokio::select! {
+          Ok(_) = config_changes_rx.recv() => {
+            println!("Config changes received.");
+            if let Some(tray_icon) = self.tray_icon.as_ref() {
+              tray_icon.set_menu(Some(self.create_tray_menu().await.unwrap()));
+            }
+          }
+          Ok(_) = window_changes_rx.recv() => {
+            println!("Window changes received.");
           }
         }
       }
