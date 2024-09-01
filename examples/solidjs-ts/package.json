@@ -9,7 +9,8 @@
     "start": "vite"
   },
   "dependencies": {
-    "solid-js": "1.8.11"
+    "solid-js": "1.8.11",
+    "zebar": "^2.0.0"
   },
   "devDependencies": {
     "typescript": "5.3.3",
