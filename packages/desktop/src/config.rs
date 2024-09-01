@@ -144,11 +144,17 @@ impl Config {
   /// Reads the config files within the config directory.
   ///
   /// Returns a new `Config` instance.
-  pub fn new(app_handle: &AppHandle) -> anyhow::Result<Self> {
-    let config_dir = app_handle
-      .path()
-      .resolve(".glzr/zebar", BaseDirectory::Home)
-      .context("Unable to get home directory.")?;
+  pub fn new(
+    app_handle: &AppHandle,
+    config_dir_override: Option<PathBuf>,
+  ) -> anyhow::Result<Self> {
+    let config_dir = match config_dir_override {
+      Some(dir) => dir,
+      None => app_handle
+        .path()
+        .resolve(".glzr/zebar", BaseDirectory::Home)
+        .context("Unable to get home directory.")?,
+    };
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
     let window_configs = Self::read_window_configs(&config_dir)?;

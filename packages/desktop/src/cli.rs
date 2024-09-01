@@ -1,4 +1,4 @@
-use std::process;
+use std::{path::PathBuf, process};
 
 use clap::{Args, Parser, Subcommand};
 
@@ -30,7 +30,7 @@ pub enum CliCommand {
   /// Open all default windows.
   ///
   /// Starts Zebar if it is not already running.
-  OpenAll,
+  OpenAll(OpenAllWindowsArgs),
 
   /// Output available monitors.
   Monitors(OutputMonitorsArgs),
@@ -45,8 +45,24 @@ pub enum CliCommand {
 
 #[derive(Args, Clone, Debug)]
 pub struct OpenWindowArgs {
-  /// Relative file path within the Zebar config directory.
+  /// Relative file path to window config within the Zebar config
+  /// directory.
   pub config_path: String,
+
+  /// Absolute path to the Zebar config directory.
+  ///
+  /// The default path is `%userprofile%/.glzr/zebar/`
+  #[clap(long, value_hint = clap::ValueHint::FilePath)]
+  pub config_dir: Option<PathBuf>,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct OpenAllWindowsArgs {
+  /// Absolute path to the Zebar config directory.
+  ///
+  /// The default path is `%userprofile%/.glzr/zebar/`
+  #[clap(long, value_hint = clap::ValueHint::FilePath)]
+  pub config_dir: Option<PathBuf>,
 }
 
 #[derive(Args, Clone, Debug)]

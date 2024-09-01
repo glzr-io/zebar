@@ -79,8 +79,15 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
     .setup(move |app| {
       task::block_in_place(|| {
         block_on(async move {
+          let config_dir_override = match cli.command() {
+            CliCommand::Open(args) => args.config_dir,
+            CliCommand::OpenAll(args) => args.config_dir,
+            _ => None,
+          };
+
           // Initialize `Config` in Tauri state.
-          let config = Arc::new(Config::new(app.handle())?);
+          let config =
+            Arc::new(Config::new(app.handle(), config_dir_override)?);
           app.manage(config.clone());
 
           // Initialize `MonitorState` in Tauri state.
@@ -140,6 +147,11 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           // Prevent windows from showing up in the dock on MacOS.
           #[cfg(target_os = "macos")]
           app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+          // Allow assets to be resolved from the config directory.
+          app
+            .asset_protocol_scope()
+            .allow_directory(&config.config_dir, true)?;
 
           // Get window configs to open on start.
           let window_configs = match cli.command() {
