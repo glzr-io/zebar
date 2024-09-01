@@ -3,7 +3,7 @@ use serde::Deserialize;
 use crate::impl_interval_config;
 
 #[derive(Deserialize, Debug)]
-#[serde(tag = "type", rename = "host")]
+#[serde(rename_all = "camelCase")]
 pub struct HostProviderConfig {
   pub refresh_interval: u64,
 }

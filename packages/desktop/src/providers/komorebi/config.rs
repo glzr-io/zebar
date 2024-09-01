@@ -1,5 +1,5 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-#[serde(tag = "type", rename = "komorebi")]
+#[serde(rename_all = "camelCase")]
 pub struct KomorebiProviderConfig {}
