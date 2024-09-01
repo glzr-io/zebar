@@ -1,2 +1,3 @@
-export { type WindowConfig } from './user-config';
-export { init } from './init';
+export * from './user-config';
+export * from './zebar-context.model';
+export * from './init';

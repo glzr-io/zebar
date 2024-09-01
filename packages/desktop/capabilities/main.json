@@ -1,8 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["*-*"],
+  "description": "Default capabilities",
+  "windows": ["*"],
+  "remote": {
+    "urls": ["http://asset.localhost"]
+  },
   "permissions": [
     "app:default",
     "dialog:allow-message",
@@ -13,6 +16,7 @@
     "window:allow-center",
     "window:allow-close",
     "window:allow-hide",
+    "window:allow-show",
     "window:allow-maximize",
     "window:allow-minimize",
     "window:allow-set-skip-taskbar",

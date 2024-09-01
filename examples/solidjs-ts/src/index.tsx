@@ -1,5 +1,6 @@
 /* @refresh reload */
 import { render } from 'solid-js/web';
+import { init } from 'zebar';
 
 import { App } from './App';
 
@@ -11,4 +12,7 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-render(() => <App />, root!);
+init().then(async ctx => {
+  const app = await App(ctx);
+  render(() => app, root!);
+});
