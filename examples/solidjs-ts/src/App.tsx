@@ -1,10 +1,24 @@
 import { ZebarContext } from 'zebar';
 
 import styles from './App.module.css';
+import { createEffect } from 'solid-js';
+import { createMutable } from 'solid-js/store';
 
-export async function App(ctx: ZebarContext) {
-  const cpu = await ctx.createProvider({ type: 'cpu' });
-  const memory = await ctx.createProvider({ type: 'memory' });
+export default async function App(props: { ctx: ZebarContext }) {
+  const cpu = await props.ctx.createProvider({ type: 'cpu' });
+  const memory = await props.ctx.createProvider({ type: 'memory' });
+
+  // const cpu = createMutable(
+  //   await props.ctx.createProvider({ type: 'cpu' }),
+  // );
+  // const memory = createMutable(
+  //   await props.ctx.createProvider({ type: 'memory' }),
+  // );
+
+  createEffect(() => {
+    console.log('client', cpu);
+    console.log('client', cpu.usage);
+  });
 
   return (
     <div class={styles.app}>

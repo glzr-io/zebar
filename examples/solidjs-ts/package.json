@@ -4,9 +4,7 @@
   "description": "",
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
-    "serve": "vite preview",
-    "start": "vite"
+    "dev": "vite build --watch"
   },
   "dependencies": {
     "solid-js": "1.8.11",
