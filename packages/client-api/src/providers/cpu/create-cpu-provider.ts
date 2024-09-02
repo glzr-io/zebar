@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
 
 export interface CpuProviderConfig {
   type: 'cpu';
@@ -16,13 +20,14 @@ const cpuProviderConfigSchema = z.object({
   refreshInterval: z.coerce.number().default(5 * 1000),
 });
 
-export interface CpuProvider {
+export type CpuProvider = Provider<CpuProviderConfig, CpuValues>;
+
+export interface CpuValues {
   frequency: number;
   usage: number;
   logicalCoreCount: number;
   physicalCoreCount: number;
   vendor: string;
-  onChange: (callback: (provider: CpuProvider) => void) => void;
 }
 
 export async function createCpuProvider(
@@ -30,11 +35,15 @@ export async function createCpuProvider(
 ): Promise<CpuProvider> {
   const mergedConfig = cpuProviderConfigSchema.parse(config);
 
-  const { firstValue, onChange } =
-    await createProviderListener<CpuProvider>(mergedConfig);
+  return createBaseProvider(mergedConfig, async queue => {
+    const { firstValue, onChange, unlisten } =
+      await createProviderListener<CpuValues>(mergedConfig);
 
-  const cpuProvider = { ...firstValue, onChange };
-  onChange(incoming => Object.assign(cpuProvider, incoming));
+    queue.value(firstValue);
+    onChange(val => queue.value(val));
 
-  return cpuProvider;
+    return async () => {
+      await unlisten();
+    };
+  });
 }

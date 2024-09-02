@@ -1,6 +1,8 @@
 import { DateTime } from 'luxon';
 import { z } from 'zod';
 
+import { createBaseProvider } from '../create-base-provider';
+
 export interface DateProviderConfig {
   type: 'date';
 
@@ -73,34 +75,27 @@ export async function createDateProvider(
 ): Promise<DateProvider> {
   const mergedConfig = DateProviderConfigSchema.parse(config);
 
-  let val = getDateValue();
+  return createBaseProvider(mergedConfig, queue => {
+    queue.value(getDateValue());
 
-  const interval = setInterval(
-    () => (val = getDateValue()),
-    mergedConfig.refreshInterval,
-  );
+    const interval = setInterval(
+      () => queue.value(getDateValue()),
+      mergedConfig.refreshInterval,
+    );
 
-  function getDateValue() {
-    const date = new Date();
+    function getDateValue() {
+      const date = new Date();
 
-    return {
-      new: date,
-      now: date.getTime(),
-      iso: date.toISOString(),
-      formatted: 'todo',
-    };
-  }
+      return {
+        new: date,
+        now: date.getTime(),
+        iso: date.toISOString(),
+        formatted: 'todo',
+      };
+    }
 
-  return {
-    val,
-    refresh(): DateProvider {
-      val = getDateValue();
-    },
-    shutdown() {
+    return () => {
       clearInterval(interval);
-    },
-    onChange(cb) {
-      return dateProvider.onChange(cb);
-    },
-  };
+    };
+  });
 }

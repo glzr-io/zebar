@@ -70,29 +70,6 @@ const createProviderMap = {
   // weather: createWeatherProvider,
 } as const;
 
-export interface Provider<T> {
-  /**
-   * Current value of the provider.
-   */
-  val: T;
-
-  /**
-   * Refresh the provider's value.
-   */
-  refresh(): Promise<T>;
-
-  /**
-   * Stop the provider.
-   */
-  shutdown(): Promise<void>;
-
-  /**
-   * Listen for changes to the provider's value.
-   * @param callback - Callback to run when the value changes.
-   */
-  onChange(callback: (nextVal: T) => void): void;
-}
-
 type ProviderMap = typeof createProviderMap;
 
 /**
