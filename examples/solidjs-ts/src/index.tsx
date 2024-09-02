@@ -11,7 +11,7 @@ import {
   onMount,
   Suspense,
 } from 'solid-js';
-import { App2 } from './App2';
+// import { App2 } from './App2';
 import { createStore } from 'solid-js/store';
 
 const root = document.getElementById('root');
@@ -31,9 +31,9 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 //   render(() => <App2 ctx={ctx} />, root!);
 // });
 // render(() => <App />, root!);
-init({}, async ctx => {
-  render(() => <App2 ctx={ctx} />, root!);
-});
+// init({}, async ctx => {
+//   render(() => <App2 ctx={ctx} />, root!);
+// });
 
 // function App() {
 //   const [context, setContext] = createSignal<ZebarContext>();
@@ -104,12 +104,14 @@ init({}, async ctx => {
 
 const ctx = await init();
 
-const [memory, cpu, glazewm, weather] = await ctx.createProviders([
-  { type: 'memory' },
-  { type: 'cpu' },
-  { type: 'glazewm' },
-  { type: 'weather' },
-]);
+// const [memory, cpu, glazewm, weather] = await ctx.createProviders([
+//   { type: 'memory' },
+//   { type: 'cpu' },
+//   { type: 'glazewm' },
+//   { type: 'weather' },
+// ]);
+// const battery = await ctx.createProvider({ type: 'battery' });
+const cpu = await ctx.createProvider({ type: 'cpu' });
 
 render(() => <App />, root!);
 
@@ -125,16 +127,13 @@ function App() {
   // weather.onChange(setWeather);
 
   const [providers, setProviders] = createStore({
-    memory,
+    // battery,
     cpu,
-    glazewm,
-    weather,
   });
 
-  memory.onChange(memory => setProviders({ memory }));
+  // battery.onChange(battery => setProviders({ battery }));
+  //@ts-ignore
   cpu.onChange(cpu => setProviders({ cpu }));
-  glazewm.onChange(glazewm => setProviders({ glazewm }));
-  weather.onChange(weather => setProviders({ weather }));
 
   return <div>Hello World {providers.cpu.usage}</div>;
 }
