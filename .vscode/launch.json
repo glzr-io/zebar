@@ -11,9 +11,7 @@
           "--manifest-path=./packages/desktop/Cargo.toml",
           "--no-default-features"
         ]
-      },
-      // Task for the `beforeDevCommand`, if used.
-      "preLaunchTask": "ui:dev"
+      }
     },
     {
       "type": "lldb",
@@ -25,9 +23,7 @@
           "--release",
           "--manifest-path=./packages/desktop/Cargo.toml"
         ]
-      },
-      // Task for the `beforeBuildCommand`, if used.
-      "preLaunchTask": "ui:build"
+      }
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "$schema": "node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "devUrl": "http://localhost:4200",
-    "frontendDist": "../client/dist"
+    "devUrl": null,
+    "frontendDist": null
   },
   "productName": "Zebar",
   "version": "0.0.0",
