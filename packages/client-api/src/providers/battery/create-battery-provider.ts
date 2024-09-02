@@ -26,6 +26,7 @@ export interface BatteryProvider {
   timeTillEmpty: number | null;
   timeTillFull: number | null;
   voltage: number | null;
+  onChange: (provider: BatteryProvider) => void;
 }
 
 export async function createBatteryProvider(

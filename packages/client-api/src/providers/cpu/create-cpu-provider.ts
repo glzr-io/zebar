@@ -11,7 +11,7 @@ export interface CpuProviderConfig {
   refreshInterval?: number;
 }
 
-const CpuProviderConfigSchema = z.object({
+const cpuProviderConfigSchema = z.object({
   type: z.literal('cpu'),
   refreshInterval: z.coerce.number().default(5 * 1000),
 });
@@ -22,16 +22,19 @@ export interface CpuProvider {
   logicalCoreCount: number;
   physicalCoreCount: number;
   vendor: string;
+  onChange: (callback: (provider: CpuProvider) => void) => void;
 }
 
-export async function createCpuProvider(config: CpuProviderConfig) {
-  const mergedConfig = CpuProviderConfigSchema.parse(config);
+export async function createCpuProvider(
+  config: CpuProviderConfig,
+): Promise<CpuProvider> {
+  const mergedConfig = cpuProviderConfigSchema.parse(config);
 
   const { firstValue, onChange } =
     await createProviderListener<CpuProvider>(mergedConfig);
 
-  const cpuVariables = { ...firstValue, onChange };
-  onChange(incoming => Object.assign(cpuVariables, incoming));
+  const cpuProvider = { ...firstValue, onChange };
+  onChange(incoming => Object.assign(cpuProvider, incoming));
 
-  return cpuVariables;
+  return cpuProvider;
 }

@@ -1,6 +1,4 @@
 import { DateTime } from 'luxon';
-import { type Owner, onCleanup, runWithOwner } from 'solid-js';
-import { createStore } from 'solid-js/store';
 import { z } from 'zod';
 
 export interface DateProviderConfig {
@@ -70,56 +68,39 @@ export interface DateProvider {
   toFormat(now: number, format: string): string;
 }
 
-type DateVariables = Omit<DateProvider, 'toFormat'>;
-
 export async function createDateProvider(
   config: DateProviderConfig,
-  owner: Owner,
-) {
+): Promise<DateProvider> {
   const mergedConfig = DateProviderConfigSchema.parse(config);
 
-  const [dateVariables, setDateVariables] =
-    createStore<DateVariables>(getDateVariables());
+  let val = getDateValue();
 
   const interval = setInterval(
-    () => setDateVariables(getDateVariables()),
+    () => (val = getDateValue()),
     mergedConfig.refreshInterval,
   );
 
-  runWithOwner(owner, () => {
-    onCleanup(() => clearInterval(interval));
-  });
-
-  function getDateVariables() {
+  function getDateValue() {
     const date = new Date();
 
     return {
       new: date,
       now: date.getTime(),
       iso: date.toISOString(),
+      formatted: 'todo',
     };
   }
 
-  function toFormat(now: number, format: string) {
-    let dateTime = DateTime.fromMillis(now);
-
-    if (mergedConfig.timezone) {
-      dateTime = dateTime.setZone(mergedConfig.timezone);
-    }
-
-    return dateTime.toFormat(format, { locale: mergedConfig.locale });
-  }
-
   return {
-    get new() {
-      return dateVariables.new;
+    val,
+    refresh(): DateProvider {
+      val = getDateValue();
     },
-    get now() {
-      return dateVariables.now;
+    shutdown() {
+      clearInterval(interval);
     },
-    get iso() {
-      return dateVariables.iso;
+    onChange(cb) {
+      return dateProvider.onChange(cb);
     },
-    toFormat,
   };
 }
