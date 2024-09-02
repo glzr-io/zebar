@@ -1,8 +1,13 @@
 import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
 export interface UtilProviderConfig {
   type: 'util';
 }
+
+const UtilProviderConfigSchema = z.object({
+  type: z.literal('util'),
+});
 
 export interface UtilProvider {
   convertBytes(

@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
 import { type Owner, onCleanup, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
+import { z } from 'zod';
 
 export interface DateProviderConfig {
   type: 'date';
@@ -27,6 +28,13 @@ export interface DateProviderConfig {
    */
   locale?: string;
 }
+
+const DateProviderConfigSchema = z.object({
+  type: z.literal('date'),
+  refreshInterval: z.coerce.number().default(1000),
+  timezone: z.string().optional(),
+  locale: z.string().optional(),
+});
 
 export interface DateProvider {
   /**
@@ -68,12 +76,14 @@ export async function createDateProvider(
   config: DateProviderConfig,
   owner: Owner,
 ) {
+  const mergedConfig = DateProviderConfigSchema.parse(config);
+
   const [dateVariables, setDateVariables] =
     createStore<DateVariables>(getDateVariables());
 
   const interval = setInterval(
     () => setDateVariables(getDateVariables()),
-    config.refreshInterval,
+    mergedConfig.refreshInterval,
   );
 
   runWithOwner(owner, () => {
@@ -93,11 +103,11 @@ export async function createDateProvider(
   function toFormat(now: number, format: string) {
     let dateTime = DateTime.fromMillis(now);
 
-    if (config.timezone) {
-      dateTime = dateTime.setZone(config.timezone);
+    if (mergedConfig.timezone) {
+      dateTime = dateTime.setZone(mergedConfig.timezone);
     }
 
-    return dateTime.toFormat(format, { locale: config.locale });
+    return dateTime.toFormat(format, { locale: mergedConfig.locale });
   }
 
   return {

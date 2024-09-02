@@ -1,5 +1,6 @@
 import { createEffect, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
+import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
 import { getMonitors } from '~/desktop';
@@ -8,6 +9,10 @@ import { getCoordinateDistance } from '~/utils';
 export interface KomorebiProviderConfig {
   type: 'komorebi';
 }
+
+const KomorebiProviderConfigSchema = z.object({
+  type: z.literal('komorebi'),
+});
 
 export interface KomorebiProvider {
   /**
@@ -114,12 +119,13 @@ export async function createKomorebiProvider(
   config: KomorebiProviderConfig,
   owner: Owner,
 ): Promise<KomorebiProvider> {
+  const mergedConfig = KomorebiProviderConfigSchema.parse(config);
   const monitors = await getMonitors();
 
   const providerListener = await createProviderListener<
     KomorebiProviderConfig,
     KomorebiResponse
-  >(config, owner);
+  >(mergedConfig, owner);
 
   const [komorebiVariables, setKomorebiVariables] = createStore(
     await getVariables(),

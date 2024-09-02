@@ -16,6 +16,7 @@ import {
 } from 'glazewm';
 import { createEffect, on, runWithOwner, type Owner } from 'solid-js';
 import { createStore } from 'solid-js/store';
+import { z } from 'zod';
 
 import { getMonitors } from '~/desktop';
 import { getCoordinateDistance } from '~/utils';
@@ -23,6 +24,10 @@ import { getCoordinateDistance } from '~/utils';
 export interface GlazeWmProviderConfig {
   type: 'glazewm';
 }
+
+const GlazeWmProviderConfigSchema = z.object({
+  type: z.literal('glazewm'),
+});
 
 export interface GlazeWmProvider {
   /**

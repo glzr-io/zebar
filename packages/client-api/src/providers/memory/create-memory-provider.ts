@@ -1,4 +1,5 @@
 import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
 
@@ -10,6 +11,11 @@ export interface MemoryProviderConfig {
    */
   refreshInterval?: number;
 }
+
+const MemoryProviderConfigSchema = z.object({
+  type: z.literal('memory'),
+  refreshInterval: z.coerce.number().default(5 * 1000),
+});
 
 export interface MemoryProvider {
   usage: number;
@@ -25,10 +31,12 @@ export async function createMemoryProvider(
   config: MemoryProviderConfig,
   owner: Owner,
 ) {
+  const mergedConfig = MemoryProviderConfigSchema.parse(config);
+
   const memoryVariables = await createProviderListener<
     MemoryProviderConfig,
     MemoryProvider
-  >(config, owner);
+  >(mergedConfig, owner);
 
   return {
     get usage() {

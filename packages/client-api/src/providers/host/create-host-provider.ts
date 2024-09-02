@@ -1,4 +1,5 @@
 import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
 
@@ -10,6 +11,11 @@ export interface HostProviderConfig {
    */
   refreshInterval?: number;
 }
+
+const HostProviderConfigSchema = z.object({
+  type: z.literal('host'),
+  refreshInterval: z.coerce.number().default(60 * 1000),
+});
 
 export interface HostProvider {
   hostname: string | null;
@@ -24,10 +30,12 @@ export async function createHostProvider(
   config: HostProviderConfig,
   owner: Owner,
 ) {
+  const mergedConfig = HostProviderConfigSchema.parse(config);
+
   const hostVariables = await createProviderListener<
     HostProviderConfig,
     HostProvider
-  >(config, owner);
+  >(mergedConfig, owner);
 
   return {
     get hostname() {

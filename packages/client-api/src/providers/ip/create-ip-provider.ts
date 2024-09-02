@@ -1,4 +1,5 @@
 import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
 
@@ -10,6 +11,11 @@ export interface IpProviderConfig {
    */
   refreshInterval?: number;
 }
+
+const IpProviderConfigSchema = z.object({
+  type: z.literal('ip'),
+  refreshInterval: z.coerce.number().default(60 * 60 * 1000),
+});
 
 export interface IpProvider {
   address: string;
@@ -23,10 +29,12 @@ export async function createIpProvider(
   config: IpProviderConfig,
   owner: Owner,
 ) {
+  const mergedConfig = IpProviderConfigSchema.parse(config);
+
   const ipVariables = await createProviderListener<
     IpProviderConfig,
     IpProvider
-  >(config, owner);
+  >(mergedConfig, owner);
 
   return {
     get address() {

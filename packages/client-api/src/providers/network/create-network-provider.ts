@@ -1,4 +1,5 @@
 import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
 
@@ -10,6 +11,11 @@ export interface NetworkProviderConfig {
    */
   refreshInterval?: number;
 }
+
+const NetworkProviderConfigSchema = z.object({
+  type: z.literal('network'),
+  refreshInterval: z.coerce.number().default(5 * 1000),
+});
 
 export interface NetworkProvider {
   defaultInterface: NetworkInterface | null;
@@ -68,10 +74,12 @@ export async function createNetworkProvider(
   config: NetworkProviderConfig,
   owner: Owner,
 ) {
+  const mergedConfig = NetworkProviderConfigSchema.parse(config);
+
   const networkVariables = await createProviderListener<
     NetworkProviderConfig,
     NetworkProvider
-  >(config, owner);
+  >(mergedConfig, owner);
 
   return {
     get defaultInterface() {

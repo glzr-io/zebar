@@ -85,6 +85,9 @@ importers:
       solid-js:
         specifier: 1.8.14
         version: 1.8.14
+      zod:
+        specifier: 3.22.4
+        version: 3.22.4
     devDependencies:
       '@types/luxon':
         specifier: 3.4.2
@@ -1809,6 +1812,9 @@ packages:
     resolution: {integrity: sha512-8aAvwVUSHpfEqTQ4w/KMlf3HcRdt50E5ODIQJBw1fQ5RL34xabzxtUlzTXVqc4rkZsPbvrXKWnABCD7kWSmocA==}
     engines: {node: '>= 14'}
 
+  zod@3.22.4:
+    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+
 snapshots:
 
   '@ampproject/remapping@2.2.1':
@@ -3327,3 +3333,5 @@ snapshots:
   yallist@4.0.0: {}
 
   yaml@2.3.4: {}
+
+  zod@3.22.4: {}

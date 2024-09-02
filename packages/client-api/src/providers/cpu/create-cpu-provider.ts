@@ -1,4 +1,5 @@
-import type { Owner } from 'solid-js';
+import { type Owner } from 'solid-js';
+import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
 
@@ -10,6 +11,11 @@ export interface CpuProviderConfig {
    */
   refreshInterval?: number;
 }
+
+const CpuProviderConfigSchema = z.object({
+  type: z.literal('cpu'),
+  refreshInterval: z.coerce.number().default(5 * 1000),
+});
 
 export interface CpuProvider {
   frequency: number;
@@ -23,10 +29,12 @@ export async function createCpuProvider(
   config: CpuProviderConfig,
   owner: Owner,
 ) {
+  const mergedConfig = CpuProviderConfigSchema.parse(config);
+
   const cpuVariables = await createProviderListener<
     CpuProviderConfig,
     CpuProvider
-  >(config, owner);
+  >(mergedConfig, owner);
 
   return {
     get frequency() {

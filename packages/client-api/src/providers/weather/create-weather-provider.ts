@@ -1,4 +1,5 @@
 import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
 import {
   type IpProvider,
@@ -28,6 +29,13 @@ export interface WeatherProviderConfig {
   refreshInterval?: number;
 }
 
+const WeatherProviderConfigSchema = z.object({
+  type: z.literal('weather'),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
+  refreshInterval: z.coerce.number().default(60 * 60 * 1000),
+});
+
 export interface WeatherProvider {
   isDaytime: boolean;
   status: WeatherStatus;
@@ -43,8 +51,7 @@ export async function createWeatherProvider(
   let ipProvider: IpProvider | null = null;
 
   const mergedConfig: WeatherProviderConfig = {
-    ...config,
-    refreshInterval: config.refreshInterval ?? 60 * 60 * 1000,
+    ...WeatherProviderConfigSchema.parse(config),
     longitude: config.longitude ?? (await getIpProvider()).approxLongitude,
     latitude: config.latitude ?? (await getIpProvider()).approxLatitude,
   };
