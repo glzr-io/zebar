@@ -1,4 +1,3 @@
-import { type Owner } from 'solid-js';
 import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
@@ -25,32 +24,14 @@ export interface CpuProvider {
   vendor: string;
 }
 
-export async function createCpuProvider(
-  config: CpuProviderConfig,
-  owner: Owner,
-) {
+export async function createCpuProvider(config: CpuProviderConfig) {
   const mergedConfig = CpuProviderConfigSchema.parse(config);
 
-  const cpuVariables = await createProviderListener<
-    CpuProviderConfig,
-    CpuProvider
-  >(mergedConfig, owner);
+  const { firstValue, onChange } =
+    await createProviderListener<CpuProvider>(mergedConfig);
 
-  return {
-    get frequency() {
-      return cpuVariables().frequency;
-    },
-    get usage() {
-      return cpuVariables().usage;
-    },
-    get logicalCoreCount() {
-      return cpuVariables().logicalCoreCount;
-    },
-    get physicalCoreCount() {
-      return cpuVariables().physicalCoreCount;
-    },
-    get vendor() {
-      return cpuVariables().vendor;
-    },
-  };
+  const cpuVariables = { ...firstValue, onChange };
+  onChange(incoming => Object.assign(cpuVariables, incoming));
+
+  return cpuVariables;
 }

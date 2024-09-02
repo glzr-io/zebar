@@ -1,6 +1,5 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { join } from '@tauri-apps/api/path';
-import { createRoot, getOwner, runWithOwner } from 'solid-js';
 
 import {
   getWindowState,
@@ -34,69 +33,52 @@ export interface ZebarInitOptions {
 export async function init(
   options?: ZebarInitOptions,
 ): Promise<ZebarContext> {
-  return withReactiveContext(async () => {
-    try {
-      const currentWindow = getCurrentWindow();
+  try {
+    const currentWindow = getCurrentWindow();
 
-      const windowState =
-        window.__ZEBAR_INITIAL_STATE ??
-        (await getWindowState(currentWindow.label));
+    const windowState =
+      window.__ZEBAR_INITIAL_STATE ??
+      (await getWindowState(currentWindow.label));
 
-      // Load default CSS unless explicitly disabled.
-      if (options?.includeDefaultCss !== false) {
-        import('./zebar.css');
-      }
-
-      await currentWindow.show();
-
-      // @ts-ignore - TODO
-      return {
-        openWindow: async (configPath: string) => {
-          const absolutePath = await join(
-            windowState.windowId,
-            '../',
-            configPath,
-          );
-
-          return openWindow(absolutePath);
-        },
-        createProvider: config => {
-          return createProvider(config, getOwner()!);
-        },
-        currentWindow: {
-          ...windowState,
-          tauri: currentWindow,
-          setZOrder: zOrder => {
-            return setWindowZOrder(currentWindow, zOrder);
-          },
-        },
-        allWindows: [],
-        currentMonitor: {},
-        allMonitors: [],
-      } as ZebarContext;
-    } catch (err) {
-      logger.error('Failed to initialize window:', err);
-
-      await showErrorDialog({
-        title: 'Failed to initialize window',
-        error: err,
-      });
-
-      // Error during window initialization is unrecoverable, so we close
-      // the window.
-      getCurrentWindow().close();
-      throw err;
+    // Load default CSS unless explicitly disabled.
+    if (options?.includeDefaultCss !== false) {
+      import('./zebar.css');
     }
-  });
-}
 
-/**
- * Runs callback in a reactive context (allows for SolidJS reactivity).
- */
-function withReactiveContext<T>(callback: () => T) {
-  const owner = getOwner();
+    // @ts-ignore - TODO
+    return {
+      openWindow: async (configPath: string) => {
+        const absolutePath = await join(
+          windowState.configPath,
+          '../',
+          configPath,
+        );
 
-  return owner
-    ? (runWithOwner(owner, callback) as T)
-    : createRoot(callback);
+        return openWindow(absolutePath);
+      },
+      createProvider,
+      currentWindow: {
+        ...windowState,
+        tauri: currentWindow,
+        setZOrder: zOrder => {
+          return setWindowZOrder(currentWindow, zOrder);
+        },
+      },
+      allWindows: [],
+      currentMonitor: {},
+      allMonitors: [],
+    } as ZebarContext;
+  } catch (err) {
+    logger.error('Failed to initialize window:', err);
+
+    await showErrorDialog({
+      title: 'Failed to initialize window',
+      error: err,
+    });
+
+    // Error during window initialization is unrecoverable, so we close
+    // the window.
+    getCurrentWindow().close();
+    throw err;
+  }
 }

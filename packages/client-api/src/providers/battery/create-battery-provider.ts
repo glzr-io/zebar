@@ -1,4 +1,3 @@
-import type { Owner } from 'solid-js';
 import { z } from 'zod';
 
 import { createProviderListener } from '../create-provider-listener';
@@ -31,42 +30,14 @@ export interface BatteryProvider {
 
 export async function createBatteryProvider(
   config: BatteryProviderConfig,
-  owner: Owner,
 ) {
   const mergedConfig = BatteryProviderConfigSchema.parse(config);
 
-  const batteryVariables = await createProviderListener<
-    BatteryProviderConfig,
-    BatteryProvider
-  >(mergedmergedConfig, owner);
+  const { firstValue, onChange } =
+    await createProviderListener<BatteryProvider>(mergedConfig);
 
-  return {
-    get chargePercent() {
-      return batteryVariables().chargePercent;
-    },
-    get cycleCount() {
-      return batteryVariables().cycleCount;
-    },
-    get healthPercent() {
-      return batteryVariables().healthPercent;
-    },
-    get powerConsumption() {
-      return batteryVariables().powerConsumption;
-    },
-    get state() {
-      return batteryVariables().state;
-    },
-    get isCharging() {
-      return batteryVariables().isCharging;
-    },
-    get timeTillEmpty() {
-      return batteryVariables().timeTillEmpty;
-    },
-    get timeTillFull() {
-      return batteryVariables().timeTillFull;
-    },
-    get voltage() {
-      return batteryVariables().voltage;
-    },
-  };
+  const batteryVariables = firstValue;
+  onChange(incoming => Object.assign(batteryVariables, incoming));
+
+  return batteryVariables;
 }
