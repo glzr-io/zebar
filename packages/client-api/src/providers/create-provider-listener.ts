@@ -1,13 +1,4 @@
 import {
-  type Accessor,
-  createEffect,
-  createSignal,
-  onCleanup,
-  type Owner,
-  runWithOwner,
-} from 'solid-js';
-
-import {
   onProviderEmit,
   listenProvider,
   unlistenProvider,
@@ -15,36 +6,47 @@ import {
 import { simpleHash } from '~/utils';
 import type { ProviderConfig } from './create-provider';
 
+export interface ProviderListener<TVars> {
+  firstValue: TVars;
+  onChange: (callback: (val: TVars) => void) => void;
+  unlisten: () => void;
+}
+
 /**
  * Utility for listening to a provider of a given config type.
  */
-export function createProviderListener<
+export async function createProviderListener<
   TConfig extends ProviderConfig,
   TVars,
->(config: TConfig, owner: Owner): Promise<Accessor<TVars>> {
-  return new Promise(async resolve => {
-    const [payload, setPayload] = createSignal<TVars>();
+>(config: TConfig): Promise<ProviderListener<TVars>> {
+  const configHash = simpleHash(config);
+  const listeners: ((val: TVars) => void)[] = [];
 
-    const configHash = simpleHash(config);
-    const unlisten = await onProviderEmit<TVars>(configHash, setPayload);
+  const unlistenEmit = await onProviderEmit<TVars>(configHash, val => {
+    listeners.forEach(listener => listener(val));
+  });
 
-    await listenProvider({
-      configHash,
-      config,
-      trackedAccess: [],
-    });
-
-    runWithOwner(owner, () => {
-      onCleanup(() => {
-        unlisten();
-        unlistenProvider(configHash);
-      });
-
-      createEffect(() => {
-        if (payload()) {
-          resolve(payload as Accessor<TVars>);
-        }
-      });
+  const firstValue = new Promise<TVars>(async resolve => {
+    const unsubscribe = await onProviderEmit<TVars>(configHash, value => {
+      unsubscribe();
+      resolve(value);
     });
   });
+
+  await listenProvider({
+    configHash,
+    config,
+    trackedAccess: [],
+  });
+
+  return {
+    firstValue: await firstValue,
+    onChange: (callback: (val: TVars) => void) => {
+      listeners.push(callback);
+    },
+    unlisten: async () => {
+      unlistenEmit();
+      await unlistenProvider(configHash);
+    },
+  };
 }
