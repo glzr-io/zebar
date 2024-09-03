@@ -1,7 +1,10 @@
-import type { Owner } from 'solid-js';
 import { z } from 'zod';
 
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
 export interface NetworkProviderConfig {
   type: 'network';
@@ -12,12 +15,17 @@ export interface NetworkProviderConfig {
   refreshInterval?: number;
 }
 
-const NetworkProviderConfigSchema = z.object({
+const networkProviderConfigSchema = z.object({
   type: z.literal('network'),
   refreshInterval: z.coerce.number().default(5 * 1000),
 });
 
-export interface NetworkProvider {
+export type NetworkProvider = Provider<
+  NetworkProviderConfig,
+  NetworkOutput
+>;
+
+export interface NetworkOutput {
   defaultInterface: NetworkInterface | null;
   defaultGateway: NetworkGateway | null;
   interfaces: NetworkInterface[];
@@ -72,27 +80,16 @@ export interface NetworkTraffic {
 
 export async function createNetworkProvider(
   config: NetworkProviderConfig,
-  owner: Owner,
-) {
-  const mergedConfig = NetworkProviderConfigSchema.parse(config);
+): Promise<NetworkProvider> {
+  const mergedConfig = networkProviderConfigSchema.parse(config);
 
-  const networkVariables = await createProviderListener<
-    NetworkProviderConfig,
-    NetworkProvider
-  >(mergedConfig, owner);
-
-  return {
-    get defaultInterface() {
-      return networkVariables().defaultInterface;
-    },
-    get defaultGateway() {
-      return networkVariables().defaultGateway;
-    },
-    get interfaces() {
-      return networkVariables().interfaces;
-    },
-    get traffic() {
-      return networkVariables().traffic;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<NetworkOutput>(mergedConfig, ({ variables }) => {
+      if ('error' in variables) {
+        queue.error(variables.error);
+      } else {
+        queue.value(variables.data);
+      }
+    });
+  });
 }

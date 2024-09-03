@@ -1,12 +1,13 @@
-import type { Owner } from 'solid-js';
 import { z } from 'zod';
 
-import {
-  type IpProvider,
-  createIpProvider,
-} from '../ip/create-ip-provider';
+import type { IpProvider } from '../ip/create-ip-provider';
 import { WeatherStatus } from './weather-status.enum';
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
+import { createProvider } from '../create-provider';
 
 export interface WeatherProviderConfig {
   type: 'weather';
@@ -29,14 +30,19 @@ export interface WeatherProviderConfig {
   refreshInterval?: number;
 }
 
-const WeatherProviderConfigSchema = z.object({
+const weatherProviderConfigSchema = z.object({
   type: z.literal('weather'),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
   refreshInterval: z.coerce.number().default(60 * 60 * 1000),
 });
 
-export interface WeatherProvider {
+export type WeatherProvider = Provider<
+  WeatherProviderConfig,
+  WeatherOutput
+>;
+
+export interface WeatherOutput {
   isDaytime: boolean;
   status: WeatherStatus;
   celsiusTemp: number;
@@ -46,49 +52,30 @@ export interface WeatherProvider {
 
 export async function createWeatherProvider(
   config: WeatherProviderConfig,
-  owner: Owner,
-) {
+): Promise<WeatherProvider> {
   let ipProvider: IpProvider | null = null;
 
   const mergedConfig: WeatherProviderConfig = {
-    ...WeatherProviderConfigSchema.parse(config),
-    longitude: config.longitude ?? (await getIpProvider()).approxLongitude,
-    latitude: config.latitude ?? (await getIpProvider()).approxLatitude,
+    ...weatherProviderConfigSchema.parse(config),
+    longitude:
+      config.longitude ?? (await getIpProvider()).value!.approxLongitude,
+    latitude:
+      config.latitude ?? (await getIpProvider()).value!.approxLatitude,
   };
-
-  const weatherVariables = await createProviderListener<
-    WeatherProviderConfig,
-    WeatherProvider
-  >(mergedConfig, owner);
 
   async function getIpProvider() {
     return (
-      ipProvider ??
-      (ipProvider = await createIpProvider(
-        {
-          type: 'ip',
-          refreshInterval: 60 * 60 * 1000,
-        },
-        owner,
-      ))
+      ipProvider ?? (ipProvider = await createProvider({ type: 'ip' }))
     );
   }
 
-  return {
-    get isDaytime() {
-      return weatherVariables().isDaytime;
-    },
-    get status() {
-      return weatherVariables().status;
-    },
-    get celsiusTemp() {
-      return weatherVariables().celsiusTemp;
-    },
-    get fahrenheitTemp() {
-      return weatherVariables().fahrenheitTemp;
-    },
-    get windSpeed() {
-      return weatherVariables().windSpeed;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<WeatherOutput>(mergedConfig, ({ variables }) => {
+      if ('error' in variables) {
+        queue.error(variables.error);
+      } else {
+        queue.value(variables.data);
+      }
+    });
+  });
 }

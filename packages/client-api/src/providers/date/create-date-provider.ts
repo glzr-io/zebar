@@ -1,7 +1,10 @@
 import { DateTime } from 'luxon';
 import { z } from 'zod';
 
-import { createBaseProvider } from '../create-base-provider';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
 
 export interface DateProviderConfig {
   type: 'date';
@@ -41,12 +44,14 @@ export interface DateProviderConfig {
   formatting?: string;
 }
 
-const DateProviderConfigSchema = z.object({
+const dateProviderConfigSchema = z.object({
   type: z.literal('date'),
   refreshInterval: z.coerce.number().default(1000),
   timezone: z.string().optional(),
   locale: z.string().optional(),
 });
+
+export type DateProvider = Provider<DateProviderConfig, DateOutput>;
 
 export interface DateOutput {
   /**
@@ -68,14 +73,12 @@ export interface DateOutput {
   iso: string;
 }
 
-// TODO: Implement `createBaseProvider` for all providers.
-// TODO: Remove `createProviderListener`. Instead move listen function to `desktop-events.ts`.
 // TODO: Organize provider-related types.
 // TODO: Remove `toFormat` on date provider. Instead add `formatting` to the config.
 export async function createDateProvider(
   config: DateProviderConfig,
-): Promise<DateOutput> {
-  const mergedConfig = DateProviderConfigSchema.parse(config);
+): Promise<DateProvider> {
+  const mergedConfig = dateProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, queue => {
     queue.value(getDateValue());

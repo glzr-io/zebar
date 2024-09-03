@@ -1,7 +1,10 @@
-import type { Owner } from 'solid-js';
 import { z } from 'zod';
 
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
 export interface MemoryProviderConfig {
   type: 'memory';
@@ -12,12 +15,14 @@ export interface MemoryProviderConfig {
   refreshInterval?: number;
 }
 
-const MemoryProviderConfigSchema = z.object({
+const memoryProviderConfigSchema = z.object({
   type: z.literal('memory'),
   refreshInterval: z.coerce.number().default(5 * 1000),
 });
 
-export interface MemoryProvider {
+export type MemoryProvider = Provider<MemoryProviderConfig, MemoryOutput>;
+
+export interface MemoryOutput {
   usage: number;
   freeMemory: number;
   usedMemory: number;
@@ -29,36 +34,16 @@ export interface MemoryProvider {
 
 export async function createMemoryProvider(
   config: MemoryProviderConfig,
-  owner: Owner,
-) {
-  const mergedConfig = MemoryProviderConfigSchema.parse(config);
+): Promise<MemoryProvider> {
+  const mergedConfig = memoryProviderConfigSchema.parse(config);
 
-  const memoryVariables = await createProviderListener<
-    MemoryProviderConfig,
-    MemoryProvider
-  >(mergedConfig, owner);
-
-  return {
-    get usage() {
-      return memoryVariables().usage;
-    },
-    get freeMemory() {
-      return memoryVariables().freeMemory;
-    },
-    get usedMemory() {
-      return memoryVariables().usedMemory;
-    },
-    get totalMemory() {
-      return memoryVariables().totalMemory;
-    },
-    get freeSwap() {
-      return memoryVariables().freeSwap;
-    },
-    get usedSwap() {
-      return memoryVariables().usedSwap;
-    },
-    get totalSwap() {
-      return memoryVariables().totalSwap;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<MemoryOutput>(mergedConfig, ({ variables }) => {
+      if ('error' in variables) {
+        queue.error(variables.error);
+      } else {
+        queue.value(variables.data);
+      }
+    });
+  });
 }

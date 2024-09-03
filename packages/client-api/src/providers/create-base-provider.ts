@@ -59,7 +59,7 @@ export async function createBaseProvider<
   config: TConfig,
   fetcher: ProviderFetcher<TVal>,
 ): Promise<Provider<TConfig, TVal>> {
-  const firstEmit = new Deferred<boolean>();
+  const hasFirstEmit = new Deferred<boolean>();
 
   const valueListeners: ((val: TVal) => void)[] = [];
   const errorListeners: ((error: string) => void)[] = [];
@@ -72,7 +72,7 @@ export async function createBaseProvider<
 
   const shutdown = fetcher({
     value: value => {
-      firstEmit.resolve(true);
+      hasFirstEmit.resolve(true);
 
       latestEmission = {
         value,
@@ -83,7 +83,8 @@ export async function createBaseProvider<
       valueListeners.forEach(listener => listener(value));
     },
     error: error => {
-      firstEmit.resolve(true);
+      hasFirstEmit.resolve(true);
+
       latestEmission = {
         value: null,
         error,
@@ -95,7 +96,7 @@ export async function createBaseProvider<
   });
 
   // Wait for the first emit before returning the provider.
-  await firstEmit.promise;
+  await hasFirstEmit.promise;
 
   return {
     // @ts-ignore - TODO
