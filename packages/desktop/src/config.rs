@@ -8,10 +8,10 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
-use tracing::{info, warn};
+use tracing::{error, info};
 
 use crate::common::{
-  copy_dir_all, is_json, read_and_parse_json, LengthValue, PathExt,
+  copy_dir_all, has_extension, read_and_parse_json, LengthValue, PathExt,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -247,7 +247,7 @@ impl Config {
       if path.is_dir() {
         // Recursively aggregate configs in subdirectories.
         configs.extend(Self::read_window_configs(&path)?);
-      } else if is_json(&path) {
+      } else if has_extension(&path, ".zebar.json") {
         if let Ok(config) = read_and_parse_json::<WindowConfig>(&path) {
           let config_path = path.canonicalize_pretty()?;
 
@@ -265,8 +265,7 @@ impl Config {
             html_path,
           });
         } else {
-          // TODO: Show error dialog.
-          warn!("Failed to process file: {}", path.display());
+          error!("Failed to parse config: {}", path.display());
         }
       }
     }

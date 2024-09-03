@@ -19,9 +19,13 @@ pub fn read_and_parse_json<T: DeserializeOwned>(
   Ok(parsed)
 }
 
-/// Returns whether the given path is a JSON file.
-pub fn is_json(path: &PathBuf) -> bool {
-  path.extension().and_then(|ext| ext.to_str()) == Some("json")
+/// Returns whether the path has the given extension.
+pub fn has_extension(path: &PathBuf, extension: &str) -> bool {
+  path
+    .file_name()
+    .and_then(|name| name.to_str())
+    .map(|name| name.ends_with(extension))
+    .unwrap_or(false)
 }
 
 /// Recursively copies a directory and all its contents to a new file
