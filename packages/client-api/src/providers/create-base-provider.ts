@@ -45,7 +45,7 @@ export interface Provider<TConfig, TVal> {
   onError(callback: (error: string) => void): void;
 }
 
-type UnlistenFn = () => Promise<void>;
+type UnlistenFn = () => void | Promise<void>;
 
 type ProviderFetcher<T> = (queue: {
   value: (nextVal: T) => void;

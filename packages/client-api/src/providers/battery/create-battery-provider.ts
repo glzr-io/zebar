@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
 export interface BatteryProviderConfig {
   type: 'battery';
@@ -11,12 +15,17 @@ export interface BatteryProviderConfig {
   refreshInterval?: number;
 }
 
-const BatteryProviderConfigSchema = z.object({
+const batteryProviderConfigSchema = z.object({
   type: z.literal('battery'),
   refreshInterval: z.coerce.number().default(60 * 60 * 1000),
 });
 
-export interface BatteryProvider {
+export type BatteryProvider = Provider<
+  BatteryProviderConfig,
+  BatteryOutput
+>;
+
+export interface BatteryOutput {
   chargePercent: number;
   cycleCount: number;
   healthPercent: number;
@@ -26,19 +35,20 @@ export interface BatteryProvider {
   timeTillEmpty: number | null;
   timeTillFull: number | null;
   voltage: number | null;
-  onChange: (provider: BatteryProvider) => void;
 }
 
 export async function createBatteryProvider(
   config: BatteryProviderConfig,
-) {
-  const mergedConfig = BatteryProviderConfigSchema.parse(config);
+): Promise<BatteryProvider> {
+  const mergedConfig = batteryProviderConfigSchema.parse(config);
 
-  const { firstValue, onChange } =
-    await createProviderListener<BatteryProvider>(mergedConfig);
-
-  const batteryVariables = firstValue;
-  onChange(incoming => Object.assign(batteryVariables, incoming));
-
-  return batteryVariables;
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<BatteryOutput>(mergedConfig, ({ variables }) => {
+      if ('error' in variables) {
+        queue.error(variables.error);
+      } else {
+        queue.value(variables.data);
+      }
+    });
+  });
 }

@@ -4,8 +4,8 @@ import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import { init } from 'zebar';
 
-const ctx = await init();
-const cpu = await ctx.createProvider({ type: 'cpu' });
+const zebarCtx = await init();
+const cpu = await zebarCtx.createProvider({ type: 'cpu' });
 
 render(() => <App />, document.getElementById('root')!);
 

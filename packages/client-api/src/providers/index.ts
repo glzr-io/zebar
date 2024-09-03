@@ -7,5 +7,4 @@
 // export * from './network/create-network-provider';
 // export * from './util/create-util-provider';
 // export * from './weather/create-weather-provider';
-export * from './create-provider-listener';
 export * from './create-provider';

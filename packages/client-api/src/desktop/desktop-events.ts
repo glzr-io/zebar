@@ -3,15 +3,12 @@ import {
   type Event,
   type UnlistenFn,
 } from '@tauri-apps/api/event';
+import type { ProviderConfig } from '~/providers';
 
-import { createLogger } from '~/utils';
+import { createLogger, simpleHash } from '~/utils';
+import { listenProvider, unlistenProvider } from './desktop-commands';
 
 const logger = createLogger('desktop-events');
-
-export interface ProviderEmitEvent<T = unknown> {
-  configHash: string;
-  variables: { data: T } | { error: string };
-}
 
 let listenPromise: Promise<UnlistenFn> | null = null;
 
@@ -20,26 +17,42 @@ let callbacks: {
   fn: (payload: Event<ProviderEmitEvent<any>>) => void;
 }[] = [];
 
+export interface ProviderEmitEvent<T = unknown> {
+  configHash: string;
+  variables: { data: T } | { error: string };
+}
+
 /**
  * Listen for provider data.
  */
 export async function onProviderEmit<T = unknown>(
-  configHash: string,
-  callback: (payload: T) => void,
-): Promise<UnlistenFn> {
+  config: ProviderConfig,
+  callback: (event: ProviderEmitEvent<T>) => void,
+): Promise<() => Promise<void>> {
+  const configHash = simpleHash(config);
+
   registerEventCallback(configHash, callback);
 
   const unlisten = await (listenPromise ??
     (listenPromise = listenProviderEmit()));
 
-  // Unlisten when there are no active callbacks.
-  return () => {
+  await listenProvider({
+    configHash,
+    config,
+    trackedAccess: [],
+  });
+
+  return async () => {
     callbacks = callbacks.filter(
       callback => callback.configHash !== configHash,
     );
 
+    await unlistenProvider(configHash);
+
+    // Unlisten when there are no active callbacks.
     if (callbacks.length === 0) {
       unlisten();
+      listenPromise = null;
     }
   };
 }
@@ -49,7 +62,7 @@ export async function onProviderEmit<T = unknown>(
  */
 function registerEventCallback<T>(
   configHash: string,
-  callback: (payload: T) => void,
+  callback: (event: ProviderEmitEvent<T>) => void,
 ) {
   const wrappedCallback = (event: Event<ProviderEmitEvent<T>>) => {
     // Ignore provider emissions for different configs.
@@ -57,15 +70,8 @@ function registerEventCallback<T>(
       return;
     }
 
-    const { variables } = event.payload;
-
-    if ('error' in variables) {
-      logger.error('Incoming provider error:', variables.error);
-      throw new Error(variables.error);
-    }
-
-    logger.debug('Incoming provider variables:', variables.data);
-    callback(variables.data as T);
+    logger.debug('Incoming provider emission:', event.payload);
+    callback(event.payload);
   };
 
   callbacks.push({ configHash, fn: wrappedCallback });

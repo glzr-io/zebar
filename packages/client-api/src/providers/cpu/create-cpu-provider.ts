@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-import { createProviderListener } from '../create-provider-listener';
 import {
   createBaseProvider,
   type Provider,
 } from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
 export interface CpuProviderConfig {
   type: 'cpu';
@@ -20,9 +20,9 @@ const cpuProviderConfigSchema = z.object({
   refreshInterval: z.coerce.number().default(5 * 1000),
 });
 
-export type CpuProvider = Provider<CpuProviderConfig, CpuValues>;
+export type CpuProvider = Provider<CpuProviderConfig, CpuOutput>;
 
-export interface CpuValues {
+export interface CpuOutput {
   frequency: number;
   usage: number;
   logicalCoreCount: number;
@@ -36,14 +36,12 @@ export async function createCpuProvider(
   const mergedConfig = cpuProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    const { firstValue, onChange, unlisten } =
-      await createProviderListener<CpuValues>(mergedConfig);
-
-    queue.value(firstValue);
-    onChange(val => queue.value(val));
-
-    return async () => {
-      await unlisten();
-    };
+    return onProviderEmit<CpuOutput>(mergedConfig, ({ variables }) => {
+      if ('error' in variables) {
+        queue.error(variables.error);
+      } else {
+        queue.value(variables.data);
+      }
+    });
   });
 }
