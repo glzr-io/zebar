@@ -3,14 +3,18 @@ import type { ProviderConfig } from './create-provider';
 
 export interface Provider<TConfig, TVal> {
   /**
-   * Current value of the provider.
+   * Latest value emitted from the provider.
+   *
+   * `null` if the provider currently has an error.
    */
-  value?: TVal;
+  value: TVal | null;
 
   /**
-   * Error message from the provider.
+   * Latest error message emitted from the provider.
+   *
+   * `null` if the provider currently has a valid value.
    */
-  error?: string;
+  error: string | null;
 
   /**
    * Whether the provider currently has an error.
@@ -23,14 +27,14 @@ export interface Provider<TConfig, TVal> {
   config: TConfig;
 
   /**
-   * Restart the provider.
+   * Restarts the provider.
    */
-  restart(): Promise<TVal>;
+  restart(): Promise<void>;
 
   /**
    * Stops the provider.
    */
-  shutdown(): Promise<void>;
+  destroy(): Promise<void>;
 
   /**
    * Listens for changes to the provider's value.
@@ -47,6 +51,9 @@ export interface Provider<TConfig, TVal> {
 
 type UnlistenFn = () => void | Promise<void>;
 
+/**
+ * Fetches next value or error from the provider.
+ */
 type ProviderFetcher<T> = (queue: {
   value: (nextVal: T) => void;
   error: (nextError: string) => void;
@@ -59,10 +66,8 @@ export async function createBaseProvider<
   config: TConfig,
   fetcher: ProviderFetcher<TVal>,
 ): Promise<Provider<TConfig, TVal>> {
-  const hasFirstEmit = new Deferred<boolean>();
-
-  const valueListeners: ((val: TVal) => void)[] = [];
-  const errorListeners: ((error: string) => void)[] = [];
+  const valueListeners = new Set<(val: TVal) => void>();
+  const errorListeners = new Set<(error: string) => void>();
 
   let latestEmission = {
     value: null as TVal | null,
@@ -70,40 +75,34 @@ export async function createBaseProvider<
     hasError: false,
   };
 
-  const shutdown = fetcher({
-    value: value => {
-      hasFirstEmit.resolve(true);
+  let unlisten: UnlistenFn | null = await startFetcher();
 
-      latestEmission = {
-        value,
-        error: null,
-        hasError: false,
-      };
+  async function startFetcher() {
+    const hasFirstEmit = new Deferred<void>();
 
-      valueListeners.forEach(listener => listener(value));
-    },
-    error: error => {
-      hasFirstEmit.resolve(true);
+    const unlisten = await fetcher({
+      value: value => {
+        latestEmission = { value, error: null, hasError: false };
+        valueListeners.forEach(listener => listener(value));
+        hasFirstEmit.resolve();
+      },
+      error: error => {
+        latestEmission = { value: null, error, hasError: true };
+        errorListeners.forEach(listener => listener(error));
+        hasFirstEmit.resolve();
+      },
+    });
 
-      latestEmission = {
-        value: null,
-        error,
-        hasError: false,
-      };
+    // Wait for the first emission.
+    await hasFirstEmit.promise;
 
-      errorListeners.forEach(listener => listener(error));
-    },
-  });
-
-  // Wait for the first emit before returning the provider.
-  await hasFirstEmit.promise;
+    return unlisten;
+  }
 
   return {
-    // @ts-ignore - TODO
     get value() {
       return latestEmission.value;
     },
-    // @ts-ignore - TODO
     get error() {
       return latestEmission.error;
     },
@@ -112,20 +111,25 @@ export async function createBaseProvider<
     },
     config,
     restart: async () => {
-      // TODO: Implement restart.
-      return null as any;
+      if (unlisten) {
+        await unlisten();
+      }
+
+      await startFetcher();
     },
-    shutdown: async () => {
-      valueListeners.length = 0;
-      errorListeners.length = 0;
-      const shutdownFn = await shutdown;
-      await shutdownFn();
+    destroy: async () => {
+      valueListeners.clear();
+      errorListeners.clear();
+
+      if (unlisten) {
+        await unlisten();
+      }
     },
     onValue: callback => {
-      valueListeners.push(callback);
+      valueListeners.add(callback);
     },
     onError: callback => {
-      errorListeners.push(callback);
+      errorListeners.add(callback);
     },
   };
 }
