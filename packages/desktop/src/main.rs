@@ -100,49 +100,13 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           app.manage(window_factory.clone());
 
           // If this is not the first instance of the app, this will emit
-          // within the original instance and exit immediately.
-          let config_clone = config.clone();
-          let window_factory_clone = window_factory.clone();
-          app.handle().plugin(tauri_plugin_single_instance::init(
-            move |_, args, _| {
-              let cli = Cli::parse_from(args);
-
-              // TODO: Improve this.
-              let config_clone = config_clone.clone();
-              let window_factory_clone = window_factory_clone.clone();
-
-              // CLI command is guaranteed to be one of the open commands
-              // here.
-              task::spawn(async move {
-                if let CliCommand::Open(args) = cli.command() {
-                  let window_config_res = config_clone
-                    .window_config_by_path(
-                      &config_clone.join_path(&args.config_path),
-                    )
-                    .await
-                    .and_then(|res| {
-                      res.ok_or_else(|| {
-                        anyhow::anyhow!(
-                          "Window config not found at {}.",
-                          args.config_path
-                        )
-                      })
-                    });
-
-                  match window_config_res {
-                    Ok(window_config) => {
-                      let window_factory_clone =
-                        window_factory_clone.clone();
-                      window_factory_clone.open(window_config).await;
-                    }
-                    Err(err) => {
-                      error!("{:?}", err);
-                    }
-                  }
-                }
-              });
-            },
-          ))?;
+          // within the original instance and exit immediately. The CLI
+          // command is guaranteed to be one of the open commands here.
+          setup_single_instance(
+            app,
+            config.clone(),
+            window_factory.clone(),
+          )?;
 
           // Prevent windows from showing up in the dock on MacOS.
           #[cfg(target_os = "macos")]
@@ -153,31 +117,13 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
             .asset_protocol_scope()
             .allow_directory(&config.config_dir, true)?;
 
-          // Get window configs to open on start.
-          let window_configs = match cli.command() {
-            CliCommand::Open(args) => {
-              let window_config = config
-                .window_config_by_path(
-                  &config.join_path(&args.config_path),
-                )
-                .await?
-                .with_context(|| {
-                  format!(
-                    "Window config not found at {}.",
-                    args.config_path
-                  )
-                })?;
-
-              vec![window_config]
-            }
-            _ => config.startup_window_configs().await?,
-          };
-
-          for window_config in window_configs {
-            if let Err(err) = window_factory.open(window_config).await {
-              error!("Failed to open window: {:?}", err);
-            }
-          }
+          // Open windows based on CLI command.
+          open_windows_by_cli_command(
+            cli,
+            config.clone(),
+            window_factory.clone(),
+          )
+          .await?;
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
@@ -212,6 +158,70 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       commands::set_skip_taskbar
     ])
     .run(tauri::generate_context!())?;
+
+  Ok(())
+}
+
+/// Setup single instance Tauri plugin.
+fn setup_single_instance(
+  app: &tauri::App,
+  config: Arc<Config>,
+  window_factory: Arc<WindowFactory>,
+) -> anyhow::Result<()> {
+  app.handle().plugin(tauri_plugin_single_instance::init(
+    move |_, args, _| {
+      let config = config.clone();
+      let window_factory = window_factory.clone();
+
+      task::spawn(async move {
+        let res = match Cli::try_parse_from(args) {
+          Ok(cli) => {
+            // No-op if no subcommand is provided.
+            if cli.command() != CliCommand::Empty {
+              open_windows_by_cli_command(cli, config, window_factory)
+                .await
+            } else {
+              Ok(())
+            }
+          }
+          _ => Err(anyhow::anyhow!("Failed to parse CLI arguments.")),
+        };
+
+        if let Err(err) = res {
+          error!("{:?}", err);
+        }
+      });
+    },
+  ))?;
+
+  Ok(())
+}
+
+/// Opens windows based on CLI command.
+async fn open_windows_by_cli_command(
+  cli: Cli,
+  config: Arc<Config>,
+  window_factory: Arc<WindowFactory>,
+) -> anyhow::Result<()> {
+  let window_configs = match cli.command() {
+    CliCommand::Open(args) => {
+      let window_config = config
+        .window_config_by_path(&config.join_path(&args.config_path))
+        .await?
+        .with_context(|| {
+          format!("Window config not found at {}.", args.config_path)
+        })?;
+
+      vec![window_config]
+    }
+    _ => config.startup_window_configs().await?,
+  };
+
+  for window_config in window_configs {
+    if let Err(err) = window_factory.open(window_config).await {
+      error!("Failed to open window: {:?}", err);
+    }
+  }
 
   Ok(())
 }

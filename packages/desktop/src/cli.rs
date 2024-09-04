@@ -17,7 +17,7 @@ impl Cli {
   }
 }
 
-#[derive(Clone, Debug, Subcommand)]
+#[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum CliCommand {
   /// Open a window by its config path.
   ///
@@ -43,7 +43,7 @@ pub enum CliCommand {
   Empty,
 }
 
-#[derive(Args, Clone, Debug)]
+#[derive(Args, Clone, Debug, PartialEq)]
 pub struct OpenWindowArgs {
   /// Relative file path to window config within the Zebar config
   /// directory.
@@ -56,7 +56,7 @@ pub struct OpenWindowArgs {
   pub config_dir: Option<PathBuf>,
 }
 
-#[derive(Args, Clone, Debug)]
+#[derive(Args, Clone, Debug, PartialEq)]
 pub struct OpenAllWindowsArgs {
   /// Absolute path to the Zebar config directory.
   ///
@@ -65,7 +65,7 @@ pub struct OpenAllWindowsArgs {
   pub config_dir: Option<PathBuf>,
 }
 
-#[derive(Args, Clone, Debug)]
+#[derive(Args, Clone, Debug, PartialEq)]
 pub struct OutputMonitorsArgs {
   /// Use ASCII NUL character (character code 0) instead of newlines
   /// for delimiting monitors.
