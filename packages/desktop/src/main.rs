@@ -117,14 +117,6 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
             .asset_protocol_scope()
             .allow_directory(&config.config_dir, true)?;
 
-          // Open windows based on CLI command.
-          open_windows_by_cli_command(
-            cli,
-            config.clone(),
-            window_factory.clone(),
-          )
-          .await?;
-
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
           app.handle().plugin(tauri_plugin_dialog::init())?;
@@ -132,6 +124,14 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           // Initialize `ProviderManager` in Tauri state.
           let manager = Arc::new(ProviderManager::new(app.handle()));
           app.manage(manager);
+
+          // Open windows based on CLI command.
+          open_windows_by_cli_command(
+            cli,
+            config.clone(),
+            window_factory.clone(),
+          )
+          .await?;
 
           // Add application icon to system tray.
           let _ =

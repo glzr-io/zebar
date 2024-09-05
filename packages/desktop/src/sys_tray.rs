@@ -7,6 +7,7 @@ use tauri::{
   tray::{TrayIcon, TrayIconBuilder},
   AppHandle, Wry,
 };
+use tokio::task;
 use tracing::{error, info};
 
 use crate::{
@@ -83,6 +84,7 @@ impl SysTray {
 
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {
     let config = self.config.clone();
+    let window_factory = self.window_factory.clone();
     let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
 
     let tray_icon = TrayIconBuilder::with_id("tray")
@@ -93,7 +95,12 @@ impl SysTray {
         let event = MenuEvent::from_str(event.id.as_ref());
 
         let event_res = event.map(|event| {
-          Self::handle_menu_event(event, &app, config.clone())
+          Self::handle_menu_event(
+            event,
+            &app,
+            config.clone(),
+            window_factory.clone(),
+          )
         });
 
         if let Err(err) = event_res {
@@ -107,7 +114,6 @@ impl SysTray {
 
   fn start_listener(self: Arc<Self>) {
     let mut config_changes_rx = self.config.changes_tx.subscribe();
-    // TODO: Add `changes_tx` to `WindowFactory`.
     let mut window_changes_rx = self.window_factory.changes_tx.subscribe();
 
     tokio::spawn(async move {
@@ -174,6 +180,7 @@ impl SysTray {
     event: MenuEvent,
     app_handle: &AppHandle,
     config: Arc<Config>,
+    window_factory: Arc<WindowFactory>,
   ) -> anyhow::Result<()> {
     match event {
       MenuEvent::ShowConfigFolder => {
@@ -188,11 +195,19 @@ impl SysTray {
 
         app_handle.exit(0)
       }
-      MenuEvent::EnableWindowConfig(id) => {
-        info!("Window config at index {} enabled.", id);
+      MenuEvent::EnableWindowConfig(path) => {
+        info!("Window config at path {} enabled.", path);
+
+        // task::spawn(async move {
+        //   window_factory.open(path).await;
+        // })
       }
-      MenuEvent::StartupWindowConfig(id) => {
-        info!("Window config at index {} set to launch on startup.", id);
+      MenuEvent::StartupWindowConfig(path) => {
+        info!("Window config at path {} set to launch on startup.", path);
+
+        // task::spawn(async move {
+        //   config.add_startup_config(path).await;
+        // })
       }
     };
 
@@ -244,6 +259,7 @@ impl SysTray {
       None::<&str>,
     )?;
 
+    // **
     // TODO: Get whether it's launched on startup.
     let startup_item = CheckMenuItem::with_id(
       &self.app_handle,

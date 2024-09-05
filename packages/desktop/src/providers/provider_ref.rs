@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::bail;
 use serde::Serialize;
-use tokio::{sync::mpsc, task};
+use tokio::sync::mpsc;
 use tracing::info;
 
 #[cfg(windows)]
@@ -16,14 +16,12 @@ use super::{
 };
 
 /// Reference to an active provider.
-#[derive(Debug, Clone)]
 pub struct ProviderRef {
   pub config_hash: String,
   pub min_refresh_interval: Option<Duration>,
   pub cache: Option<ProviderCache>,
   pub emit_output_tx: mpsc::Sender<ProviderOutput>,
-  pub refresh_tx: mpsc::Sender<()>,
-  pub stop_tx: mpsc::Sender<()>,
+  provider: Box<dyn Provider + Send>,
 }
 
 /// Cache for provider output.
@@ -64,78 +62,27 @@ impl From<anyhow::Result<ProviderVariables>> for VariablesResult {
 
 impl ProviderRef {
   /// Creates a new `ProviderRef` instance.
-  pub fn new(
+  pub async fn new(
     config_hash: String,
     config: ProviderConfig,
     emit_output_tx: mpsc::Sender<ProviderOutput>,
     shared_state: &SharedProviderState,
   ) -> anyhow::Result<Self> {
-    let provider = Self::create_provider(config, shared_state)?;
+    let mut provider = Self::create_provider(config, shared_state)?;
     let min_refresh_interval = provider.min_refresh_interval();
 
-    let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
-    let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
-
-    Self::start_provider(
-      provider,
-      config_hash.clone(),
-      emit_output_tx.clone(),
-      refresh_rx,
-      stop_rx,
-    );
+    info!("Starting provider: {}", config_hash);
+    provider
+      .on_start(&config_hash, emit_output_tx.clone())
+      .await;
 
     Ok(Self {
       config_hash,
       min_refresh_interval,
       cache: None,
       emit_output_tx,
-      refresh_tx,
-      stop_tx,
+      provider,
     })
-  }
-
-  /// Starts the provider in a separate task.
-  fn start_provider(
-    mut provider: Box<dyn Provider + Send>,
-    config_hash: String,
-    emit_output_tx: mpsc::Sender<ProviderOutput>,
-    mut refresh_rx: mpsc::Receiver<()>,
-    mut stop_rx: mpsc::Receiver<()>,
-  ) {
-    task::spawn(async move {
-      let mut has_started = false;
-
-      // Loop to avoid exiting the select on refresh.
-      loop {
-        let config_hash = config_hash.clone();
-        let emit_output_tx = emit_output_tx.clone();
-
-        tokio::select! {
-          // Default match arm which handles initialization of the provider.
-          // This has a precondition to avoid running again on refresh.
-          _ = {
-            info!("Starting provider: {}", config_hash);
-            has_started = true;
-            provider.on_start(&config_hash, emit_output_tx.clone())
-          }, if !has_started => break,
-
-          // On refresh, re-emit provider variables and continue looping.
-          Some(_) = refresh_rx.recv() => {
-            info!("Refreshing provider: {}", config_hash);
-            _ = provider.on_refresh(&config_hash, emit_output_tx).await;
-          },
-
-          // On stop, perform any necessary clean up and exit the loop.
-          Some(_) = stop_rx.recv() => {
-            info!("Stopping provider: {}", config_hash);
-            _ = provider.on_stop().await;
-            break;
-          },
-        }
-      }
-
-      info!("Provider stopped: {}", config_hash);
-    });
   }
 
   fn create_provider(
@@ -186,7 +133,7 @@ impl ProviderRef {
   ///
   /// Since the previous output of providers is cached, if within the
   /// minimum refresh interval, send the previous output.
-  pub async fn refresh(&self) -> anyhow::Result<()> {
+  pub async fn refresh(&mut self) -> anyhow::Result<()> {
     let min_refresh_interval =
       self.min_refresh_interval.unwrap_or(Duration::MAX);
 
@@ -194,7 +141,13 @@ impl ProviderRef {
       Some(cache) if cache.timestamp.elapsed() >= min_refresh_interval => {
         self.emit_output_tx.send(*cache.output.clone()).await?;
       }
-      _ => self.refresh_tx.send(()).await?,
+      _ => {
+        info!("Refreshing provider: {}", self.config_hash);
+        self
+          .provider
+          .on_refresh(&self.config_hash, self.emit_output_tx.clone())
+          .await;
+      }
     };
 
     Ok(())
@@ -203,8 +156,10 @@ impl ProviderRef {
   /// Stops the given provider.
   ///
   /// This triggers any necessary cleanup.
-  pub async fn stop(&self) -> anyhow::Result<()> {
-    self.stop_tx.send(()).await?;
+  pub async fn stop(&mut self) -> anyhow::Result<()> {
+    info!("Stopping provider: {}", self.config_hash);
+    _ = self.provider.on_stop().await;
+    info!("Provider stopped: {}", self.config_hash);
 
     Ok(())
   }

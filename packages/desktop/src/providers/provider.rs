@@ -10,7 +10,7 @@ use tokio::{
 use super::{provider_ref::ProviderOutput, variables::ProviderVariables};
 
 #[async_trait]
-pub trait Provider {
+pub trait Provider: Send + Sync {
   /// Callback for when the provider is started.
   async fn on_start(
     &mut self,
@@ -20,13 +20,13 @@ pub trait Provider {
 
   /// Callback for when the provider is refreshed.
   async fn on_refresh(
-    &mut self,
+    &self,
     config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
   );
 
   /// Callback for when the provider is stopped.
-  async fn on_stop(&mut self);
+  async fn on_stop(&self);
 
   /// Minimum interval between refreshes.
   ///
@@ -35,7 +35,7 @@ pub trait Provider {
 }
 
 #[async_trait]
-pub trait IntervalProvider {
+pub trait IntervalProvider: Send + Sync {
   type Config: Sync + Send + 'static + IntervalConfig;
   type State: Sync + Send + 'static;
 
@@ -93,11 +93,10 @@ impl<T: IntervalProvider + Send> Provider for T {
     });
 
     self.set_abort_handle(interval_task.abort_handle());
-    _ = interval_task.await;
   }
 
   async fn on_refresh(
-    &mut self,
+    &self,
     config_hash: &str,
     emit_output_tx: Sender<ProviderOutput>,
   ) {
@@ -114,7 +113,7 @@ impl<T: IntervalProvider + Send> Provider for T {
       .await;
   }
 
-  async fn on_stop(&mut self) {
+  async fn on_stop(&self) {
     if let Some(handle) = &self.abort_handle() {
       handle.abort();
     }

@@ -178,18 +178,17 @@ impl Provider for KomorebiProvider {
     });
 
     self.abort_handle = Some(task_handle.abort_handle());
-    _ = task_handle.await;
   }
 
   async fn on_refresh(
-    &mut self,
+    &self,
     _config_hash: &str,
     _emit_output_tx: Sender<ProviderOutput>,
   ) {
     // No-op.
   }
 
-  async fn on_stop(&mut self) {
+  async fn on_stop(&self) {
     if let Some(handle) = &self.abort_handle {
       handle.abort();
     }

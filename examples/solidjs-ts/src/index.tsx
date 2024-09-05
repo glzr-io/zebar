@@ -3,12 +3,15 @@ import './index.css';
 import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import { init } from 'zebar';
+import { createEffect } from 'solid-js';
 
 const zebarCtx = await init();
-const cpu = await zebarCtx.createProvider({ type: 'cpu' });
-const battery = await zebarCtx.createProvider({ type: 'battery' });
-const memory = await zebarCtx.createProvider({ type: 'memory' });
-const weather = await zebarCtx.createProvider({ type: 'weather' });
+const [cpu, battery, memory, weather] = await Promise.all([
+  zebarCtx.createProvider({ type: 'cpu' }),
+  zebarCtx.createProvider({ type: 'battery' }),
+  zebarCtx.createProvider({ type: 'memory' }),
+  zebarCtx.createProvider({ type: 'weather' }),
+]);
 
 render(() => <App />, document.getElementById('root')!);
 
