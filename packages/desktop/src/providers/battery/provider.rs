@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Context;
 use async_trait::async_trait;
@@ -9,42 +9,43 @@ use starship_battery::{
   },
   Manager, State,
 };
-use tokio::task::AbortHandle;
+use tokio::{sync::mpsc, time};
 
 use super::{BatteryProviderConfig, BatteryVariables};
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
+  provider::Provider,
+  provider_manager::SharedProviderState,
+  provider_ref::{ProviderOutput, VariablesResult},
+  variables::ProviderVariables,
 };
 
 pub struct BatteryProvider {
-  pub config: Arc<BatteryProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  battery_manager: Arc<Manager>,
+  config: BatteryProviderConfig,
+  battery_manager: Manager,
 }
 
 impl BatteryProvider {
   pub fn new(
     config: BatteryProviderConfig,
   ) -> anyhow::Result<BatteryProvider> {
-    let manager = Manager::new()?;
-
     Ok(BatteryProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      battery_manager: Arc::new(manager),
+      config,
+      battery_manager: Manager::new()?,
     })
   }
 
   /// Battery manager from `starship_battery` is not thread-safe, so it
   /// requires its own non-async function.
-  fn get_variables(manager: &Manager) -> anyhow::Result<BatteryVariables> {
-    let first_battery = manager
+  pub fn get_variables(
+    manager: &Manager,
+  ) -> anyhow::Result<ProviderVariables> {
+    let battery = manager
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
       .unwrap_or(None)
-      .context("No battery found.");
+      .context("No battery found.")?;
 
-    first_battery.map(|battery| BatteryVariables {
+    Ok(ProviderVariables::Battery(BatteryVariables {
       charge_percent: battery.state_of_charge().get::<percent>(),
       health_percent: battery.state_of_health().get::<percent>(),
       state: battery.state().to_string(),
@@ -58,37 +59,26 @@ impl BatteryProvider {
       power_consumption: battery.energy_rate().get::<watt>(),
       voltage: battery.voltage().get::<volt>(),
       cycle_count: battery.cycle_count(),
-    })
+    }))
   }
 }
 
 #[async_trait]
-impl IntervalProvider for BatteryProvider {
-  type Config = BatteryProviderConfig;
-  type State = Manager;
+impl Provider for BatteryProvider {
+  async fn on_start(
+    self: Arc<Self>,
+    shared_state: SharedProviderState,
+    emit_output_tx: mpsc::Sender<VariablesResult>,
+  ) {
+    let mut interval =
+      time::interval(Duration::from_millis(self.config.refresh_interval));
 
-  fn config(&self) -> Arc<BatteryProviderConfig> {
-    self.config.clone()
-  }
-
-  fn state(&self) -> Arc<Manager> {
-    self.battery_manager.clone()
-  }
-
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    _: &BatteryProviderConfig,
-    battery_manager: &Manager,
-  ) -> anyhow::Result<ProviderVariables> {
-    Ok(ProviderVariables::Battery(Self::get_variables(
-      battery_manager,
-    )?))
+    loop {
+      interval.tick().await;
+      emit_output_tx
+        .send(Self::get_variables(&self.battery_manager).into())
+        .await
+        .unwrap();
+    }
   }
 }

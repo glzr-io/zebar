@@ -1,27 +1,34 @@
-use std::time::{Duration, Instant};
+use std::{
+  sync::Arc,
+  time::{Duration, Instant},
+};
 
 use anyhow::bail;
 use serde::Serialize;
-use tokio::sync::mpsc;
-use tracing::info;
+use tauri::{AppHandle, Emitter};
+use tokio::{sync::mpsc, task};
+use tracing::{info, warn};
 
-#[cfg(windows)]
-use super::komorebi::KomorebiProvider;
+// #[cfg(windows)]
+// use super::komorebi::KomorebiProvider;
 use super::{
-  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, provider::Provider,
-  provider_manager::SharedProviderState, variables::ProviderVariables,
-  weather::WeatherProvider,
+  battery::BatteryProvider,
+  config::ProviderConfig,
+  cpu::CpuProvider,
+  // host::HostProvider, ip::IpProvider, memory::MemoryProvider,
+  // network::NetworkProvider,
+  provider::Provider,
+  provider_manager::SharedProviderState,
+  variables::ProviderVariables,
+  // weather::WeatherProvider,
 };
 
 /// Reference to an active provider.
 pub struct ProviderRef {
   pub config_hash: String,
-  pub min_refresh_interval: Option<Duration>,
   pub cache: Option<ProviderCache>,
-  pub emit_output_tx: mpsc::Sender<ProviderOutput>,
-  provider: Box<dyn Provider + Send>,
+  provider: Arc<dyn Provider>,
+  emit_output_tx: mpsc::Sender<VariablesResult>,
 }
 
 /// Cache for provider output.
@@ -63,57 +70,90 @@ impl From<anyhow::Result<ProviderVariables>> for VariablesResult {
 impl ProviderRef {
   /// Creates a new `ProviderRef` instance.
   pub async fn new(
+    app_handle: &AppHandle,
     config_hash: String,
     config: ProviderConfig,
-    emit_output_tx: mpsc::Sender<ProviderOutput>,
     shared_state: &SharedProviderState,
   ) -> anyhow::Result<Self> {
-    let mut provider = Self::create_provider(config, shared_state)?;
-    let min_refresh_interval = provider.min_refresh_interval();
+    let provider = Self::create_provider(config, shared_state)?;
+
+    let (emit_output_tx, mut emit_output_rx) =
+      mpsc::channel::<VariablesResult>(1);
+
+    let config_hash_clone = config_hash.clone();
+    let app_handle = app_handle.clone();
+    task::spawn(async move {
+      while let Some(output) = emit_output_rx.recv().await {
+        info!("Emitting for provider: {}", config_hash_clone);
+
+        let output = Box::new(output);
+        let xx = ProviderOutput {
+          config_hash: config_hash_clone.clone(),
+          variables: *output.clone(),
+        };
+
+        if let Err(err) = app_handle.emit("provider-emit", xx) {
+          warn!("Error emitting provider output: {:?}", err);
+        }
+
+        // Update the provider's output cache.
+        // if let Ok(mut providers) = providers.try_lock() {
+        //   if let Some(found_provider) =
+        //     providers.get_mut(&output.config_hash)
+        //   {
+        //     found_provider.update_cache(output);
+        //   }
+        // } else {
+        //   warn!("Failed to update provider output cache.");
+        // }
+      }
+    });
 
     info!("Starting provider: {}", config_hash);
-    provider
-      .on_start(&config_hash, emit_output_tx.clone())
-      .await;
+    let provider_clone = provider.clone();
+    let shared_state = shared_state.clone();
+    let emit_output_tx_clone = emit_output_tx.clone();
+    task::spawn(async move {
+      provider_clone
+        .on_start(shared_state.clone(), emit_output_tx_clone)
+        .await;
+    });
 
     Ok(Self {
       config_hash,
-      min_refresh_interval,
       cache: None,
-      emit_output_tx,
       provider,
+      emit_output_tx,
     })
   }
 
   fn create_provider(
     config: ProviderConfig,
     shared_state: &SharedProviderState,
-  ) -> anyhow::Result<Box<dyn Provider + Send>> {
-    let provider: Box<dyn Provider + Send> = match config {
+  ) -> anyhow::Result<Arc<dyn Provider>> {
+    let provider: Arc<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
-        Box::new(BatteryProvider::new(config)?)
+        Arc::new(BatteryProvider::new(config)?)
       }
-      ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
-      }
-      ProviderConfig::Host(config) => {
-        Box::new(HostProvider::new(config, shared_state.sysinfo.clone()))
-      }
-      ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
-      #[cfg(windows)]
-      ProviderConfig::Komorebi(config) => {
-        Box::new(KomorebiProvider::new(config))
-      }
-      ProviderConfig::Memory(config) => {
-        Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
-      }
-      ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
-        config,
-        shared_state.netinfo.clone(),
-      )),
-      ProviderConfig::Weather(config) => {
-        Box::new(WeatherProvider::new(config))
-      }
+      ProviderConfig::Cpu(config) => Arc::new(CpuProvider::new(config)),
+      // ProviderConfig::Host(config) => {
+      //   Box::new(HostProvider::new(config,
+      // shared_state.sysinfo.clone())) }
+      // ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
+      // #[cfg(windows)]
+      // ProviderConfig::Komorebi(config) => {
+      //   Box::new(KomorebiProvider::new(config))
+      // }
+      // ProviderConfig::Memory(config) => {
+      //   Box::new(MemoryProvider::new(config,
+      // shared_state.sysinfo.clone())) }
+      // ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
+      //   config,
+      //   shared_state.netinfo.clone(),
+      // )),
+      // ProviderConfig::Weather(config) => {
+      //   Box::new(WeatherProvider::new(config))
+      // }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),
     };
@@ -134,21 +174,9 @@ impl ProviderRef {
   /// Since the previous output of providers is cached, if within the
   /// minimum refresh interval, send the previous output.
   pub async fn refresh(&mut self) -> anyhow::Result<()> {
-    let min_refresh_interval =
-      self.min_refresh_interval.unwrap_or(Duration::MAX);
-
-    match &self.cache {
-      Some(cache) if cache.timestamp.elapsed() >= min_refresh_interval => {
-        self.emit_output_tx.send(*cache.output.clone()).await?;
-      }
-      _ => {
-        info!("Refreshing provider: {}", self.config_hash);
-        self
-          .provider
-          .on_refresh(&self.config_hash, self.emit_output_tx.clone())
-          .await;
-      }
-    };
+    // if let Some(cache) = self.cache {
+    //   self.emit_output_tx.send(*cache.output.clone()).await?;
+    // }
 
     Ok(())
   }
@@ -158,7 +186,7 @@ impl ProviderRef {
   /// This triggers any necessary cleanup.
   pub async fn stop(&mut self) -> anyhow::Result<()> {
     info!("Stopping provider: {}", self.config_hash);
-    _ = self.provider.on_stop().await;
+    _ = self.provider.clone().on_stop().await;
     info!("Provider stopped: {}", self.config_hash);
 
     Ok(())

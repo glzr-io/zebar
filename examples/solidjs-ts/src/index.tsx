@@ -6,11 +6,11 @@ import { init } from 'zebar';
 import { createEffect } from 'solid-js';
 
 const zebarCtx = await init();
-const [cpu, battery, memory, weather] = await Promise.all([
+const [cpu, battery] = await Promise.all([
   zebarCtx.createProvider({ type: 'cpu' }),
   zebarCtx.createProvider({ type: 'battery' }),
-  zebarCtx.createProvider({ type: 'memory' }),
-  zebarCtx.createProvider({ type: 'weather' }),
+  // zebarCtx.createProvider({ type: 'memory' }),
+  // zebarCtx.createProvider({ type: 'weather' }),
 ]);
 
 render(() => <App />, document.getElementById('root')!);
@@ -19,22 +19,22 @@ function App() {
   const [store, setStore] = createStore({
     cpu: cpu.output,
     battery: battery.output,
-    memory: memory.output,
-    weather: weather.output,
+    // memory: memory.output,
+    // weather: weather.output,
   });
 
   cpu.onOutput(cpu => setStore({ cpu }));
   battery.onOutput(battery => setStore({ battery }));
-  memory.onOutput(memory => setStore({ memory }));
-  weather.onOutput(weather => setStore({ weather }));
+  // memory.onOutput(memory => setStore({ memory }));
+  // weather.onOutput(weather => setStore({ weather }));
 
   return (
     <div>
       cpu: {store.cpu.usage}
       battery: {store.battery?.chargePercent}
-      memory: {store.memory.usage}
+      {/* memory: {store.memory.usage}
       weather temp: {store.weather.celsiusTemp}
-      weather status: {store.weather.status}
+      weather status: {store.weather.status} */}
     </div>
   );
 }

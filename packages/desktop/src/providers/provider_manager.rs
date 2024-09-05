@@ -1,22 +1,14 @@
 use std::{collections::HashMap, sync::Arc};
 
 use sysinfo::{Networks, System};
-use tauri::{AppHandle, Emitter};
-use tokio::{
-  sync::{
-    mpsc::{self},
-    Mutex,
-  },
-  task,
-};
-use tracing::{info, warn};
+use tauri::AppHandle;
+use tokio::sync::Mutex;
+use tracing::warn;
 
-use super::{
-  config::ProviderConfig,
-  provider_ref::{ProviderOutput, ProviderRef},
-};
+use super::{config::ProviderConfig, provider_ref::ProviderRef};
 
 /// State shared between providers.
+#[derive(Clone)]
 pub struct SharedProviderState {
   pub sysinfo: Arc<Mutex<System>>,
   pub netinfo: Arc<Mutex<Networks>>,
@@ -24,61 +16,21 @@ pub struct SharedProviderState {
 
 /// Manages the creation and cleanup of providers.
 pub struct ProviderManager {
-  emit_output_tx: mpsc::Sender<ProviderOutput>,
+  app_handle: AppHandle,
   providers: Arc<Mutex<HashMap<String, ProviderRef>>>,
   shared_state: SharedProviderState,
 }
 
 impl ProviderManager {
   pub fn new(app_handle: &AppHandle) -> Self {
-    let (emit_output_tx, emit_output_rx) =
-      mpsc::channel::<ProviderOutput>(1);
-
-    let providers = Arc::new(Mutex::new(HashMap::new()));
-    Self::start_listener(app_handle, emit_output_rx, providers.clone());
-
     Self {
-      emit_output_tx,
-      providers,
+      app_handle: app_handle.clone(),
+      providers: Arc::new(Mutex::new(HashMap::new())),
       shared_state: SharedProviderState {
         sysinfo: Arc::new(Mutex::new(System::new_all())),
         netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
       },
     }
-  }
-
-  /// Starts listening for provider outputs and emits them to frontend
-  /// clients.
-  fn start_listener(
-    app_handle: &AppHandle,
-    mut emit_output_rx: mpsc::Receiver<ProviderOutput>,
-    providers: Arc<Mutex<HashMap<String, ProviderRef>>>,
-  ) {
-    let app_handle = app_handle.clone();
-
-    task::spawn(async move {
-      while let Some(output) = emit_output_rx.recv().await {
-        info!("Emitting for provider: {}", output.config_hash);
-
-        let output = Box::new(output);
-
-        if let Err(err) = app_handle.emit("provider-emit", output.clone())
-        {
-          warn!("Error emitting provider output: {:?}", err);
-        }
-
-        // Update the provider's output cache.
-        if let Ok(mut providers) = providers.try_lock() {
-          if let Some(found_provider) =
-            providers.get_mut(&output.config_hash)
-          {
-            found_provider.update_cache(output);
-          }
-        } else {
-          warn!("Failed to update provider output cache.");
-        }
-      }
-    });
   }
 
   /// Creates a provider with the given config.
@@ -103,9 +55,9 @@ impl ProviderManager {
     }
 
     let provider_ref = ProviderRef::new(
+      &self.app_handle,
       config_hash.clone(),
       config,
-      self.emit_output_tx.clone(),
       &self.shared_state,
     )
     .await?;

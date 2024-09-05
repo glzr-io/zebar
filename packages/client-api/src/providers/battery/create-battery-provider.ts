@@ -17,7 +17,7 @@ export interface BatteryProviderConfig {
 
 const batteryProviderConfigSchema = z.object({
   type: z.literal('battery'),
-  refreshInterval: z.coerce.number().default(60 * 60 * 1000),
+  refreshInterval: z.coerce.number().default(60 * 1000),
 });
 
 export type BatteryProvider = Provider<

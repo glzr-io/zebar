@@ -1,69 +1,56 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use sysinfo::System;
-use tokio::{sync::Mutex, task::AbortHandle};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task::AbortHandle,
+  time,
+};
 
 use super::{CpuProviderConfig, CpuVariables};
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
+  provider::Provider, provider_manager::SharedProviderState,
+  provider_ref::VariablesResult, variables::ProviderVariables,
 };
 
 pub struct CpuProvider {
-  pub config: Arc<CpuProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  sysinfo: Arc<Mutex<System>>,
+  config: CpuProviderConfig,
 }
 
 impl CpuProvider {
-  pub fn new(
-    config: CpuProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
-  ) -> CpuProvider {
-    CpuProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      sysinfo,
-    }
+  pub fn new(config: CpuProviderConfig) -> CpuProvider {
+    CpuProvider { config }
   }
 }
 
 #[async_trait]
-impl IntervalProvider for CpuProvider {
-  type Config = CpuProviderConfig;
-  type State = Mutex<System>;
+impl Provider for CpuProvider {
+  async fn on_start(
+    self: Arc<Self>,
+    shared_state: SharedProviderState,
+    emit_output_tx: mpsc::Sender<VariablesResult>,
+  ) {
+    let mut interval =
+      time::interval(Duration::from_millis(self.config.refresh_interval));
 
-  fn config(&self) -> Arc<CpuProviderConfig> {
-    self.config.clone()
-  }
+    loop {
+      interval.tick().await;
 
-  fn state(&self) -> Arc<Mutex<System>> {
-    self.sysinfo.clone()
-  }
+      let mut sysinfo = shared_state.sysinfo.lock().await;
+      sysinfo.refresh_cpu();
 
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
+      let res = Ok(ProviderVariables::Cpu(CpuVariables {
+        usage: sysinfo.global_cpu_info().cpu_usage(),
+        frequency: sysinfo.global_cpu_info().frequency(),
+        logical_core_count: sysinfo.cpus().len(),
+        physical_core_count: sysinfo
+          .physical_core_count()
+          .unwrap_or(sysinfo.cpus().len()),
+        vendor: sysinfo.global_cpu_info().vendor_id().into(),
+      }));
 
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    _: &CpuProviderConfig,
-    sysinfo: &Mutex<System>,
-  ) -> anyhow::Result<ProviderVariables> {
-    let mut sysinfo = sysinfo.lock().await;
-    sysinfo.refresh_cpu();
-
-    Ok(ProviderVariables::Cpu(CpuVariables {
-      usage: sysinfo.global_cpu_info().cpu_usage(),
-      frequency: sysinfo.global_cpu_info().frequency(),
-      logical_core_count: sysinfo.cpus().len(),
-      physical_core_count: sysinfo
-        .physical_core_count()
-        .unwrap_or(sysinfo.cpus().len()),
-      vendor: sysinfo.global_cpu_info().vendor_id().into(),
-    }))
+      emit_output_tx.send(res.into()).await;
+    }
   }
 }

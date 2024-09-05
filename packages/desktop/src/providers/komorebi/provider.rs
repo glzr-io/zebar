@@ -6,10 +6,7 @@ use std::{
 
 use async_trait::async_trait;
 use komorebi_client::{Container, Monitor, Window, Workspace};
-use tokio::{
-  sync::mpsc::Sender,
-  task::{self, AbortHandle},
-};
+use tokio::{sync::mpsc::Sender, task::AbortHandle};
 use tracing::debug;
 
 use super::{
@@ -123,11 +120,6 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
-  fn min_refresh_interval(&self) -> Option<Duration> {
-    // State should always be up to date.
-    None
-  }
-
   async fn on_start(
     &mut self,
     config_hash: &str,
@@ -135,62 +127,43 @@ impl Provider for KomorebiProvider {
   ) {
     let config_hash = config_hash.to_string();
 
-    let task_handle = task::spawn(async move {
-      let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
-      debug!("Connected to Komorebi socket.");
+    let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
+    debug!("Connected to Komorebi socket.");
 
-      for incoming in socket.incoming() {
-        debug!("Incoming Komorebi socket message.");
+    for incoming in socket.incoming() {
+      debug!("Incoming Komorebi socket message.");
 
-        match incoming {
-          Ok(data) => {
-            let reader = BufReader::new(data.try_clone().unwrap());
+      match incoming {
+        Ok(data) => {
+          let reader = BufReader::new(data.try_clone().unwrap());
 
-            for line in reader.lines().flatten() {
-              if let Ok(notification) = serde_json::from_str::<
-                komorebi_client::Notification,
-              >(&line)
-              {
-                // Transform and emit the incoming Komorebi state.
-                _ = emit_output_tx
-                  .send(ProviderOutput {
-                    config_hash: config_hash.clone(),
-                    variables: VariablesResult::Data(
-                      ProviderVariables::Komorebi(
-                        Self::transform_response(notification.state),
-                      ),
-                    ),
-                  })
-                  .await;
-              }
+          for line in reader.lines().flatten() {
+            if let Ok(notification) =
+              serde_json::from_str::<komorebi_client::Notification>(&line)
+            {
+              // Transform and emit the incoming Komorebi state.
+              _ = emit_output_tx
+                .send(ProviderOutput {
+                  config_hash: config_hash.clone(),
+                  variables: VariablesResult::Data(
+                    ProviderVariables::Komorebi(Self::transform_response(
+                      notification.state,
+                    )),
+                  ),
+                })
+                .await;
             }
           }
-          Err(error) => {
-            _ = emit_output_tx
-              .send(ProviderOutput {
-                config_hash: config_hash.to_string(),
-                variables: VariablesResult::Error(error.to_string()),
-              })
-              .await;
-          }
+        }
+        Err(error) => {
+          _ = emit_output_tx
+            .send(ProviderOutput {
+              config_hash: config_hash.to_string(),
+              variables: VariablesResult::Error(error.to_string()),
+            })
+            .await;
         }
       }
-    });
-
-    self.abort_handle = Some(task_handle.abort_handle());
-  }
-
-  async fn on_refresh(
-    &self,
-    _config_hash: &str,
-    _emit_output_tx: Sender<ProviderOutput>,
-  ) {
-    // No-op.
-  }
-
-  async fn on_stop(&self) {
-    if let Some(handle) = &self.abort_handle {
-      handle.abort();
     }
   }
 }
