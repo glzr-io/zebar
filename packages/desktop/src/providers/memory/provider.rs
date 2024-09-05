@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{sync::Mutex, task::AbortHandle};
 
-use super::{MemoryProviderConfig, MemoryVariables};
+use super::{MemoryProviderConfig, MemoryOutput};
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderOutput,
 };
 
 pub struct MemoryProvider {
@@ -52,7 +52,7 @@ impl IntervalProvider for MemoryProvider {
   async fn get_refreshed_variables(
     _: &MemoryProviderConfig,
     sysinfo: &Mutex<System>,
-  ) -> anyhow::Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderOutput> {
     let mut sysinfo = sysinfo.lock().await;
     sysinfo.refresh_memory();
 
@@ -60,7 +60,7 @@ impl IntervalProvider for MemoryProvider {
       / sysinfo.total_memory() as f32)
       * 100.0;
 
-    Ok(ProviderVariables::Memory(MemoryVariables {
+    Ok(ProviderOutput::Memory(MemoryOutput {
       usage,
       free_memory: sysinfo.free_memory(),
       used_memory: sysinfo.used_memory(),

@@ -4,23 +4,26 @@ use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{
   sync::{mpsc, Mutex},
-  task::AbortHandle,
   time,
 };
 
-use super::{CpuProviderConfig, CpuVariables};
+use super::{CpuOutput, CpuProviderConfig};
 use crate::providers::{
-  provider::Provider, provider_manager::SharedProviderState,
-  provider_ref::VariablesResult, variables::ProviderVariables,
+  provider::Provider, provider_ref::ProviderResult,
+  variables::ProviderOutput,
 };
 
 pub struct CpuProvider {
   config: CpuProviderConfig,
+  sysinfo: Arc<Mutex<System>>,
 }
 
 impl CpuProvider {
-  pub fn new(config: CpuProviderConfig) -> CpuProvider {
-    CpuProvider { config }
+  pub fn new(
+    config: CpuProviderConfig,
+    sysinfo: Arc<Mutex<System>>,
+  ) -> CpuProvider {
+    CpuProvider { config, sysinfo }
   }
 }
 
@@ -28,8 +31,7 @@ impl CpuProvider {
 impl Provider for CpuProvider {
   async fn on_start(
     self: Arc<Self>,
-    shared_state: SharedProviderState,
-    emit_output_tx: mpsc::Sender<VariablesResult>,
+    emit_result_tx: mpsc::Sender<ProviderResult>,
   ) {
     let mut interval =
       time::interval(Duration::from_millis(self.config.refresh_interval));
@@ -37,10 +39,10 @@ impl Provider for CpuProvider {
     loop {
       interval.tick().await;
 
-      let mut sysinfo = shared_state.sysinfo.lock().await;
+      let mut sysinfo = self.sysinfo.lock().await;
       sysinfo.refresh_cpu();
 
-      let res = Ok(ProviderVariables::Cpu(CpuVariables {
+      let res = Ok(ProviderOutput::Cpu(CpuOutput {
         usage: sysinfo.global_cpu_info().cpu_usage(),
         frequency: sysinfo.global_cpu_info().frequency(),
         logical_core_count: sysinfo.cpus().len(),
@@ -50,7 +52,7 @@ impl Provider for CpuProvider {
         vendor: sysinfo.global_cpu_info().vendor_id().into(),
       }));
 
-      emit_output_tx.send(res.into()).await;
+      emit_result_tx.send(res.into()).await;
     }
   }
 }

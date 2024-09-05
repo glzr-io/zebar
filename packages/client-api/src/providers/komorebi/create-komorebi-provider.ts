@@ -180,11 +180,11 @@ export async function createKomorebiProvider(
 
     return onProviderEmit<KomorebiResponse>(
       mergedConfig,
-      async ({ variables }) => {
-        if ('error' in variables) {
-          queue.error(variables.error);
+      async ({ result }) => {
+        if ('error' in result) {
+          queue.error(result.error);
         } else {
-          const updatedState = await getUpdatedState(variables.data);
+          const updatedState = await getUpdatedState(result.output);
           queue.output(updatedState);
         }
       },

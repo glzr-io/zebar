@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use sysinfo::System;
 use tokio::{sync::Mutex, task::AbortHandle};
 
-use super::{HostProviderConfig, HostVariables};
+use super::{HostProviderConfig, HostOutput};
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderOutput,
 };
 
 pub struct HostProvider {
@@ -52,8 +52,8 @@ impl IntervalProvider for HostProvider {
   async fn get_refreshed_variables(
     _: &HostProviderConfig,
     __: &Mutex<System>,
-  ) -> anyhow::Result<ProviderVariables> {
-    Ok(ProviderVariables::Host(HostVariables {
+  ) -> anyhow::Result<ProviderOutput> {
+    Ok(ProviderOutput::Host(HostOutput {
       hostname: System::host_name(),
       os_name: System::name(),
       os_version: System::os_version(),

@@ -14,10 +14,8 @@ use super::{
   KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
 };
 use crate::providers::{
-  komorebi::KomorebiVariables,
-  provider::Provider,
-  provider_ref::{ProviderOutput, VariablesResult},
-  variables::ProviderVariables,
+  komorebi::KomorebiOutput, provider::Provider,
+  provider_ref::ProviderResult, variables::ProviderOutput,
 };
 
 const SOCKET_NAME: &str = "zebar.sock";
@@ -35,9 +33,7 @@ impl KomorebiProvider {
     }
   }
 
-  fn transform_response(
-    state: komorebi_client::State,
-  ) -> KomorebiVariables {
+  fn transform_response(state: komorebi_client::State) -> KomorebiOutput {
     let all_monitors = state
       .monitors
       .elements()
@@ -45,7 +41,7 @@ impl KomorebiProvider {
       .map(Self::transform_monitor)
       .collect();
 
-    KomorebiVariables {
+    KomorebiOutput {
       all_monitors,
       focused_monitor_index: state.monitors.focused_idx(),
     }
@@ -123,7 +119,7 @@ impl Provider for KomorebiProvider {
   async fn on_start(
     &mut self,
     config_hash: &str,
-    emit_output_tx: Sender<ProviderOutput>,
+    emit_result_tx: Sender<ProviderResult>,
   ) {
     let config_hash = config_hash.to_string();
 
@@ -142,24 +138,22 @@ impl Provider for KomorebiProvider {
               serde_json::from_str::<komorebi_client::Notification>(&line)
             {
               // Transform and emit the incoming Komorebi state.
-              _ = emit_output_tx
+              _ = emit_result_tx
                 .send(ProviderOutput {
                   config_hash: config_hash.clone(),
-                  variables: VariablesResult::Data(
-                    ProviderVariables::Komorebi(Self::transform_response(
-                      notification.state,
-                    )),
-                  ),
+                  variables: OutputResult::Data(ProviderOutput::Komorebi(
+                    Self::transform_response(notification.state),
+                  )),
                 })
                 .await;
             }
           }
         }
         Err(error) => {
-          _ = emit_output_tx
+          _ = emit_result_tx
             .send(ProviderOutput {
               config_hash: config_hash.to_string(),
-              variables: VariablesResult::Error(error.to_string()),
+              variables: OutputResult::Error(error.to_string()),
             })
             .await;
         }

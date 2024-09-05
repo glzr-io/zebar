@@ -36,11 +36,11 @@ export async function createCpuProvider(
   const mergedConfig = cpuProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    return onProviderEmit<CpuOutput>(mergedConfig, ({ variables }) => {
-      if ('error' in variables) {
-        queue.error(variables.error);
+    return onProviderEmit<CpuOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
       } else {
-        queue.output(variables.data);
+        queue.output(result.output);
       }
     });
   });

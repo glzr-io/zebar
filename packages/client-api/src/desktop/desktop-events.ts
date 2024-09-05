@@ -19,7 +19,7 @@ let callbacks: {
 
 export interface ProviderEmitEvent<T = unknown> {
   configHash: string;
-  variables: { data: T } | { error: string };
+  result: { output: T } | { error: string };
 }
 
 /**

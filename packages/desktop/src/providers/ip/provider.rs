@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use reqwest::Client;
 use tokio::task::AbortHandle;
 
-use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpVariables};
+use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpOutput};
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderOutput,
 };
 
 pub struct IpProvider {
@@ -50,7 +50,7 @@ impl IntervalProvider for IpProvider {
   async fn get_refreshed_variables(
     _: &IpProviderConfig,
     http_client: &Client,
-  ) -> anyhow::Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderOutput> {
     let res = http_client
       .get("https://ipinfo.io/json")
       .send()
@@ -60,7 +60,7 @@ impl IntervalProvider for IpProvider {
 
     let mut loc_parts = res.loc.split(',');
 
-    Ok(ProviderVariables::Ip(IpVariables {
+    Ok(ProviderOutput::Ip(IpOutput {
       address: res.ip,
       approx_city: res.city,
       approx_country: res.country,

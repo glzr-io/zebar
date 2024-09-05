@@ -8,10 +8,10 @@ use tokio::{sync::Mutex, task::AbortHandle};
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
   InterfaceType, NetworkGateway, NetworkInterface, NetworkProviderConfig,
-  NetworkTraffic, NetworkVariables,
+  NetworkTraffic, NetworkOutput,
 };
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderOutput,
 };
 
 pub struct NetworkProvider {
@@ -110,7 +110,7 @@ impl IntervalProvider for NetworkProvider {
   async fn get_refreshed_variables(
     config: &NetworkProviderConfig,
     netinfo: &Mutex<Networks>,
-  ) -> anyhow::Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderOutput> {
     let mut netinfo = netinfo.lock().await;
     netinfo.refresh();
 
@@ -118,7 +118,7 @@ impl IntervalProvider for NetworkProvider {
 
     let default_interface = netdev::get_default_interface().ok();
 
-    let variables = NetworkVariables {
+    let variables = NetworkOutput {
       default_interface: default_interface
         .as_ref()
         .map(Self::transform_interface),
@@ -145,7 +145,7 @@ impl IntervalProvider for NetworkProvider {
       },
     };
 
-    Ok(ProviderVariables::Network(variables))
+    Ok(ProviderOutput::Network(variables))
   }
 }
 

@@ -84,11 +84,11 @@ export async function createNetworkProvider(
   const mergedConfig = networkProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    return onProviderEmit<NetworkOutput>(mergedConfig, ({ variables }) => {
-      if ('error' in variables) {
-        queue.error(variables.error);
+    return onProviderEmit<NetworkOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
       } else {
-        queue.output(variables.data);
+        queue.output(result.output);
       }
     });
   });

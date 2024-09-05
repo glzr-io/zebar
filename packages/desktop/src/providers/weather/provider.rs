@@ -6,10 +6,10 @@ use tokio::task::AbortHandle;
 
 use super::{
   open_meteo_res::OpenMeteoRes, WeatherProviderConfig, WeatherStatus,
-  WeatherVariables,
+  WeatherOutput,
 };
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
+  provider::IntervalProvider, variables::ProviderOutput,
 };
 
 pub struct WeatherProvider {
@@ -94,7 +94,7 @@ impl IntervalProvider for WeatherProvider {
   async fn get_refreshed_variables(
     config: &WeatherProviderConfig,
     http_client: &Client,
-  ) -> anyhow::Result<ProviderVariables> {
+  ) -> anyhow::Result<ProviderOutput> {
     let res = http_client
       .get("https://api.open-meteo.com/v1/forecast")
       .query(&[
@@ -113,7 +113,7 @@ impl IntervalProvider for WeatherProvider {
     let current_weather = res.current_weather;
     let is_daytime = current_weather.is_day == 1;
 
-    Ok(ProviderVariables::Weather(WeatherVariables {
+    Ok(ProviderOutput::Weather(WeatherOutput {
       is_daytime,
       status: Self::get_weather_status(
         current_weather.weather_code,

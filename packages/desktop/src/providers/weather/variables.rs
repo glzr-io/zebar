@@ -2,7 +2,7 @@ use serde::Serialize;
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct WeatherVariables {
+pub struct WeatherOutput {
   pub is_daytime: bool,
   pub status: WeatherStatus,
   pub celsius_temp: f32,

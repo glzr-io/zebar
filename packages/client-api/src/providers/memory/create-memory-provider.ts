@@ -38,11 +38,11 @@ export async function createMemoryProvider(
   const mergedConfig = memoryProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    return onProviderEmit<MemoryOutput>(mergedConfig, ({ variables }) => {
-      if ('error' in variables) {
-        queue.error(variables.error);
+    return onProviderEmit<MemoryOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
       } else {
-        queue.output(variables.data);
+        queue.output(result.output);
       }
     });
   });

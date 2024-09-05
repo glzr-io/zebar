@@ -70,11 +70,11 @@ export async function createWeatherProvider(
   }
 
   return createBaseProvider(mergedConfig, async queue => {
-    return onProviderEmit<WeatherOutput>(mergedConfig, ({ variables }) => {
-      if ('error' in variables) {
-        queue.error(variables.error);
+    return onProviderEmit<WeatherOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
       } else {
-        queue.output(variables.data);
+        queue.output(result.output);
       }
     });
   });

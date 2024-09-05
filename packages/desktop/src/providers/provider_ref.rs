@@ -1,10 +1,8 @@
-use std::{
-  sync::Arc,
-  time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Instant};
 
 use anyhow::bail;
 use serde::Serialize;
+use serde_json::json;
 use tauri::{AppHandle, Emitter};
 use tokio::{sync::mpsc, task};
 use tracing::{info, warn};
@@ -19,7 +17,7 @@ use super::{
   // network::NetworkProvider,
   provider::Provider,
   provider_manager::SharedProviderState,
-  variables::ProviderVariables,
+  variables::ProviderOutput,
   // weather::WeatherProvider,
 };
 
@@ -28,7 +26,7 @@ pub struct ProviderRef {
   pub config_hash: String,
   pub cache: Option<ProviderCache>,
   provider: Arc<dyn Provider>,
-  emit_output_tx: mpsc::Sender<VariablesResult>,
+  emit_result_tx: mpsc::Sender<ProviderResult>,
 }
 
 /// Cache for provider output.
@@ -38,31 +36,23 @@ pub struct ProviderCache {
   pub output: Box<ProviderOutput>,
 }
 
-/// Output emitted to frontend clients.
-#[derive(Serialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ProviderOutput {
-  pub config_hash: String,
-  pub variables: VariablesResult,
-}
-
-/// Provider variable output emitted to frontend clients.
+/// Provider output/error emitted to frontend clients.
 ///
-/// This is used instead of a normal `Result` type to serialize it in a
-/// nicer way.
+/// This is used instead of a normal `Result` type in order to serialize it
+/// in a nicer way.
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub enum VariablesResult {
-  Data(ProviderVariables),
+pub enum ProviderResult {
+  Output(ProviderOutput),
   Error(String),
 }
 
-/// Implements conversion from an `anyhow::Result`.
-impl From<anyhow::Result<ProviderVariables>> for VariablesResult {
-  fn from(result: anyhow::Result<ProviderVariables>) -> Self {
+/// Implements conversion from `anyhow::Result`.
+impl From<anyhow::Result<ProviderOutput>> for ProviderResult {
+  fn from(result: anyhow::Result<ProviderOutput>) -> Self {
     match result {
-      Ok(data) => VariablesResult::Data(data),
-      Err(err) => VariablesResult::Error(err.to_string()),
+      Ok(output) => ProviderResult::Output(output),
+      Err(err) => ProviderResult::Error(err.to_string()),
     }
   }
 }
@@ -77,22 +67,22 @@ impl ProviderRef {
   ) -> anyhow::Result<Self> {
     let provider = Self::create_provider(config, shared_state)?;
 
-    let (emit_output_tx, mut emit_output_rx) =
-      mpsc::channel::<VariablesResult>(1);
+    let (emit_result_tx, mut emit_result_rx) =
+      mpsc::channel::<ProviderResult>(1);
 
     let config_hash_clone = config_hash.clone();
     let app_handle = app_handle.clone();
     task::spawn(async move {
-      while let Some(output) = emit_output_rx.recv().await {
+      while let Some(output) = emit_result_rx.recv().await {
         info!("Emitting for provider: {}", config_hash_clone);
 
         let output = Box::new(output);
-        let xx = ProviderOutput {
-          config_hash: config_hash_clone.clone(),
-          variables: *output.clone(),
-        };
+        let payload = json!({
+          "config_hash": config_hash_clone.clone(),
+          "result": *output.clone(),
+        });
 
-        if let Err(err) = app_handle.emit("provider-emit", xx) {
+        if let Err(err) = app_handle.emit("provider-emit", payload) {
           warn!("Error emitting provider output: {:?}", err);
         }
 
@@ -111,19 +101,16 @@ impl ProviderRef {
 
     info!("Starting provider: {}", config_hash);
     let provider_clone = provider.clone();
-    let shared_state = shared_state.clone();
-    let emit_output_tx_clone = emit_output_tx.clone();
+    let emit_result_tx_clone = emit_result_tx.clone();
     task::spawn(async move {
-      provider_clone
-        .on_start(shared_state.clone(), emit_output_tx_clone)
-        .await;
+      provider_clone.on_start(emit_result_tx_clone).await;
     });
 
     Ok(Self {
       config_hash,
       cache: None,
       provider,
-      emit_output_tx,
+      emit_result_tx,
     })
   }
 
@@ -135,7 +122,9 @@ impl ProviderRef {
       ProviderConfig::Battery(config) => {
         Arc::new(BatteryProvider::new(config)?)
       }
-      ProviderConfig::Cpu(config) => Arc::new(CpuProvider::new(config)),
+      ProviderConfig::Cpu(config) => {
+        Arc::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
+      }
       // ProviderConfig::Host(config) => {
       //   Box::new(HostProvider::new(config,
       // shared_state.sysinfo.clone())) }
@@ -175,7 +164,7 @@ impl ProviderRef {
   /// minimum refresh interval, send the previous output.
   pub async fn refresh(&mut self) -> anyhow::Result<()> {
     // if let Some(cache) = self.cache {
-    //   self.emit_output_tx.send(*cache.output.clone()).await?;
+    //   self.emit_result_tx.send(*cache.output.clone()).await?;
     // }
 
     Ok(())

@@ -18,6 +18,7 @@ pub struct SharedProviderState {
 pub struct ProviderManager {
   app_handle: AppHandle,
   providers: Arc<Mutex<HashMap<String, ProviderRef>>>,
+  // provider_cache: Arc<Mutex<HashMap<String, ProviderOutput>>>,
   shared_state: SharedProviderState,
 }
 
@@ -26,6 +27,7 @@ impl ProviderManager {
     Self {
       app_handle: app_handle.clone(),
       providers: Arc::new(Mutex::new(HashMap::new())),
+      // provider_cache: Arc::new(Mutex::new(HashMap::new())),
       shared_state: SharedProviderState {
         sysinfo: Arc::new(Mutex::new(System::new_all())),
         netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),

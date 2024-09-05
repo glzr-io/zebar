@@ -36,11 +36,11 @@ export async function createIpProvider(
   const mergedConfig = ipProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    return onProviderEmit<IpOutput>(mergedConfig, ({ variables }) => {
-      if ('error' in variables) {
-        queue.error(variables.error);
+    return onProviderEmit<IpOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
       } else {
-        queue.output(variables.data);
+        queue.output(result.output);
       }
     });
   });
