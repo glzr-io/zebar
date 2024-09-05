@@ -1,20 +1,19 @@
 {
   "name": "zebar",
   "version": "2.0.0",
-  "type": "module",
+  "sideEffects": false,
   "exports": {
-    "import": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
     }
   },
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "browser": {},
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "typesVersions": {},
   "scripts": {
-    "build": "tsup",
+    "build": "tsup src/index.ts --format cjs,esm --dts --inject-style",
     "dev": "npm run build -- --watch src",
     "prepublishOnly": "npm run build"
   },
@@ -24,14 +23,12 @@
     "@tauri-apps/plugin-shell": "2.0.0-beta.8",
     "glazewm": "1.4.1",
     "luxon": "3.4.4",
-    "solid-js": "1.8.14",
     "zod": "3.22.4"
   },
   "devDependencies": {
     "@types/luxon": "3.4.2",
     "esbuild": "0.20.0",
     "tsup": "8.0.2",
-    "tsup-preset-solid": "2.2.0",
     "typescript": "5.3.3"
   }
 }
