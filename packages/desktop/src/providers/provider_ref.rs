@@ -7,18 +7,14 @@ use tauri::{AppHandle, Emitter};
 use tokio::{sync::mpsc, task};
 use tracing::{info, warn};
 
-// #[cfg(windows)]
-// use super::komorebi::KomorebiProvider;
+#[cfg(windows)]
+use super::komorebi::KomorebiProvider;
 use super::{
-  battery::BatteryProvider,
-  config::ProviderConfig,
-  cpu::CpuProvider,
-  // host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  // network::NetworkProvider,
-  provider::Provider,
-  provider_manager::SharedProviderState,
-  variables::ProviderOutput,
-  // weather::WeatherProvider,
+  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
+  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
+  network::NetworkProvider, provider::Provider,
+  provider_manager::SharedProviderState, variables::ProviderOutput,
+  weather::WeatherProvider,
 };
 
 /// Reference to an active provider.
@@ -125,24 +121,24 @@ impl ProviderRef {
       ProviderConfig::Cpu(config) => {
         Arc::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
       }
-      // ProviderConfig::Host(config) => {
-      //   Box::new(HostProvider::new(config,
-      // shared_state.sysinfo.clone())) }
-      // ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
-      // #[cfg(windows)]
-      // ProviderConfig::Komorebi(config) => {
-      //   Box::new(KomorebiProvider::new(config))
-      // }
-      // ProviderConfig::Memory(config) => {
-      //   Box::new(MemoryProvider::new(config,
-      // shared_state.sysinfo.clone())) }
-      // ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
-      //   config,
-      //   shared_state.netinfo.clone(),
-      // )),
-      // ProviderConfig::Weather(config) => {
-      //   Box::new(WeatherProvider::new(config))
-      // }
+      ProviderConfig::Host(config) => {
+        Arc::new(HostProvider::new(config, shared_state.sysinfo.clone()))
+      }
+      ProviderConfig::Ip(config) => Arc::new(IpProvider::new(config)),
+      #[cfg(windows)]
+      ProviderConfig::Komorebi(config) => {
+        Arc::new(KomorebiProvider::new(config))
+      }
+      ProviderConfig::Memory(config) => {
+        Arc::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
+      }
+      ProviderConfig::Network(config) => Arc::new(NetworkProvider::new(
+        config,
+        shared_state.netinfo.clone(),
+      )),
+      ProviderConfig::Weather(config) => {
+        Arc::new(WeatherProvider::new(config))
+      }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),
     };

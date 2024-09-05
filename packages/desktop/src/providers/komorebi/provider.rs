@@ -1,12 +1,15 @@
 use std::{
-  io::{BufRead, BufReader},
+  io::{BufReader, Read},
   sync::Arc,
   time::Duration,
 };
 
+use anyhow::Context;
 use async_trait::async_trait;
-use komorebi_client::{Container, Monitor, Window, Workspace};
-use tokio::{sync::mpsc::Sender, task::AbortHandle};
+use komorebi_client::{
+  Container, Monitor, SocketMessage, Window, Workspace,
+};
+use tokio::{sync::mpsc::Sender, time};
 use tracing::debug;
 
 use super::{
@@ -21,16 +24,74 @@ use crate::providers::{
 const SOCKET_NAME: &str = "zebar.sock";
 
 pub struct KomorebiProvider {
-  pub config: Arc<KomorebiProviderConfig>,
-  abort_handle: Option<AbortHandle>,
+  config: KomorebiProviderConfig,
 }
 
 impl KomorebiProvider {
   pub fn new(config: KomorebiProviderConfig) -> KomorebiProvider {
-    KomorebiProvider {
-      config: Arc::new(config),
-      abort_handle: None,
+    KomorebiProvider { config }
+  }
+
+  async fn create_socket(
+    self: Arc<Self>,
+    emit_result_tx: Sender<ProviderResult>,
+  ) -> anyhow::Result<()> {
+    let socket = komorebi_client::subscribe(SOCKET_NAME)
+      .context("Failed to initialize Komorebi socket.")?;
+
+    debug!("Connected to Komorebi socket.");
+
+    for incoming in socket.incoming() {
+      debug!("Incoming Komorebi socket message.");
+
+      match incoming {
+        Ok(stream) => {
+          let mut buffer = Vec::new();
+          let mut reader = BufReader::new(stream);
+
+          // Shutdown has been sent.
+          if matches!(reader.read_to_end(&mut buffer), Ok(0)) {
+            debug!("Komorebi shutdown.");
+
+            // Attempt to reconnect to Komorebi.
+            while komorebi_client::send_message(
+              &SocketMessage::AddSubscriberSocket(SOCKET_NAME.to_string()),
+            )
+            .is_err()
+            {
+              debug!("Attempting to reconnect to Komorebi.");
+              time::sleep(Duration::from_secs(15)).await;
+            }
+          }
+
+          // Transform and emit the incoming Komorebi state.
+          if let Ok(notification) =
+            serde_json::from_str::<komorebi_client::Notification>(
+              &String::from_utf8(buffer).unwrap(),
+            )
+          {
+            emit_result_tx
+              .send(
+                Ok(ProviderOutput::Komorebi(Self::transform_response(
+                  notification.state,
+                )))
+                .into(),
+              )
+              .await;
+          }
+        }
+        Err(_) => {
+          emit_result_tx
+            .send(
+              Err(anyhow::anyhow!("Failed to read Komorebi stream."))
+                .into(),
+            )
+            .await;
+        }
+      }
     }
+
+    Ok(())
   }
 
   fn transform_response(state: komorebi_client::State) -> KomorebiOutput {
@@ -117,47 +178,11 @@ impl KomorebiProvider {
 #[async_trait]
 impl Provider for KomorebiProvider {
   async fn on_start(
-    &mut self,
-    config_hash: &str,
+    self: Arc<Self>,
     emit_result_tx: Sender<ProviderResult>,
   ) {
-    let config_hash = config_hash.to_string();
-
-    let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
-    debug!("Connected to Komorebi socket.");
-
-    for incoming in socket.incoming() {
-      debug!("Incoming Komorebi socket message.");
-
-      match incoming {
-        Ok(data) => {
-          let reader = BufReader::new(data.try_clone().unwrap());
-
-          for line in reader.lines().flatten() {
-            if let Ok(notification) =
-              serde_json::from_str::<komorebi_client::Notification>(&line)
-            {
-              // Transform and emit the incoming Komorebi state.
-              _ = emit_result_tx
-                .send(ProviderOutput {
-                  config_hash: config_hash.clone(),
-                  variables: OutputResult::Data(ProviderOutput::Komorebi(
-                    Self::transform_response(notification.state),
-                  )),
-                })
-                .await;
-            }
-          }
-        }
-        Err(error) => {
-          _ = emit_result_tx
-            .send(ProviderOutput {
-              config_hash: config_hash.to_string(),
-              variables: OutputResult::Error(error.to_string()),
-            })
-            .await;
-        }
-      }
+    if let Err(err) = self.create_socket(emit_result_tx.clone()).await {
+      emit_result_tx.send(Err(err).into()).await;
     }
   }
 }

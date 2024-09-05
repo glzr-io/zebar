@@ -1,17 +1,20 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use sysinfo::System;
-use tokio::{sync::Mutex, task::AbortHandle};
+use tokio::{
+  sync::{mpsc, Mutex},
+  time,
+};
 
-use super::{HostProviderConfig, HostOutput};
+use super::{HostOutput, HostProviderConfig};
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderOutput,
+  provider::Provider, provider_ref::ProviderResult,
+  variables::ProviderOutput,
 };
 
 pub struct HostProvider {
-  pub config: Arc<HostProviderConfig>,
-  abort_handle: Option<AbortHandle>,
+  config: HostProviderConfig,
   sysinfo: Arc<Mutex<System>>,
 }
 
@@ -20,39 +23,10 @@ impl HostProvider {
     config: HostProviderConfig,
     sysinfo: Arc<Mutex<System>>,
   ) -> HostProvider {
-    HostProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      sysinfo,
-    }
-  }
-}
-
-#[async_trait]
-impl IntervalProvider for HostProvider {
-  type Config = HostProviderConfig;
-  type State = Mutex<System>;
-
-  fn config(&self) -> Arc<HostProviderConfig> {
-    self.config.clone()
+    HostProvider { config, sysinfo }
   }
 
-  fn state(&self) -> Arc<Mutex<System>> {
-    self.sysinfo.clone()
-  }
-
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    _: &HostProviderConfig,
-    __: &Mutex<System>,
-  ) -> anyhow::Result<ProviderOutput> {
+  async fn interval_output() -> anyhow::Result<ProviderOutput> {
     Ok(ProviderOutput::Host(HostOutput {
       hostname: System::host_name(),
       os_name: System::name(),
@@ -61,5 +35,24 @@ impl IntervalProvider for HostProvider {
       boot_time: System::boot_time() * 1000,
       uptime: System::uptime() * 1000,
     }))
+  }
+}
+
+#[async_trait]
+impl Provider for HostProvider {
+  async fn on_start(
+    self: Arc<Self>,
+    emit_result_tx: mpsc::Sender<ProviderResult>,
+  ) {
+    let mut interval =
+      time::interval(Duration::from_millis(self.config.refresh_interval));
+
+    loop {
+      interval.tick().await;
+
+      emit_result_tx
+        .send(Self::interval_output().await.into())
+        .await;
+    }
   }
 }

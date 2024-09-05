@@ -1,54 +1,30 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Context;
 use async_trait::async_trait;
 use reqwest::Client;
-use tokio::task::AbortHandle;
+use tokio::{sync::mpsc, time};
 
-use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpOutput};
+use super::{ipinfo_res::IpinfoRes, IpOutput, IpProviderConfig};
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderOutput,
+  provider::Provider, provider_ref::ProviderResult,
+  variables::ProviderOutput,
 };
 
 pub struct IpProvider {
-  pub config: Arc<IpProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  http_client: Arc<Client>,
+  config: IpProviderConfig,
+  http_client: Client,
 }
 
 impl IpProvider {
   pub fn new(config: IpProviderConfig) -> IpProvider {
     IpProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      http_client: Arc::new(Client::new()),
+      config,
+      http_client: Client::new(),
     }
   }
-}
 
-#[async_trait]
-impl IntervalProvider for IpProvider {
-  type Config = IpProviderConfig;
-  type State = Client;
-
-  fn config(&self) -> Arc<IpProviderConfig> {
-    self.config.clone()
-  }
-
-  fn state(&self) -> Arc<Client> {
-    self.http_client.clone()
-  }
-
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    _: &IpProviderConfig,
+  async fn interval_output(
     http_client: &Client,
   ) -> anyhow::Result<ProviderOutput> {
     let res = http_client
@@ -73,5 +49,24 @@ impl IntervalProvider for IpProvider {
         .and_then(|long| long.parse::<f32>().ok())
         .context("Failed to parse longitude from IPinfo.")?,
     }))
+  }
+}
+
+#[async_trait]
+impl Provider for IpProvider {
+  async fn on_start(
+    self: Arc<Self>,
+    emit_result_tx: mpsc::Sender<ProviderResult>,
+  ) {
+    let mut interval =
+      time::interval(Duration::from_millis(self.config.refresh_interval));
+
+    loop {
+      interval.tick().await;
+
+      emit_result_tx
+        .send(Self::interval_output(&self.http_client).await.into())
+        .await;
+    }
   }
 }

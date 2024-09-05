@@ -1,23 +1,25 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use netdev::interface::get_interfaces;
 use sysinfo::Networks;
-use tokio::{sync::Mutex, task::AbortHandle};
+use tokio::{
+  sync::{mpsc, Mutex},
+  time,
+};
 
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
-  InterfaceType, NetworkGateway, NetworkInterface, NetworkProviderConfig,
-  NetworkTraffic, NetworkOutput,
+  InterfaceType, NetworkGateway, NetworkInterface, NetworkOutput,
+  NetworkProviderConfig, NetworkTraffic,
 };
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderOutput,
+  provider::Provider, provider_ref::ProviderResult,
+  variables::ProviderOutput,
 };
 
 pub struct NetworkProvider {
-  pub config: Arc<NetworkProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  _state: Arc<Mutex<()>>,
+  config: NetworkProviderConfig,
   netinfo: Arc<Mutex<Networks>>,
 }
 
@@ -26,12 +28,45 @@ impl NetworkProvider {
     config: NetworkProviderConfig,
     netinfo: Arc<Mutex<Networks>>,
   ) -> NetworkProvider {
-    NetworkProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      _state: Arc::new(Mutex::new(())),
-      netinfo,
-    }
+    NetworkProvider { config, netinfo }
+  }
+
+  async fn provider_output(
+    self: Arc<Self>,
+  ) -> anyhow::Result<ProviderOutput> {
+    let mut netinfo = self.netinfo.lock().await;
+    netinfo.refresh();
+
+    let interfaces = get_interfaces();
+
+    let default_interface = netdev::get_default_interface().ok();
+
+    Ok(ProviderOutput::Network(NetworkOutput {
+      default_interface: default_interface
+        .as_ref()
+        .map(Self::transform_interface),
+      default_gateway: default_interface
+        .and_then(|interface| interface.gateway)
+        .and_then(|gateway| {
+          default_gateway_wifi()
+            .map(|wifi| Self::transform_gateway(&gateway, wifi))
+            .ok()
+        }),
+      interfaces: interfaces
+        .iter()
+        .map(Self::transform_interface)
+        .collect(),
+      traffic: NetworkTraffic {
+        received: to_bytes_per_seconds(
+          get_network_down(&netinfo),
+          self.config.refresh_interval,
+        ),
+        transmitted: to_bytes_per_seconds(
+          get_network_up(&netinfo),
+          self.config.refresh_interval,
+        ),
+      },
+    }))
   }
 
   fn transform_interface(
@@ -87,69 +122,25 @@ impl NetworkProvider {
 }
 
 #[async_trait]
-impl IntervalProvider for NetworkProvider {
-  type Config = NetworkProviderConfig;
-  type State = Mutex<Networks>;
+impl Provider for NetworkProvider {
+  async fn on_start(
+    self: Arc<Self>,
+    emit_result_tx: mpsc::Sender<ProviderResult>,
+  ) {
+    let mut interval =
+      time::interval(Duration::from_millis(self.config.refresh_interval));
 
-  fn config(&self) -> Arc<NetworkProviderConfig> {
-    self.config.clone()
-  }
+    loop {
+      interval.tick().await;
 
-  fn state(&self) -> Arc<Mutex<Networks>> {
-    self.netinfo.clone()
-  }
-
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    config: &NetworkProviderConfig,
-    netinfo: &Mutex<Networks>,
-  ) -> anyhow::Result<ProviderOutput> {
-    let mut netinfo = netinfo.lock().await;
-    netinfo.refresh();
-
-    let interfaces = get_interfaces();
-
-    let default_interface = netdev::get_default_interface().ok();
-
-    let variables = NetworkOutput {
-      default_interface: default_interface
-        .as_ref()
-        .map(Self::transform_interface),
-      default_gateway: default_interface
-        .and_then(|interface| interface.gateway)
-        .and_then(|gateway| {
-          default_gateway_wifi()
-            .map(|wifi| Self::transform_gateway(&gateway, wifi))
-            .ok()
-        }),
-      interfaces: interfaces
-        .iter()
-        .map(Self::transform_interface)
-        .collect(),
-      traffic: NetworkTraffic {
-        received: to_bytes_per_seconds(
-          get_network_down(&netinfo),
-          config.refresh_interval,
-        ),
-        transmitted: to_bytes_per_seconds(
-          get_network_up(&netinfo),
-          config.refresh_interval,
-        ),
-      },
-    };
-
-    Ok(ProviderOutput::Network(variables))
+      emit_result_tx
+        .send(self.provider_output().await.into())
+        .await;
+    }
   }
 }
 
-// Get the total network (down) usage
+/// Gets the total network (down) usage.
 fn get_network_down(req_net: &sysinfo::Networks) -> u64 {
   // Get the total bytes recieved by every network interface
   let mut received_total: Vec<u64> = Vec::new();
@@ -160,7 +151,7 @@ fn get_network_down(req_net: &sysinfo::Networks) -> u64 {
   received_total.iter().sum()
 }
 
-// Get the total network (up) usage
+/// Gets the total network (up) usage.
 fn get_network_up(req_net: &sysinfo::Networks) -> u64 {
   // Get the total bytes recieved by every network interface
   let mut transmitted_total: Vec<u64> = Vec::new();

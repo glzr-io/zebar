@@ -1,30 +1,65 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use reqwest::Client;
-use tokio::task::AbortHandle;
+use tokio::{sync::mpsc, time};
 
 use super::{
-  open_meteo_res::OpenMeteoRes, WeatherProviderConfig, WeatherStatus,
-  WeatherOutput,
+  open_meteo_res::OpenMeteoRes, WeatherOutput, WeatherProviderConfig,
+  WeatherStatus,
 };
 use crate::providers::{
-  provider::IntervalProvider, variables::ProviderOutput,
+  provider::Provider, provider_ref::ProviderResult,
+  variables::ProviderOutput,
 };
 
 pub struct WeatherProvider {
-  pub config: Arc<WeatherProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  http_client: Arc<Client>,
+  config: WeatherProviderConfig,
+  http_client: Client,
 }
 
 impl WeatherProvider {
   pub fn new(config: WeatherProviderConfig) -> WeatherProvider {
     WeatherProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      http_client: Arc::new(Client::new()),
+      config,
+      http_client: Client::new(),
     }
+  }
+
+  async fn interval_output(
+    config: &WeatherProviderConfig,
+    http_client: &Client,
+  ) -> anyhow::Result<ProviderOutput> {
+    let res = http_client
+      .get("https://api.open-meteo.com/v1/forecast")
+      .query(&[
+        ("temperature_unit", "celsius"),
+        ("latitude", &config.latitude.to_string()),
+        ("longitude", &config.longitude.to_string()),
+        ("current_weather", "true"),
+        ("daily", "sunset,sunrise"),
+        ("timezone", "auto"),
+      ])
+      .send()
+      .await?
+      .json::<OpenMeteoRes>()
+      .await?;
+
+    let current_weather = res.current_weather;
+    let is_daytime = current_weather.is_day == 1;
+
+    Ok(ProviderOutput::Weather(WeatherOutput {
+      is_daytime,
+      status: Self::get_weather_status(
+        current_weather.weather_code,
+        is_daytime,
+      ),
+      celsius_temp: current_weather.temperature,
+      fahrenheit_temp: Self::celsius_to_fahrenheit(
+        current_weather.temperature,
+      ),
+      wind_speed: current_weather.wind_speed,
+    }))
   }
 
   fn celsius_to_fahrenheit(celsius_temp: f32) -> f32 {
@@ -71,59 +106,24 @@ impl WeatherProvider {
 }
 
 #[async_trait]
-impl IntervalProvider for WeatherProvider {
-  type Config = WeatherProviderConfig;
-  type State = Client;
+impl Provider for WeatherProvider {
+  async fn on_start(
+    self: Arc<Self>,
+    emit_result_tx: mpsc::Sender<ProviderResult>,
+  ) {
+    let mut interval =
+      time::interval(Duration::from_millis(self.config.refresh_interval));
 
-  fn config(&self) -> Arc<WeatherProviderConfig> {
-    self.config.clone()
-  }
+    loop {
+      interval.tick().await;
 
-  fn state(&self) -> Arc<Client> {
-    self.http_client.clone()
-  }
-
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    config: &WeatherProviderConfig,
-    http_client: &Client,
-  ) -> anyhow::Result<ProviderOutput> {
-    let res = http_client
-      .get("https://api.open-meteo.com/v1/forecast")
-      .query(&[
-        ("temperature_unit", "celsius"),
-        ("latitude", &config.latitude.to_string()),
-        ("longitude", &config.longitude.to_string()),
-        ("current_weather", "true"),
-        ("daily", "sunset,sunrise"),
-        ("timezone", "auto"),
-      ])
-      .send()
-      .await?
-      .json::<OpenMeteoRes>()
-      .await?;
-
-    let current_weather = res.current_weather;
-    let is_daytime = current_weather.is_day == 1;
-
-    Ok(ProviderOutput::Weather(WeatherOutput {
-      is_daytime,
-      status: Self::get_weather_status(
-        current_weather.weather_code,
-        is_daytime,
-      ),
-      celsius_temp: current_weather.temperature,
-      fahrenheit_temp: Self::celsius_to_fahrenheit(
-        current_weather.temperature,
-      ),
-      wind_speed: current_weather.wind_speed,
-    }))
+      emit_result_tx
+        .send(
+          Self::interval_output(&self.config, &self.http_client)
+            .await
+            .into(),
+        )
+        .await;
+    }
   }
 }
