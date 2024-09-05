@@ -185,7 +185,7 @@ export async function createKomorebiProvider(
           queue.error(variables.error);
         } else {
           const updatedState = await getUpdatedState(variables.data);
-          queue.value(updatedState);
+          queue.output(updatedState);
         }
       },
     );

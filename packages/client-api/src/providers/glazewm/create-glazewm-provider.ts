@@ -108,7 +108,7 @@ export async function createGlazeWmProvider(
     const client = new WmClient();
 
     let state = await getInitialState();
-    queue.value(state);
+    queue.output(state);
 
     const unlisten = await client.subscribeMany(
       [
@@ -169,7 +169,7 @@ export async function createGlazeWmProvider(
         }
       }
 
-      queue.value(state);
+      queue.output(state);
     }
 
     function focusWorkspace(name: string) {

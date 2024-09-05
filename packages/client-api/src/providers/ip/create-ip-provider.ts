@@ -40,7 +40,7 @@ export async function createIpProvider(
       if ('error' in variables) {
         queue.error(variables.error);
       } else {
-        queue.value(variables.data);
+        queue.output(variables.data);
       }
     });
   });

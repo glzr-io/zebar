@@ -15,18 +15,18 @@ render(() => <App />, document.getElementById('root')!);
 
 function App() {
   const [store, setStore] = createStore({
-    glazewm: glazewm.value,
-    cpu: cpu.value,
-    battery: battery.value,
-    memory: memory.value,
-    weather: weather.value,
+    glazewm: glazewm.output,
+    cpu: cpu.output,
+    battery: battery.output,
+    memory: memory.output,
+    weather: weather.output,
   });
 
-  glazewm.onValue(glazewm => setStore({ glazewm }));
-  cpu.onValue(cpu => setStore({ cpu }));
-  battery.onValue(battery => setStore({ battery }));
-  memory.onValue(memory => setStore({ memory }));
-  weather.onValue(weather => setStore({ weather }));
+  glazewm.onOutput(glazewm => setStore({ glazewm }));
+  cpu.onOutput(cpu => setStore({ cpu }));
+  battery.onOutput(battery => setStore({ battery }));
+  memory.onOutput(memory => setStore({ memory }));
+  weather.onOutput(weather => setStore({ weather }));
 
   return (
     <div>

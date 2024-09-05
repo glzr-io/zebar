@@ -81,10 +81,10 @@ export async function createDateProvider(
   const mergedConfig = dateProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, queue => {
-    queue.value(getDateValue());
+    queue.output(getDateValue());
 
     const interval = setInterval(
-      () => queue.value(getDateValue()),
+      () => queue.output(getDateValue()),
       mergedConfig.refreshInterval,
     );
 

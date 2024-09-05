@@ -77,6 +77,18 @@ export type ProviderOutput<T extends ProviderType> = ReturnType<
   ProviderMap[T]
 >;
 
+/**
+ * Creates an instance of a provider.
+ *
+ * The provider will continue to output until its `destroy` function is
+ * called.
+ *
+ * Waits until the provider has emitted either its first output or first
+ * error.
+ *
+ * @throws If the provider config is invalid. *Does not throw* if the
+ * provider initially emits an error.
+ */
 export function createProvider<T extends ProviderConfig>(
   config: T,
 ): ProviderOutput<T['type']> {

@@ -3,26 +3,26 @@ import type { ProviderConfig } from './create-provider';
 
 export interface Provider<TConfig, TVal> {
   /**
-   * Latest value emitted from the provider.
+   * Latest output emitted from the provider.
    *
-   * `null` if the provider currently has an error.
+   * `null` if the latest emission from the provider is an error.
    */
-  value: TVal | null;
+  output: TVal | null;
 
   /**
    * Latest error message emitted from the provider.
    *
-   * `null` if the provider currently has a valid value.
+   * `null` if the latest emission from the provider is a valid output.
    */
   error: string | null;
 
   /**
-   * Whether the provider currently has an error.
+   * Whether the latest emission from the provider is an error.
    */
   hasError: boolean;
 
   /**
-   * Config for the provider.
+   * Underlying config for the provider.
    */
   config: TConfig;
 
@@ -34,16 +34,18 @@ export interface Provider<TConfig, TVal> {
   /**
    * Stops the provider.
    */
-  destroy(): Promise<void>;
+  stop(): Promise<void>;
 
   /**
    * Listens for changes to the provider's value.
-   * @param callback - Callback to run when the value changes.
+   *
+   * @param callback - Callback to run when an output is emitted.
    */
-  onValue(callback: (nextVal: TVal) => void): void;
+  onOutput(callback: (output: TVal) => void): void;
 
   /**
    * Listens for errors from the provider.
+   *
    * @param callback - Callback to run when an error is emitted.
    */
   onError(callback: (error: string) => void): void;
@@ -52,10 +54,10 @@ export interface Provider<TConfig, TVal> {
 type UnlistenFn = () => void | Promise<void>;
 
 /**
- * Fetches next value or error from the provider.
+ * Fetches next output or error from the provider.
  */
 type ProviderFetcher<T> = (queue: {
-  value: (nextVal: T) => void;
+  output: (nextOutput: T) => void;
   error: (nextError: string) => void;
 }) => UnlistenFn | Promise<UnlistenFn>;
 
@@ -81,7 +83,7 @@ export async function createBaseProvider<
     const hasFirstEmit = new Deferred<void>();
 
     const unlisten = await fetcher({
-      value: value => {
+      output: value => {
         latestEmission = { value, error: null, hasError: false };
         valueListeners.forEach(listener => listener(value));
         hasFirstEmit.resolve();
@@ -100,7 +102,7 @@ export async function createBaseProvider<
   }
 
   return {
-    get value() {
+    get output() {
       return latestEmission.value;
     },
     get error() {
@@ -117,7 +119,7 @@ export async function createBaseProvider<
 
       await startFetcher();
     },
-    destroy: async () => {
+    stop: async () => {
       valueListeners.clear();
       errorListeners.clear();
 
@@ -125,7 +127,7 @@ export async function createBaseProvider<
         await unlisten();
       }
     },
-    onValue: callback => {
+    onOutput: callback => {
       valueListeners.add(callback);
     },
     onError: callback => {

@@ -58,9 +58,9 @@ export async function createWeatherProvider(
   const mergedConfig: WeatherProviderConfig = {
     ...weatherProviderConfigSchema.parse(config),
     longitude:
-      config.longitude ?? (await getIpProvider()).value!.approxLongitude,
+      config.longitude ?? (await getIpProvider()).output!.approxLongitude,
     latitude:
-      config.latitude ?? (await getIpProvider()).value!.approxLatitude,
+      config.latitude ?? (await getIpProvider()).output!.approxLatitude,
   };
 
   async function getIpProvider() {
@@ -74,7 +74,7 @@ export async function createWeatherProvider(
       if ('error' in variables) {
         queue.error(variables.error);
       } else {
-        queue.value(variables.data);
+        queue.output(variables.data);
       }
     });
   });
