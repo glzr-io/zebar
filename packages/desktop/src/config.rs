@@ -154,7 +154,9 @@ impl Config {
         .path()
         .resolve(".glzr/zebar", BaseDirectory::Home)
         .context("Unable to get home directory.")?,
-    };
+    }
+    .canonicalize_pretty()?
+    .into();
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
     let window_configs = Self::read_window_configs(&config_dir)?;

@@ -266,13 +266,12 @@ impl SysTray {
     config_path: &str,
     config_dir: &PathBuf,
   ) -> String {
-    let config_pathbuf = PathBuf::from(config_path);
-
-    config_pathbuf
+    let path = PathBuf::from(config_path)
       .strip_prefix(config_dir)
-      .unwrap_or(&config_pathbuf)
-      .with_extension("")
+      .unwrap_or(&PathBuf::from(config_path))
       .to_string_lossy()
-      .to_string()
+      .to_string();
+
+    path.strip_suffix(".zebar.json").unwrap_or(&path).into()
   }
 }
