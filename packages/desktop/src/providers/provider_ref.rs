@@ -1,10 +1,13 @@
-use std::time::Instant;
+use std::sync::Arc;
 
 use anyhow::bail;
 use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
-use tokio::{sync::mpsc, task};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task,
+};
 use tracing::{info, warn};
 
 #[cfg(windows)]
@@ -18,17 +21,15 @@ use super::{
 
 /// Reference to an active provider.
 pub struct ProviderRef {
-  config_hash: String,
-  cache: Option<ProviderCache>,
-  emit_result_tx: mpsc::Sender<ProviderResult>,
-  stop_tx: mpsc::Sender<()>,
-}
+  /// Cache for provider output.
+  cache: Arc<Mutex<Option<Box<ProviderResult>>>>,
 
-/// Cache for provider output.
-#[derive(Debug, Clone)]
-pub struct ProviderCache {
-  timestamp: Instant,
-  output: Box<ProviderOutput>,
+  /// Sender channel for emitting provider output/error to frontend
+  /// clients.
+  emit_result_tx: mpsc::Sender<ProviderResult>,
+
+  /// Sender channel for stopping the provider.
+  stop_tx: mpsc::Sender<()>,
 }
 
 /// Provider output/error emitted to frontend clients.
@@ -60,18 +61,47 @@ impl ProviderRef {
     config_hash: String,
     shared_state: SharedProviderState,
   ) -> anyhow::Result<Self> {
-    let (emit_result_tx, mut emit_result_rx) =
+    let cache = Arc::new(Mutex::new(None));
+
+    let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
+    let (emit_result_tx, emit_result_rx) =
       mpsc::channel::<ProviderResult>(1);
 
-    let config_hash_clone = config_hash.clone();
-    let app_handle = app_handle.clone();
+    Self::start_output_listener(
+      app_handle.clone(),
+      config_hash.clone(),
+      cache.clone(),
+      emit_result_rx,
+    );
+
+    Self::start_provider(
+      config,
+      config_hash,
+      shared_state,
+      emit_result_tx.clone(),
+      stop_rx,
+    )?;
+
+    Ok(Self {
+      cache,
+      emit_result_tx,
+      stop_tx,
+    })
+  }
+
+  fn start_output_listener(
+    app_handle: AppHandle,
+    config_hash: String,
+    cache: Arc<Mutex<Option<Box<ProviderResult>>>>,
+    mut emit_result_rx: mpsc::Receiver<ProviderResult>,
+  ) {
     task::spawn(async move {
       while let Some(output) = emit_result_rx.recv().await {
-        info!("Emitting for provider: {}", config_hash_clone);
+        info!("Emitting for provider: {}", config_hash);
 
         let output = Box::new(output);
         let payload = json!({
-          "configHash": config_hash_clone.clone(),
+          "configHash": config_hash.clone(),
           "result": *output.clone(),
         });
 
@@ -80,34 +110,13 @@ impl ProviderRef {
         }
 
         // Update the provider's output cache.
-        // if let Ok(mut providers) = providers.try_lock() {
-        //   if let Some(found_provider) =
-        //     providers.get_mut(&output.config_hash)
-        //   {
-        //     found_provider.update_cache(output);
-        //   }
-        // } else {
-        //   warn!("Failed to update provider output cache.");
-        // }
+        if let Ok(mut providers) = cache.try_lock() {
+          *providers = Some(output);
+        } else {
+          warn!("Failed to update provider output cache.");
+        }
       }
     });
-
-    let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
-
-    Self::start_provider(
-      config,
-      config_hash.clone(),
-      shared_state,
-      emit_result_tx.clone(),
-      stop_rx,
-    )?;
-
-    Ok(Self {
-      config_hash,
-      cache: None,
-      emit_result_tx,
-      stop_tx,
-    })
   }
 
   /// Starts the provider in a separate task.
@@ -181,22 +190,16 @@ impl ProviderRef {
     Ok(provider)
   }
 
-  /// Updates cache with the given output.
-  pub fn update_cache(&mut self, output: Box<ProviderOutput>) {
-    self.cache = Some(ProviderCache {
-      timestamp: Instant::now(),
-      output,
-    });
-  }
-
-  /// Refreshes the provider.
+  /// Re-emits the latest provider output.
   ///
-  /// Since the previous output of providers is cached, if within the
-  /// minimum refresh interval, send the previous output.
-  pub async fn refresh(&mut self) -> anyhow::Result<()> {
-    // if let Some(cache) = self.cache {
-    //   self.emit_result_tx.send(*cache.output.clone()).await?;
-    // }
+  /// No-ops if the provider hasn't outputted yet, since the provider will
+  /// anyways emit its output after initialization.
+  pub async fn refresh(&self) -> anyhow::Result<()> {
+    let cache = { self.cache.lock().await.clone() };
+
+    if let Some(cache) = cache {
+      self.emit_result_tx.send(*cache).await?;
+    }
 
     Ok(())
   }
@@ -204,8 +207,9 @@ impl ProviderRef {
   /// Stops the given provider.
   ///
   /// This triggers any necessary cleanup.
-  pub async fn stop(&mut self) -> anyhow::Result<()> {
+  pub async fn stop(&self) -> anyhow::Result<()> {
     self.stop_tx.send(()).await?;
+
     Ok(())
   }
 }
