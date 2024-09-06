@@ -4,9 +4,7 @@ use sysinfo::System;
 use tokio::sync::Mutex;
 
 use super::{MemoryOutput, MemoryProviderConfig};
-use crate::{
-  impl_interval_provider, providers::variables::ProviderOutput,
-};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct MemoryProvider {
   config: MemoryProviderConfig,

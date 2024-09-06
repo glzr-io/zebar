@@ -7,7 +7,6 @@ use tauri::{
   tray::{TrayIcon, TrayIconBuilder},
   AppHandle, Wry,
 };
-use tokio::task;
 use tracing::{error, info};
 
 use crate::{

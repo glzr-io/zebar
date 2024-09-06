@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
 
 use anyhow::bail;
 use serde::Serialize;
@@ -10,11 +10,10 @@ use tracing::{info, warn};
 #[cfg(windows)]
 use super::komorebi::KomorebiProvider;
 use super::{
-  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, provider::Provider,
-  provider_manager::SharedProviderState, variables::ProviderOutput,
-  weather::WeatherProvider,
+  battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
+  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
+  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
+  SharedProviderState,
 };
 
 /// Reference to an active provider.

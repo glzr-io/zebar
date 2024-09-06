@@ -8,9 +8,7 @@ use starship_battery::{
 };
 
 use super::{BatteryOutput, BatteryProviderConfig};
-use crate::{
-  impl_interval_provider, providers::variables::ProviderOutput,
-};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct BatteryProvider {
   config: BatteryProviderConfig,

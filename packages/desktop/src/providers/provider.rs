@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
 
-use super::provider_ref::ProviderResult;
+use super::ProviderResult;
 
 #[async_trait]
 pub trait Provider: Send + Sync {
@@ -22,11 +22,11 @@ pub trait Provider: Send + Sync {
 macro_rules! impl_interval_provider {
   ($type:ty) => {
     #[async_trait::async_trait]
-    impl crate::providers::provider::Provider for $type {
+    impl crate::providers::Provider for $type {
       async fn run(
         &self,
         emit_result_tx: tokio::sync::mpsc::Sender<
-          crate::providers::provider_ref::ProviderResult,
+          crate::providers::ProviderResult,
         >,
       ) {
         let mut interval = tokio::time::interval(

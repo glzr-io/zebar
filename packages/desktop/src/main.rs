@@ -14,7 +14,7 @@ use crate::{
   cli::{Cli, CliCommand, OutputMonitorsArgs},
   config::Config,
   monitor_state::MonitorState,
-  providers::provider_manager::ProviderManager,
+  providers::ProviderManager,
   sys_tray::SysTray,
   window_factory::WindowFactory,
 };

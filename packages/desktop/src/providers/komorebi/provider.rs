@@ -13,12 +13,10 @@ use tracing::debug;
 
 use super::{
   KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
-  KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
+  KomorebiOutput, KomorebiProviderConfig, KomorebiWindow,
+  KomorebiWorkspace,
 };
-use crate::providers::{
-  komorebi::KomorebiOutput, provider::Provider,
-  provider_ref::ProviderResult, variables::ProviderOutput,
-};
+use crate::providers::{Provider, ProviderOutput, ProviderResult};
 
 const SOCKET_NAME: &str = "zebar.sock";
 

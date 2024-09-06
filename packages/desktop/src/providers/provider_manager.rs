@@ -5,7 +5,7 @@ use tauri::AppHandle;
 use tokio::sync::Mutex;
 use tracing::warn;
 
-use super::{config::ProviderConfig, provider_ref::ProviderRef};
+use super::{ProviderConfig, ProviderRef};
 
 /// State shared between providers.
 #[derive(Clone)]

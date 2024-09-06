@@ -1,14 +1,20 @@
-pub mod battery;
-pub mod config;
-pub mod cpu;
-pub mod host;
-pub mod ip;
+mod battery;
+mod config;
+mod cpu;
+mod host;
+mod ip;
 #[cfg(windows)]
-pub mod komorebi;
-pub mod memory;
-pub mod network;
-pub mod provider;
-pub mod provider_manager;
-pub mod provider_ref;
-pub mod variables;
-pub mod weather;
+mod komorebi;
+mod memory;
+mod network;
+mod provider;
+mod provider_manager;
+mod provider_ref;
+mod variables;
+mod weather;
+
+pub use config::*;
+pub use provider::*;
+pub use provider_manager::*;
+pub use provider_ref::*;
+pub use variables::*;

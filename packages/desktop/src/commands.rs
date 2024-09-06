@@ -5,7 +5,7 @@ use tauri::{State, Window};
 use crate::{
   common::WindowExt,
   config::Config,
-  providers::{config::ProviderConfig, provider_manager::ProviderManager},
+  providers::{ProviderConfig, ProviderManager},
   window_factory::{WindowFactory, WindowState},
 };
 

@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 
 use super::{CpuOutput, CpuProviderConfig};
 use crate::{
-  impl_interval_provider, providers::variables::ProviderOutput,
+  impl_interval_provider, providers::ProviderOutput,
 };
 
 pub struct CpuProvider {
