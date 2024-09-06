@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use sysinfo::System;
 use tokio::sync::Mutex;
 
 use super::{MemoryOutput, MemoryProviderConfig};
-use crate::providers::{
-  provider::IntervalProvider, variables::ProviderOutput,
+use crate::{
+  impl_interval_provider, providers::variables::ProviderOutput,
 };
 
 pub struct MemoryProvider {
@@ -20,6 +19,10 @@ impl MemoryProvider {
     sysinfo: Arc<Mutex<System>>,
   ) -> MemoryProvider {
     MemoryProvider { config, sysinfo }
+  }
+
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
   }
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
@@ -42,13 +45,4 @@ impl MemoryProvider {
   }
 }
 
-#[async_trait]
-impl IntervalProvider for MemoryProvider {
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    self.run_interval().await
-  }
-}
+impl_interval_provider!(MemoryProvider);

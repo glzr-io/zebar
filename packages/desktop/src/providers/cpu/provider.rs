@@ -1,16 +1,11 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
-use async_trait::async_trait;
 use sysinfo::System;
-use tokio::{
-  sync::{mpsc, Mutex},
-  time,
-};
+use tokio::sync::Mutex;
 
 use super::{CpuOutput, CpuProviderConfig};
-use crate::providers::{
-  provider::Provider, provider_ref::ProviderResult,
-  variables::ProviderOutput,
+use crate::{
+  impl_interval_provider, providers::variables::ProviderOutput,
 };
 
 pub struct CpuProvider {
@@ -25,31 +20,25 @@ impl CpuProvider {
   ) -> CpuProvider {
     CpuProvider { config, sysinfo }
   }
-}
 
-#[async_trait]
-impl Provider for CpuProvider {
-  async fn run(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.config.refresh_interval));
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
 
-    loop {
-      interval.tick().await;
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let mut sysinfo = self.sysinfo.lock().await;
+    sysinfo.refresh_cpu();
 
-      let mut sysinfo = self.sysinfo.lock().await;
-      sysinfo.refresh_cpu();
-
-      let res = Ok(ProviderOutput::Cpu(CpuOutput {
-        usage: sysinfo.global_cpu_info().cpu_usage(),
-        frequency: sysinfo.global_cpu_info().frequency(),
-        logical_core_count: sysinfo.cpus().len(),
-        physical_core_count: sysinfo
-          .physical_core_count()
-          .unwrap_or(sysinfo.cpus().len()),
-        vendor: sysinfo.global_cpu_info().vendor_id().into(),
-      }));
-
-      emit_result_tx.send(res.into()).await;
-    }
+    Ok(ProviderOutput::Cpu(CpuOutput {
+      usage: sysinfo.global_cpu_info().cpu_usage(),
+      frequency: sysinfo.global_cpu_info().frequency(),
+      logical_core_count: sysinfo.cpus().len(),
+      physical_core_count: sysinfo
+        .physical_core_count()
+        .unwrap_or(sysinfo.cpus().len()),
+      vendor: sysinfo.global_cpu_info().vendor_id().into(),
+    }))
   }
 }
+
+impl_interval_provider!(CpuProvider);

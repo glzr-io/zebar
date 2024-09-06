@@ -1,16 +1,11 @@
-use std::{sync::Arc, time::Duration};
-
-use async_trait::async_trait;
 use reqwest::Client;
-use tokio::{sync::mpsc, time};
 
 use super::{
   open_meteo_res::OpenMeteoRes, WeatherOutput, WeatherProviderConfig,
   WeatherStatus,
 };
-use crate::providers::{
-  provider::Provider, provider_ref::ProviderResult,
-  variables::ProviderOutput,
+use crate::{
+  impl_interval_provider, providers::variables::ProviderOutput,
 };
 
 pub struct WeatherProvider {
@@ -26,16 +21,18 @@ impl WeatherProvider {
     }
   }
 
-  async fn interval_output(
-    config: &WeatherProviderConfig,
-    http_client: &Client,
-  ) -> anyhow::Result<ProviderOutput> {
-    let res = http_client
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
+
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let res = self
+      .http_client
       .get("https://api.open-meteo.com/v1/forecast")
       .query(&[
         ("temperature_unit", "celsius"),
-        ("latitude", &config.latitude.to_string()),
-        ("longitude", &config.longitude.to_string()),
+        ("latitude", &self.config.latitude.to_string()),
+        ("longitude", &self.config.longitude.to_string()),
         ("current_weather", "true"),
         ("daily", "sunset,sunrise"),
         ("timezone", "auto"),
@@ -105,22 +102,4 @@ impl WeatherProvider {
   }
 }
 
-#[async_trait]
-impl Provider for WeatherProvider {
-  async fn run(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.config.refresh_interval));
-
-    loop {
-      interval.tick().await;
-
-      emit_result_tx
-        .send(
-          Self::interval_output(&self.config, &self.http_client)
-            .await
-            .into(),
-        )
-        .await;
-    }
-  }
-}
+impl_interval_provider!(WeatherProvider);

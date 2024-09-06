@@ -1,32 +1,24 @@
-use std::{sync::Arc, time::Duration};
-
-use async_trait::async_trait;
 use sysinfo::System;
-use tokio::{
-  sync::{mpsc, Mutex},
-  time,
-};
 
 use super::{HostOutput, HostProviderConfig};
-use crate::providers::{
-  provider::Provider, provider_ref::ProviderResult,
-  variables::ProviderOutput,
+use crate::{
+  impl_interval_provider, providers::variables::ProviderOutput,
 };
 
 pub struct HostProvider {
   config: HostProviderConfig,
-  sysinfo: Arc<Mutex<System>>,
 }
 
 impl HostProvider {
-  pub fn new(
-    config: HostProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
-  ) -> HostProvider {
-    HostProvider { config, sysinfo }
+  pub fn new(config: HostProviderConfig) -> HostProvider {
+    HostProvider { config }
   }
 
-  async fn interval_output() -> anyhow::Result<ProviderOutput> {
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
+
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
     Ok(ProviderOutput::Host(HostOutput {
       hostname: System::host_name(),
       os_name: System::name(),
@@ -38,18 +30,4 @@ impl HostProvider {
   }
 }
 
-#[async_trait]
-impl Provider for HostProvider {
-  async fn run(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.config.refresh_interval));
-
-    loop {
-      interval.tick().await;
-
-      emit_result_tx
-        .send(Self::interval_output().await.into())
-        .await;
-    }
-  }
-}
+impl_interval_provider!(HostProvider);

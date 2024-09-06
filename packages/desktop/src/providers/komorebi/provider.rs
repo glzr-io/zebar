@@ -1,6 +1,5 @@
 use std::{
   io::{BufReader, Read},
-  sync::Arc,
   time::Duration,
 };
 

@@ -1,14 +1,9 @@
-use std::{sync::Arc, time::Duration};
-
 use anyhow::Context;
-use async_trait::async_trait;
 use reqwest::Client;
-use tokio::{sync::mpsc, time};
 
 use super::{ipinfo_res::IpinfoRes, IpOutput, IpProviderConfig};
-use crate::providers::{
-  provider::Provider, provider_ref::ProviderResult,
-  variables::ProviderOutput,
+use crate::{
+  impl_interval_provider, providers::variables::ProviderOutput,
 };
 
 pub struct IpProvider {
@@ -24,10 +19,13 @@ impl IpProvider {
     }
   }
 
-  async fn interval_output(
-    http_client: &Client,
-  ) -> anyhow::Result<ProviderOutput> {
-    let res = http_client
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
+
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let res = self
+      .http_client
       .get("https://ipinfo.io/json")
       .send()
       .await?
@@ -52,18 +50,4 @@ impl IpProvider {
   }
 }
 
-#[async_trait]
-impl Provider for IpProvider {
-  async fn run(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.config.refresh_interval));
-
-    loop {
-      interval.tick().await;
-
-      emit_result_tx
-        .send(Self::interval_output(&self.http_client).await.into())
-        .await;
-    }
-  }
-}
+impl_interval_provider!(IpProvider);

@@ -1,7 +1,4 @@
-use std::{sync::Arc, time::Duration};
-
 use anyhow::Context;
-use async_trait::async_trait;
 use starship_battery::{
   units::{
     electric_potential::volt, power::watt, ratio::percent,
@@ -9,12 +6,10 @@ use starship_battery::{
   },
   Manager, State,
 };
-use tokio::{sync::mpsc, time};
 
 use super::{BatteryOutput, BatteryProviderConfig};
-use crate::providers::{
-  provider::Provider, provider_ref::ProviderResult,
-  variables::ProviderOutput,
+use crate::{
+  impl_interval_provider, providers::variables::ProviderOutput,
 };
 
 pub struct BatteryProvider {
@@ -32,12 +27,13 @@ impl BatteryProvider {
     })
   }
 
-  /// Battery manager from `starship_battery` is not thread-safe, so it
-  /// requires its own non-async function.
-  pub fn get_variables(
-    manager: &Manager,
-  ) -> anyhow::Result<ProviderOutput> {
-    let battery = manager
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
+
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let battery = self
+      .battery_manager
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
       .unwrap_or(None)
@@ -61,18 +57,4 @@ impl BatteryProvider {
   }
 }
 
-#[async_trait]
-impl Provider for BatteryProvider {
-  async fn run(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.config.refresh_interval));
-
-    loop {
-      interval.tick().await;
-      emit_result_tx
-        .send(Self::get_variables(&self.battery_manager).into())
-        .await
-        .unwrap();
-    }
-  }
-}
+impl_interval_provider!(BatteryProvider);

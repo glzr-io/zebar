@@ -1,21 +1,16 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
-use async_trait::async_trait;
 use netdev::interface::get_interfaces;
 use sysinfo::Networks;
-use tokio::{
-  sync::{mpsc, Mutex},
-  time,
-};
+use tokio::sync::Mutex;
 
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
   InterfaceType, NetworkGateway, NetworkInterface, NetworkOutput,
   NetworkProviderConfig, NetworkTraffic,
 };
-use crate::providers::{
-  provider::Provider, provider_ref::ProviderResult,
-  variables::ProviderOutput,
+use crate::{
+  impl_interval_provider, providers::variables::ProviderOutput,
 };
 
 pub struct NetworkProvider {
@@ -31,11 +26,12 @@ impl NetworkProvider {
     NetworkProvider { config, netinfo }
   }
 
-  async fn interval_output(
-    config: &NetworkProviderConfig,
-    netinfo: Arc<Mutex<Networks>>,
-  ) -> anyhow::Result<ProviderOutput> {
-    let mut netinfo = netinfo.lock().await;
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
+
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let mut netinfo = self.netinfo.lock().await;
     netinfo.refresh();
 
     let interfaces = get_interfaces();
@@ -60,11 +56,11 @@ impl NetworkProvider {
       traffic: NetworkTraffic {
         received: to_bytes_per_seconds(
           get_network_down(&netinfo),
-          config.refresh_interval,
+          self.config.refresh_interval,
         ),
         transmitted: to_bytes_per_seconds(
           get_network_up(&netinfo),
-          config.refresh_interval,
+          self.config.refresh_interval,
         ),
       },
     }))
@@ -122,25 +118,7 @@ impl NetworkProvider {
   }
 }
 
-#[async_trait]
-impl Provider for NetworkProvider {
-  async fn run(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.config.refresh_interval));
-
-    loop {
-      interval.tick().await;
-
-      emit_result_tx
-        .send(
-          Self::interval_output(&self.config, self.netinfo.clone())
-            .await
-            .into(),
-        )
-        .await;
-    }
-  }
-}
+impl_interval_provider!(NetworkProvider);
 
 /// Gets the total network (down) usage.
 fn get_network_down(req_net: &sysinfo::Networks) -> u64 {

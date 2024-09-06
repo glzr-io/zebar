@@ -158,9 +158,7 @@ impl ProviderRef {
       ProviderConfig::Cpu(config) => {
         Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
       }
-      ProviderConfig::Host(config) => {
-        Box::new(HostProvider::new(config, shared_state.sysinfo.clone()))
-      }
+      ProviderConfig::Host(config) => Box::new(HostProvider::new(config)),
       ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
       #[cfg(windows)]
       ProviderConfig::Komorebi(config) => {

@@ -1,10 +1,7 @@
-use std::time::Duration;
-
 use async_trait::async_trait;
-use tokio::{sync::mpsc::Sender, time};
-use tracing::error;
+use tokio::sync::mpsc::Sender;
 
-use super::{provider_ref::ProviderResult, variables::ProviderOutput};
+use super::provider_ref::ProviderResult;
 
 #[async_trait]
 pub trait Provider: Send + Sync {
@@ -17,30 +14,36 @@ pub trait Provider: Send + Sync {
   }
 }
 
-#[async_trait]
-pub trait IntervalProvider {
-  /// Refresh interval in milliseconds.
-  fn refresh_interval_ms(&self) -> u64;
+/// Implements the `Provider` trait for the given struct.
+///
+/// Expects that the struct has a `refresh_interval_ms` and `run_interval`
+/// method.
+#[macro_export]
+macro_rules! impl_interval_provider {
+  ($type:ty) => {
+    #[async_trait::async_trait]
+    impl crate::providers::provider::Provider for $type {
+      async fn run(
+        &self,
+        emit_result_tx: tokio::sync::mpsc::Sender<
+          crate::providers::provider_ref::ProviderResult,
+        >,
+      ) {
+        let mut interval = tokio::time::interval(
+          std::time::Duration::from_millis(self.refresh_interval_ms()),
+        );
 
-  /// Callback for when the provider is started.
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput>;
-}
+        loop {
+          interval.tick().await;
 
-#[async_trait]
-impl<T: IntervalProvider + Send + Sync> Provider for T {
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.refresh_interval_ms()));
+          let res =
+            emit_result_tx.send(self.run_interval().await.into()).await;
 
-    loop {
-      interval.tick().await;
-
-      let res =
-        emit_result_tx.send(self.run_interval().await.into()).await;
-
-      if let Err(err) = res {
-        error!("Error sending provider result: {:?}", err);
+          if let Err(err) = res {
+            tracing::error!("Error sending provider result: {:?}", err);
+          }
+        }
       }
     }
-  }
+  };
 }
