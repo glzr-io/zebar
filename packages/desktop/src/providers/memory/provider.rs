@@ -61,7 +61,7 @@ impl Provider for MemoryProvider {
       interval.tick().await;
 
       emit_result_tx
-        .send(Self::interval_output().await.into())
+        .send(Self::interval_output(self.sysinfo.clone()).await.into())
         .await;
     }
   }

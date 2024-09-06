@@ -31,10 +31,11 @@ impl NetworkProvider {
     NetworkProvider { config, netinfo }
   }
 
-  async fn provider_output(
-    self: Arc<Self>,
+  async fn interval_output(
+    config: &NetworkProviderConfig,
+    netinfo: Arc<Mutex<Networks>>,
   ) -> anyhow::Result<ProviderOutput> {
-    let mut netinfo = self.netinfo.lock().await;
+    let mut netinfo = netinfo.lock().await;
     netinfo.refresh();
 
     let interfaces = get_interfaces();
@@ -59,11 +60,11 @@ impl NetworkProvider {
       traffic: NetworkTraffic {
         received: to_bytes_per_seconds(
           get_network_down(&netinfo),
-          self.config.refresh_interval,
+          config.refresh_interval,
         ),
         transmitted: to_bytes_per_seconds(
           get_network_up(&netinfo),
-          self.config.refresh_interval,
+          config.refresh_interval,
         ),
       },
     }))
@@ -134,7 +135,11 @@ impl Provider for NetworkProvider {
       interval.tick().await;
 
       emit_result_tx
-        .send(self.provider_output().await.into())
+        .send(
+          Self::interval_output(&self.config, self.netinfo.clone())
+            .await
+            .into(),
+        )
         .await;
     }
   }
