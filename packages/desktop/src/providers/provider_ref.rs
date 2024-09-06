@@ -100,7 +100,7 @@ impl ProviderRef {
       shared_state,
       emit_result_tx.clone(),
       stop_rx,
-    );
+    )?;
 
     Ok(Self {
       config_hash,
@@ -117,11 +117,10 @@ impl ProviderRef {
     shared_state: SharedProviderState,
     emit_result_tx: mpsc::Sender<ProviderResult>,
     mut stop_rx: mpsc::Receiver<()>,
-  ) {
-    task::spawn(async move {
-      // TODO: Remove unwrap.
-      let provider = Self::create_provider(config, shared_state).unwrap();
+  ) -> anyhow::Result<()> {
+    let provider = Self::create_provider(config, shared_state)?;
 
+    task::spawn(async move {
       // TODO: Add arc `should_stop` to be passed to `run`.
 
       let run = provider.run(emit_result_tx);
@@ -144,6 +143,8 @@ impl ProviderRef {
 
       info!("Provider stopped: {}", config_hash);
     });
+
+    Ok(())
   }
 
   fn create_provider(
@@ -152,7 +153,7 @@ impl ProviderRef {
   ) -> anyhow::Result<Box<dyn Provider>> {
     let provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
-        Box::new(BatteryProvider::new(config)?)
+        Box::new(BatteryProvider::new(config))
       }
       ProviderConfig::Cpu(config) => {
         Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))

@@ -12,17 +12,11 @@ use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct BatteryProvider {
   config: BatteryProviderConfig,
-  battery_manager: Manager,
 }
 
 impl BatteryProvider {
-  pub fn new(
-    config: BatteryProviderConfig,
-  ) -> anyhow::Result<BatteryProvider> {
-    Ok(BatteryProvider {
-      config,
-      battery_manager: Manager::new()?,
-    })
+  pub fn new(config: BatteryProviderConfig) -> BatteryProvider {
+    BatteryProvider { config }
   }
 
   fn refresh_interval_ms(&self) -> u64 {
@@ -30,8 +24,7 @@ impl BatteryProvider {
   }
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let battery = self
-      .battery_manager
+    let battery = Manager::new()?
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
       .unwrap_or(None)

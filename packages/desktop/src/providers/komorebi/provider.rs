@@ -21,12 +21,12 @@ use crate::providers::{Provider, ProviderOutput, ProviderResult};
 const SOCKET_NAME: &str = "zebar.sock";
 
 pub struct KomorebiProvider {
-  config: KomorebiProviderConfig,
+  _config: KomorebiProviderConfig,
 }
 
 impl KomorebiProvider {
   pub fn new(config: KomorebiProviderConfig) -> KomorebiProvider {
-    KomorebiProvider { config }
+    KomorebiProvider { _config: config }
   }
 
   async fn create_socket(
