@@ -22,7 +22,6 @@ pub struct ProviderRef {
   config_hash: String,
   cache: Option<ProviderCache>,
   emit_result_tx: mpsc::Sender<ProviderResult>,
-  refresh_tx: mpsc::Sender<()>,
   stop_tx: mpsc::Sender<()>,
 }
 
@@ -58,8 +57,8 @@ impl ProviderRef {
   /// Creates a new `ProviderRef` instance.
   pub async fn new(
     app_handle: &AppHandle,
-    config_hash: String,
     config: ProviderConfig,
+    config_hash: String,
     shared_state: SharedProviderState,
   ) -> anyhow::Result<Self> {
     let (emit_result_tx, mut emit_result_rx) =
@@ -94,14 +93,13 @@ impl ProviderRef {
       }
     });
 
-    let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
     let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
 
     Self::start_provider(
       config,
+      config_hash.clone(),
       shared_state,
       emit_result_tx.clone(),
-      refresh_rx,
       stop_rx,
     );
 
@@ -110,43 +108,42 @@ impl ProviderRef {
       cache: None,
       emit_result_tx,
       stop_tx,
-      refresh_tx,
     })
   }
 
   /// Starts the provider in a separate task.
   fn start_provider(
     config: ProviderConfig,
+    config_hash: String,
     shared_state: SharedProviderState,
     emit_result_tx: mpsc::Sender<ProviderResult>,
-    mut refresh_rx: mpsc::Receiver<()>,
     mut stop_rx: mpsc::Receiver<()>,
   ) {
     task::spawn(async move {
       // TODO: Remove unwrap.
       let provider = Self::create_provider(config, shared_state).unwrap();
 
-      // TODO: Add arc `should_stop` to be passed to `on_start`.
+      // TODO: Add arc `should_stop` to be passed to `run`.
 
-      let start = provider.on_start(emit_result_tx);
-      tokio::pin!(start);
+      let run = provider.run(emit_result_tx);
+      tokio::pin!(run);
 
+      // Ref: https://tokio.rs/tokio/tutorial/select#resuming-an-async-operation
       loop {
         tokio::select! {
-          // Default match arm which handles initialization of the provider.
-          // This has a precondition to avoid running again on refresh.
-          _ = start => break,
+          // Default match arm which continuously runs the provider.
+          _ = run => break,
 
           // On stop, perform any necessary clean up and exit the loop.
           Some(_) = stop_rx.recv() => {
-            // info!("Stopping provider: {}", config_hash);
+            info!("Stopping provider: {}", config_hash);
             _ = provider.on_stop().await;
             break;
           },
         }
       }
 
-      // info!("Provider stopped: {}", config_hash);
+      info!("Provider stopped: {}", config_hash);
     });
   }
 

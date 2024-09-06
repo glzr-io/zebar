@@ -58,8 +58,8 @@ impl ProviderManager {
 
     let provider_ref = ProviderRef::new(
       &self.app_handle,
-      config_hash.clone(),
       config,
+      config_hash.clone(),
       self.shared_state.clone(),
     )
     .await?;

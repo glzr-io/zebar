@@ -40,7 +40,7 @@ impl HostProvider {
 
 #[async_trait]
 impl Provider for HostProvider {
-  async fn on_start(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
+  async fn run(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
     let mut interval =
       time::interval(Duration::from_millis(self.config.refresh_interval));
 

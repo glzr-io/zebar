@@ -1,16 +1,12 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use sysinfo::System;
-use tokio::{
-  sync::{mpsc, Mutex},
-  time,
-};
+use tokio::sync::Mutex;
 
 use super::{MemoryOutput, MemoryProviderConfig};
 use crate::providers::{
-  provider::Provider, provider_ref::ProviderResult,
-  variables::ProviderOutput,
+  provider::IntervalProvider, variables::ProviderOutput,
 };
 
 pub struct MemoryProvider {
@@ -26,10 +22,8 @@ impl MemoryProvider {
     MemoryProvider { config, sysinfo }
   }
 
-  async fn interval_output(
-    sysinfo: Arc<Mutex<System>>,
-  ) -> anyhow::Result<ProviderOutput> {
-    let mut sysinfo = sysinfo.lock().await;
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let mut sysinfo = self.sysinfo.lock().await;
     sysinfo.refresh_memory();
 
     let usage = (sysinfo.used_memory() as f32
@@ -49,17 +43,12 @@ impl MemoryProvider {
 }
 
 #[async_trait]
-impl Provider for MemoryProvider {
-  async fn on_start(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
-    let mut interval =
-      time::interval(Duration::from_millis(self.config.refresh_interval));
+impl IntervalProvider for MemoryProvider {
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
 
-    loop {
-      interval.tick().await;
-
-      emit_result_tx
-        .send(Self::interval_output(self.sysinfo.clone()).await.into())
-        .await;
-    }
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    self.run_interval().await
   }
 }
