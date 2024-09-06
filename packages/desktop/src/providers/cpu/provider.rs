@@ -29,10 +29,7 @@ impl CpuProvider {
 
 #[async_trait]
 impl Provider for CpuProvider {
-  async fn on_start(
-    self: Arc<Self>,
-    emit_result_tx: mpsc::Sender<ProviderResult>,
-  ) {
+  async fn on_start(&self, emit_result_tx: mpsc::Sender<ProviderResult>) {
     let mut interval =
       time::interval(Duration::from_millis(self.config.refresh_interval));
 

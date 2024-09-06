@@ -33,7 +33,7 @@ impl KomorebiProvider {
   }
 
   async fn create_socket(
-    self: Arc<Self>,
+    &self,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
     let socket = komorebi_client::subscribe(SOCKET_NAME)
@@ -177,10 +177,7 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
-  async fn on_start(
-    self: Arc<Self>,
-    emit_result_tx: Sender<ProviderResult>,
-  ) {
+  async fn on_start(&self, emit_result_tx: Sender<ProviderResult>) {
     if let Err(err) = self.create_socket(emit_result_tx.clone()).await {
       emit_result_tx.send(Err(err).into()).await;
     }

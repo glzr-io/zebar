@@ -60,7 +60,7 @@ impl ProviderManager {
       &self.app_handle,
       config_hash.clone(),
       config,
-      &self.shared_state,
+      self.shared_state.clone(),
     )
     .await?;
 

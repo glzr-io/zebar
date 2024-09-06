@@ -19,17 +19,18 @@ use super::{
 
 /// Reference to an active provider.
 pub struct ProviderRef {
-  pub config_hash: String,
-  pub cache: Option<ProviderCache>,
-  provider: Arc<dyn Provider>,
+  config_hash: String,
+  cache: Option<ProviderCache>,
   emit_result_tx: mpsc::Sender<ProviderResult>,
+  refresh_tx: mpsc::Sender<()>,
+  stop_tx: mpsc::Sender<()>,
 }
 
 /// Cache for provider output.
 #[derive(Debug, Clone)]
 pub struct ProviderCache {
-  pub timestamp: Instant,
-  pub output: Box<ProviderOutput>,
+  timestamp: Instant,
+  output: Box<ProviderOutput>,
 }
 
 /// Provider output/error emitted to frontend clients.
@@ -59,10 +60,8 @@ impl ProviderRef {
     app_handle: &AppHandle,
     config_hash: String,
     config: ProviderConfig,
-    shared_state: &SharedProviderState,
+    shared_state: SharedProviderState,
   ) -> anyhow::Result<Self> {
-    let provider = Self::create_provider(config, shared_state)?;
-
     let (emit_result_tx, mut emit_result_rx) =
       mpsc::channel::<ProviderResult>(1);
 
@@ -74,7 +73,7 @@ impl ProviderRef {
 
         let output = Box::new(output);
         let payload = json!({
-          "config_hash": config_hash_clone.clone(),
+          "configHash": config_hash_clone.clone(),
           "result": *output.clone(),
         });
 
@@ -95,49 +94,90 @@ impl ProviderRef {
       }
     });
 
-    info!("Starting provider: {}", config_hash);
-    let provider_clone = provider.clone();
-    let emit_result_tx_clone = emit_result_tx.clone();
-    task::spawn(async move {
-      provider_clone.on_start(emit_result_tx_clone).await;
-    });
+    let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
+    let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
+
+    Self::start_provider(
+      config,
+      shared_state,
+      emit_result_tx.clone(),
+      refresh_rx,
+      stop_rx,
+    );
 
     Ok(Self {
       config_hash,
       cache: None,
-      provider,
       emit_result_tx,
+      stop_tx,
+      refresh_tx,
     })
+  }
+
+  /// Starts the provider in a separate task.
+  fn start_provider(
+    config: ProviderConfig,
+    shared_state: SharedProviderState,
+    emit_result_tx: mpsc::Sender<ProviderResult>,
+    mut refresh_rx: mpsc::Receiver<()>,
+    mut stop_rx: mpsc::Receiver<()>,
+  ) {
+    task::spawn(async move {
+      // TODO: Remove unwrap.
+      let provider = Self::create_provider(config, shared_state).unwrap();
+
+      // TODO: Add arc `should_stop` to be passed to `on_start`.
+
+      let start = provider.on_start(emit_result_tx);
+      tokio::pin!(start);
+
+      loop {
+        tokio::select! {
+          // Default match arm which handles initialization of the provider.
+          // This has a precondition to avoid running again on refresh.
+          _ = start => break,
+
+          // On stop, perform any necessary clean up and exit the loop.
+          Some(_) = stop_rx.recv() => {
+            // info!("Stopping provider: {}", config_hash);
+            _ = provider.on_stop().await;
+            break;
+          },
+        }
+      }
+
+      // info!("Provider stopped: {}", config_hash);
+    });
   }
 
   fn create_provider(
     config: ProviderConfig,
-    shared_state: &SharedProviderState,
-  ) -> anyhow::Result<Arc<dyn Provider>> {
-    let provider: Arc<dyn Provider> = match config {
+    shared_state: SharedProviderState,
+  ) -> anyhow::Result<Box<dyn Provider>> {
+    let provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
-        Arc::new(BatteryProvider::new(config)?)
+        Box::new(BatteryProvider::new(config)?)
       }
       ProviderConfig::Cpu(config) => {
-        Arc::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
+        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
       }
       ProviderConfig::Host(config) => {
-        Arc::new(HostProvider::new(config, shared_state.sysinfo.clone()))
+        Box::new(HostProvider::new(config, shared_state.sysinfo.clone()))
       }
-      ProviderConfig::Ip(config) => Arc::new(IpProvider::new(config)),
+      ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
       #[cfg(windows)]
       ProviderConfig::Komorebi(config) => {
-        Arc::new(KomorebiProvider::new(config))
+        Box::new(KomorebiProvider::new(config))
       }
       ProviderConfig::Memory(config) => {
-        Arc::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
+        Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
       }
-      ProviderConfig::Network(config) => Arc::new(NetworkProvider::new(
+      ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
         config,
         shared_state.netinfo.clone(),
       )),
       ProviderConfig::Weather(config) => {
-        Arc::new(WeatherProvider::new(config))
+        Box::new(WeatherProvider::new(config))
       }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),
@@ -170,10 +210,7 @@ impl ProviderRef {
   ///
   /// This triggers any necessary cleanup.
   pub async fn stop(&mut self) -> anyhow::Result<()> {
-    info!("Stopping provider: {}", self.config_hash);
-    _ = self.provider.clone().on_stop().await;
-    info!("Provider stopped: {}", self.config_hash);
-
+    self.stop_tx.send(()).await?;
     Ok(())
   }
 }
