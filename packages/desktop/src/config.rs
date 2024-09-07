@@ -305,7 +305,7 @@ impl Config {
 
     for config_path in startup_configs {
       let config = self
-        .window_config_by_path(&self.join_path(&config_path))
+        .window_config_by_path(&self.join_config_dir(&config_path))
         .await
         .unwrap_or(None)
         .context("Failed to get window config.")?;
@@ -319,8 +319,20 @@ impl Config {
   /// Joins the given path with the config directory path.
   ///
   /// Returns an absolute path.
-  pub fn join_path(&self, config_path: &str) -> String {
+  pub fn join_config_dir(&self, config_path: &str) -> String {
     self.config_dir.join(config_path).to_unicode_string()
+  }
+
+  /// Strips the config directory path from the given path.
+  ///
+  /// Returns a relative path.
+  pub fn strip_config_dir<'a>(
+    &self,
+    config_path: &'a str,
+  ) -> anyhow::Result<&'a str> {
+    config_path
+      .strip_prefix(&self.config_dir.to_unicode_string())
+      .context("Failed to strip config directory path.")
   }
 
   /// Returns the window config at the given absolute path.

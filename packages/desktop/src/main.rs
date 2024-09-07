@@ -206,7 +206,7 @@ async fn open_windows_by_cli_command(
   let window_configs = match cli.command() {
     CliCommand::Open(args) => {
       let window_config = config
-        .window_config_by_path(&config.join_path(&args.config_path))
+        .window_config_by_path(&config.join_config_dir(&args.config_path))
         .await?
         .with_context(|| {
           format!("Window config not found at {}.", args.config_path)

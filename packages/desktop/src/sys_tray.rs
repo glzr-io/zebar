@@ -184,7 +184,7 @@ impl SysTray {
         let label = format!(
           "({}) {}",
           states.len(),
-          Self::format_config_path(&config_path, &self.config.config_dir)
+          Self::format_config_path(&self.config, &config_path)
         );
 
         tray_menu = tray_menu.item(&self.create_config_menu(
@@ -252,10 +252,8 @@ impl SysTray {
 
     // Add each window config to the menu.
     for window_config in &self.config.window_configs().await {
-      let label = Self::format_config_path(
-        &window_config.config_path,
-        &self.config.config_dir,
-      );
+      let label =
+        Self::format_config_path(&self.config, &window_config.config_path);
 
       let menu_item = self.create_config_menu(
         &window_config.config_path,
@@ -307,11 +305,12 @@ impl SysTray {
 
   /// Formats the config path for display in the system tray.
   fn format_config_path(
+    config: &Arc<Config>,
     config_path: &str,
-    config_dir: &PathBuf,
   ) -> String {
-    config_path
-      .strip_prefix(&config_dir.to_unicode_string())
+    config
+      .strip_config_dir(config_path)
+      .ok()
       .and_then(|path| path.strip_suffix(".zebar.json"))
       .unwrap_or(config_path)
       .into()
