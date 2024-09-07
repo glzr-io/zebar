@@ -92,20 +92,29 @@ impl SysTray {
       .menu(&self.create_tray_menu().await?)
       .tooltip(tooltip)
       .on_menu_event(move |app, event| {
-        let event = MenuEvent::from_str(event.id.as_ref());
+        let app_handle = app.clone();
+        let config = config.clone();
+        let window_factory = window_factory.clone();
 
-        let event_res = event.map(|event| {
-          Self::handle_menu_event(
-            event,
-            &app,
-            config.clone(),
-            window_factory.clone(),
-          )
+        task::spawn(async move {
+          let event = MenuEvent::from_str(event.id.as_ref());
+
+          if let Ok(event) = event {
+            info!("Received tray menu event: {}", event.to_string());
+
+            let res = Self::handle_menu_event(
+              event,
+              app_handle,
+              config,
+              window_factory,
+            )
+            .await;
+
+            if let Err(err) = res {
+              error!("{:?}", err);
+            }
+          }
         });
-
-        if let Err(err) = event_res {
-          error!("{:?}", err);
-        }
       })
       .build(&self.app_handle)?;
 
@@ -193,9 +202,9 @@ impl SysTray {
   }
 
   /// Callback for system tray menu events.
-  fn handle_menu_event(
+  async fn handle_menu_event(
     event: MenuEvent,
-    app_handle: &AppHandle,
+    app_handle: AppHandle,
     config: Arc<Config>,
     window_factory: Arc<WindowFactory>,
   ) -> anyhow::Result<()> {
@@ -215,18 +224,12 @@ impl SysTray {
       MenuEvent::EnableWindowConfig(path) => {
         info!("Window config at path {} enabled.", path);
 
-        task::spawn(async move {
-          let window_config = config
-            .window_config_by_path(&config.join_path(&path))
-            .await
-            .unwrap()
-            .with_context(|| {
-              format!("Window config not found at {}.", path)
-            })
-            .unwrap();
+        let window_config = config
+          .window_config_by_path(&path)
+          .await?
+          .context("Window config not found.")?;
 
-          window_factory.open(window_config).await;
-        });
+        window_factory.open(window_config).await?;
       }
       MenuEvent::StartupWindowConfig(path) => {
         info!("Window config at path {} set to launch on startup.", path);
