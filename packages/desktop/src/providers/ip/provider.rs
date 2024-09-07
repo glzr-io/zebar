@@ -2,9 +2,7 @@ use anyhow::Context;
 use reqwest::Client;
 
 use super::{ipinfo_res::IpinfoRes, IpOutput, IpProviderConfig};
-use crate::{
-  impl_interval_provider, providers::ProviderOutput,
-};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct IpProvider {
   config: IpProviderConfig,

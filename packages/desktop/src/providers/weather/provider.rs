@@ -4,9 +4,7 @@ use super::{
   open_meteo_res::OpenMeteoRes, WeatherOutput, WeatherProviderConfig,
   WeatherStatus,
 };
-use crate::{
-  impl_interval_provider, providers::ProviderOutput,
-};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct WeatherProvider {
   config: WeatherProviderConfig,

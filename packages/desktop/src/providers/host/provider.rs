@@ -1,9 +1,7 @@
 use sysinfo::System;
 
 use super::{HostOutput, HostProviderConfig};
-use crate::{
-  impl_interval_provider, providers::ProviderOutput,
-};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct HostProvider {
   config: HostProviderConfig,

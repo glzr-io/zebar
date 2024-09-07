@@ -9,9 +9,7 @@ use super::{
   InterfaceType, NetworkGateway, NetworkInterface, NetworkOutput,
   NetworkProviderConfig, NetworkTraffic,
 };
-use crate::{
-  impl_interval_provider, providers::ProviderOutput,
-};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct NetworkProvider {
   config: NetworkProviderConfig,
