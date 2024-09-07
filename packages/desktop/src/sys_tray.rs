@@ -7,6 +7,7 @@ use tauri::{
   tray::{TrayIcon, TrayIconBuilder},
   AppHandle, Wry,
 };
+use tokio::task;
 use tracing::{error, info};
 
 use crate::{
@@ -113,19 +114,36 @@ impl SysTray {
 
   fn start_listener(self: Arc<Self>) {
     let mut config_changes_rx = self.config.changes_tx.subscribe();
-    let mut window_changes_rx = self.window_factory.changes_tx.subscribe();
+    let mut window_open_rx = self.window_factory.open_tx.subscribe();
+    let mut window_close_rx = self.window_factory.close_tx.subscribe();
 
     tokio::spawn(async move {
       loop {
-        tokio::select! {
-          Ok(_) = config_changes_rx.recv() => {
-            println!("Config changes received.");
-            if let Some(tray_icon) = self.tray_icon.as_ref() {
-              tray_icon.set_menu(Some(self.create_tray_menu().await.unwrap()));
-            }
-          }
-          Ok(_) = window_changes_rx.recv() => {
-            println!("Window changes received.");
+        let event = tokio::select! {
+          Ok(_) = config_changes_rx.recv() => "Config changes",
+          Ok(_) = window_open_rx.recv() => "Window open",
+          Ok(_) = window_close_rx.recv() => "Window close",
+        };
+
+        info!("{} received in system tray. Updating menu.", event);
+
+        // Drain receiver channels if multiple events are queued up.
+        config_changes_rx = config_changes_rx.resubscribe();
+        window_open_rx = window_open_rx.resubscribe();
+        window_close_rx = window_close_rx.resubscribe();
+
+        if let Some(tray_icon) = self.tray_icon.as_ref() {
+          if let Err(err) =
+            self.create_tray_menu().await.and_then(|menu| {
+              tray_icon
+                .set_menu(Some(menu))
+                .context("Failed to set tray menu.")
+            })
+          {
+            error!(
+              "Failed to update tray menu after {} event: {:?}",
+              event, err
+            );
           }
         }
       }
@@ -197,9 +215,18 @@ impl SysTray {
       MenuEvent::EnableWindowConfig(path) => {
         info!("Window config at path {} enabled.", path);
 
-        // task::spawn(async move {
-        //   window_factory.open(path).await;
-        // })
+        task::spawn(async move {
+          let window_config = config
+            .window_config_by_path(&config.join_path(&path))
+            .await
+            .unwrap()
+            .with_context(|| {
+              format!("Window config not found at {}.", path)
+            })
+            .unwrap();
+
+          window_factory.open(window_config).await;
+        });
       }
       MenuEvent::StartupWindowConfig(path) => {
         info!("Window config at path {} set to launch on startup.", path);

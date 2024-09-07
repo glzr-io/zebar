@@ -7,9 +7,12 @@ use std::{
 };
 
 use serde::Serialize;
-use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
-use tokio::sync::{broadcast, Mutex};
-use tracing::info;
+use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tokio::{
+  sync::{broadcast, Mutex},
+  task,
+};
+use tracing::{error, info};
 
 use crate::{
   common::WindowExt,
@@ -22,9 +25,13 @@ pub struct WindowFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
 
-  _changes_rx: broadcast::Receiver<HashMap<String, WindowState>>,
+  _close_rx: broadcast::Receiver<WindowState>,
 
-  pub changes_tx: broadcast::Sender<HashMap<String, WindowState>>,
+  pub close_tx: broadcast::Sender<WindowState>,
+
+  _open_rx: broadcast::Receiver<WindowState>,
+
+  pub open_tx: broadcast::Sender<WindowState>,
 
   /// Reference to `MonitorState` for window positioning.
   monitor_state: Arc<MonitorState>,
@@ -69,12 +76,15 @@ impl WindowFactory {
     app_handle: &AppHandle,
     monitor_state: Arc<MonitorState>,
   ) -> Self {
-    let (changes_tx, _changes_rx) = broadcast::channel(16);
+    let (open_tx, _open_rx) = broadcast::channel(16);
+    let (close_tx, _close_rx) = broadcast::channel(16);
 
     Self {
       app_handle: app_handle.clone(),
-      _changes_rx,
-      changes_tx,
+      _close_rx,
+      close_tx,
+      _open_rx,
+      open_tx,
       monitor_state,
       window_count: Arc::new(AtomicU32::new(0)),
       window_states: Arc::new(Mutex::new(HashMap::new())),
@@ -93,15 +103,17 @@ impl WindowFactory {
     } = &config_entry;
 
     for placement in self.window_placements(config) {
+      // Use running window count as a unique ID for the window.
       let new_count =
         self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
+      let window_id = new_count.to_string();
 
       info!("Creating window #{} from {}", new_count, config_path);
 
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
-        new_count.to_string(),
+        window_id.clone(),
         WebviewUrl::App(
           format!("http://asset.localhost/{}", html_path).into(),
         ),
@@ -119,7 +131,7 @@ impl WindowFactory {
       .build()?;
 
       let state = WindowState {
-        window_id: new_count.to_string(),
+        window_id: window_id.clone(),
         config: config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
@@ -139,10 +151,42 @@ impl WindowFactory {
         .set_tool_window(!config.launch_options.shown_in_taskbar);
 
       let mut window_states = self.window_states.lock().await;
-      window_states.insert(state.window_id.clone(), state);
+      window_states.insert(state.window_id.clone(), state.clone());
+
+      self.register_window_events(&window, window_id);
+      self.open_tx.send(state)?;
     }
 
     Ok(())
+  }
+
+  /// Registers window events for a given window.
+  fn register_window_events(
+    &self,
+    window: &tauri::WebviewWindow,
+    window_id: String,
+  ) {
+    let window_states = self.window_states.clone();
+    let close_tx = self.close_tx.clone();
+
+    window.on_window_event(move |event| {
+      if let WindowEvent::Destroyed = event {
+        let window_states = window_states.clone();
+        let close_tx = close_tx.clone();
+        let window_id = window_id.clone();
+
+        task::spawn(async move {
+          let mut window_states = window_states.lock().await;
+
+          // Remove the window state and broadcast the close event.
+          if let Some(state) = window_states.remove(&window_id) {
+            if let Err(err) = close_tx.send(state) {
+              error!("Failed to send window close event: {:?}", err);
+            }
+          }
+        });
+      }
+    });
   }
 
   /// Returns coordinates for window placement based on the given config.
