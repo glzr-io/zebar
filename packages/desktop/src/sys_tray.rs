@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use anyhow::{bail, Context};
 use tauri::{
@@ -11,7 +11,6 @@ use tokio::task;
 use tracing::{error, info};
 
 use crate::{
-  common::PathExt,
   config::Config,
   window_factory::{WindowFactory, WindowState},
 };
@@ -20,8 +19,8 @@ use crate::{
 enum MenuEvent {
   ShowConfigFolder,
   Exit,
-  EnableWindowConfig(String),
-  StartupWindowConfig(String),
+  ToggleWindowConfig { enable: bool, path: String },
+  ToggleStartupWindowConfig { enable: bool, path: String },
 }
 
 impl ToString for MenuEvent {
@@ -29,8 +28,12 @@ impl ToString for MenuEvent {
     match self {
       MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
       MenuEvent::Exit => "exit".to_string(),
-      MenuEvent::EnableWindowConfig(id) => format!("enable_{}", id),
-      MenuEvent::StartupWindowConfig(id) => format!("startup_{}", id),
+      MenuEvent::ToggleWindowConfig { enable, path } => {
+        format!("toggle_window_config_{}_{}", enable, path)
+      }
+      MenuEvent::ToggleStartupWindowConfig { enable, path } => {
+        format!("toggle_startup_window_config_{}_{}", enable, path)
+      }
     }
   }
 }
@@ -39,16 +42,24 @@ impl FromStr for MenuEvent {
   type Err = anyhow::Error;
 
   fn from_str(event: &str) -> Result<Self, Self::Err> {
-    if event == "show_config_folder" {
-      Ok(MenuEvent::ShowConfigFolder)
-    } else if event == "exit" {
-      Ok(MenuEvent::Exit)
-    } else if let Some(id) = event.strip_prefix("enable_") {
-      Ok(MenuEvent::EnableWindowConfig(id.to_string()))
-    } else if let Some(id) = event.strip_prefix("startup_") {
-      Ok(MenuEvent::StartupWindowConfig(id.to_string()))
-    } else {
-      bail!("Invalid menu event: {}", event)
+    let parts: Vec<&str> = event.split('_').collect();
+
+    match parts.as_slice() {
+      ["show", "config", "folder"] => Ok(Self::ShowConfigFolder),
+      ["exit"] => Ok(Self::Exit),
+      ["toggle", "window", "config", enable @ ("true" | "false"), path @ ..] => {
+        Ok(Self::ToggleWindowConfig {
+          enable: *enable == "true",
+          path: path.join("_"),
+        })
+      }
+      ["toggle", "startup", "window", "config", enable @ ("true" | "false"), path @ ..] => {
+        Ok(Self::ToggleStartupWindowConfig {
+          enable: *enable == "true",
+          path: path.join("_"),
+        })
+      }
+      _ => bail!("Invalid menu event: {}", event),
     }
   }
 }
@@ -190,7 +201,9 @@ impl SysTray {
         tray_menu = tray_menu.item(&self.create_config_menu(
           &config_path,
           &label,
-          &states,
+          !states.is_empty(),
+          // TODO: Get whether it's launched on startup.
+          false,
         )?);
       }
 
@@ -223,18 +236,25 @@ impl SysTray {
         app_handle.exit(0);
         Ok(())
       }
-      MenuEvent::EnableWindowConfig(path) => {
-        info!("Window config at path {} enabled.", path);
+      MenuEvent::ToggleWindowConfig { enable, path } => {
+        info!(
+          "Window config toggled {} at path {} enabled.",
+          enable, path
+        );
 
-        let window_config = config
-          .window_config_by_path(&path)
-          .await?
-          .context("Window config not found.")?;
+        // let window_config = config
+        //   .window_config_by_path(&path)
+        //   .await?
+        //   .context("Window config not found.")?;
 
-        window_factory.open(window_config).await
+        // window_factory.open(window_config).await
+        Ok(())
       }
-      MenuEvent::StartupWindowConfig(path) => {
-        info!("Window config at path {} set to launch on startup.", path);
+      MenuEvent::ToggleStartupWindowConfig { enable, path } => {
+        info!(
+          "Window config toggled {} at path {} set to launch on startup.",
+          enable, path
+        );
 
         // config.add_startup_config(path).await
         Ok(())
@@ -258,9 +278,9 @@ impl SysTray {
       let menu_item = self.create_config_menu(
         &window_config.config_path,
         &label,
-        window_states
-          .get(&window_config.config_path)
-          .unwrap_or(&vec![]),
+        window_states.contains_key(&window_config.config_path),
+        // TODO: Get whether it's launched on startup.
+        false,
       )?;
 
       configs_menu = configs_menu.item(&menu_item);
@@ -274,25 +294,30 @@ impl SysTray {
     &self,
     config_path: &str,
     label: &str,
-    window_states: &Vec<WindowState>,
+    is_enabled: bool,
+    is_launched_on_startup: bool,
   ) -> anyhow::Result<Submenu<Wry>> {
     let enabled_item = CheckMenuItem::with_id(
       &self.app_handle,
-      MenuEvent::EnableWindowConfig(config_path.to_string()),
+      MenuEvent::ToggleWindowConfig {
+        enable: is_enabled,
+        path: config_path.to_string(),
+      },
       "Enabled",
       true,
-      !window_states.is_empty(),
+      is_enabled,
       None::<&str>,
     )?;
 
-    // **
-    // TODO: Get whether it's launched on startup.
     let startup_item = CheckMenuItem::with_id(
       &self.app_handle,
-      MenuEvent::StartupWindowConfig(config_path.to_string()),
+      MenuEvent::ToggleStartupWindowConfig {
+        enable: is_launched_on_startup,
+        path: config_path.to_string(),
+      },
       "Launch on startup",
       true,
-      true,
+      is_launched_on_startup,
       None::<&str>,
     )?;
 

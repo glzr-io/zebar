@@ -229,6 +229,18 @@ impl Config {
     }
   }
 
+  /// Writes to the global settings file.
+  async fn write_settings(
+    &self,
+    settings: &SettingsConfig,
+  ) -> anyhow::Result<()> {
+    let settings_path = self.config_dir.join("settings.json");
+
+    fs::write(&settings_path, serde_json::to_string_pretty(settings)?)?;
+
+    Ok(())
+  }
+
   /// Recursively aggregates all valid window configs in the given
   /// directory.
   ///
@@ -314,6 +326,36 @@ impl Config {
     }
 
     Ok(result)
+  }
+
+  /// Adds the given config to be launched on startup.
+  ///
+  /// Config path must be absolute.
+  pub async fn add_startup_config(
+    &self,
+    config_path: &str,
+  ) -> anyhow::Result<()> {
+    let startup_configs = self.startup_window_configs().await?;
+
+    // Check if the config is already set to be launched on startup.
+    if startup_configs
+      .iter()
+      .find(|config| config.config_path == config_path)
+      .is_some()
+    {
+      return Ok(());
+    }
+
+    let relative_path = self.strip_config_dir(config_path)?;
+
+    let mut settings = self.settings.lock().await;
+    let mut new_settings = settings.clone();
+    new_settings.startup_configs.push(relative_path.to_string());
+
+    self.write_settings(&new_settings).await?;
+    *settings = new_settings;
+
+    Ok(())
   }
 
   /// Joins the given path with the config directory path.

@@ -6,8 +6,11 @@ use std::{
   },
 };
 
+use anyhow::Context;
 use serde::Serialize;
-use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{
+  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+};
 use tokio::{
   sync::{broadcast, Mutex},
   task,
@@ -248,6 +251,36 @@ impl WindowFactory {
     }
 
     placements
+  }
+
+  /// Closes a single window by a given window ID.
+  pub fn close_by_id(&self, window_id: &str) -> anyhow::Result<()> {
+    let window = self
+      .app_handle
+      .get_webview_window(window_id)
+      .context("No window found with the given ID.")?;
+
+    window.close()?;
+
+    Ok(())
+  }
+
+  /// Closes all windows with the given config path.
+  pub async fn close_by_path(
+    &self,
+    config_path: &str,
+  ) -> anyhow::Result<()> {
+    let window_states = self.states_by_config_path().await;
+
+    let found_window_states = window_states
+      .get(config_path)
+      .context("No windows found with the given config path.")?;
+
+    for window_state in found_window_states {
+      self.close_by_id(&window_state.window_id)?;
+    }
+
+    Ok(())
   }
 
   /// Returns window state by a given window ID.
