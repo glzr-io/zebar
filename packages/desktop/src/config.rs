@@ -320,11 +320,7 @@ impl Config {
   ///
   /// Returns an absolute path.
   pub fn join_path(&self, config_path: &str) -> String {
-    self
-      .config_dir
-      .join(config_path)
-      .to_string_lossy()
-      .to_string()
+    self.config_dir.join(config_path).to_unicode_string()
   }
 
   /// Returns the window config at the given absolute path.

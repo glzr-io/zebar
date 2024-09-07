@@ -16,12 +16,17 @@ where
   /// path.canonicalize_pretty().unwrap(); // "C:\\Users\\John\\Desktop\\test"
   /// ```
   fn canonicalize_pretty(&self) -> anyhow::Result<String>;
+
+  /// Converts the path to a unicode string.
+  ///
+  /// Short-hand for `.to_string_lossy().to_string()`.
+  fn to_unicode_string(&self) -> String;
 }
 
 impl PathExt for PathBuf {
   fn canonicalize_pretty(&self) -> anyhow::Result<String> {
     let canonicalized = fs::canonicalize(self)?;
-    let canonicalized_str = canonicalized.to_string_lossy().to_string();
+    let canonicalized_str = canonicalized.to_unicode_string();
 
     #[cfg(not(windows))]
     {
@@ -48,5 +53,9 @@ impl PathExt for PathBuf {
 
       Ok(stripped_str)
     }
+  }
+
+  fn to_unicode_string(&self) -> String {
+    self.to_string_lossy().to_string()
   }
 }

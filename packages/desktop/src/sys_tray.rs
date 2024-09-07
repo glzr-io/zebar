@@ -11,6 +11,7 @@ use tokio::task;
 use tracing::{error, info};
 
 use crate::{
+  common::PathExt,
   config::Config,
   window_factory::{WindowFactory, WindowState},
 };
@@ -214,12 +215,13 @@ impl SysTray {
 
         config
           .open_config_dir()
-          .context("Failed to open config folder.")?;
+          .context("Failed to open config folder.")
       }
       MenuEvent::Exit => {
         info!("Exiting through system tray.");
 
-        app_handle.exit(0)
+        app_handle.exit(0);
+        Ok(())
       }
       MenuEvent::EnableWindowConfig(path) => {
         info!("Window config at path {} enabled.", path);
@@ -229,18 +231,15 @@ impl SysTray {
           .await?
           .context("Window config not found.")?;
 
-        window_factory.open(window_config).await?;
+        window_factory.open(window_config).await
       }
       MenuEvent::StartupWindowConfig(path) => {
         info!("Window config at path {} set to launch on startup.", path);
 
-        // task::spawn(async move {
-        //   config.add_startup_config(path).await;
-        // })
+        // config.add_startup_config(path).await
+        Ok(())
       }
-    };
-
-    Ok(())
+    }
   }
 
   /// Creates and returns a submenu for the window configs.
@@ -311,12 +310,10 @@ impl SysTray {
     config_path: &str,
     config_dir: &PathBuf,
   ) -> String {
-    let path = PathBuf::from(config_path)
-      .strip_prefix(config_dir)
-      .unwrap_or(&PathBuf::from(config_path))
-      .to_string_lossy()
-      .to_string();
-
-    path.strip_suffix(".zebar.json").unwrap_or(&path).into()
+    config_path
+      .strip_prefix(&config_dir.to_unicode_string())
+      .and_then(|path| path.strip_suffix(".zebar.json"))
+      .unwrap_or(config_path)
+      .into()
   }
 }
