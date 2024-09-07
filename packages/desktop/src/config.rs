@@ -121,11 +121,9 @@ pub struct Config {
   /// List of window configs.
   pub window_configs: Arc<Mutex<Vec<WindowConfigEntry>>>,
 
-  _changes_rx:
-    broadcast::Receiver<(SettingsConfig, Vec<WindowConfigEntry>)>,
+  _settings_change_rx: broadcast::Receiver<SettingsConfig>,
 
-  pub changes_tx:
-    broadcast::Sender<(SettingsConfig, Vec<WindowConfigEntry>)>,
+  pub settings_change_tx: broadcast::Sender<SettingsConfig>,
 }
 
 #[derive(Clone, Debug)]
@@ -160,15 +158,15 @@ impl Config {
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
     let window_configs = Self::read_window_configs(&config_dir)?;
-    let (changes_tx, _changes_rx) = broadcast::channel(16);
+    let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
 
     Ok(Self {
       app_handle: app_handle.clone(),
       config_dir,
       settings: Arc::new(Mutex::new(settings)),
       window_configs: Arc::new(Mutex::new(window_configs)),
-      _changes_rx,
-      changes_tx,
+      _settings_change_rx,
+      settings_change_tx,
     })
   }
 
@@ -188,7 +186,7 @@ impl Config {
       *window_configs = new_window_configs.clone();
     }
 
-    self.changes_tx.send((new_settings, new_window_configs))?;
+    self.settings_change_tx.send(new_settings)?;
 
     Ok(())
   }
@@ -232,11 +230,19 @@ impl Config {
   /// Writes to the global settings file.
   async fn write_settings(
     &self,
-    settings: &SettingsConfig,
+    new_settings: SettingsConfig,
   ) -> anyhow::Result<()> {
     let settings_path = self.config_dir.join("settings.json");
 
-    fs::write(&settings_path, serde_json::to_string_pretty(settings)?)?;
+    fs::write(
+      &settings_path,
+      serde_json::to_string_pretty(&new_settings)?,
+    )?;
+
+    let mut settings = self.settings.lock().await;
+    *settings = new_settings.clone();
+
+    self.settings_change_tx.send(new_settings)?;
 
     Ok(())
   }
@@ -346,14 +352,32 @@ impl Config {
       return Ok(());
     }
 
-    let relative_path = self.strip_config_dir(config_path)?;
+    // Add the path to startup configs.
+    let mut new_settings = { self.settings.lock().await.clone() };
+    new_settings
+      .startup_configs
+      .push(self.strip_config_dir(config_path)?.to_string());
 
-    let mut settings = self.settings.lock().await;
-    let mut new_settings = settings.clone();
-    new_settings.startup_configs.push(relative_path.to_string());
+    self.write_settings(new_settings).await?;
 
-    self.write_settings(&new_settings).await?;
-    *settings = new_settings;
+    Ok(())
+  }
+
+  /// Removes the given config from being launched on startup.
+  ///
+  /// Config path must be absolute.
+  pub async fn remove_startup_config(
+    &self,
+    config_path: &str,
+  ) -> anyhow::Result<()> {
+    let rel_path = self.strip_config_dir(config_path)?.to_string();
+
+    let mut new_settings = { self.settings.lock().await.clone() };
+    new_settings
+      .startup_configs
+      .retain(|path| path != &rel_path);
+
+    self.write_settings(new_settings).await?;
 
     Ok(())
   }
