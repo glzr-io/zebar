@@ -5,7 +5,7 @@ pub mod host;
 pub mod ip;
 #[cfg(windows)]
 pub mod komorebi;
-#[cfg(all(windows, target_arch = "x86_64"))]
+#[cfg(windows)]
 pub mod language;
 pub mod memory;
 pub mod network;
