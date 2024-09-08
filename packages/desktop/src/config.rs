@@ -18,7 +18,7 @@ use crate::common::{
 #[serde(rename_all = "camelCase")]
 pub struct SettingsConfig {
   /// Relative paths to window configs to launch on startup.
-  pub startup_configs: Vec<String>,
+  pub startup_configs: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -128,11 +128,11 @@ pub struct Config {
 
 #[derive(Clone, Debug)]
 pub struct WindowConfigEntry {
-  /// Canonicalized absolute path to the window config file.
-  pub config_path: String,
+  /// Absolute path to the window config file.
+  pub config_path: PathBuf,
 
-  /// Canonicalized absolute path to the window's HTML file.
-  pub html_path: String,
+  /// Absolute path to the window's HTML file.
+  pub html_path: PathBuf,
 
   /// Parsed window config.
   pub config: WindowConfig,
@@ -153,7 +153,7 @@ impl Config {
         .resolve(".glzr/zebar", BaseDirectory::Home)
         .context("Unable to get home directory.")?,
     }
-    .canonicalize_pretty()?
+    .to_absolute()?
     .into();
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
@@ -269,15 +269,15 @@ impl Config {
         configs.extend(Self::read_window_configs(&path)?);
       } else if has_extension(&path, ".zebar.json") {
         if let Ok(config) = read_and_parse_json::<WindowConfig>(&path) {
-          let config_path = path.canonicalize_pretty()?;
+          let config_path = path.to_absolute()?;
 
           let html_path = path
             .parent()
             .context("Invalid parent directory.")?
             .join(&config.html_path)
-            .canonicalize_pretty()?;
+            .to_absolute()?;
 
-          info!("Found valid window config at: {}", config_path);
+          info!("Found valid window config at: {}", config_path.display());
 
           configs.push(WindowConfigEntry {
             config,
@@ -339,14 +339,14 @@ impl Config {
   /// Config path must be absolute.
   pub async fn add_startup_config(
     &self,
-    config_path: &str,
+    config_path: &PathBuf,
   ) -> anyhow::Result<()> {
     let startup_configs = self.startup_window_configs().await?;
 
     // Check if the config is already set to be launched on startup.
     if startup_configs
       .iter()
-      .find(|config| config.config_path == config_path)
+      .find(|config| config.config_path == *config_path)
       .is_some()
     {
       return Ok(());
@@ -356,7 +356,7 @@ impl Config {
     let mut new_settings = { self.settings.lock().await.clone() };
     new_settings
       .startup_configs
-      .push(self.strip_config_dir(config_path)?.to_string());
+      .push(self.strip_config_dir(config_path)?);
 
     self.write_settings(new_settings).await?;
 
@@ -368,9 +368,9 @@ impl Config {
   /// Config path must be absolute.
   pub async fn remove_startup_config(
     &self,
-    config_path: &str,
+    config_path: &PathBuf,
   ) -> anyhow::Result<()> {
-    let rel_path = self.strip_config_dir(config_path)?.to_string();
+    let rel_path = self.strip_config_dir(config_path)?;
 
     let mut new_settings = { self.settings.lock().await.clone() };
     new_settings
@@ -385,29 +385,30 @@ impl Config {
   /// Joins the given path with the config directory path.
   ///
   /// Returns an absolute path.
-  pub fn join_config_dir(&self, config_path: &str) -> String {
-    self.config_dir.join(config_path).to_unicode_string()
+  pub fn join_config_dir(&self, config_path: &PathBuf) -> PathBuf {
+    self.config_dir.join(config_path)
   }
 
   /// Strips the config directory path from the given path.
   ///
   /// Returns a relative path.
-  pub fn strip_config_dir<'a>(
+  pub fn strip_config_dir(
     &self,
-    config_path: &'a str,
-  ) -> anyhow::Result<&'a str> {
+    config_path: &PathBuf,
+  ) -> anyhow::Result<PathBuf> {
     config_path
-      .strip_prefix(&self.config_dir.to_unicode_string())
+      .strip_prefix(&self.config_dir)
       .context("Failed to strip config directory path.")
+      .map(Into::into)
   }
 
   /// Returns the window config at the given absolute path.
   pub async fn window_config_by_path(
     &self,
-    config_path: &str,
+    config_path: &PathBuf,
   ) -> anyhow::Result<Option<WindowConfigEntry>> {
     let formatted_config_path =
-      PathBuf::from(config_path).canonicalize_pretty()?;
+      PathBuf::from(config_path).to_absolute()?;
 
     let window_configs = self.window_configs.lock().await;
     let config_entry = window_configs

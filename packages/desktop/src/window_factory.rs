@@ -1,5 +1,6 @@
 use std::{
   collections::HashMap,
+  path::PathBuf,
   sync::{
     atomic::{AtomicU32, Ordering},
     Arc,
@@ -18,7 +19,7 @@ use tokio::{
 use tracing::{error, info};
 
 use crate::{
-  common::WindowExt,
+  common::{PathExt, WindowExt},
   config::{WindowAnchor, WindowConfig, WindowConfigEntry},
   monitor_state::MonitorState,
 };
@@ -60,10 +61,10 @@ pub struct WindowState {
   pub config: WindowConfig,
 
   /// Absolute path to the window's config file.
-  pub config_path: String,
+  pub config_path: PathBuf,
 
   /// Absolute path to the window's HTML file.
-  pub html_path: String,
+  pub html_path: PathBuf,
 }
 
 pub struct WindowPlacement {
@@ -111,15 +112,26 @@ impl WindowFactory {
         self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
       let window_id = new_count.to_string();
 
-      info!("Creating window #{} from {}", new_count, config_path);
+      info!(
+        "Creating window #{} from {}",
+        new_count,
+        config_path.display()
+      );
+
+      // TODO: Url-encode the HTML path to get this working on MacOS/Linux.
+      let webview_url = WebviewUrl::App(
+        format!(
+          "http://asset.localhost/{}",
+          html_path.to_unicode_string()
+        )
+        .into(),
+      );
 
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         window_id.clone(),
-        WebviewUrl::App(
-          format!("http://asset.localhost/{}", html_path).into(),
-        ),
+        webview_url,
       )
       .title("Zebar")
       .inner_size(placement.width, placement.height)
@@ -268,7 +280,7 @@ impl WindowFactory {
   /// Closes all windows with the given config path.
   pub async fn close_by_path(
     &self,
-    config_path: &str,
+    config_path: &PathBuf,
   ) -> anyhow::Result<()> {
     let window_states = self.states_by_config_path().await;
 
@@ -291,7 +303,7 @@ impl WindowFactory {
   /// Returns window states grouped by their config paths.
   pub async fn states_by_config_path(
     &self,
-  ) -> HashMap<String, Vec<WindowState>> {
+  ) -> HashMap<PathBuf, Vec<WindowState>> {
     self.window_states.lock().await.values().fold(
       HashMap::new(),
       |mut acc, state| {

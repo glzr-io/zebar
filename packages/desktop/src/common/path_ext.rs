@@ -8,14 +8,14 @@ where
   Self: AsRef<Path>,
 {
   /// Like `std::fs::canonicalize()`, but on Windows it outputs paths
-  /// without UNC.
+  /// without UNC prefix. Similar to the `dunce::canonicalize` crate fn.
   ///
   /// Example:
   /// ```
   /// let path = PathBuf::from("\\?\C:\\Users\\John\\Desktop\\test");
   /// path.canonicalize_pretty().unwrap(); // "C:\\Users\\John\\Desktop\\test"
   /// ```
-  fn canonicalize_pretty(&self) -> anyhow::Result<String>;
+  fn to_absolute(&self) -> anyhow::Result<PathBuf>;
 
   /// Converts the path to a unicode string.
   ///
@@ -24,13 +24,12 @@ where
 }
 
 impl PathExt for PathBuf {
-  fn canonicalize_pretty(&self) -> anyhow::Result<String> {
+  fn to_absolute(&self) -> anyhow::Result<PathBuf> {
     let canonicalized = fs::canonicalize(self)?;
-    let canonicalized_str = canonicalized.to_unicode_string();
 
     #[cfg(not(windows))]
     {
-      Ok(canonicalized_str)
+      Ok(canonicalized)
     }
     #[cfg(windows)]
     {
@@ -42,16 +41,15 @@ impl PathExt for PathBuf {
         _ => false,
       };
 
-      let stripped_str = if should_strip_unc {
-        canonicalized_str
-          .get(4..)
-          .map(Into::into)
-          .unwrap_or(canonicalized_str)
-      } else {
-        canonicalized_str
+      let formatted = match should_strip_unc {
+        true => canonicalized
+          .to_str()
+          .and_then(|path| path.get(4..))
+          .map_or(canonicalized.clone(), PathBuf::from),
+        false => canonicalized,
       };
 
-      Ok(stripped_str)
+      Ok(formatted)
     }
   }
 

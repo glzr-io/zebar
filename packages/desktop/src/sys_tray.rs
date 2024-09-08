@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::{bail, Context};
 use tauri::{
@@ -11,6 +11,7 @@ use tokio::task;
 use tracing::{error, info};
 
 use crate::{
+  common::PathExt,
   config::Config,
   window_factory::{WindowFactory, WindowState},
 };
@@ -19,8 +20,8 @@ use crate::{
 enum MenuEvent {
   ShowConfigFolder,
   Exit,
-  ToggleWindowConfig { enable: bool, path: String },
-  ToggleStartupWindowConfig { enable: bool, path: String },
+  ToggleWindowConfig { enable: bool, path: PathBuf },
+  ToggleStartupWindowConfig { enable: bool, path: PathBuf },
 }
 
 impl ToString for MenuEvent {
@@ -29,10 +30,18 @@ impl ToString for MenuEvent {
       MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
       MenuEvent::Exit => "exit".to_string(),
       MenuEvent::ToggleWindowConfig { enable, path } => {
-        format!("toggle_window_config_{}_{}", enable, path)
+        format!(
+          "toggle_window_config_{}_{}",
+          enable,
+          path.to_unicode_string()
+        )
       }
       MenuEvent::ToggleStartupWindowConfig { enable, path } => {
-        format!("toggle_startup_window_config_{}_{}", enable, path)
+        format!(
+          "toggle_startup_window_config_{}_{}",
+          enable,
+          path.to_unicode_string()
+        )
       }
     }
   }
@@ -50,13 +59,13 @@ impl FromStr for MenuEvent {
       ["toggle", "window", "config", enable @ ("true" | "false"), path @ ..] => {
         Ok(Self::ToggleWindowConfig {
           enable: *enable == "true",
-          path: path.join("_"),
+          path: PathBuf::from(path.join("_")),
         })
       }
       ["toggle", "startup", "window", "config", enable @ ("true" | "false"), path @ ..] => {
         Ok(Self::ToggleStartupWindowConfig {
           enable: *enable == "true",
-          path: path.join("_"),
+          path: PathBuf::from(path.join("_")),
         })
       }
       _ => bail!("Invalid menu event: {}", event),
@@ -250,7 +259,11 @@ impl SysTray {
         Ok(())
       }
       MenuEvent::ToggleWindowConfig { enable, path } => {
-        info!("Window config '{}' to be enabled: {}", path, enable);
+        info!(
+          "Window config '{}' to be enabled: {}",
+          path.display(),
+          enable
+        );
 
         match enable {
           true => {
@@ -267,7 +280,8 @@ impl SysTray {
       MenuEvent::ToggleStartupWindowConfig { enable, path } => {
         info!(
           "Window config '{}' to be launched on startup: {}",
-          path, enable
+          path.display(),
+          enable
         );
 
         match enable {
@@ -281,8 +295,8 @@ impl SysTray {
   /// Creates and returns a submenu for the window configs.
   async fn create_configs_menu(
     &self,
-    window_states: &HashMap<String, Vec<WindowState>>,
-    startup_config_paths: &Vec<String>,
+    window_states: &HashMap<PathBuf, Vec<WindowState>>,
+    startup_config_paths: &Vec<PathBuf>,
   ) -> anyhow::Result<Submenu<Wry>> {
     let mut configs_menu =
       SubmenuBuilder::new(&self.app_handle, "Window configs");
@@ -308,7 +322,7 @@ impl SysTray {
   /// Creates and returns a submenu for the given window config.
   fn create_config_menu(
     &self,
-    config_path: &str,
+    config_path: &PathBuf,
     label: &str,
     is_enabled: bool,
     is_launched_on_startup: bool,
@@ -317,7 +331,7 @@ impl SysTray {
       &self.app_handle,
       MenuEvent::ToggleWindowConfig {
         enable: !is_enabled,
-        path: config_path.to_string(),
+        path: config_path.clone(),
       },
       "Enabled",
       true,
@@ -329,7 +343,7 @@ impl SysTray {
       &self.app_handle,
       MenuEvent::ToggleStartupWindowConfig {
         enable: !is_launched_on_startup,
-        path: config_path.to_string(),
+        path: config_path.clone(),
       },
       "Launch on startup",
       true,
@@ -347,13 +361,13 @@ impl SysTray {
   /// Formats the config path for display in the system tray.
   fn format_config_path(
     config: &Arc<Config>,
-    config_path: &str,
+    config_path: &PathBuf,
   ) -> String {
-    config
+    let path = config
       .strip_config_dir(config_path)
-      .ok()
-      .and_then(|path| path.strip_suffix(".zebar.json"))
-      .unwrap_or(config_path)
-      .into()
+      .unwrap_or(config_path.clone())
+      .to_unicode_string();
+
+    path.strip_suffix(".zebar.json").unwrap_or(&path).into()
   }
 }

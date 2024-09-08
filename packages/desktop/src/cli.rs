@@ -47,9 +47,9 @@ pub enum CliCommand {
 pub struct OpenWindowArgs {
   /// Relative file path to window config within the Zebar config
   /// directory.
-  pub config_path: String,
+  pub config_path: PathBuf,
 
-  /// Absolute path to the Zebar config directory.
+  /// Absolute or relative path to the Zebar config directory.
   ///
   /// The default path is `%userprofile%/.glzr/zebar/`
   #[clap(long, value_hint = clap::ValueHint::FilePath)]
@@ -58,7 +58,7 @@ pub struct OpenWindowArgs {
 
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct OpenAllWindowsArgs {
-  /// Absolute path to the Zebar config directory.
+  /// Absolute or relative path to the Zebar config directory.
   ///
   /// The default path is `%userprofile%/.glzr/zebar/`
   #[clap(long, value_hint = clap::ValueHint::FilePath)]
