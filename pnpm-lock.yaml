@@ -15,14 +15,14 @@ importers:
         specifier: 3.2.5
         version: 3.2.5
 
-  examples/solidjs-ts:
+  examples/boilerplates/solid-ts:
     dependencies:
       solid-js:
         specifier: 1.8.11
         version: 1.8.11
       zebar:
         specifier: ^2.0.0
-        version: link:../../packages/client-api
+        version: link:../../../packages/client-api
     devDependencies:
       typescript:
         specifier: 5.3.3
