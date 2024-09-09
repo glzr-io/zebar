@@ -1,6 +1,10 @@
 {
   "name": "zebar",
   "version": "2.0.0",
+  "description": "Client API for Zebar - a tool for creating customizable taskbars, desktop widgets, and popups.",
+  "repository": "github:glzr-io/zebar",
+  "license": "GPL-3.0-only",
+  "author": "Lars Berger",
   "sideEffects": false,
   "exports": {
     ".": {
@@ -12,6 +16,10 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --inject-style",
     "dev": "npm run build -- --watch src",
