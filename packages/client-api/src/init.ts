@@ -10,6 +10,7 @@ import {
 import { createLogger } from '~/utils';
 import type { ZebarContext } from './zebar-context.model';
 import { createProvider } from './providers';
+import { zebarStyles } from './zebar-styles';
 
 const logger = createLogger('init-window');
 
@@ -42,7 +43,10 @@ export async function init(
 
     // Load default CSS unless explicitly disabled.
     if (options?.includeDefaultCss !== false) {
-      import('./zebar.css');
+      const styleElement = document.createElement('style');
+      styleElement.setAttribute('data-zebar', '');
+      styleElement.innerHTML = zebarStyles;
+      document.head.appendChild(styleElement);
     }
 
     // @ts-ignore - TODO

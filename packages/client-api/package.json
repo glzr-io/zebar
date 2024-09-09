@@ -20,7 +20,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --inject-style",
+    "build": "tsup src/index.ts --format esm --dts",
     "dev": "npm run build -- --watch src",
     "prepublishOnly": "npm run build"
   },
