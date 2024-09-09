@@ -6,14 +6,13 @@
   "license": "GPL-3.0-only",
   "author": "Lars Berger",
   "sideEffects": false,
+  "type": "module",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
     }
   },
-  "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
@@ -21,7 +20,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --inject-style",
+    "build": "tsup src/index.ts --format esm --dts --inject-style",
     "dev": "npm run build -- --watch src",
     "prepublishOnly": "npm run build"
   },
