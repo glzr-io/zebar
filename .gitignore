@@ -21,7 +21,6 @@ gen
 *.pem
 *.env
 examples/settings.json
-examples/starter
 
 # Debug
 npm-debug.log*

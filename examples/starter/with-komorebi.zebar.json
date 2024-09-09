@@ -1,6 +1,6 @@
 {
   "$schema": "TODO",
-  "htmlPath": "./glazewm.html",
+  "htmlPath": "./with-komorebi.html",
   "launchOptions": {
     "zOrder": "normal",
     "shownInTaskbar": false,

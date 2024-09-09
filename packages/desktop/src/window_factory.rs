@@ -7,7 +7,7 @@ use std::{
   },
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use serde::Serialize;
 use tauri::{
   AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
@@ -111,6 +111,14 @@ impl WindowFactory {
       let new_count =
         self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
       let window_id = new_count.to_string();
+
+      if !html_path.exists() {
+        bail!(
+          "HTML file not found at {} for config {}.",
+          html_path.display(),
+          config_path.display()
+        );
+      }
 
       info!(
         "Creating window #{} from {}",

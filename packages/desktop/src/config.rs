@@ -17,6 +17,10 @@ use crate::common::{
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsConfig {
+  /// JSON schema URL to validate the settings file.
+  #[serde(rename = "$schema")]
+  schema: Option<String>,
+
   /// Relative paths to window configs to launch on startup.
   pub startup_configs: Vec<PathBuf>,
 }
@@ -24,6 +28,10 @@ pub struct SettingsConfig {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowConfig {
+  /// JSON schema URL to validate the window config file.
+  #[serde(rename = "$schema")]
+  schema: Option<String>,
+
   /// Entry point HTML file.
   pub html_path: String,
 
@@ -203,7 +211,7 @@ impl Config {
     match settings {
       Some(settings) => Ok(settings),
       None => {
-        Self::create_from_starter(app_handle, dir)?;
+        Self::create_from_examples(app_handle, dir)?;
 
         Ok(
           Self::read_settings(&dir)?
@@ -293,17 +301,43 @@ impl Config {
     Ok(configs)
   }
 
-  /// Initializes config at the given path from the starter resource.
-  fn create_from_starter(
+  /// Initializes settings and window configs at the given path.
+  ///
+  /// `settings.json` is initialized with either `starter/vanilla.json` or
+  /// `starter/with-glazewm.json` as startup config. Window configs are
+  /// initialized from `examples/` directory.
+  fn create_from_examples(
     app_handle: &AppHandle,
     config_dir: &PathBuf,
   ) -> anyhow::Result<()> {
     let starter_path = app_handle
       .path()
-      .resolve("resources/config", BaseDirectory::Resource)
+      .resolve("../../examples", BaseDirectory::Resource)
       .context("Unable to resolve starter config resource.")?;
 
+    info!(
+      "Copying starter configs from {} to {}.",
+      starter_path.display(),
+      config_dir.display()
+    );
+
     copy_dir_all(&starter_path, config_dir, false)?;
+
+    let default_startup_config = match is_app_installed("glazewm") {
+      true => "starter/with-glazewm.zebar.json",
+      false => "starter/vanilla.zebar.json",
+    };
+
+    let default_settings = SettingsConfig {
+      schema: Some("TODO".into()),
+      startup_configs: vec![default_startup_config.into()],
+    };
+
+    let settings_path = config_dir.join("settings.json");
+    fs::write(
+      &settings_path,
+      serde_json::to_string_pretty(&default_settings)?,
+    )?;
 
     Ok(())
   }
@@ -322,11 +356,15 @@ impl Config {
     let mut result = Vec::new();
 
     for config_path in startup_configs {
+      let abs_config_path = self.join_config_dir(&config_path);
       let config = self
-        .window_config_by_path(&self.join_config_dir(&config_path))
+        .window_config_by_path(&abs_config_path)
         .await
         .unwrap_or(None)
-        .context("Failed to get window config.")?;
+        .context(format!(
+          "Failed to get window config at {}.",
+          abs_config_path.display()
+        ))?;
 
       result.push(config);
     }
@@ -443,5 +481,28 @@ impl Config {
     }
 
     Ok(())
+  }
+}
+
+/// Checks if an application is installed and available in the system PATH.
+///
+/// Returns `true` if the application is found in PATH, `false` otherwise.
+fn is_app_installed(app_name: &str) -> bool {
+  #[cfg(target_os = "windows")]
+  {
+    std::process::Command::new("where")
+      .arg(app_name)
+      .output()
+      .map(|output| output.status.success())
+      .unwrap_or(false)
+  }
+
+  #[cfg(any(target_os = "macos", target_os = "linux"))]
+  {
+    std::process::Command::new("which")
+      .arg(app_name)
+      .output()
+      .map(|output| output.status.success())
+      .unwrap_or(false)
   }
 }
