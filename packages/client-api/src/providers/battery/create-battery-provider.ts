@@ -26,10 +26,11 @@ export type BatteryProvider = Provider<
 >;
 
 export interface BatteryOutput {
-  chargePercent: number;
-  cycleCount: number;
-  healthPercent: number;
-  powerConsumption: number;
+  hasBattery: boolean;
+  chargePercent: number | null;
+  cycleCount: number | null;
+  healthPercent: number | null;
+  powerConsumption: number | null;
   state: 'discharging' | 'charging' | 'full' | 'empty' | 'unknown';
   isCharging: boolean;
   timeTillEmpty: number | null;

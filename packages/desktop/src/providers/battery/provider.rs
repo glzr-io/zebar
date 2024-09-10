@@ -1,4 +1,3 @@
-use anyhow::Context;
 use starship_battery::{
   units::{
     electric_potential::volt, power::watt, ratio::percent,
@@ -27,24 +26,40 @@ impl BatteryProvider {
     let battery = Manager::new()?
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
-      .unwrap_or(None)
-      .context("No battery found.")?;
+      .unwrap_or(None);
 
-    Ok(ProviderOutput::Battery(BatteryOutput {
-      charge_percent: battery.state_of_charge().get::<percent>(),
-      health_percent: battery.state_of_health().get::<percent>(),
-      state: battery.state().to_string(),
-      is_charging: battery.state() == State::Charging,
-      time_till_full: battery
-        .time_to_full()
-        .map(|time| time.get::<millisecond>()),
-      time_till_empty: battery
-        .time_to_empty()
-        .map(|time| time.get::<millisecond>()),
-      power_consumption: battery.energy_rate().get::<watt>(),
-      voltage: battery.voltage().get::<volt>(),
-      cycle_count: battery.cycle_count(),
-    }))
+    let output = match battery {
+      None => BatteryOutput {
+        has_battery: false,
+        charge_percent: None,
+        health_percent: None,
+        state: "unknown".to_string(),
+        is_charging: false,
+        time_till_full: None,
+        time_till_empty: None,
+        power_consumption: None,
+        voltage: None,
+        cycle_count: None,
+      },
+      Some(battery) => BatteryOutput {
+        has_battery: true,
+        charge_percent: Some(battery.state_of_charge().get::<percent>()),
+        health_percent: Some(battery.state_of_health().get::<percent>()),
+        state: battery.state().to_string(),
+        is_charging: battery.state() == State::Charging,
+        time_till_full: battery
+          .time_to_full()
+          .map(|time| time.get::<millisecond>()),
+        time_till_empty: battery
+          .time_to_empty()
+          .map(|time| time.get::<millisecond>()),
+        power_consumption: Some(battery.energy_rate().get::<watt>()),
+        voltage: Some(battery.voltage().get::<volt>()),
+        cycle_count: battery.cycle_count(),
+      },
+    };
+
+    Ok(ProviderOutput::Battery(output))
   }
 }
 
