@@ -26,6 +26,15 @@ body {
   overscroll-behavior-x: none;
 }
 
+/**
+ * Extend \`body\` to the full viewport.
+ */
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
 /*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
 
 /* Document
