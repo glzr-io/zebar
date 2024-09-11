@@ -123,16 +123,19 @@
           <div className="app">
             <div className="left">
               <i className="logo nf nf-fa-windows"></i>
-              <div className="workspaces">
-                {outputs.komorebi.currentWorkspaces.map(workspace => (
-                  <button
-                    className={`workspace ${workspace.name === outputs.komorebi.focusedWorkspace.name && 'focused'}`}
-                    key={workspace.name}
-                  >
-                    {workspace.name}
-                  </button>
-                ))}
-              </div>
+
+              {outputs.komorebi && (
+                <div className="workspaces">
+                  {outputs.komorebi.currentWorkspaces.map(workspace => (
+                    <button
+                      className={`workspace ${workspace.name === outputs.komorebi.focusedWorkspace.name && 'focused'}`}
+                      key={workspace.name}
+                    >
+                      {workspace.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="center">{outputs.date.formatted}</div>
@@ -154,7 +157,7 @@
                 </span>
               </div>
 
-              {outputs.battery.hasBattery && (
+              {outputs.battery && (
                 <div className="battery">
                   {/* Show icon for whether battery is charging. */}
                   {outputs.battery.isCharging && (
