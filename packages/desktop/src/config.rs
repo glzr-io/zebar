@@ -32,8 +32,8 @@ pub struct WindowConfig {
   #[serde(rename = "$schema")]
   schema: Option<String>,
 
-  /// Entry point HTML file.
-  pub html_path: String,
+  /// Relative path to entry point HTML file.
+  pub html_path: PathBuf,
 
   /// Default options for when the window is opened.
   pub launch_options: WindowLaunchOptions,
@@ -276,24 +276,46 @@ impl Config {
         // Recursively aggregate configs in subdirectories.
         configs.extend(Self::read_window_configs(&path)?);
       } else if has_extension(&path, ".zebar.json") {
-        if let Ok(config) = read_and_parse_json::<WindowConfig>(&path) {
-          let config_path = path.to_absolute()?;
+        let parse_res = read_and_parse_json::<WindowConfig>(&path)
+          .and_then(|config| {
+            let config_path = path.to_absolute()?;
 
-          let html_path = path
-            .parent()
-            .context("Invalid parent directory.")?
-            .join(&config.html_path)
-            .to_absolute()?;
+            let html_path = path
+              .parent()
+              .and_then(|parent| {
+                parent.join(&config.html_path).to_absolute().ok()
+              })
+              .with_context(|| {
+                format!(
+                  "HTML file not found at {} for config {}.",
+                  config.html_path.display(),
+                  config_path.display()
+                )
+              })?;
 
-          info!("Found valid window config at: {}", config_path.display());
-
-          configs.push(WindowConfigEntry {
-            config,
-            config_path,
-            html_path,
+            Ok(WindowConfigEntry {
+              config,
+              config_path,
+              html_path,
+            })
           });
-        } else {
-          error!("Failed to parse config: {}", path.display());
+
+        match parse_res {
+          Ok(config) => {
+            info!(
+              "Found valid window config at: {}",
+              config.config_path.display()
+            );
+
+            configs.push(config);
+          }
+          Err(err) => {
+            error!(
+              "Failed to parse config at {}: {:?}",
+              path.display(),
+              err
+            );
+          }
         }
       }
     }
