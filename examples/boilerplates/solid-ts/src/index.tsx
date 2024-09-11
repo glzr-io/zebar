@@ -5,6 +5,7 @@ import { createStore } from 'solid-js/store';
 import { init } from 'zebar';
 
 const zebarCtx = await init();
+
 const [cpu, battery, memory, weather] = await Promise.all([
   zebarCtx.createProvider({ type: 'cpu' }),
   zebarCtx.createProvider({ type: 'battery' }),
@@ -15,25 +16,26 @@ const [cpu, battery, memory, weather] = await Promise.all([
 render(() => <App />, document.getElementById('root')!);
 
 function App() {
-  const [store, setStore] = createStore({
+  const [outputs, setOutputs] = createStore({
     cpu: cpu.output,
     battery: battery.output,
     memory: memory.output,
     weather: weather.output,
   });
 
-  cpu.onOutput(cpu => setStore({ cpu }));
-  battery.onOutput(battery => setStore({ battery }));
-  memory.onOutput(memory => setStore({ memory }));
-  weather.onOutput(weather => setStore({ weather }));
+  cpu.onOutput(cpu => setOutputs({ cpu }));
+  battery.onOutput(battery => setOutputs({ battery }));
+  memory.onOutput(memory => setOutputs({ memory }));
+  weather.onOutput(weather => setOutputs({ weather }));
 
   return (
-    <div>
-      cpu: {store.cpu.usage}
-      battery: {store.battery?.chargePercent}
-      memory: {store.memory.usage}
-      weather temp: {store.weather.celsiusTemp}
-      weather status: {store.weather.status}
+    <div class="app">
+      <div class="chip">CPU usage: {outputs.cpu.usage}</div>
+      <div class="chip">
+        Battery charge: {outputs.battery?.chargePercent}
+      </div>
+      <div class="chip">Memory usage: {outputs.memory.usage}</div>
+      <div class="chip">Weather temp: {outputs.weather?.celsiusTemp}</div>
     </div>
   );
 }
