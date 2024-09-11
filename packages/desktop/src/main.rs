@@ -1,3 +1,5 @@
+// Prevent additional console window on Windows in release mode.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![feature(async_closure)]
 #![feature(iterator_try_collect)]
 
@@ -34,6 +36,15 @@ mod window_factory;
 /// subcommand.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+  // Attach to parent console on Windows in release mode.
+  #[cfg(all(windows, not(debug_assertions)))]
+  {
+    use windows::Win32::System::Console::{
+      AttachConsole, ATTACH_PARENT_PROCESS,
+    };
+    let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
+  }
+
   let cli = Cli::parse();
 
   match cli.command() {
