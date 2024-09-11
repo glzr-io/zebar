@@ -38,13 +38,21 @@ pub fn default_gateway_wifi() -> anyhow::Result<WifiHotstop> {
 
   let ssid = ssid_match
     .captures(&output)
-    .map(|m| m.get(1).unwrap().as_str().to_string());
-  let signal_str: Option<&str> = signal_match
+    .context("Failed to parse WiFi hotspot SSID.")?
+    .get(1)
+    .map(|s| s.as_str().to_string());
+
+  let signal_str = signal_match
     .captures(&output)
-    .map(|m| m.get(1).unwrap().as_str());
-  let signal: Option<u32> = signal_str
+    .context("Failed to parse WiFi hotspot signal strength.")?
+    .get(1)
+    .map(|s| s.as_str());
+
+  let signal = signal_str
     .and_then(|s| signal_strip.captures(s))
-    .map(|m| m.get(1).unwrap().as_str().parse().unwrap());
+    .context("Failed to parse WiFi hotspot signal strength.")?
+    .get(1)
+    .and_then(|s| s.as_str().parse().ok());
 
   return Ok(WifiHotstop {
     ssid,
