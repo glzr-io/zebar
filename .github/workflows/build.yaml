@@ -5,6 +5,10 @@ on:
     inputs:
       version-number:
         type: string
+  workflow_dispatch:
+    inputs:
+      version-number:
+        type: string
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -63,11 +67,14 @@ jobs:
           dotnet tool install --global AzureSignTool --version 5.0.0
 
       - run: pnpm i
-      - run: pnpm run --filter zebar --filter @zebar/client build
 
       - name: Set version number
+        shell: bash
         run: |
-          jq '.version="${{ inputs.version-number || '0.0.0' }}"' packages/desktop/tauri.conf.json
+          TMP_PATH=$(mktemp)
+          CONF_PATH=packages/desktop/tauri.conf.json
+          jq '.version="${{ inputs.version-number || '0.0.0' }}"' "$CONF_PATH" > "$TMP_PATH"
+          mv "$TMP_PATH" "$CONF_PATH"
 
       - name: Tauri build
         uses: tauri-apps/tauri-action@v0
@@ -84,13 +91,13 @@ jobs:
           args: --target ${{ matrix.tauri-target }}
 
       - name: Move & rename artifacts
+        shell: bash
         run: |
           mkdir tmp
           ARTIFACTS='${{ steps.tauri.outputs.artifactPaths }}'
           for ARTIFACT in $(echo "$ARTIFACTS" | jq -r '.[]'); do
             mv "$ARTIFACT" "tmp/tauri.${ARTIFACT##*.}"
           done
-        shell: bash
 
       - name: Upload bundle
         uses: actions/upload-artifact@v4
