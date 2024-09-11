@@ -149,13 +149,6 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
             SysTray::new(app.handle(), config.clone(), window_factory)
               .await?;
 
-          // TODO: Remove this test.
-          tokio::spawn(async move {
-            sleep(Duration::from_secs(60)).await;
-            println!("Reloading config...");
-            config.reload().await.unwrap();
-          });
-
           Ok(())
         })
       })
