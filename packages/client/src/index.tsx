@@ -3,6 +3,7 @@ import { render } from 'solid-js/web';
 
 import './normalize.css';
 import './index.css';
+import './webfont.css';
 import { WindowElement } from './app/window-element.component';
 
 const root = document.getElementById('zebar');
