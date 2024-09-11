@@ -108,142 +108,150 @@ export async function createGlazeWmProvider(
   const mergedConfig = glazeWmProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    const monitors = await getMonitors();
-    const client = new WmClient();
+    try {
+      const monitors = await getMonitors();
+      const client = new WmClient();
 
-    let state = await getInitialState();
-    queue.output(state);
+      let state = await getInitialState();
+      queue.output(state);
 
-    const unlisten = await client.subscribeMany(
-      [
-        WmEventType.BINDING_MODES_CHANGED,
-        WmEventType.FOCUS_CHANGED,
-        WmEventType.FOCUSED_CONTAINER_MOVED,
-        WmEventType.TILING_DIRECTION_CHANGED,
-        WmEventType.WORKSPACE_ACTIVATED,
-        WmEventType.WORKSPACE_DEACTIVATED,
-        WmEventType.WORKSPACE_UPDATED,
-      ],
-      onEvent,
-    );
+      const unlisten = await client.subscribeMany(
+        [
+          WmEventType.BINDING_MODES_CHANGED,
+          WmEventType.FOCUS_CHANGED,
+          WmEventType.FOCUSED_CONTAINER_MOVED,
+          WmEventType.TILING_DIRECTION_CHANGED,
+          WmEventType.WORKSPACE_ACTIVATED,
+          WmEventType.WORKSPACE_DEACTIVATED,
+          WmEventType.WORKSPACE_UPDATED,
+        ],
+        onEvent,
+      );
 
-    // TODO: Update state when monitors change.
-    // monitors.onChange(async () => {
-    //   state = { ...state, ...(await getMonitorState()) };
-    //   queue.value(state);
-    // });
+      // TODO: Update state when monitors change.
+      // monitors.onChange(async () => {
+      //   state = { ...state, ...(await getMonitorState()) };
+      //   queue.value(state);
+      // });
 
-    async function onEvent(
-      e:
-        | BindingModesChangedEvent
-        | FocusChangedEvent
-        | FocusedContainerMovedEvent
-        | TilingDirectionChangedEvent
-        | WorkspaceActivatedEvent
-        | WorkspaceDeactivatedEvent
-        | WorkspaceUpdatedEvent,
-    ) {
-      switch (e.eventType) {
-        case WmEventType.BINDING_MODES_CHANGED: {
-          state = { ...state, bindingModes: e.newBindingModes };
-          break;
-        }
-        case WmEventType.FOCUS_CHANGED: {
-          state = { ...state, focusedContainer: e.focusedContainer };
-          state = { ...state, ...(await getMonitorState()) };
+      async function onEvent(
+        e:
+          | BindingModesChangedEvent
+          | FocusChangedEvent
+          | FocusedContainerMovedEvent
+          | TilingDirectionChangedEvent
+          | WorkspaceActivatedEvent
+          | WorkspaceDeactivatedEvent
+          | WorkspaceUpdatedEvent,
+      ) {
+        switch (e.eventType) {
+          case WmEventType.BINDING_MODES_CHANGED: {
+            state = { ...state, bindingModes: e.newBindingModes };
+            break;
+          }
+          case WmEventType.FOCUS_CHANGED: {
+            state = { ...state, focusedContainer: e.focusedContainer };
+            state = { ...state, ...(await getMonitorState()) };
 
-          const { tilingDirection } = await client.queryTilingDirection();
-          state = { ...state, tilingDirection };
-          break;
+            const { tilingDirection } =
+              await client.queryTilingDirection();
+            state = { ...state, tilingDirection };
+            break;
+          }
+          case WmEventType.FOCUSED_CONTAINER_MOVED: {
+            state = { ...state, focusedContainer: e.focusedContainer };
+            state = { ...state, ...(await getMonitorState()) };
+            break;
+          }
+          case WmEventType.TILING_DIRECTION_CHANGED: {
+            state = { ...state, tilingDirection: e.newTilingDirection };
+            break;
+          }
+          case WmEventType.WORKSPACE_ACTIVATED:
+          case WmEventType.WORKSPACE_DEACTIVATED:
+          case WmEventType.WORKSPACE_UPDATED: {
+            state = { ...state, ...(await getMonitorState()) };
+            break;
+          }
         }
-        case WmEventType.FOCUSED_CONTAINER_MOVED: {
-          state = { ...state, focusedContainer: e.focusedContainer };
-          state = { ...state, ...(await getMonitorState()) };
-          break;
-        }
-        case WmEventType.TILING_DIRECTION_CHANGED: {
-          state = { ...state, tilingDirection: e.newTilingDirection };
-          break;
-        }
-        case WmEventType.WORKSPACE_ACTIVATED:
-        case WmEventType.WORKSPACE_DEACTIVATED:
-        case WmEventType.WORKSPACE_UPDATED: {
-          state = { ...state, ...(await getMonitorState()) };
-          break;
-        }
+
+        queue.output(state);
       }
 
-      queue.output(state);
-    }
+      function runCommand(
+        command: string,
+        subjectContainerId?: string,
+      ): Promise<RunCommandResponse> {
+        return client.runCommand(command, subjectContainerId);
+      }
 
-    function runCommand(
-      command: string,
-      subjectContainerId?: string,
-    ): Promise<RunCommandResponse> {
-      return client.runCommand(command, subjectContainerId);
-    }
+      async function getInitialState() {
+        const { focused: focusedContainer } = await client.queryFocused();
+        const { bindingModes } = await client.queryBindingModes();
+        const { tilingDirection } = await client.queryTilingDirection();
 
-    async function getInitialState() {
-      const { focused: focusedContainer } = await client.queryFocused();
-      const { bindingModes } = await client.queryBindingModes();
-      const { tilingDirection } = await client.queryTilingDirection();
+        return {
+          ...(await getMonitorState()),
+          focusedContainer,
+          tilingDirection,
+          bindingModes,
+          runCommand,
+        };
+      }
 
-      return {
-        ...(await getMonitorState()),
-        focusedContainer,
-        tilingDirection,
-        bindingModes,
-        runCommand,
-      };
-    }
+      async function getMonitorState() {
+        const currentPosition = {
+          x: monitors.currentMonitor!.x,
+          y: monitors.currentMonitor!.y,
+        };
 
-    async function getMonitorState() {
-      const currentPosition = {
-        x: monitors.currentMonitor!.x,
-        y: monitors.currentMonitor!.y,
-      };
+        const { monitors: glazeWmMonitors } = await client.queryMonitors();
 
-      const { monitors: glazeWmMonitors } = await client.queryMonitors();
-
-      // Get GlazeWM monitor that corresponds to the Zebar window's monitor.
-      const currentGlazeWmMonitor = glazeWmMonitors.reduce((a, b) =>
-        getCoordinateDistance(currentPosition, a) <
-        getCoordinateDistance(currentPosition, b)
-          ? a
-          : b,
-      );
-
-      const focusedGlazeWmMonitor = glazeWmMonitors.find(
-        monitor => monitor.hasFocus,
-      );
-
-      const allGlazeWmWorkspaces = glazeWmMonitors.flatMap(
-        monitor => monitor.children,
-      );
-
-      const focusedGlazeWmWorkspace = focusedGlazeWmMonitor?.children.find(
-        workspace => workspace.hasFocus,
-      );
-
-      const displayedGlazeWmWorkspace =
-        currentGlazeWmMonitor.children.find(
-          workspace => workspace.isDisplayed,
+        // Get GlazeWM monitor that corresponds to the Zebar window's monitor.
+        const currentGlazeWmMonitor = glazeWmMonitors.reduce((a, b) =>
+          getCoordinateDistance(currentPosition, a) <
+          getCoordinateDistance(currentPosition, b)
+            ? a
+            : b,
         );
 
-      return {
-        displayedWorkspace: displayedGlazeWmWorkspace!,
-        focusedWorkspace: focusedGlazeWmWorkspace!,
-        currentWorkspaces: currentGlazeWmMonitor.children,
-        allWorkspaces: allGlazeWmWorkspaces,
-        focusedMonitor: focusedGlazeWmMonitor!,
-        currentMonitor: currentGlazeWmMonitor,
-        allMonitors: glazeWmMonitors,
-      };
-    }
+        const focusedGlazeWmMonitor = glazeWmMonitors.find(
+          monitor => monitor.hasFocus,
+        );
 
-    return () => {
-      unlisten();
-      client.closeConnection();
-    };
+        const allGlazeWmWorkspaces = glazeWmMonitors.flatMap(
+          monitor => monitor.children,
+        );
+
+        const focusedGlazeWmWorkspace =
+          focusedGlazeWmMonitor?.children.find(
+            workspace => workspace.hasFocus,
+          );
+
+        const displayedGlazeWmWorkspace =
+          currentGlazeWmMonitor.children.find(
+            workspace => workspace.isDisplayed,
+          );
+
+        return {
+          displayedWorkspace: displayedGlazeWmWorkspace!,
+          focusedWorkspace: focusedGlazeWmWorkspace!,
+          currentWorkspaces: currentGlazeWmMonitor.children,
+          allWorkspaces: allGlazeWmWorkspaces,
+          focusedMonitor: focusedGlazeWmMonitor!,
+          currentMonitor: currentGlazeWmMonitor,
+          allMonitors: glazeWmMonitors,
+        };
+      }
+
+      return () => {
+        unlisten();
+        client.closeConnection();
+      };
+    } catch (err) {
+      // TODO: Implement retries.
+      queue.error((err as Error).message);
+      return () => {};
+    }
   });
 }
