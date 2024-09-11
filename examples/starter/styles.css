@@ -15,9 +15,13 @@ body {
   font-size: 12px;
 }
 
+html,
+body,
 #root {
-  width: 100%;
   height: 100%;
+}
+
+#root {
   border-bottom: 1px solid rgb(255 255 255 / 5%);
   background: linear-gradient(rgb(0 0 0 / 90%), rgb(5 2 20 / 85%));
 }
@@ -27,7 +31,7 @@ body {
   grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   height: 100%;
-  padding: 4px 24px;
+  padding: 4px 1.5vw;
 }
 
 .left,
@@ -35,10 +39,6 @@ body {
 .right {
   display: flex;
   align-items: center;
-
-  & > * {
-    margin-right: 20px;
-  }
 }
 
 .center {
@@ -49,31 +49,36 @@ body {
   justify-self: end;
 }
 
-.logo {
+.logo,
+.binding-mode,
+.tiling-direction,
+.memory,
+.cpu,
+.battery {
   margin-right: 20px;
 }
 
 .workspaces {
   display: flex;
   align-items: center;
+}
 
-  .workspace {
-    background: rgb(255 255 255 / 5%);
-    margin-right: 4px;
-    padding: 4px 8px;
-    color: rgb(255 255 255 / 90%);
-    border: none;
-    border-radius: 2px;
-    cursor: pointer;
+.workspace {
+  background: rgb(255 255 255 / 5%);
+  margin-right: 4px;
+  padding: 4px 8px;
+  color: rgb(255 255 255 / 90%);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
 
-    &.displayed {
-      background: rgb(255 255 255 / 15%);
-    }
+  &.displayed {
+    background: rgb(255 255 255 / 15%);
+  }
 
-    &.focused,
-    &:hover {
-      background: rgb(75 115 255 / 50%);
-    }
+  &.focused,
+  &:hover {
+    background: rgb(75 115 255 / 50%);
   }
 }
 
@@ -82,20 +87,21 @@ body {
   background: rgb(255 255 255 / 15%);
   color: rgb(255 255 255 / 90%);
   border-radius: 2px;
-  padding: 4px 6px;
-  margin: 0;
-}
-
-.tiling-direction {
+  line-height: 1;
+  padding: 4px 8px;
   border: 0;
   cursor: pointer;
 }
 
-.high-usage {
+.binding-mode {
+  margin-right: 4px;
+}
+
+.cpu .high-usage {
   color: #900029;
 }
 
-.charging-icon {
+.battery .charging-icon {
   position: absolute;
   font-size: 11px;
   left: 7px;

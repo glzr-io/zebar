@@ -10,10 +10,10 @@
     "placements": [
       {
         "anchor": "top_left",
-        "offsetX": "20px",
-        "offsetY": "20px",
+        "offsetX": "0px",
+        "offsetY": "0px",
         "width": "100%",
-        "height": "30px",
+        "height": "40px",
         "monitorSelection": {
           "type": "all"
         }
