@@ -118,30 +118,47 @@
           <div className="app">
             <div className="left">
               <i className="logo nf nf-fa-windows"></i>
-              <div className="workspaces">
-                {outputs.glazewm.currentWorkspaces.map(workspace => (
-                  <button
-                    className={`workspace ${workspace.hasFocus && 'focused'} ${workspace.isDisplayed && 'displayed'}`}
-                    key={workspace.name}
-                  >
-                    {workspace.displayName ?? workspace.name}
-                  </button>
-                ))}
-              </div>
+              {outputs.glazewm && (
+                <div className="workspaces">
+                  {outputs.glazewm.currentWorkspaces.map(workspace => (
+                    <button
+                      className={`workspace ${workspace.hasFocus && 'focused'} ${workspace.isDisplayed && 'displayed'}`}
+                      onClick={() =>
+                        outputs.glazewm.runCommand(
+                          `focus --workspace ${workspace.name}`,
+                        )
+                      }
+                      key={workspace.name}
+                    >
+                      {workspace.displayName ?? workspace.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="center">{outputs.date.formatted}</div>
 
             <div className="right">
-              {outputs.glazewm.bindingModes.map(bindingMode => (
-                <button className="binding-mode">
-                  {bindingMode.displayName ?? bindingMode.name}
-                </button>
-              ))}
+              {outputs.glazewm && (
+                <>
+                  {outputs.glazewm.bindingModes.map(bindingMode => (
+                    <button
+                      className="binding-mode"
+                      key={bindingMode.name}
+                    >
+                      {bindingMode.displayName ?? bindingMode.name}
+                    </button>
+                  ))}
 
-              <button
-                className={`tiling-direction nf ${outputs.glazewm.tilingDirection === 'horizontal' ? 'nf-md-swap_horizontal' : 'nf-md-swap_vertical'}`}
-              ></button>
+                  <button
+                    className={`tiling-direction nf ${outputs.glazewm.tilingDirection === 'horizontal' ? 'nf-md-swap_horizontal' : 'nf-md-swap_vertical'}`}
+                    onClick={() =>
+                      outputs.glazewm.runCommand(`toggle-tiling-direction`)
+                    }
+                  ></button>
+                </>
+              )}
 
               <div className="memory">
                 <i className="nf nf-fae-chip"></i>

@@ -8,6 +8,7 @@ import {
   type FocusChangedEvent,
   type FocusedContainerMovedEvent,
   type Monitor,
+  type RunCommandResponse,
   type TilingDirectionChangedEvent,
   type Workspace,
   type WorkspaceActivatedEvent,
@@ -88,14 +89,17 @@ export interface GlazeWmOutput {
   bindingModes: BindingModeConfig[];
 
   /**
-   * Focus a workspace by name.
+   * Invokes a WM command (e.g. `"focus --workspace 1"`).
+   *
+   * @param command WM command to run (e.g. `"focus --workspace 1"`).
+   * @param subjectContainerId (optional) ID of container to use as subject.
+   * If not provided, this defaults to the currently focused container.
+   * @throws If command fails.
    */
-  focusWorkspace(name: string): void;
-
-  /**
-   * Toggle tiling direction.
-   */
-  toggleTilingDirection(): void;
+  runCommand(
+    command: string,
+    subjectContainerId?: string,
+  ): Promise<RunCommandResponse>;
 }
 
 export async function createGlazeWmProvider(
@@ -172,12 +176,11 @@ export async function createGlazeWmProvider(
       queue.output(state);
     }
 
-    function focusWorkspace(name: string) {
-      client.runCommand(`focus --workspace ${name}`);
-    }
-
-    function toggleTilingDirection() {
-      client.runCommand('toggle-tiling-direction');
+    function runCommand(
+      command: string,
+      subjectContainerId?: string,
+    ): Promise<RunCommandResponse> {
+      return client.runCommand(command, subjectContainerId);
     }
 
     async function getInitialState() {
@@ -190,8 +193,7 @@ export async function createGlazeWmProvider(
         focusedContainer,
         tilingDirection,
         bindingModes,
-        focusWorkspace,
-        toggleTilingDirection,
+        runCommand,
       };
     }
 
