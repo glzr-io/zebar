@@ -28,8 +28,9 @@
 
       const zebarCtx = await init();
 
-      const [glazewm, cpu, date, battery, memory, weather] =
+      const [network, glazewm, cpu, date, battery, memory, weather] =
         await Promise.all([
+          zebarCtx.createProvider({ type: 'network' }),
           zebarCtx.createProvider({ type: 'glazewm' }),
           zebarCtx.createProvider({ type: 'cpu' }),
           zebarCtx.createProvider({
@@ -45,6 +46,7 @@
 
       function App() {
         const [outputs, setOutputs] = useState({
+          network: network.output,
           glazewm: glazewm.output,
           cpu: cpu.output,
           date: date.output,
@@ -54,6 +56,9 @@
         });
 
         useEffect(() => {
+          network.onOutput(network =>
+            setOutputs(outputs => ({ ...outputs, network })),
+          );
           glazewm.onOutput(glazewm =>
             setOutputs(outputs => ({ ...outputs, glazewm })),
           );
@@ -71,6 +76,36 @@
           );
         }, []);
 
+        // Get icon to show for current network status.
+        function getNetworkIcon() {
+          switch (outputs.network.defaultInterface?.type) {
+            case 'ethernet':
+              return <i className="nf nf-md-ethernet_cable"></i>;
+            case 'wifi':
+              if (outputs.network.defaultGateway?.signalStrength >= 80) {
+                return <i className="nf nf-md-wifi_strength_4"></i>;
+              } else if (
+                outputs.network.defaultGateway?.signalStrength >= 65
+              ) {
+                return <i className="nf nf-md-wifi_strength_3"></i>;
+              } else if (
+                outputs.network.defaultGateway?.signalStrength >= 40
+              ) {
+                return <i className="nf nf-md-wifi_strength_2"></i>;
+              } else if (
+                outputs.network.defaultGateway?.signalStrength >= 25
+              ) {
+                return <i className="nf nf-md-wifi_strength_1"></i>;
+              } else {
+                return <i className="nf nf-md-wifi_strength_outline"></i>;
+              }
+            default:
+              return (
+                <i className="nf nf-md-wifi_strength_off_outline"></i>
+              );
+          }
+        }
+
         // Get icon to show for how much of the battery is charged.
         function getBatteryIcon() {
           if (outputs.battery.chargePercent > 90)
@@ -84,7 +119,7 @@
           return <i className="nf nf-fa-battery_0"></i>;
         }
 
-        // Get icon to show for how much of the battery is charged.
+        // Get icon to show for current weather status.
         function getWeatherIcon() {
           switch (outputs.weather.status) {
             case 'clear_day':
@@ -160,6 +195,13 @@
                 </>
               )}
 
+              {outputs.network && (
+                <div className="network">
+                  {getNetworkIcon()}
+                  {outputs.network.defaultGateway?.ssid}
+                </div>
+              )}
+
               <div className="memory">
                 <i className="nf nf-fae-chip"></i>
                 {Math.round(outputs.memory.usage)}%
@@ -187,10 +229,12 @@
                 </div>
               )}
 
-              <div className="weather">
-                {getWeatherIcon()}
-                {Math.round(outputs.weather.celsiusTemp)}°C
-              </div>
+              {outputs.weather && (
+                <div className="weather">
+                  {getWeatherIcon()}
+                  {Math.round(outputs.weather.celsiusTemp)}°C
+                </div>
+              )}
             </div>
           </div>
         );
