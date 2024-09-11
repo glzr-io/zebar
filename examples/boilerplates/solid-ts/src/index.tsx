@@ -4,7 +4,7 @@ import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import { init } from 'zebar';
 
-const zebarCtx = await init({ includeDefaultCss: true });
+const zebarCtx = await init();
 const [cpu, battery, memory, weather] = await Promise.all([
   zebarCtx.createProvider({ type: 'cpu' }),
   zebarCtx.createProvider({ type: 'battery' }),
