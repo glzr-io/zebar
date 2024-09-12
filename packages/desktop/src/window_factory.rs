@@ -140,10 +140,23 @@ impl WindowFactory {
       let logical = LogicalSize::new(placement.width, placement.height);
       let physical = PhysicalSize::new(placement.x, placement.y);
 
-      let PhysicalSize { width, height } =
-        PhysicalSize::from_logical(logical, placement.scale_factor);
+      let xx: PhysicalSize<f64> =
+        PhysicalSize::from_logical(logical, 0.75_f64);
       let yy: LogicalSize<f64> =
         LogicalSize::from_physical(physical, placement.scale_factor);
+
+      dbg!(
+        "",
+        placement.width,
+        xx.width,
+        placement.height,
+        xx.height,
+        placement.x,
+        yy.width,
+        placement.y,
+        yy.height,
+        placement.scale_factor
+      );
 
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
@@ -152,8 +165,8 @@ impl WindowFactory {
         webview_url,
       )
       .title("Zebar")
-      .inner_size(width, height)
-      .position(yy.width, yy.height)
+      .inner_size(2560_f64, placement.height)
+      .position(yy.width, placement.y)
       .focused(config.launch_options.focused)
       .skip_taskbar(!config.launch_options.shown_in_taskbar)
       .visible_on_all_workspaces(true)
