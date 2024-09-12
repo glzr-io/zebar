@@ -136,25 +136,28 @@ impl WindowFactory {
         )
         .into(),
       );
+           
+      let size: LogicalSize<f64> = LogicalSize::from_physical(
+        PhysicalSize::new(placement.width, placement.height),
+        placement.scale_factor,
+      );
 
-      let logical = LogicalSize::new(placement.width, placement.height);
-      let physical = PhysicalSize::new(placement.x, placement.y);
-
-      let xx: PhysicalSize<f64> =
-        PhysicalSize::from_logical(logical, 0.75_f64);
-      let yy: LogicalSize<f64> =
-        LogicalSize::from_physical(physical, placement.scale_factor);
+      let position: LogicalSize<f64> = LogicalSize::from_physical(
+        PhysicalSize::new(placement.x, placement.y),
+        placement.scale_factor,
+      );
 
       dbg!(
-        "",
+        "Size",
         placement.width,
-        xx.width,
         placement.height,
-        xx.height,
+        size.width,
+        size.height,
+        "Position",
         placement.x,
-        yy.width,
         placement.y,
-        yy.height,
+        position.width,
+        position.height,
         placement.scale_factor
       );
 
@@ -165,8 +168,8 @@ impl WindowFactory {
         webview_url,
       )
       .title("Zebar")
-      .inner_size(2560_f64, placement.height)
-      .position(yy.width, placement.y)
+      .inner_size(size.width, size.height)
+      .position(position.width, position.height)
       .focused(config.launch_options.focused)
       .skip_taskbar(!config.launch_options.shown_in_taskbar)
       .visible_on_all_workspaces(true)
