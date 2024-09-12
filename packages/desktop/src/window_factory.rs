@@ -17,6 +17,7 @@ use tokio::{
   task,
 };
 use tracing::{error, info};
+use winit::dpi::{LogicalSize, PhysicalSize};
 
 use crate::{
   common::{PathExt, WindowExt},
@@ -72,6 +73,7 @@ pub struct WindowPlacement {
   height: f64,
   x: f64,
   y: f64,
+  scale_factor: f64,
 }
 
 impl WindowFactory {
@@ -135,6 +137,14 @@ impl WindowFactory {
         .into(),
       );
 
+      let logical = LogicalSize::new(placement.width, placement.height);
+      let physical = PhysicalSize::new(placement.x, placement.y);
+
+      let PhysicalSize { width, height } =
+        PhysicalSize::from_logical(logical, placement.scale_factor);
+      let yy: LogicalSize<f64> =
+        LogicalSize::from_physical(physical, placement.scale_factor);
+
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
@@ -142,8 +152,8 @@ impl WindowFactory {
         webview_url,
       )
       .title("Zebar")
-      .inner_size(placement.width, placement.height)
-      .position(placement.x, placement.y)
+      .inner_size(width, height)
+      .position(yy.width, yy.height)
       .focused(config.launch_options.focused)
       .skip_taskbar(!config.launch_options.shown_in_taskbar)
       .visible_on_all_workspaces(true)
@@ -264,6 +274,7 @@ impl WindowFactory {
             as f64,
           y: (anchor_y + placement.offset_y.to_px(monitor.height as i32))
             as f64,
+          scale_factor: monitor.scale_factor,
         };
 
         placements.push(placement);
