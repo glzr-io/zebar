@@ -1,102 +1,123 @@
 import {
   createBatteryProvider,
+  type BatteryProvider,
   type BatteryProviderConfig,
 } from './battery/create-battery-provider';
 import {
   createCpuProvider,
+  type CpuProvider,
   type CpuProviderConfig,
 } from './cpu/create-cpu-provider';
 import {
   createDateProvider,
+  type DateProvider,
   type DateProviderConfig,
 } from './date/create-date-provider';
 import {
   createGlazeWmProvider,
+  type GlazeWmProvider,
   type GlazeWmProviderConfig,
 } from './glazewm/create-glazewm-provider';
 import {
   createHostProvider,
+  type HostProvider,
   type HostProviderConfig,
 } from './host/create-host-provider';
 import {
   createIpProvider,
+  type IpProvider,
   type IpProviderConfig,
 } from './ip/create-ip-provider';
 import {
   createKomorebiProvider,
+  type KomorebiProvider,
   type KomorebiProviderConfig,
 } from './komorebi/create-komorebi-provider';
 import {
   createMemoryProvider,
+  type MemoryProvider,
   type MemoryProviderConfig,
 } from './memory/create-memory-provider';
 import {
   createNetworkProvider,
+  type NetworkProvider,
   type NetworkProviderConfig,
 } from './network/create-network-provider';
 import {
   createWeatherProvider,
+  type WeatherProvider,
   type WeatherProviderConfig,
 } from './weather/create-weather-provider';
 
-export type ProviderConfig =
-  | BatteryProviderConfig
-  | CpuProviderConfig
-  | DateProviderConfig
-  | GlazeWmProviderConfig
-  | HostProviderConfig
-  | IpProviderConfig
-  | KomorebiProviderConfig
-  | MemoryProviderConfig
-  | NetworkProviderConfig
-  | WeatherProviderConfig;
+export interface ProviderConfigMap {
+  battery: BatteryProviderConfig;
+  cpu: CpuProviderConfig;
+  date: DateProviderConfig;
+  glazewm: GlazeWmProviderConfig;
+  host: HostProviderConfig;
+  ip: IpProviderConfig;
+  komorebi: KomorebiProviderConfig;
+  memory: MemoryProviderConfig;
+  network: NetworkProviderConfig;
+  weather: WeatherProviderConfig;
+}
 
-export type ProviderType = ProviderConfig['type'];
+export interface ProviderMap {
+  battery: BatteryProvider;
+  cpu: CpuProvider;
+  date: DateProvider;
+  glazewm: GlazeWmProvider;
+  host: HostProvider;
+  ip: IpProvider;
+  komorebi: KomorebiProvider;
+  memory: MemoryProvider;
+  network: NetworkProvider;
+  weather: WeatherProvider;
+}
 
-const createProviderMap = {
-  battery: createBatteryProvider,
-  cpu: createCpuProvider,
-  date: createDateProvider,
-  glazewm: createGlazeWmProvider,
-  host: createHostProvider,
-  ip: createIpProvider,
-  komorebi: createKomorebiProvider,
-  memory: createMemoryProvider,
-  network: createNetworkProvider,
-  weather: createWeatherProvider,
-} as const;
+export type ProviderType = keyof ProviderConfigMap;
 
-type ProviderMap = typeof createProviderMap;
+export type ProviderConfig = ProviderConfigMap[keyof ProviderConfigMap];
 
-/**
- * Utility type to get the return value of a provider.
- *
- * @example `Provider<'battery'> = BatteryProvider`
- */
-export type ProviderOutput<T extends ProviderType> = ReturnType<
-  ProviderMap[T]
->;
+export type ProviderOutput = ProviderMap[keyof ProviderMap]['output'];
 
 /**
  * Creates an instance of a provider.
  *
- * The provider will continue to output until its `destroy` function is
+ * The provider will continue to output until its `stop` function is
  * called.
  *
  * Waits until the provider has emitted either its first output or first
  * error.
  *
  * @throws If the provider config is invalid. *Does not throw* if the
- * provider initially emits an error.
+ * provider's first emission is an error.
  */
 export function createProvider<T extends ProviderConfig>(
   config: T,
-): ProviderOutput<T['type']> {
-  const providerFn = createProviderMap[config.type];
-
-  if (!providerFn) {
-    throw new Error('Not a supported provider type.');
+): Promise<ProviderMap[T['type']]> {
+  switch (config.type) {
+    case 'battery':
+      return createBatteryProvider(config) as any;
+    case 'cpu':
+      return createCpuProvider(config) as any;
+    case 'date':
+      return createDateProvider(config) as any;
+    case 'glazewm':
+      return createGlazeWmProvider(config) as any;
+    case 'host':
+      return createHostProvider(config) as any;
+    case 'ip':
+      return createIpProvider(config) as any;
+    case 'komorebi':
+      return createKomorebiProvider(config) as any;
+    case 'memory':
+      return createMemoryProvider(config) as any;
+    case 'network':
+      return createNetworkProvider(config) as any;
+    case 'weather':
+      return createWeatherProvider(config) as any;
+    default:
+      throw new Error('Not a supported provider type.');
   }
-
-  return providerFn(config as any) as ProviderOutput<T['type']>;
 }

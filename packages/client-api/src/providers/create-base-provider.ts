@@ -1,13 +1,13 @@
 import { Deferred } from '~/utils';
 import type { ProviderConfig } from './create-provider';
 
-export interface Provider<TConfig, TVal> {
+export interface Provider<TConfig, TOutput> {
   /**
    * Latest output emitted from the provider.
    *
    * `null` if the latest emission from the provider is an error.
    */
-  output: TVal | null;
+  output: TOutput | null;
 
   /**
    * Latest error message emitted from the provider.
@@ -41,7 +41,7 @@ export interface Provider<TConfig, TVal> {
    *
    * @param callback - Callback to run when an output is emitted.
    */
-  onOutput(callback: (output: TVal) => void): void;
+  onOutput(callback: (output: TOutput) => void): void;
 
   /**
    * Listens for errors from the provider.
@@ -63,16 +63,16 @@ type ProviderFetcher<T> = (queue: {
 
 export async function createBaseProvider<
   TConfig extends ProviderConfig,
-  TVal,
+  TOutput,
 >(
   config: TConfig,
-  fetcher: ProviderFetcher<TVal>,
-): Promise<Provider<TConfig, TVal>> {
-  const valueListeners = new Set<(val: TVal) => void>();
+  fetcher: ProviderFetcher<TOutput>,
+): Promise<Provider<TConfig, TOutput>> {
+  const outputListeners = new Set<(output: TOutput) => void>();
   const errorListeners = new Set<(error: string) => void>();
 
   let latestEmission = {
-    value: null as TVal | null,
+    output: null as TOutput | null,
     error: null as string | null,
     hasError: false,
   };
@@ -83,13 +83,13 @@ export async function createBaseProvider<
     const hasFirstEmit = new Deferred<void>();
 
     const unlisten = await fetcher({
-      output: value => {
-        latestEmission = { value, error: null, hasError: false };
-        valueListeners.forEach(listener => listener(value));
+      output: output => {
+        latestEmission = { output, error: null, hasError: false };
+        outputListeners.forEach(listener => listener(output));
         hasFirstEmit.resolve();
       },
       error: error => {
-        latestEmission = { value: null, error, hasError: true };
+        latestEmission = { output: null, error, hasError: true };
         errorListeners.forEach(listener => listener(error));
         hasFirstEmit.resolve();
       },
@@ -103,7 +103,7 @@ export async function createBaseProvider<
 
   return {
     get output() {
-      return latestEmission.value;
+      return latestEmission.output;
     },
     get error() {
       return latestEmission.error;
@@ -120,7 +120,7 @@ export async function createBaseProvider<
       await startFetcher();
     },
     stop: async () => {
-      valueListeners.clear();
+      outputListeners.clear();
       errorListeners.clear();
 
       if (unlisten) {
@@ -128,7 +128,7 @@ export async function createBaseProvider<
       }
     },
     onOutput: callback => {
-      valueListeners.add(callback);
+      outputListeners.add(callback);
     },
     onError: callback => {
       errorListeners.add(callback);

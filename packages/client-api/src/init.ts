@@ -6,10 +6,10 @@ import {
   openWindow,
   setWindowZOrder,
   showErrorDialog,
-} from './desktop';
+} from '~/desktop';
 import { createLogger } from '~/utils';
+import { createProvider, createProviderGroup } from '~/providers';
 import type { ZebarContext } from './zebar-context.model';
-import { createProvider } from './providers';
 
 const logger = createLogger('init-window');
 
@@ -36,6 +36,7 @@ export async function init(): Promise<ZebarContext> {
         return openWindow(absolutePath);
       },
       createProvider,
+      createProviderGroup,
       currentWindow: {
         ...windowState,
         tauri: currentWindow,
