@@ -10,14 +10,13 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent, LogicalSize, PhysicalSize
 };
 use tokio::{
   sync::{broadcast, Mutex},
   task,
 };
 use tracing::{error, info};
-use winit::dpi::{LogicalSize, PhysicalSize};
 
 use crate::{
   common::{PathExt, WindowExt},
@@ -145,20 +144,6 @@ impl WindowFactory {
       let position: LogicalSize<f64> = LogicalSize::from_physical(
         PhysicalSize::new(placement.x, placement.y),
         placement.scale_factor,
-      );
-
-      dbg!(
-        "Size",
-        placement.width,
-        placement.height,
-        size.width,
-        size.height,
-        "Position",
-        placement.x,
-        placement.y,
-        position.width,
-        position.height,
-        placement.scale_factor
       );
 
       // Note that window label needs to be globally unique.
