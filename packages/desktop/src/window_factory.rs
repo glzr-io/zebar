@@ -10,7 +10,8 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent, LogicalSize, PhysicalSize
+  AppHandle, LogicalPosition, LogicalSize, Manager, PhysicalPosition,
+  PhysicalSize, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -67,14 +68,6 @@ pub struct WindowState {
   pub html_path: PathBuf,
 }
 
-pub struct WindowPlacement {
-  width: f64,
-  height: f64,
-  x: f64,
-  y: f64,
-  scale_factor: f64,
-}
-
 impl WindowFactory {
   /// Creates a new `WindowFactory` instance.
   pub fn new(
@@ -107,7 +100,7 @@ impl WindowFactory {
       html_path,
     } = &config_entry;
 
-    for placement in self.window_placements(config) {
+    for (size, position) in self.window_placements(config) {
       // Use running window count as a unique ID for the window.
       let new_count =
         self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
@@ -135,16 +128,6 @@ impl WindowFactory {
         )
         .into(),
       );
-           
-      let size: LogicalSize<f64> = LogicalSize::from_physical(
-        PhysicalSize::new(placement.width, placement.height),
-        placement.scale_factor,
-      );
-
-      let position: LogicalSize<f64> = LogicalSize::from_physical(
-        PhysicalSize::new(placement.x, placement.y),
-        placement.scale_factor,
-      );
 
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
@@ -154,7 +137,7 @@ impl WindowFactory {
       )
       .title("Zebar")
       .inner_size(size.width, size.height)
-      .position(position.width, position.height)
+      .position(position.x, position.y)
       .focused(config.launch_options.focused)
       .skip_taskbar(!config.launch_options.shown_in_taskbar)
       .visible_on_all_workspaces(true)
@@ -176,13 +159,22 @@ impl WindowFactory {
         serde_json::to_string(&state)?
       ));
 
-      // Tauri's `skip_taskbar` option isn't 100% reliable, so we
-      // also set the window as a tool window.
+      // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable, so
+      // we also set the window as a tool window.
       #[cfg(target_os = "windows")]
       let _ = window
         .as_ref()
         .window()
         .set_tool_window(!config.launch_options.shown_in_taskbar);
+
+      // On Windows, there's an issue where the window size is constrained
+      // when initially created. To work around this, apply the size and
+      // position settings again after launch.
+      #[cfg(target_os = "windows")]
+      {
+        let _ = window.set_size(size);
+        let _ = window.set_position(position);
+      }
 
       let mut window_states = self.window_states.lock().await;
       window_states.insert(state.window_id.clone(), state.clone());
@@ -227,7 +219,7 @@ impl WindowFactory {
   fn window_placements(
     &self,
     config: &WindowConfig,
-  ) -> Vec<WindowPlacement> {
+  ) -> Vec<(LogicalSize<f64>, LogicalPosition<f64>)> {
     let mut placements = vec![];
 
     for placement in config.launch_options.placements.iter() {
@@ -268,17 +260,23 @@ impl WindowFactory {
           ),
         };
 
-        let placement = WindowPlacement {
-          width: placement.width.to_px(monitor.width as i32) as f64,
-          height: placement.height.to_px(monitor.height as i32) as f64,
-          x: (anchor_x + placement.offset_x.to_px(monitor.width as i32))
-            as f64,
-          y: (anchor_y + placement.offset_y.to_px(monitor.height as i32))
-            as f64,
-          scale_factor: monitor.scale_factor,
-        };
+        let size = LogicalSize::from_physical(
+          PhysicalSize::new(
+            placement.width.to_px(monitor.width as i32),
+            placement.height.to_px(monitor.height as i32),
+          ),
+          monitor.scale_factor,
+        );
 
-        placements.push(placement);
+        let position = LogicalPosition::from_physical(
+          PhysicalPosition::new(
+            anchor_x + placement.offset_x.to_px(monitor.width as i32),
+            anchor_y + placement.offset_y.to_px(monitor.height as i32),
+          ),
+          monitor.scale_factor,
+        );
+
+        placements.push((size, position));
       }
     }
 
