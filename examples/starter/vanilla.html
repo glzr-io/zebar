@@ -26,9 +26,9 @@
       import { createRoot } from 'react-dom/client';
       import { init } from 'zebar';
 
-      const ctx = await init();
+      const zebarCtx = await init();
 
-      const providers = await ctx.createProviderGroup({
+      const providers = await zebarCtx.createProviderGroup({
         network: { type: 'network' },
         cpu: { type: 'cpu' },
         date: { type: 'date', formatting: 'EEE d MMM t' },
@@ -40,10 +40,10 @@
       createRoot(document.getElementById('root')).render(<App />);
 
       function App() {
-        const [output, setOutput] = useState(providers.outputs);
+        const [output, setOutput] = useState(providers.outputMap);
 
         useEffect(() => {
-          providers.onOutput(() => setOutput(providers.outputs));
+          providers.onOutput(() => setOutput(providers.outputMap));
         }, []);
 
         // Get icon to show for current network status.

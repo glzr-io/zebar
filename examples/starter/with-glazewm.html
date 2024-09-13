@@ -28,72 +28,43 @@
 
       const zebarCtx = await init();
 
-      const [network, glazewm, cpu, date, battery, memory, weather] =
-        await Promise.all([
-          zebarCtx.createProvider({ type: 'network' }),
-          zebarCtx.createProvider({ type: 'glazewm' }),
-          zebarCtx.createProvider({ type: 'cpu' }),
-          zebarCtx.createProvider({
-            type: 'date',
-            formatting: 'EEE d MMM t',
-          }),
-          zebarCtx.createProvider({ type: 'battery' }),
-          zebarCtx.createProvider({ type: 'memory' }),
-          zebarCtx.createProvider({ type: 'weather' }),
-        ]);
+      const providers = await zebarCtx.createProviderGroup({
+        network: { type: 'network' },
+        glazewm: { type: 'glazewm' },
+        cpu: { type: 'cpu' },
+        date: { type: 'date', formatting: 'EEE d MMM t' },
+        battery: { type: 'battery' },
+        memory: { type: 'memory' },
+        weather: { type: 'weather' },
+      });
 
       createRoot(document.getElementById('root')).render(<App />);
 
       function App() {
-        const [outputs, setOutputs] = useState({
-          network: network.output,
-          glazewm: glazewm.output,
-          cpu: cpu.output,
-          date: date.output,
-          battery: battery.output,
-          memory: memory.output,
-          weather: weather.output,
-        });
+        const [output, setOutput] = useState(providers.outputMap);
 
         useEffect(() => {
-          network.onOutput(network =>
-            setOutputs(outputs => ({ ...outputs, network })),
-          );
-          glazewm.onOutput(glazewm =>
-            setOutputs(outputs => ({ ...outputs, glazewm })),
-          );
-          date.onOutput(date =>
-            setOutputs(outputs => ({ ...outputs, date })),
-          );
-          battery.onOutput(battery =>
-            setOutputs(outputs => ({ ...outputs, battery })),
-          );
-          memory.onOutput(memory =>
-            setOutputs(outputs => ({ ...outputs, memory })),
-          );
-          weather.onOutput(weather =>
-            setOutputs(outputs => ({ ...outputs, weather })),
-          );
+          providers.onOutput(() => setOutput(providers.outputMap));
         }, []);
 
         // Get icon to show for current network status.
         function getNetworkIcon() {
-          switch (outputs.network.defaultInterface?.type) {
+          switch (output.network.defaultInterface?.type) {
             case 'ethernet':
               return <i className="nf nf-md-ethernet_cable"></i>;
             case 'wifi':
-              if (outputs.network.defaultGateway?.signalStrength >= 80) {
+              if (output.network.defaultGateway?.signalStrength >= 80) {
                 return <i className="nf nf-md-wifi_strength_4"></i>;
               } else if (
-                outputs.network.defaultGateway?.signalStrength >= 65
+                output.network.defaultGateway?.signalStrength >= 65
               ) {
                 return <i className="nf nf-md-wifi_strength_3"></i>;
               } else if (
-                outputs.network.defaultGateway?.signalStrength >= 40
+                output.network.defaultGateway?.signalStrength >= 40
               ) {
                 return <i className="nf nf-md-wifi_strength_2"></i>;
               } else if (
-                outputs.network.defaultGateway?.signalStrength >= 25
+                output.network.defaultGateway?.signalStrength >= 25
               ) {
                 return <i className="nf nf-md-wifi_strength_1"></i>;
               } else {
@@ -108,20 +79,20 @@
 
         // Get icon to show for how much of the battery is charged.
         function getBatteryIcon() {
-          if (outputs.battery.chargePercent > 90)
+          if (output.battery.chargePercent > 90)
             return <i className="nf nf-fa-battery_4"></i>;
-          if (outputs.battery.chargePercent > 70)
+          if (output.battery.chargePercent > 70)
             return <i className="nf nf-fa-battery_3"></i>;
-          if (outputs.battery.chargePercent > 40)
+          if (output.battery.chargePercent > 40)
             return <i className="nf nf-fa-battery_2"></i>;
-          if (outputs.battery.chargePercent > 20)
+          if (output.battery.chargePercent > 20)
             return <i className="nf nf-fa-battery_1"></i>;
           return <i className="nf nf-fa-battery_0"></i>;
         }
 
         // Get icon to show for current weather status.
         function getWeatherIcon() {
-          switch (outputs.weather.status) {
+          switch (output.weather.status) {
             case 'clear_day':
               return <i className="nf nf-weather-day_sunny"></i>;
             case 'clear_night':
@@ -153,13 +124,13 @@
           <div className="app">
             <div className="left">
               <i className="logo nf nf-fa-windows"></i>
-              {outputs.glazewm && (
+              {output.glazewm && (
                 <div className="workspaces">
-                  {outputs.glazewm.currentWorkspaces.map(workspace => (
+                  {output.glazewm.currentWorkspaces.map(workspace => (
                     <button
                       className={`workspace ${workspace.hasFocus && 'focused'} ${workspace.isDisplayed && 'displayed'}`}
                       onClick={() =>
-                        outputs.glazewm.runCommand(
+                        output.glazewm.runCommand(
                           `focus --workspace ${workspace.name}`,
                         )
                       }
@@ -172,12 +143,12 @@
               )}
             </div>
 
-            <div className="center">{outputs.date.formatted}</div>
+            <div className="center">{output.date.formatted}</div>
 
             <div className="right">
-              {outputs.glazewm && (
+              {output.glazewm && (
                 <>
-                  {outputs.glazewm.bindingModes.map(bindingMode => (
+                  {output.glazewm.bindingModes.map(bindingMode => (
                     <button
                       className="binding-mode"
                       key={bindingMode.name}
@@ -187,24 +158,24 @@
                   ))}
 
                   <button
-                    className={`tiling-direction nf ${outputs.glazewm.tilingDirection === 'horizontal' ? 'nf-md-swap_horizontal' : 'nf-md-swap_vertical'}`}
+                    className={`tiling-direction nf ${output.glazewm.tilingDirection === 'horizontal' ? 'nf-md-swap_horizontal' : 'nf-md-swap_vertical'}`}
                     onClick={() =>
-                      outputs.glazewm.runCommand(`toggle-tiling-direction`)
+                      output.glazewm.runCommand(`toggle-tiling-direction`)
                     }
                   ></button>
                 </>
               )}
 
-              {outputs.network && (
+              {output.network && (
                 <div className="network">
                   {getNetworkIcon()}
-                  {outputs.network.defaultGateway?.ssid}
+                  {output.network.defaultGateway?.ssid}
                 </div>
               )}
 
               <div className="memory">
                 <i className="nf nf-fae-chip"></i>
-                {Math.round(outputs.memory.usage)}%
+                {Math.round(output.memory.usage)}%
               </div>
 
               <div className="cpu">
@@ -212,27 +183,27 @@
 
                 {/* Change the text color if the CPU usage is high. */}
                 <span
-                  className={outputs.cpu.usage > 85 ? 'high-usage' : ''}
+                  className={output.cpu.usage > 85 ? 'high-usage' : ''}
                 >
-                  {Math.round(outputs.cpu.usage)}%
+                  {Math.round(output.cpu.usage)}%
                 </span>
               </div>
 
-              {outputs.battery && (
+              {output.battery && (
                 <div className="battery">
                   {/* Show icon for whether battery is charging. */}
-                  {outputs.battery.isCharging && (
+                  {output.battery.isCharging && (
                     <i className="nf nf-md-power_plug charging-icon"></i>
                   )}
                   {getBatteryIcon()}
-                  {Math.round(outputs.battery.chargePercent)}%
+                  {Math.round(output.battery.chargePercent)}%
                 </div>
               )}
 
-              {outputs.weather && (
+              {output.weather && (
                 <div className="weather">
                   {getWeatherIcon()}
-                  {Math.round(outputs.weather.celsiusTemp)}°C
+                  {Math.round(output.weather.celsiusTemp)}°C
                 </div>
               )}
             </div>

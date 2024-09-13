@@ -6,36 +6,28 @@ import { init } from 'zebar';
 
 const zebarCtx = await init();
 
-const [cpu, battery, memory, weather] = await Promise.all([
-  zebarCtx.createProvider({ type: 'cpu' }),
-  zebarCtx.createProvider({ type: 'battery' }),
-  zebarCtx.createProvider({ type: 'memory' }),
-  zebarCtx.createProvider({ type: 'weather' }),
-]);
+const providers = await zebarCtx.createProviderGroup({
+  cpu: { type: 'cpu' },
+  battery: { type: 'battery' },
+  memory: { type: 'memory' },
+  weather: { type: 'weather' },
+});
 
 render(() => <App />, document.getElementById('root')!);
 
 function App() {
-  const [outputs, setOutputs] = createStore({
-    cpu: cpu.output,
-    battery: battery.output,
-    memory: memory.output,
-    weather: weather.output,
-  });
+  const [output, setOutput] = createStore(providers.outputMap);
 
-  cpu.onOutput(cpu => setOutputs({ cpu }));
-  battery.onOutput(battery => setOutputs({ battery }));
-  memory.onOutput(memory => setOutputs({ memory }));
-  weather.onOutput(weather => setOutputs({ weather }));
+  providers.onOutput(outputMap => setOutput(outputMap));
 
   return (
     <div class="app">
-      <div class="chip">CPU usage: {outputs.cpu.usage}</div>
+      <div class="chip">CPU usage: {output.cpu.usage}</div>
       <div class="chip">
-        Battery charge: {outputs.battery?.chargePercent}
+        Battery charge: {output.battery?.chargePercent}
       </div>
-      <div class="chip">Memory usage: {outputs.memory.usage}</div>
-      <div class="chip">Weather temp: {outputs.weather?.celsiusTemp}</div>
+      <div class="chip">Memory usage: {output.memory.usage}</div>
+      <div class="chip">Weather temp: {output.weather?.celsiusTemp}</div>
     </div>
   );
 }

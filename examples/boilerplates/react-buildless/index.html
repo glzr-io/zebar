@@ -28,49 +28,31 @@
 
       const zebarCtx = await init();
 
-      const [cpu, battery, memory, weather] = await Promise.all([
-        zebarCtx.createProvider({ type: 'cpu' }),
-        zebarCtx.createProvider({ type: 'battery' }),
-        zebarCtx.createProvider({ type: 'memory' }),
-        zebarCtx.createProvider({ type: 'weather' }),
-      ]);
+      const providers = await zebarCtx.createProviderGroup({
+        cpu: { type: 'cpu' },
+        battery: { type: 'battery' },
+        memory: { type: 'memory' },
+        weather: { type: 'weather' },
+      });
 
       createRoot(document.getElementById('root')).render(<App />);
 
       function App() {
-        const [outputs, setOutputs] = useState({
-          cpu: cpu.output,
-          battery: battery.output,
-          memory: memory.output,
-          weather: weather.output,
-        });
+        const [output, setOutput] = useState(providers.outputMap);
 
         useEffect(() => {
-          cpu.onOutput(cpu =>
-            setOutputs(outputs => ({ ...outputs, cpu })),
-          );
-          battery.onOutput(battery =>
-            setOutputs(outputs => ({ ...outputs, battery })),
-          );
-          memory.onOutput(memory =>
-            setOutputs(outputs => ({ ...outputs, memory })),
-          );
-          weather.onOutput(weather =>
-            setOutputs(outputs => ({ ...outputs, weather })),
-          );
+          providers.onOutput(() => setOutput(providers.outputMap));
         }, []);
 
         return (
           <div className="app">
-            <div className="chip">CPU usage: {outputs.cpu.usage}</div>
+            <div className="chip">CPU usage: {output.cpu.usage}</div>
             <div className="chip">
-              Battery charge: {outputs.battery?.chargePercent}
+              Battery charge: {output.battery?.chargePercent}
             </div>
+            <div className="chip">Memory usage: {output.memory.usage}</div>
             <div className="chip">
-              Memory usage: {outputs.memory.usage}
-            </div>
-            <div className="chip">
-              Weather temp: {outputs.weather?.celsiusTemp}
+              Weather temp: {output.weather?.celsiusTemp}
             </div>
           </div>
         );
