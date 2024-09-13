@@ -10,7 +10,7 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent, LogicalSize, PhysicalSize
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -72,6 +72,7 @@ pub struct WindowPlacement {
   height: f64,
   x: f64,
   y: f64,
+  scale_factor: f64,
 }
 
 impl WindowFactory {
@@ -134,6 +135,16 @@ impl WindowFactory {
         )
         .into(),
       );
+           
+      let size: LogicalSize<f64> = LogicalSize::from_physical(
+        PhysicalSize::new(placement.width, placement.height),
+        placement.scale_factor,
+      );
+
+      let position: LogicalSize<f64> = LogicalSize::from_physical(
+        PhysicalSize::new(placement.x, placement.y),
+        placement.scale_factor,
+      );
 
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
@@ -142,8 +153,8 @@ impl WindowFactory {
         webview_url,
       )
       .title("Zebar")
-      .inner_size(placement.width, placement.height)
-      .position(placement.x, placement.y)
+      .inner_size(size.width, size.height)
+      .position(position.width, position.height)
       .focused(config.launch_options.focused)
       .skip_taskbar(!config.launch_options.shown_in_taskbar)
       .visible_on_all_workspaces(true)
@@ -264,6 +275,7 @@ impl WindowFactory {
             as f64,
           y: (anchor_y + placement.offset_y.to_px(monitor.height as i32))
             as f64,
+          scale_factor: monitor.scale_factor,
         };
 
         placements.push(placement);
