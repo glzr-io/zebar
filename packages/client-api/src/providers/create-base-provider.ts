@@ -37,7 +37,7 @@ export interface Provider<TConfig, TOutput> {
   stop(): Promise<void>;
 
   /**
-   * Listens for changes to the provider's value.
+   * Listens for outputs from the provider.
    *
    * @param callback - Callback to run when an output is emitted.
    */

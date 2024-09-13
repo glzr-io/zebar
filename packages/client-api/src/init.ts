@@ -27,10 +27,15 @@ export async function init(): Promise<ZebarContext> {
     // @ts-ignore - TODO
     return {
       openWindow: async (configPath: string) => {
+        // Ensure the config path ends with '.zebar.json'.
+        const filePath = configPath.endsWith('.zebar.json')
+          ? configPath
+          : `${configPath}.zebar.json`;
+
         const absolutePath = await join(
           windowState.configPath,
           '../',
-          configPath,
+          filePath,
         );
 
         return openWindow(absolutePath);

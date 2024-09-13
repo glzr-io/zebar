@@ -1,56 +1,72 @@
+import type { ZebarContext } from '~/zebar-context.model';
 import {
   createProvider,
   type ProviderConfig,
   type ProviderMap,
 } from './create-provider';
 
+/**
+ * Config for creating multiple provider instances at once.
+ *
+ * Keys are unique identifiers for the provider instance, values are their
+ * respective configs.
+ */
 export type ProviderGroupConfig = {
   [name: string]: ProviderConfig;
 };
 
-export type ProviderGroupOutputs<T extends ProviderGroupConfig> = {
-  [N in keyof T]: ProviderMap[T[N]['type']]['output'];
-};
-
-export type ProviderGroupErrors<T extends ProviderGroupConfig> = {
-  [N in keyof T]: ProviderMap[T[N]['type']]['error'];
-};
-
-export type ProviderGroupRaw<T extends ProviderGroupConfig> = {
-  [N in keyof T]: ProviderMap[T[N]['type']];
-};
-
 export type ProviderGroup<T extends ProviderGroupConfig> = {
-  outputs: ProviderGroupOutputs<T>;
-
-  errors: ProviderGroupErrors<T>;
+  /**
+   * A map of combined provider outputs. Each key corresponds to a provider
+   * name, and each value is the output of that provider.
+   */
+  outputMap: {
+    [TName in keyof T]: ProviderMap[T[TName]['type']]['output'];
+  };
 
   /**
-   * Whether the group has any errors.
+   * A map of combined provider errors. Each key corresponds to a provider
+   * name, and each value is the error of that provider.
+   */
+  errorMap: {
+    [TName in keyof T]: ProviderMap[T[TName]['type']]['error'];
+  };
+
+  /**
+   * Whether the latest emission from any provider in the group is an
+   * error.
    */
   hasErrors: boolean;
 
   /**
-   * Underlying providers for the group.
+   * Underlying providers in the group.
    */
-  raw: ProviderGroupRaw<T>;
+  raw: {
+    [TName in keyof T]: ProviderMap[T[TName]['type']];
+  };
 
   /**
    * Config for the provider group.
    */
-  config: T;
+  configMap: T;
 
   /**
-   * TODO
-   * @param callback TODO
+   * Listens for outputs from any provider in the group.
+   *
+   * @param callback - Callback to run when an output is emitted.
    */
-  onOutput: (callback: (outputs: ProviderGroupOutputs<T>) => void) => void;
+  onOutput: (
+    callback: (outputMap: ProviderGroup<T>['outputMap']) => void,
+  ) => void;
 
   /**
-   * TODO
-   * @param callback TODO
+   * Listens for errors from any provider in the group.
+   *
+   * @param callback - Callback to run when an error is emitted.
    */
-  onError: (callback: (errors: ProviderGroupErrors<T>) => void) => void;
+  onError: (
+    callback: (errorMap: ProviderGroup<T>['errorMap']) => void,
+  ) => void;
 
   /**
    * Restarts all providers in the group.
@@ -63,65 +79,52 @@ export type ProviderGroup<T extends ProviderGroupConfig> = {
   stopAll(): Promise<void>;
 };
 
-const xxx = await createProviderGroup({
-  glazewm: { type: 'glazewm' },
-});
-
-const config = xxx.config;
-const output = xxx.outputs.glazewm;
-const raw = xxx.raw.glazewm;
-
+/**
+ * Docs {@link ZebarContext.createProviderGroup}
+ */
 export async function createProviderGroup<T extends ProviderGroupConfig>(
-  config: T,
+  configMap: T,
 ): Promise<ProviderGroup<T>> {
   const outputListeners = new Set<
-    (outputs: ProviderGroupOutputs<T>) => void
+    (outputMap: ProviderGroup<T>['outputMap']) => void
   >();
 
   const errorListeners = new Set<
-    (errors: ProviderGroupErrors<T>) => void
+    (errorMap: ProviderGroup<T>['errorMap']) => void
   >();
 
-  const providerEntries = await Promise.all([
-    ...Object.entries(config).map(async ([key, value]) => {
-      return [key, await createProvider(value)] as const;
-    }),
-  ]);
+  const providerMap = await createProviderMap(configMap);
 
-  const providers = Object.fromEntries(
-    providerEntries,
-  ) as ProviderGroupRaw<T>;
+  let outputMap = {} as ProviderGroup<T>['outputMap'];
+  let errorMap = {} as ProviderGroup<T>['errorMap'];
 
-  let outputs = {} as ProviderGroupOutputs<T>;
-  let errors = {} as ProviderGroupErrors<T>;
-
-  for (const [name, provider] of providerEntries) {
-    outputs = { ...outputs, [name]: provider.output };
-    errors = { ...errors, [name]: provider.error };
+  for (const [name, provider] of Object.entries(providerMap)) {
+    outputMap = { ...outputMap, [name]: provider.output };
+    errorMap = { ...errorMap, [name]: provider.error };
 
     provider.onOutput(() => {
-      outputs = { ...outputs, [name]: provider.output };
-      outputListeners.forEach(listener => listener(outputs));
+      outputMap = { ...outputMap, [name]: provider.output };
+      outputListeners.forEach(listener => listener(outputMap));
     });
 
     provider.onError(() => {
-      errors = { ...errors, [name]: provider.error };
-      errorListeners.forEach(listener => listener(errors));
+      errorMap = { ...errorMap, [name]: provider.error };
+      errorListeners.forEach(listener => listener(errorMap));
     });
   }
 
   return {
-    get outputs() {
-      return outputs;
+    get outputMap() {
+      return outputMap;
     },
-    get errors() {
-      return errors;
+    get errorMap() {
+      return errorMap;
     },
     get hasErrors() {
-      return Object.keys(errors).length > 0;
+      return Object.keys(errorMap).length > 0;
     },
-    config,
-    raw: providers,
+    configMap,
+    raw: providerMap,
     onOutput: callback => {
       outputListeners.add(callback);
     },
@@ -130,7 +133,7 @@ export async function createProviderGroup<T extends ProviderGroupConfig>(
     },
     restartAll: async () => {
       await Promise.all(
-        providerEntries.map(([_, provider]) => provider.restart()),
+        Object.values(providerMap).map(provider => provider.restart()),
       );
     },
     stopAll: async () => {
@@ -138,8 +141,20 @@ export async function createProviderGroup<T extends ProviderGroupConfig>(
       errorListeners.clear();
 
       await Promise.all(
-        providerEntries.map(([_, provider]) => provider.stop()),
+        Object.values(providerMap).map(provider => provider.stop()),
       );
     },
   };
+}
+
+async function createProviderMap<T extends ProviderGroupConfig>(
+  configMap: T,
+) {
+  const providerEntries = await Promise.all([
+    ...Object.entries(configMap).map(async ([key, value]) => {
+      return [key, await createProvider(value)] as const;
+    }),
+  ]);
+
+  return Object.fromEntries(providerEntries) as ProviderGroup<T>['raw'];
 }

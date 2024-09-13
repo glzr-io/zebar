@@ -1,3 +1,4 @@
+import type { ZebarContext } from '~/zebar-context.model';
 import {
   createBatteryProvider,
   type BatteryProvider,
@@ -82,16 +83,7 @@ export type ProviderConfig = ProviderConfigMap[keyof ProviderConfigMap];
 export type ProviderOutput = ProviderMap[keyof ProviderMap]['output'];
 
 /**
- * Creates an instance of a provider.
- *
- * The provider will continue to output until its `stop` function is
- * called.
- *
- * Waits until the provider has emitted either its first output or first
- * error.
- *
- * @throws If the provider config is invalid. *Does not throw* if the
- * provider's first emission is an error.
+ * Docs {@link ZebarContext.createProvider}
  */
 export function createProvider<T extends ProviderConfig>(
   config: T,
