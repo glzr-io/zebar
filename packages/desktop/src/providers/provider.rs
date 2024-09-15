@@ -33,6 +33,11 @@ macro_rules! impl_interval_provider {
           std::time::Duration::from_millis(self.refresh_interval_ms()),
         );
 
+        // Skip missed ticks when the interval runs. This prevents a burst
+        // of backlogged ticks after a delay.
+        interval
+          .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
         loop {
           interval.tick().await;
 
