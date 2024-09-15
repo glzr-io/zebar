@@ -132,6 +132,10 @@ pub struct Config {
   _settings_change_rx: broadcast::Receiver<SettingsConfig>,
 
   pub settings_change_tx: broadcast::Sender<SettingsConfig>,
+
+  _window_configs_change_rx: broadcast::Receiver<Vec<WindowConfigEntry>>,
+
+  pub window_configs_change_tx: broadcast::Sender<Vec<WindowConfigEntry>>,
 }
 
 #[derive(Clone, Debug)]
@@ -166,7 +170,10 @@ impl Config {
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
     let window_configs = Self::read_window_configs(&config_dir)?;
+
     let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
+    let (window_configs_change_tx, _window_configs_change_rx) =
+      broadcast::channel(16);
 
     Ok(Self {
       app_handle: app_handle.clone(),
@@ -175,6 +182,8 @@ impl Config {
       window_configs: Arc::new(Mutex::new(window_configs)),
       _settings_change_rx,
       settings_change_tx,
+      _window_configs_change_rx,
+      window_configs_change_tx,
     })
   }
 
@@ -195,6 +204,7 @@ impl Config {
     }
 
     self.settings_change_tx.send(new_settings)?;
+    self.window_configs_change_tx.send(new_window_configs)?;
 
     Ok(())
   }

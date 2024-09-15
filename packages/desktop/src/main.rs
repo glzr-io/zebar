@@ -3,13 +3,13 @@
 #![feature(async_closure)]
 #![feature(iterator_try_collect)]
 
-use std::{env, sync::Arc, time::Duration};
+use std::{env, sync::Arc};
 
 use anyhow::Context;
 use clap::Parser;
-use tauri::{async_runtime::block_on, Manager};
-use tokio::{task, time::sleep};
-use tracing::{error, level_filters::LevelFilter};
+use tauri::{async_runtime::block_on, Manager, RunEvent};
+use tokio::task;
+use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
@@ -86,7 +86,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 
   tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-  tauri::Builder::default()
+  let app = tauri::Builder::default()
     .setup(move |app| {
       task::block_in_place(|| {
         block_on(async move {
@@ -106,8 +106,11 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           app.manage(monitor_state.clone());
 
           // Initialize `WindowFactory` in Tauri state.
-          let window_factory =
-            Arc::new(WindowFactory::new(app.handle(), monitor_state));
+          let window_factory = Arc::new(WindowFactory::new(
+            app.handle(),
+            config.clone(),
+            monitor_state,
+          ));
           app.manage(window_factory.clone());
 
           // If this is not the first instance of the app, this will emit
@@ -145,9 +148,14 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           .await?;
 
           // Add application icon to system tray.
-          let _ =
-            SysTray::new(app.handle(), config.clone(), window_factory)
-              .await?;
+          let tray = SysTray::new(
+            app.handle(),
+            config.clone(),
+            window_factory.clone(),
+          )
+          .await?;
+
+          listen_events(window_factory, config, tray);
 
           Ok(())
         })
@@ -161,9 +169,57 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       commands::set_always_on_top,
       commands::set_skip_taskbar
     ])
-    .run(tauri::generate_context!())?;
+    .build(tauri::generate_context!())?;
+
+  app.run(|_, event| {
+    if let RunEvent::ExitRequested { code, api, .. } = &event {
+      if code.is_none() {
+        // Keep the message loop running even if all windows are closed.
+        api.prevent_exit();
+      }
+    }
+  });
 
   Ok(())
+}
+
+fn listen_events(
+  window_factory: Arc<WindowFactory>,
+  config: Arc<Config>,
+  tray: Arc<SysTray>,
+) {
+  let mut window_open_rx = window_factory.open_tx.subscribe();
+  let mut window_close_rx = window_factory.close_tx.subscribe();
+  let mut settings_change_rx = config.settings_change_tx.subscribe();
+  let mut window_configs_change_rx =
+    config.window_configs_change_tx.subscribe();
+
+  task::spawn(async move {
+    loop {
+      let res = tokio::select! {
+        Ok(_) = window_open_rx.recv() => {
+          info!("Window opened.");
+          tray.refresh().await
+        },
+        Ok(_) = window_close_rx.recv() => {
+          info!("Window closed.");
+          tray.refresh().await
+        },
+        Ok(_) = settings_change_rx.recv() => {
+          info!("Settings changed.");
+          tray.refresh().await
+        },
+        Ok(_) = window_configs_change_rx.recv() => {
+          info!("Window configs changed.");
+          window_factory.relaunch_all().await
+        },
+      };
+
+      if let Err(err) = res {
+        error!("{:?}", err);
+      }
+    }
+  });
 }
 
 /// Setup single instance Tauri plugin.

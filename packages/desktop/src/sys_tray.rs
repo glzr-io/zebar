@@ -19,6 +19,7 @@ use crate::{
 #[derive(Debug, Clone)]
 enum MenuEvent {
   ShowConfigFolder,
+  ReloadConfigs,
   Exit,
   ToggleWindowConfig { enable: bool, path: PathBuf },
   ToggleStartupWindowConfig { enable: bool, path: PathBuf },
@@ -28,6 +29,7 @@ impl ToString for MenuEvent {
   fn to_string(&self) -> String {
     match self {
       MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
+      MenuEvent::ReloadConfigs => "reload_configs".to_string(),
       MenuEvent::Exit => "exit".to_string(),
       MenuEvent::ToggleWindowConfig { enable, path } => {
         format!(
@@ -55,6 +57,7 @@ impl FromStr for MenuEvent {
 
     match parts.as_slice() {
       ["show", "config", "folder"] => Ok(Self::ShowConfigFolder),
+      ["reload", "configs"] => Ok(Self::ReloadConfigs),
       ["exit"] => Ok(Self::Exit),
       ["toggle", "window", "config", enable @ ("true" | "false"), path @ ..] => {
         Ok(Self::ToggleWindowConfig {
@@ -97,10 +100,7 @@ impl SysTray {
 
     sys_tray.tray_icon = Some(sys_tray.create_tray_icon().await?);
 
-    let sys_tray = Arc::new(sys_tray);
-    sys_tray.clone().start_listener();
-
-    Ok(sys_tray)
+    Ok(Arc::new(sys_tray))
   }
 
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {
@@ -142,43 +142,15 @@ impl SysTray {
     Ok(tray_icon)
   }
 
-  fn start_listener(self: Arc<Self>) {
-    let mut window_open_rx = self.window_factory.open_tx.subscribe();
-    let mut window_close_rx = self.window_factory.close_tx.subscribe();
-    let mut settings_change_rx =
-      self.config.settings_change_tx.subscribe();
+  pub async fn refresh(&self) -> anyhow::Result<()> {
+    info!("Updating system tray menu.");
 
-    tokio::spawn(async move {
-      loop {
-        let event = tokio::select! {
-          Ok(_) = window_open_rx.recv() => "Window open",
-          Ok(_) = window_close_rx.recv() => "Window close",
-          Ok(_) = settings_change_rx.recv() => "Settings change",
-        };
+    if let Some(tray_icon) = self.tray_icon.as_ref() {
+      let tray_menu = self.create_tray_menu().await?;
+      tray_icon.set_menu(Some(tray_menu))?;
+    }
 
-        info!("{} received in system tray. Updating menu.", event);
-
-        // Drain receiver channels if multiple events are queued up.
-        window_open_rx = window_open_rx.resubscribe();
-        window_close_rx = window_close_rx.resubscribe();
-        settings_change_rx = settings_change_rx.resubscribe();
-
-        if let Some(tray_icon) = self.tray_icon.as_ref() {
-          if let Err(err) =
-            self.create_tray_menu().await.and_then(|menu| {
-              tray_icon
-                .set_menu(Some(menu))
-                .context("Failed to set tray menu.")
-            })
-          {
-            error!(
-              "Failed to update tray menu after {} event: {:?}",
-              event, err
-            );
-          }
-        }
-      }
-    });
+    Ok(())
   }
 
   /// Returns the image to use for the system tray icon.
@@ -209,6 +181,7 @@ impl SysTray {
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
       .item(&configs_menu)
       .text(MenuEvent::ShowConfigFolder, "Show config folder")
+      .text(MenuEvent::ReloadConfigs, "Reload configs")
       .separator();
 
     // Add submenus for currently active windows.
@@ -250,6 +223,11 @@ impl SysTray {
         config
           .open_config_dir()
           .context("Failed to open config folder.")
+      }
+      MenuEvent::ReloadConfigs => {
+        info!("Opening config folder from system tray.");
+
+        config.reload().await
       }
       MenuEvent::Exit => {
         info!("Exiting through system tray.");

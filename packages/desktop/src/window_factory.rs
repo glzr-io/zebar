@@ -21,7 +21,7 @@ use tracing::{error, info};
 
 use crate::{
   common::{PathExt, WindowExt},
-  config::{WindowAnchor, WindowConfig, WindowConfigEntry},
+  config::{Config, WindowAnchor, WindowConfig, WindowConfigEntry},
   monitor_state::MonitorState,
 };
 
@@ -34,11 +34,16 @@ pub struct WindowFactory {
 
   pub close_tx: broadcast::Sender<WindowState>,
 
+  /// Reference to `Config`.
+  config: Arc<Config>,
+
   _open_rx: broadcast::Receiver<WindowState>,
 
   pub open_tx: broadcast::Sender<WindowState>,
 
-  /// Reference to `MonitorState` for window positioning.
+  /// Reference to `MonitorState`.
+  ///
+  /// Used for window positioning.
   monitor_state: Arc<MonitorState>,
 
   /// Running total of windows created.
@@ -72,6 +77,7 @@ impl WindowFactory {
   /// Creates a new `WindowFactory` instance.
   pub fn new(
     app_handle: &AppHandle,
+    config: Arc<Config>,
     monitor_state: Arc<MonitorState>,
   ) -> Self {
     let (open_tx, _open_rx) = broadcast::channel(16);
@@ -81,6 +87,7 @@ impl WindowFactory {
       app_handle: app_handle.clone(),
       _close_rx,
       close_tx,
+      config,
       _open_rx,
       open_tx,
       monitor_state,
@@ -308,6 +315,25 @@ impl WindowFactory {
 
     for window_state in found_window_states {
       self.close_by_id(&window_state.window_id)?;
+    }
+
+    Ok(())
+  }
+
+  /// Relaunches all currently open windows.
+  pub async fn relaunch_all(&self) -> anyhow::Result<()> {
+    let window_states = self.states_by_config_path().await;
+
+    for (config_path, _) in window_states {
+      let _ = self.close_by_path(&config_path).await;
+
+      let window_config = self
+        .config
+        .window_config_by_path(&config_path)
+        .await?
+        .context("Window config not found.")?;
+
+      self.open(window_config).await?;
     }
 
     Ok(())
