@@ -109,7 +109,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           let window_factory = Arc::new(WindowFactory::new(
             app.handle(),
             config.clone(),
-            monitor_state,
+            monitor_state.clone(),
           ));
           app.manage(window_factory.clone());
 
@@ -155,7 +155,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           )
           .await?;
 
-          listen_events(window_factory, config, tray);
+          listen_events(config, monitor_state, window_factory, tray);
 
           Ok(())
         })
@@ -184,13 +184,15 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 }
 
 fn listen_events(
-  window_factory: Arc<WindowFactory>,
   config: Arc<Config>,
+  monitor_state: Arc<MonitorState>,
+  window_factory: Arc<WindowFactory>,
   tray: Arc<SysTray>,
 ) {
   let mut window_open_rx = window_factory.open_tx.subscribe();
   let mut window_close_rx = window_factory.close_tx.subscribe();
   let mut settings_change_rx = config.settings_change_tx.subscribe();
+  let mut monitors_change_rx = monitor_state.change_tx.subscribe();
   let mut window_configs_change_rx =
     config.window_configs_change_tx.subscribe();
 
@@ -208,6 +210,10 @@ fn listen_events(
         Ok(_) = settings_change_rx.recv() => {
           info!("Settings changed.");
           tray.refresh().await
+        },
+        Ok(_) = monitors_change_rx.recv() => {
+          info!("Monitors changed.");
+          window_factory.relaunch_all().await
         },
         Ok(_) = window_configs_change_rx.recv() => {
           info!("Window configs changed.");

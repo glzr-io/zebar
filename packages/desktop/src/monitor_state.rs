@@ -1,5 +1,12 @@
+use std::sync::Arc;
+
 use anyhow::bail;
 use tauri::AppHandle;
+use tokio::{
+  sync::{broadcast, Mutex},
+  task,
+};
+use tracing::info;
 
 use crate::{cli::OutputMonitorsArgs, config::MonitorSelection};
 
@@ -7,10 +14,15 @@ pub struct MonitorState {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
 
+  _change_rx: broadcast::Receiver<Vec<Monitor>>,
+
+  pub change_tx: broadcast::Sender<Vec<Monitor>>,
+
   /// Available monitors sorted from left-to-right and top-to-bottom.
-  monitors: Vec<Monitor>,
+  monitors: Arc<Mutex<Vec<Monitor>>>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Monitor {
   pub name: Option<String>,
   pub is_primary: bool,
@@ -24,15 +36,55 @@ pub struct Monitor {
 impl MonitorState {
   /// Creates a new `MonitorState` instance.
   pub fn new(app_handle: &AppHandle) -> Self {
+    let (change_tx, _change_rx) = broadcast::channel(16);
+
+    let monitors =
+      Arc::new(Mutex::new(Self::available_monitors(app_handle)));
+
+    Self::listen_changes(
+      app_handle.clone(),
+      monitors.clone(),
+      change_tx.clone(),
+    );
+
     Self {
       app_handle: app_handle.clone(),
-      monitors: Self::monitors(app_handle),
+      monitors,
+      _change_rx,
+      change_tx,
     }
   }
 
-  /// Returns a vector of available monitors sorted from left-to-right and
+  /// Listens for display setting changes.
+  ///
+  /// Updates monitor state on scaling changes, monitor connections, and
+  /// monitor disconnections. Does not update on working area changes.
+  fn listen_changes(
+    app_handle: AppHandle,
+    monitors: Arc<Mutex<Vec<Monitor>>>,
+    change_tx: broadcast::Sender<Vec<Monitor>>,
+  ) {
+    task::spawn(async move {
+      loop {
+        let new_monitors = Self::available_monitors(&app_handle);
+        let mut monitors = monitors.lock().await;
+
+        if *monitors != new_monitors {
+          info!("Detected change in monitors.");
+          let _ = change_tx.send(new_monitors.clone());
+          *monitors = new_monitors;
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+      }
+    });
+  }
+
+  /// Gets available monitors on the system.
+  ///
+  /// Returns a vector of `Monitor` instances sorted from left-to-right and
   /// top-to-bottom.
-  fn monitors(app_handle: &AppHandle) -> Vec<Monitor> {
+  fn available_monitors(app_handle: &AppHandle) -> Vec<Monitor> {
     let primary_monitor = app_handle.primary_monitor().unwrap_or(None);
 
     let mut monitors = app_handle
@@ -73,13 +125,15 @@ impl MonitorState {
     &self,
     args: OutputMonitorsArgs,
   ) -> anyhow::Result<String> {
-    if self.monitors.len() == 0 {
+    let monitors = self.monitors.try_lock()?;
+
+    if monitors.len() == 0 {
       bail!("No monitors found")
     }
 
     let mut monitors_str = String::new();
 
-    for monitor in &self.monitors {
+    for monitor in monitors.iter() {
       monitors_str += &format!(
       "MONITOR_NAME=\"{}\" MONITOR_X=\"{}\" MONITOR_Y=\"{}\" MONITOR_WIDTH=\"{}\" MONITOR_HEIGHT=\"{}\" MONITOR_SCALE_FACTOR=\"{}\"",
       monitor.name.clone().unwrap_or("".into()),
@@ -99,28 +153,27 @@ impl MonitorState {
     Ok(monitors_str)
   }
 
-  pub fn monitors_by_selection(
+  pub async fn monitors_by_selection(
     &self,
     monitor_selection: &MonitorSelection,
-  ) -> Vec<&Monitor> {
+  ) -> Vec<Monitor> {
+    let monitors = self.monitors.lock().await.clone();
+
     match monitor_selection {
-      MonitorSelection::All => self.monitors.iter().collect(),
-      MonitorSelection::Primary => self
-        .monitors
-        .iter()
+      MonitorSelection::All => monitors,
+      MonitorSelection::Primary => monitors
+        .into_iter()
         .filter(|monitor| monitor.is_primary)
         .collect(),
-      MonitorSelection::Secondary => self
-        .monitors
-        .iter()
+      MonitorSelection::Secondary => monitors
+        .into_iter()
         .filter(|monitor| !monitor.is_primary)
         .collect(),
       MonitorSelection::Index(index) => {
-        self.monitors.get(*index).into_iter().collect()
+        monitors.get(*index).cloned().into_iter().collect()
       }
-      MonitorSelection::Name(name) => self
-        .monitors
-        .iter()
+      MonitorSelection::Name(name) => monitors
+        .into_iter()
         .filter(|monitor| monitor.name.as_deref() == Some(name))
         .collect(),
     }

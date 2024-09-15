@@ -107,7 +107,7 @@ impl WindowFactory {
       html_path,
     } = &config_entry;
 
-    for (size, position) in self.window_placements(config) {
+    for (size, position) in self.window_placements(config).await {
       // Use running window count as a unique ID for the window.
       let new_count =
         self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
@@ -223,7 +223,7 @@ impl WindowFactory {
   }
 
   /// Returns coordinates for window placement based on the given config.
-  fn window_placements(
+  async fn window_placements(
     &self,
     config: &WindowConfig,
   ) -> Vec<(LogicalSize<f64>, LogicalPosition<f64>)> {
@@ -232,7 +232,8 @@ impl WindowFactory {
     for placement in config.launch_options.placements.iter() {
       let monitors = self
         .monitor_state
-        .monitors_by_selection(&placement.monitor_selection);
+        .monitors_by_selection(&placement.monitor_selection)
+        .await;
 
       for monitor in monitors {
         let (anchor_x, anchor_y) = match placement.anchor {
