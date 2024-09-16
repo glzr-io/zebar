@@ -74,8 +74,16 @@ export enum InterfaceType {
 }
 
 export interface NetworkTraffic {
-  received: number | null;
-  transmitted: number | null;
+  received: NetworkTrafficMeasure;
+  transmitted: NetworkTrafficMeasure;
+}
+
+export interface NetworkTrafficMeasure {
+  bytes: number;
+  siValue: number;
+  siUnit: string;
+  iecValue: number;
+  iecUnit: string;
 }
 
 export async function createNetworkProvider(

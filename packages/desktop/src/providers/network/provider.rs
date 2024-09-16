@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::bail;
+use anyhow::Context;
 use netdev::interface::get_interfaces;
 use sysinfo::Networks;
 use tokio::sync::Mutex;
@@ -8,9 +8,13 @@ use tokio::sync::Mutex;
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
   InterfaceType, NetworkGateway, NetworkInterface, NetworkOutput,
-  NetworkProviderConfig, NetworkTraffic,
+  NetworkProviderConfig, NetworkTraffic, NetworkTrafficMeasure,
 };
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  common::{to_iec_bytes, to_si_bytes},
+  impl_interval_provider,
+  providers::ProviderOutput,
+};
 
 pub struct NetworkProvider {
   config: NetworkProviderConfig,
@@ -36,6 +40,14 @@ impl NetworkProvider {
     let interfaces = get_interfaces();
     let default_interface = netdev::get_default_interface().ok();
 
+    let received_per_sec = Self::total_bytes_received(&netinfo)
+      / self.config.refresh_interval
+      * 1000;
+
+    let transmitted_per_sec = Self::total_bytes_transmitted(&netinfo)
+      / self.config.refresh_interval
+      * 1000;
+
     Ok(ProviderOutput::Network(NetworkOutput {
       default_interface: default_interface
         .as_ref()
@@ -52,14 +64,27 @@ impl NetworkProvider {
         .map(Self::transform_interface)
         .collect(),
       traffic: NetworkTraffic {
-        received: Self::total_bytes_received(&netinfo)
-          / self.config.refresh_interval
-          * 1000,
-        transmitted: Self::total_bytes_transmitted(&netinfo)
-          / self.config.refresh_interval
-          * 1000,
+        received: Self::to_network_traffic_measure(received_per_sec)?,
+        transmitted: Self::to_network_traffic_measure(
+          transmitted_per_sec,
+        )?,
       },
     }))
+  }
+
+  fn to_network_traffic_measure(
+    bytes: u64,
+  ) -> anyhow::Result<NetworkTrafficMeasure> {
+    let (si_value, si_unit) = to_si_bytes(bytes as f64);
+    let (iec_value, iec_unit) = to_iec_bytes(bytes as f64);
+
+    Ok(NetworkTrafficMeasure {
+      bytes,
+      si_value,
+      si_unit,
+      iec_value,
+      iec_unit,
+    })
   }
 
   /// Gets the total network (down) usage.
@@ -86,30 +111,6 @@ impl NetworkProvider {
     }
 
     transmitted_total.iter().sum()
-  }
-
-  fn to_pretty_bytes(bytes: u64) -> anyhow::Result<String> {
-    let magnitude = match bytes {
-      0 => 0,
-      _ => bytes.ilog(1024),
-    };
-
-    let unit = match magnitude {
-      0 => "B",
-      1 => "KiB",
-      2 => "MiB",
-      3 => "GiB",
-      4 => "TiB",
-      5 => "PiB",
-      6 => "EiB",
-      7 => "ZiB",
-      8 => "YiB",
-      _ => bail!("Unknown data unit"),
-    };
-
-    let result = bytes / ((1u64) << (magnitude * 10));
-
-    Ok(format!("{result:.1} {unit}").into())
   }
 
   /// Transforms a `netdev::Interface` into a `NetworkInterface`.
