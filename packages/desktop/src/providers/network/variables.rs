@@ -19,6 +19,42 @@ pub struct NetworkTraffic {
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct NetworkTrafficMeasure {
+  pub bytes: u64,
+  pub si_value: u64,
+  pub si_unit: SiDataUnit,
+  pub iec_value: u64,
+  pub iec_unit: IecDataUnit,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub enum SiDataUnit {
+  B,
+  KB,
+  MB,
+  GB,
+  TB,
+  PB,
+  EB,
+  ZB,
+  YB,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub enum IecDataUnit {
+  B,
+  KiB,
+  MiB,
+  GiB,
+  TiB,
+  PiB,
+  EiB,
+  ZiB,
+  YiB,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkInterface {
   pub name: String,
   pub friendly_name: Option<String>,

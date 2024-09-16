@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::bail;
 use netdev::interface::get_interfaces;
 use sysinfo::Networks;
 use tokio::sync::Mutex;
@@ -33,7 +34,6 @@ impl NetworkProvider {
     netinfo.refresh();
 
     let interfaces = get_interfaces();
-
     let default_interface = netdev::get_default_interface().ok();
 
     Ok(ProviderOutput::Network(NetworkOutput {
@@ -52,18 +52,67 @@ impl NetworkProvider {
         .map(Self::transform_interface)
         .collect(),
       traffic: NetworkTraffic {
-        received: to_bytes_per_seconds(
-          get_network_down(&netinfo),
-          self.config.refresh_interval,
-        ),
-        transmitted: to_bytes_per_seconds(
-          get_network_up(&netinfo),
-          self.config.refresh_interval,
-        ),
+        received: Self::total_bytes_received(&netinfo)
+          / self.config.refresh_interval
+          * 1000,
+        transmitted: Self::total_bytes_transmitted(&netinfo)
+          / self.config.refresh_interval
+          * 1000,
       },
     }))
   }
 
+  /// Gets the total network (down) usage.
+  ///
+  /// Returns the total bytes received by every network interface.
+  fn total_bytes_received(networks: &sysinfo::Networks) -> u64 {
+    let mut received_total: Vec<u64> = Vec::new();
+
+    for (_interface_name, network) in networks {
+      received_total.push(network.received());
+    }
+
+    received_total.iter().sum()
+  }
+
+  /// Gets the total network (up) usage.
+  ///
+  /// Returns the total bytes transmitted by every network interface.
+  fn total_bytes_transmitted(networks: &sysinfo::Networks) -> u64 {
+    let mut transmitted_total: Vec<u64> = Vec::new();
+
+    for (_interface_name, network) in networks {
+      transmitted_total.push(network.transmitted());
+    }
+
+    transmitted_total.iter().sum()
+  }
+
+  fn to_pretty_bytes(bytes: u64) -> anyhow::Result<String> {
+    let magnitude = match bytes {
+      0 => 0,
+      _ => bytes.ilog(1024),
+    };
+
+    let unit = match magnitude {
+      0 => "B",
+      1 => "KiB",
+      2 => "MiB",
+      3 => "GiB",
+      4 => "TiB",
+      5 => "PiB",
+      6 => "EiB",
+      7 => "ZiB",
+      8 => "YiB",
+      _ => bail!("Unknown data unit"),
+    };
+
+    let result = bytes / ((1u64) << (magnitude * 10));
+
+    Ok(format!("{result:.1} {unit}").into())
+  }
+
+  /// Transforms a `netdev::Interface` into a `NetworkInterface`.
   fn transform_interface(
     interface: &netdev::Interface,
   ) -> NetworkInterface {
@@ -94,6 +143,7 @@ impl NetworkProvider {
     }
   }
 
+  /// Transforms a `netdev::NetworkDevice` into a `NetworkGateway`.
   fn transform_gateway(
     gateway: &netdev::NetworkDevice,
     wifi_hotspot: WifiHotstop,
@@ -117,29 +167,3 @@ impl NetworkProvider {
 }
 
 impl_interval_provider!(NetworkProvider);
-
-/// Gets the total network (down) usage.
-fn get_network_down(req_net: &sysinfo::Networks) -> u64 {
-  // Get the total bytes recieved by every network interface
-  let mut received_total: Vec<u64> = Vec::new();
-  for (_interface_name, network) in req_net {
-    received_total.push(network.received() as u64);
-  }
-
-  received_total.iter().sum()
-}
-
-/// Gets the total network (up) usage.
-fn get_network_up(req_net: &sysinfo::Networks) -> u64 {
-  // Get the total bytes recieved by every network interface
-  let mut transmitted_total: Vec<u64> = Vec::new();
-  for (_interface_name, network) in req_net {
-    transmitted_total.push(network.transmitted() as u64);
-  }
-
-  transmitted_total.iter().sum()
-}
-
-fn to_bytes_per_seconds(input_in_bytes: u64, timespan_in_ms: u64) -> u64 {
-  input_in_bytes / (timespan_in_ms / 1000)
-}
