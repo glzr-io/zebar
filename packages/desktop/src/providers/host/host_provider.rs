@@ -1,7 +1,24 @@
+use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
-use super::{HostOutput, HostProviderConfig};
 use crate::{impl_interval_provider, providers::ProviderOutput};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct HostProviderConfig {
+  pub refresh_interval: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HostOutput {
+  pub hostname: Option<String>,
+  pub os_name: Option<String>,
+  pub os_version: Option<String>,
+  pub friendly_os_version: Option<String>,
+  pub boot_time: u64,
+  pub uptime: u64,
+}
 
 pub struct HostProvider {
   config: HostProviderConfig,

@@ -1,4 +1,5 @@
 use anyhow::bail;
+use serde::{Deserialize, Serialize};
 use windows::Win32::{
   Globalization::{LCIDToLocaleName, LOCALE_ALLOW_NEUTRAL_NAMES},
   System::SystemServices::LOCALE_NAME_MAX_LENGTH,
@@ -8,8 +9,19 @@ use windows::Win32::{
   },
 };
 
-use super::{KeyboardOutput, KeyboardProviderConfig};
 use crate::{impl_interval_provider, providers::ProviderOutput};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyboardProviderConfig {
+  pub refresh_interval: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyboardOutput {
+  pub layout: String,
+}
 
 pub struct KeyboardProvider {
   config: KeyboardProviderConfig,

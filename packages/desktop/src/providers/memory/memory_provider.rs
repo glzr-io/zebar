@@ -1,10 +1,28 @@
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
 use sysinfo::System;
 use tokio::sync::Mutex;
 
-use super::{MemoryOutput, MemoryProviderConfig};
 use crate::{impl_interval_provider, providers::ProviderOutput};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryProviderConfig {
+  pub refresh_interval: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryOutput {
+  pub usage: f32,
+  pub free_memory: u64,
+  pub used_memory: u64,
+  pub total_memory: u64,
+  pub free_swap: u64,
+  pub used_swap: u64,
+  pub total_swap: u64,
+}
 
 pub struct MemoryProvider {
   config: MemoryProviderConfig,

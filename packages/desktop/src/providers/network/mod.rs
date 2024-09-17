@@ -1,8 +1,6 @@
-mod config;
-mod provider;
-mod variables;
+mod netdev_res;
+mod network_provider;
 mod wifi_hotspot;
 
-pub use config::*;
-pub use provider::*;
-pub use variables::*;
+pub use netdev_res::*;
+pub use network_provider::*;

@@ -1,8 +1,25 @@
 use anyhow::Context;
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 
-use super::{ipinfo_res::IpinfoRes, IpOutput, IpProviderConfig};
+use super::ipinfo_res::IpinfoRes;
 use crate::{impl_interval_provider, providers::ProviderOutput};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct IpProviderConfig {
+  pub refresh_interval: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpOutput {
+  pub address: String,
+  pub approx_city: String,
+  pub approx_country: String,
+  pub approx_latitude: f32,
+  pub approx_longitude: f32,
+}
 
 pub struct IpProvider {
   config: IpProviderConfig,

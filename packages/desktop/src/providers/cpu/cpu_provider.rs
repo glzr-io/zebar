@@ -1,10 +1,26 @@
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
 use sysinfo::System;
 use tokio::sync::Mutex;
 
-use super::{CpuOutput, CpuProviderConfig};
 use crate::{impl_interval_provider, providers::ProviderOutput};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CpuProviderConfig {
+  pub refresh_interval: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CpuOutput {
+  pub frequency: u64,
+  pub usage: f32,
+  pub logical_core_count: usize,
+  pub physical_core_count: usize,
+  pub vendor: String,
+}
 
 pub struct CpuProvider {
   config: CpuProviderConfig,

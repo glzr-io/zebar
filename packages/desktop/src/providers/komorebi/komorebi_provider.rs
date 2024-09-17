@@ -8,17 +8,28 @@ use async_trait::async_trait;
 use komorebi_client::{
   Container, Monitor, SocketMessage, Window, Workspace,
 };
+use serde::{Deserialize, Serialize};
 use tokio::{sync::mpsc::Sender, time};
 use tracing::debug;
 
 use super::{
   KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
-  KomorebiOutput, KomorebiProviderConfig, KomorebiWindow,
-  KomorebiWorkspace,
+  KomorebiWindow, KomorebiWorkspace,
 };
 use crate::providers::{Provider, ProviderOutput, ProviderResult};
 
 const SOCKET_NAME: &str = "zebar.sock";
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct KomorebiProviderConfig {}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KomorebiOutput {
+  pub all_monitors: Vec<KomorebiMonitor>,
+  pub focused_monitor_index: usize,
+}
 
 pub struct KomorebiProvider {
   _config: KomorebiProviderConfig,
