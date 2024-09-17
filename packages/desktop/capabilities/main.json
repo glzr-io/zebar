@@ -24,8 +24,6 @@
     "window:allow-set-always-on-top",
     "window:allow-set-resizable",
     "window:allow-set-position",
-    "window:allow-set-size",
-    "shell:allow-open",
-    "tray:default"
+    "window:allow-set-size"
   ]
 }

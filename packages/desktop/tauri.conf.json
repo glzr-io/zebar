@@ -7,11 +7,6 @@
   "productName": "Zebar",
   "version": "0.0.0",
   "identifier": "com.glzr.zebar",
-  "plugins": {
-    "shell": {
-      "open": true
-    }
-  },
   "bundle": {
     "active": true,
     "icon": [
