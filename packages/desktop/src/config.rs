@@ -164,9 +164,7 @@ impl Config {
         .path()
         .resolve(".glzr/zebar", BaseDirectory::Home)
         .context("Unable to get home directory.")?,
-    }
-    .to_absolute()?
-    .into();
+    };
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
     let window_configs = Self::read_window_configs(&config_dir)?;
@@ -177,7 +175,7 @@ impl Config {
 
     Ok(Self {
       app_handle: app_handle.clone(),
-      config_dir,
+      config_dir: config_dir.to_absolute()?,
       settings: Arc::new(Mutex::new(settings)),
       window_configs: Arc::new(Mutex::new(window_configs)),
       _settings_change_rx,
