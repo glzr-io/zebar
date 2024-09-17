@@ -28,4 +28,4 @@ impl HostProvider {
   }
 }
 
-impl_interval_provider!(HostProvider);
+impl_interval_provider!(HostProvider, false);

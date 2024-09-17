@@ -52,7 +52,7 @@ And in the Zebar config (if using the default generated one), replace the GlazeW
           height: 30px;
           color: #ffffffe6;
           border: none;
-          border-radius: 2px;         
+          border-radius: 2px;
         }
 
         .workspace.active {
@@ -453,6 +453,20 @@ Self provider doesn't take any config options.
 | `rawConfig`    | Unparsed config for this element.                    | `unknown`                                       | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `parsedConfig` | Parsed config for this element.                      | `WindowConfig \| GroupConfig \| TemplateConfig` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `globalConfig` | Global user config.                                  | `GlobalConfig`                                  | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+### Keyboard (Windows only)
+
+### Provider config
+
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+
+### Variables
+
+| Variable      | Description                           | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`    | Current layout, for example 'en-US' | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24">
 
 ## Util
 

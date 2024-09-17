@@ -100,4 +100,4 @@ impl WeatherProvider {
   }
 }
 
-impl_interval_provider!(WeatherProvider);
+impl_interval_provider!(WeatherProvider, true);

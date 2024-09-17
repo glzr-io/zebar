@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CpuOutput {
   pub frequency: u64,

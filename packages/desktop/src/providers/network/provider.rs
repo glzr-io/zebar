@@ -167,4 +167,4 @@ impl NetworkProvider {
   }
 }
 
-impl_interval_provider!(NetworkProvider);
+impl_interval_provider!(NetworkProvider, true);

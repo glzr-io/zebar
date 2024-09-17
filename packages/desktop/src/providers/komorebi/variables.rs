@@ -1,14 +1,14 @@
 use komorebi_client::{Axis, DefaultLayout, Layout, Rect};
 use serde::Serialize;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiOutput {
   pub all_monitors: Vec<KomorebiMonitor>,
   pub focused_monitor_index: usize,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiMonitor {
   pub id: isize,
@@ -21,7 +21,7 @@ pub struct KomorebiMonitor {
   pub workspaces: Vec<KomorebiWorkspace>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiWorkspace {
   pub container_padding: Option<i32>,
@@ -37,14 +37,14 @@ pub struct KomorebiWorkspace {
   pub workspace_padding: Option<i32>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiContainer {
   pub id: String,
   pub windows: Vec<KomorebiWindow>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiWindow {
   pub class: Option<String>,
@@ -53,7 +53,7 @@ pub struct KomorebiWindow {
   pub title: Option<String>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KomorebiLayout {
   Bsp,
@@ -88,7 +88,7 @@ impl From<Layout> for KomorebiLayout {
   }
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KomorebiLayoutFlip {
   Horizontal,

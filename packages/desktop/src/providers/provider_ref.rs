@@ -10,14 +10,14 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-#[cfg(windows)]
-use super::komorebi::KomorebiProvider;
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
   ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
   weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
   SharedProviderState,
 };
+#[cfg(windows)]
+use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
 
 /// Reference to an active provider.
 pub struct ProviderRef {
@@ -36,7 +36,7 @@ pub struct ProviderRef {
 ///
 /// This is used instead of a normal `Result` type in order to serialize it
 /// in a nicer way.
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ProviderResult {
   Output(ProviderOutput),
@@ -182,6 +182,10 @@ impl ProviderRef {
       )),
       ProviderConfig::Weather(config) => {
         Box::new(WeatherProvider::new(config))
+      }
+      #[cfg(windows)]
+      ProviderConfig::Keyboard(config) => {
+        Box::new(KeyboardProvider::new(config))
       }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),

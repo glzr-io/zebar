@@ -1,13 +1,13 @@
 use serde::Serialize;
 
-#[cfg(windows)]
-use super::komorebi::KomorebiOutput;
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, host::HostOutput, ip::IpOutput,
   memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
 };
+#[cfg(windows)]
+use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum ProviderOutput {
   Battery(BatteryOutput),
@@ -19,4 +19,6 @@ pub enum ProviderOutput {
   Memory(MemoryOutput),
   Network(NetworkOutput),
   Weather(WeatherOutput),
+  #[cfg(windows)]
+  Keyboard(KeyboardOutput),
 }

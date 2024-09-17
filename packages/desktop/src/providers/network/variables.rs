@@ -1,7 +1,7 @@
 use netdev::interface::InterfaceType as NdInterfaceType;
 use serde::Serialize;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkOutput {
   pub default_interface: Option<NetworkInterface>,
@@ -10,14 +10,14 @@ pub struct NetworkOutput {
   pub traffic: NetworkTraffic,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkTraffic {
   pub received: NetworkTrafficMeasure,
   pub transmitted: NetworkTrafficMeasure,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkTrafficMeasure {
   pub bytes: u64,
@@ -27,7 +27,7 @@ pub struct NetworkTrafficMeasure {
   pub iec_unit: String,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkInterface {
   pub name: String,
@@ -44,7 +44,7 @@ pub struct NetworkInterface {
   pub is_default: bool,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkGateway {
   pub mac_address: String,
@@ -54,7 +54,7 @@ pub struct NetworkGateway {
   pub signal_strength: Option<u32>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InterfaceType {
   Unknown,

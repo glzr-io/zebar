@@ -49,6 +49,11 @@ import {
   type WeatherProvider,
   type WeatherProviderConfig,
 } from './weather/create-weather-provider';
+import {
+  createKeyboardProvider,
+  type KeyboardProvider,
+  type KeyboardProviderConfig,
+} from './keyboard/create-keyboard-provider';
 
 export interface ProviderConfigMap {
   battery: BatteryProviderConfig;
@@ -61,6 +66,7 @@ export interface ProviderConfigMap {
   memory: MemoryProviderConfig;
   network: NetworkProviderConfig;
   weather: WeatherProviderConfig;
+  keyboard: KeyboardProviderConfig;
 }
 
 export interface ProviderMap {
@@ -74,6 +80,7 @@ export interface ProviderMap {
   memory: MemoryProvider;
   network: NetworkProvider;
   weather: WeatherProvider;
+  keyboard: KeyboardProvider;
 }
 
 export type ProviderType = keyof ProviderConfigMap;
@@ -109,6 +116,8 @@ export function createProvider<T extends ProviderConfig>(
       return createNetworkProvider(config) as any;
     case 'weather':
       return createWeatherProvider(config) as any;
+    case 'keyboard':
+      return createKeyboardProvider(config) as any;
     default:
       throw new Error('Not a supported provider type.');
   }

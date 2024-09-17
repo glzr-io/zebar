@@ -48,4 +48,4 @@ impl BatteryProvider {
   }
 }
 
-impl_interval_provider!(BatteryProvider);
+impl_interval_provider!(BatteryProvider, true);

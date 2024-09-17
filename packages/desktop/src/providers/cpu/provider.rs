@@ -39,4 +39,4 @@ impl CpuProvider {
   }
 }
 
-impl_interval_provider!(CpuProvider);
+impl_interval_provider!(CpuProvider, true);

@@ -4,6 +4,8 @@ mod cpu;
 mod host;
 mod ip;
 #[cfg(windows)]
+mod keyboard;
+#[cfg(windows)]
 mod komorebi;
 mod memory;
 mod network;
