@@ -1,17 +1,13 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use sysinfo::System;
-use tokio::{sync::Mutex, task::AbortHandle};
+use tokio::sync::Mutex;
 
-use super::{MemoryProviderConfig, MemoryVariables};
-use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
-};
+use super::{MemoryOutput, MemoryProviderConfig};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct MemoryProvider {
-  pub config: Arc<MemoryProviderConfig>,
-  abort_handle: Option<AbortHandle>,
+  config: MemoryProviderConfig,
   sysinfo: Arc<Mutex<System>>,
 }
 
@@ -20,47 +16,22 @@ impl MemoryProvider {
     config: MemoryProviderConfig,
     sysinfo: Arc<Mutex<System>>,
   ) -> MemoryProvider {
-    MemoryProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      sysinfo,
-    }
-  }
-}
-
-#[async_trait]
-impl IntervalProvider for MemoryProvider {
-  type Config = MemoryProviderConfig;
-  type State = Mutex<System>;
-
-  fn config(&self) -> Arc<MemoryProviderConfig> {
-    self.config.clone()
+    MemoryProvider { config, sysinfo }
   }
 
-  fn state(&self) -> Arc<Mutex<System>> {
-    self.sysinfo.clone()
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
   }
 
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    _: &MemoryProviderConfig,
-    sysinfo: &Mutex<System>,
-  ) -> anyhow::Result<ProviderVariables> {
-    let mut sysinfo = sysinfo.lock().await;
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let mut sysinfo = self.sysinfo.lock().await;
     sysinfo.refresh_memory();
 
     let usage = (sysinfo.used_memory() as f32
       / sysinfo.total_memory() as f32)
       * 100.0;
 
-    Ok(ProviderVariables::Memory(MemoryVariables {
+    Ok(ProviderOutput::Memory(MemoryOutput {
       usage,
       free_memory: sysinfo.free_memory(),
       used_memory: sysinfo.used_memory(),
@@ -71,3 +42,5 @@ impl IntervalProvider for MemoryProvider {
     }))
   }
 }
+
+impl_interval_provider!(MemoryProvider);

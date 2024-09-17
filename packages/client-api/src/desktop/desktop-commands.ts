@@ -4,34 +4,24 @@ import {
 } from '@tauri-apps/api/core';
 
 import { createLogger } from '../utils';
-import type { ProviderConfig } from '~/user-config';
-import type { OpenWindowArgs } from './shared';
+import type { WindowState } from './shared';
+import type { ProviderConfig } from '~/providers';
 
 const logger = createLogger('desktop-commands');
 
 /**
- * Reads config file from disk. Creates file if it doesn't exist.
+ * Get state associated with the given {@link windowId}.
  */
-export function readConfigFile(): Promise<string> {
-  return invoke<string>('read_config_file');
-}
-
-/**
- * Get args used to open the window with the {@link windowLabel}.
- */
-export function getOpenWindowArgs(
-  windowLabel: string,
-): Promise<OpenWindowArgs | null> {
-  return invoke<OpenWindowArgs | null>('get_open_window_args', {
-    windowLabel,
+export function getWindowState(
+  windowId: string,
+): Promise<WindowState | null> {
+  return invoke<WindowState | null>('get_window_state', {
+    windowId,
   });
 }
 
-export function openWindow(
-  windowId: string,
-  args: Record<string, string> = {},
-): Promise<void> {
-  return invoke<void>('open_window', { windowId, args });
+export function openWindow(configPath: string): Promise<void> {
+  return invoke<void>('open_window', { configPath });
 }
 
 // TODO: Add support for only fetching selected variables.
@@ -76,6 +66,7 @@ export async function invoke<T>(
 
     return response;
   } catch (err) {
+    logger.error(`Command '${command}' failed: ${err}`);
     throw new Error(`Command '${command}' failed: ${err}`);
   }
 }

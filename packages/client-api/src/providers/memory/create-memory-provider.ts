@@ -1,9 +1,28 @@
-import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
-import type { MemoryProviderConfig } from '~/user-config';
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
-export interface MemoryVariables {
+export interface MemoryProviderConfig {
+  type: 'memory';
+
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
+}
+
+const memoryProviderConfigSchema = z.object({
+  type: z.literal('memory'),
+  refreshInterval: z.coerce.number().default(5 * 1000),
+});
+
+export type MemoryProvider = Provider<MemoryProviderConfig, MemoryOutput>;
+
+export interface MemoryOutput {
   usage: number;
   freeMemory: number;
   usedMemory: number;
@@ -15,34 +34,16 @@ export interface MemoryVariables {
 
 export async function createMemoryProvider(
   config: MemoryProviderConfig,
-  owner: Owner,
-) {
-  const memoryVariables = await createProviderListener<
-    MemoryProviderConfig,
-    MemoryVariables
-  >(config, owner);
+): Promise<MemoryProvider> {
+  const mergedConfig = memoryProviderConfigSchema.parse(config);
 
-  return {
-    get usage() {
-      return memoryVariables().usage;
-    },
-    get freeMemory() {
-      return memoryVariables().freeMemory;
-    },
-    get usedMemory() {
-      return memoryVariables().usedMemory;
-    },
-    get totalMemory() {
-      return memoryVariables().totalMemory;
-    },
-    get freeSwap() {
-      return memoryVariables().freeSwap;
-    },
-    get usedSwap() {
-      return memoryVariables().usedSwap;
-    },
-    get totalSwap() {
-      return memoryVariables().totalSwap;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<MemoryOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
+      } else {
+        queue.output(result.output);
+      }
+    });
+  });
 }

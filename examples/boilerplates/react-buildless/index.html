@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css" />
+    <link rel="stylesheet" type="text/css" href="./styles.css" />
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react?dev",
+          "react-dom/client": "https://esm.sh/react-dom/client?dev",
+          "zebar": "https://esm.sh/zebar"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { init } from 'zebar';
+
+      const zebarCtx = await init();
+
+      const providers = await zebarCtx.createProviderGroup({
+        cpu: { type: 'cpu' },
+        battery: { type: 'battery' },
+        memory: { type: 'memory' },
+        weather: { type: 'weather' },
+      });
+
+      createRoot(document.getElementById('root')).render(<App />);
+
+      function App() {
+        const [output, setOutput] = useState(providers.outputMap);
+
+        useEffect(() => {
+          providers.onOutput(() => setOutput(providers.outputMap));
+        }, []);
+
+        return (
+          <div className="app">
+            <div className="chip">CPU usage: {output.cpu.usage}</div>
+            <div className="chip">
+              Battery charge: {output.battery?.chargePercent}
+            </div>
+            <div className="chip">Memory usage: {output.memory.usage}</div>
+            <div className="chip">
+              Weather temp: {output.weather?.celsiusTemp}
+            </div>
+          </div>
+        );
+      }
+    </script>
+  </body>
+</html>

@@ -1,118 +1,82 @@
+// Prevent additional console window on Windows in release mode.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![feature(async_closure)]
-use std::{collections::HashMap, env};
+#![feature(iterator_try_collect)]
 
+use std::{env, sync::Arc};
+
+use anyhow::Context;
 use clap::Parser;
-use cli::OpenWindowArgs;
-use providers::config::ProviderConfig;
-use tauri::{AppHandle, Manager, State, Window};
-use tracing::level_filters::LevelFilter;
+use tauri::{async_runtime::block_on, Manager, RunEvent};
+use tokio::task;
+use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
-use window_factory::{WindowFactory, WindowState};
 
 use crate::{
-  cli::{Cli, CliCommand},
-  monitors::get_monitors_str,
-  providers::provider_manager::ProviderManager,
-  sys_tray::setup_sys_tray,
-  util::window_ext::WindowExt,
+  cli::{Cli, CliCommand, OutputMonitorsArgs},
+  config::Config,
+  monitor_state::MonitorState,
+  providers::ProviderManager,
+  sys_tray::SysTray,
+  window_factory::WindowFactory,
 };
 
 mod cli;
-mod monitors;
+mod commands;
+mod common;
+mod config;
+mod monitor_state;
 mod providers;
 mod sys_tray;
-mod user_config;
-mod util;
 mod window_factory;
 
-#[tauri::command]
-fn read_config_file(
-  config_path_override: Option<&str>,
-  app_handle: AppHandle,
-) -> anyhow::Result<String, String> {
-  user_config::read_file(config_path_override, app_handle)
-    .map_err(|err| err.to_string())
+/// Main entry point for the application.
+///
+/// Conditionally starts Zebar or runs a CLI command based on the given
+/// subcommand.
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+  // Attach to parent console on Windows in release mode.
+  #[cfg(all(windows, not(debug_assertions)))]
+  {
+    use windows::Win32::System::Console::{
+      AttachConsole, ATTACH_PARENT_PROCESS,
+    };
+    let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
+  }
+
+  let cli = Cli::parse();
+
+  match cli.command() {
+    CliCommand::Monitors(args) => output_monitors(args),
+    _ => {
+      let start_res = start_app(cli);
+
+      // If unable to start Zebar, the error is fatal and a message dialog
+      // is shown.
+      if let Err(err) = &start_res {
+        // TODO: Show error dialog.
+        error!("{:?}", err);
+      };
+
+      start_res
+    }
+  }
 }
 
-#[tauri::command]
-async fn get_open_window_args(
-  window_label: String,
-  window_factory: State<'_, WindowFactory>,
-) -> anyhow::Result<Option<WindowState>, String> {
-  Ok(window_factory.state_by_window_label(window_label).await)
-}
-
-#[tauri::command]
-fn open_window(
-  window_id: String,
-  args: HashMap<String, String>,
-  window_factory: State<'_, WindowFactory>,
-) -> anyhow::Result<(), String> {
-  window_factory.try_open(OpenWindowArgs {
-    window_id,
-    args: Some(args.into_iter().collect()),
+/// Prints available monitors to console.
+fn output_monitors(args: OutputMonitorsArgs) -> anyhow::Result<()> {
+  let _ = tauri::Builder::default().setup(|app| {
+    let monitors = MonitorState::new(app.handle());
+    cli::print_and_exit(monitors.output_str(args));
+    Ok(())
   });
 
   Ok(())
 }
 
-#[tauri::command]
-async fn listen_provider(
-  config_hash: String,
-  config: ProviderConfig,
-  tracked_access: Vec<String>,
-  provider_manager: State<'_, ProviderManager>,
-) -> anyhow::Result<(), String> {
-  provider_manager
-    .create(config_hash, config, tracked_access)
-    .await
-    .map_err(|err| err.to_string())
-}
-
-#[tauri::command]
-async fn unlisten_provider(
-  config_hash: String,
-  provider_manager: State<'_, ProviderManager>,
-) -> anyhow::Result<(), String> {
-  provider_manager
-    .destroy(config_hash)
-    .await
-    .map_err(|err| err.to_string())
-}
-
-/// Tauri's implementation of `always_on_top` places the window above
-/// all normal windows (but not the MacOS menu bar). The following instead
-/// sets the z-order of the window to be above the menu bar.
-#[tauri::command]
-fn set_always_on_top(window: Window) -> anyhow::Result<(), String> {
-  #[cfg(target_os = "macos")]
-  let res = window.set_above_menu_bar();
-
-  #[cfg(not(target_os = "macos"))]
-  let res = window.set_always_on_top(true);
-
-  res.map_err(|err| err.to_string())
-}
-
-#[tauri::command]
-fn set_skip_taskbar(
-  window: Window,
-  skip: bool,
-) -> anyhow::Result<(), String> {
-  window
-    .set_skip_taskbar(skip)
-    .map_err(|err| err.to_string())?;
-
-  #[cfg(target_os = "windows")]
-  window
-    .set_tool_window(skip)
-    .map_err(|err| err.to_string())?;
-
-  Ok(())
-}
-
-#[tokio::main]
-async fn main() {
+/// Starts Zebar - either with a specific window or all windows.
+fn start_app(cli: Cli) -> anyhow::Result<()> {
   tracing_subscriber::fmt()
     .with_env_filter(
       EnvFilter::from_env("LOG_LEVEL")
@@ -122,68 +86,211 @@ async fn main() {
 
   tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-  tauri::Builder::default()
-    .setup(|app| {
-      let cli = Cli::parse();
+  let app = tauri::Builder::default()
+    .setup(move |app| {
+      task::block_in_place(|| {
+        block_on(async move {
+          let config_dir_override = match cli.command() {
+            CliCommand::Open(args) => args.config_dir,
+            CliCommand::OpenAll(args) => args.config_dir,
+            _ => None,
+          };
 
-      // Since most Tauri plugins and setup is not needed for the
-      // `monitors` CLI command, the setup is conditional based on
-      // the CLI command.
-      match cli.command {
-        CliCommand::Monitors(args) => {
-          let monitors_str = get_monitors_str(app, args);
-          cli::print_and_exit(monitors_str);
-          Ok(())
-        }
-        CliCommand::Open(open_args) => {
+          // Initialize `Config` in Tauri state.
+          let config =
+            Arc::new(Config::new(app.handle(), config_dir_override)?);
+          app.manage(config.clone());
+
+          // Initialize `MonitorState` in Tauri state.
+          let monitor_state = Arc::new(MonitorState::new(app.handle()));
+          app.manage(monitor_state.clone());
+
+          // Initialize `WindowFactory` in Tauri state.
+          let window_factory = Arc::new(WindowFactory::new(
+            app.handle(),
+            config.clone(),
+            monitor_state.clone(),
+          ));
+          app.manage(window_factory.clone());
+
           // If this is not the first instance of the app, this will emit
-          // within the original instance and exit immediately.
-          app.handle().plugin(tauri_plugin_single_instance::init(
-            move |app, args, _| {
-              let cli = Cli::parse_from(args);
-
-              // CLI command is guaranteed to be an open command here.
-              if let CliCommand::Open(args) = cli.command {
-                app.state::<WindowFactory>().try_open(args);
-              }
-            },
-          ))?;
+          // within the original instance and exit immediately. The CLI
+          // command is guaranteed to be one of the open commands here.
+          setup_single_instance(
+            app,
+            config.clone(),
+            window_factory.clone(),
+          )?;
 
           // Prevent windows from showing up in the dock on MacOS.
           #[cfg(target_os = "macos")]
           app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-          // Open window with the given args and initialize `WindowFactory`
-          // in Tauri state.
-          let window_factory = WindowFactory::new(app.handle());
-          window_factory.try_open(open_args);
-          app.manage(window_factory);
+          // Allow assets to be resolved from the config directory.
+          app
+            .asset_protocol_scope()
+            .allow_directory(&config.config_dir, true)?;
 
           app.handle().plugin(tauri_plugin_shell::init())?;
           app.handle().plugin(tauri_plugin_http::init())?;
           app.handle().plugin(tauri_plugin_dialog::init())?;
 
           // Initialize `ProviderManager` in Tauri state.
-          let mut manager = ProviderManager::new();
-          manager.init(app.handle());
+          let manager = Arc::new(ProviderManager::new(app.handle()));
           app.manage(manager);
 
+          // Open windows based on CLI command.
+          open_windows_by_cli_command(
+            cli,
+            config.clone(),
+            window_factory.clone(),
+          )
+          .await?;
+
           // Add application icon to system tray.
-          setup_sys_tray(app)?;
+          let tray = SysTray::new(
+            app.handle(),
+            config.clone(),
+            window_factory.clone(),
+          )
+          .await?;
+
+          listen_events(config, monitor_state, window_factory, tray);
 
           Ok(())
-        }
-      }
+        })
+      })
     })
     .invoke_handler(tauri::generate_handler![
-      read_config_file,
-      get_open_window_args,
-      open_window,
-      listen_provider,
-      unlisten_provider,
-      set_always_on_top,
-      set_skip_taskbar
+      commands::get_window_state,
+      commands::open_window,
+      commands::listen_provider,
+      commands::unlisten_provider,
+      commands::set_always_on_top,
+      commands::set_skip_taskbar
     ])
-    .run(tauri::generate_context!())
-    .expect("Failed to build Tauri application.");
+    .build(tauri::generate_context!())?;
+
+  app.run(|_, event| {
+    if let RunEvent::ExitRequested { code, api, .. } = &event {
+      if code.is_none() {
+        // Keep the message loop running even if all windows are closed.
+        api.prevent_exit();
+      }
+    }
+  });
+
+  Ok(())
+}
+
+fn listen_events(
+  config: Arc<Config>,
+  monitor_state: Arc<MonitorState>,
+  window_factory: Arc<WindowFactory>,
+  tray: Arc<SysTray>,
+) {
+  let mut window_open_rx = window_factory.open_tx.subscribe();
+  let mut window_close_rx = window_factory.close_tx.subscribe();
+  let mut settings_change_rx = config.settings_change_tx.subscribe();
+  let mut monitors_change_rx = monitor_state.change_tx.subscribe();
+  let mut window_configs_change_rx =
+    config.window_configs_change_tx.subscribe();
+
+  task::spawn(async move {
+    loop {
+      let res = tokio::select! {
+        Ok(_) = window_open_rx.recv() => {
+          info!("Window opened.");
+          tray.refresh().await
+        },
+        Ok(_) = window_close_rx.recv() => {
+          info!("Window closed.");
+          tray.refresh().await
+        },
+        Ok(_) = settings_change_rx.recv() => {
+          info!("Settings changed.");
+          tray.refresh().await
+        },
+        Ok(_) = monitors_change_rx.recv() => {
+          info!("Monitors changed.");
+          window_factory.relaunch_all().await
+        },
+        Ok(_) = window_configs_change_rx.recv() => {
+          info!("Window configs changed.");
+          window_factory.relaunch_all().await
+        },
+      };
+
+      if let Err(err) = res {
+        error!("{:?}", err);
+      }
+    }
+  });
+}
+
+/// Setup single instance Tauri plugin.
+fn setup_single_instance(
+  app: &tauri::App,
+  config: Arc<Config>,
+  window_factory: Arc<WindowFactory>,
+) -> anyhow::Result<()> {
+  app.handle().plugin(tauri_plugin_single_instance::init(
+    move |_, args, _| {
+      let config = config.clone();
+      let window_factory = window_factory.clone();
+
+      task::spawn(async move {
+        let res = match Cli::try_parse_from(args) {
+          Ok(cli) => {
+            // No-op if no subcommand is provided.
+            if cli.command() != CliCommand::Empty {
+              open_windows_by_cli_command(cli, config, window_factory)
+                .await
+            } else {
+              Ok(())
+            }
+          }
+          _ => Err(anyhow::anyhow!("Failed to parse CLI arguments.")),
+        };
+
+        if let Err(err) = res {
+          error!("{:?}", err);
+        }
+      });
+    },
+  ))?;
+
+  Ok(())
+}
+
+/// Opens windows based on CLI command.
+async fn open_windows_by_cli_command(
+  cli: Cli,
+  config: Arc<Config>,
+  window_factory: Arc<WindowFactory>,
+) -> anyhow::Result<()> {
+  let window_configs = match cli.command() {
+    CliCommand::Open(args) => {
+      let window_config = config
+        .window_config_by_path(&config.join_config_dir(&args.config_path))
+        .await?
+        .with_context(|| {
+          format!(
+            "Window config not found at {}.",
+            args.config_path.display()
+          )
+        })?;
+
+      vec![window_config]
+    }
+    _ => config.startup_window_configs().await?,
+  };
+
+  for window_config in window_configs {
+    if let Err(err) = window_factory.open(window_config).await {
+      error!("Failed to open window: {:?}", err);
+    }
+  }
+
+  Ok(())
 }

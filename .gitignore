@@ -20,6 +20,7 @@ gen
 .DS_Store
 *.pem
 *.env
+examples/settings.json
 
 # Debug
 npm-debug.log*

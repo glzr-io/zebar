@@ -1,9 +1,28 @@
-import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
-import type { HostProviderConfig } from '~/user-config';
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
-export interface HostVariables {
+export interface HostProviderConfig {
+  type: 'host';
+
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
+}
+
+const hostProviderConfigSchema = z.object({
+  type: z.literal('host'),
+  refreshInterval: z.coerce.number().default(60 * 1000),
+});
+
+export type HostProvider = Provider<HostProviderConfig, HostOutput>;
+
+export interface HostOutput {
   hostname: string | null;
   osName: string | null;
   osVersion: string | null;
@@ -14,31 +33,16 @@ export interface HostVariables {
 
 export async function createHostProvider(
   config: HostProviderConfig,
-  owner: Owner,
-) {
-  const hostVariables = await createProviderListener<
-    HostProviderConfig,
-    HostVariables
-  >(config, owner);
+): Promise<HostProvider> {
+  const mergedConfig = hostProviderConfigSchema.parse(config);
 
-  return {
-    get hostname() {
-      return hostVariables().hostname;
-    },
-    get osName() {
-      return hostVariables().osName;
-    },
-    get osVersion() {
-      return hostVariables().osVersion;
-    },
-    get friendlyOsVersion() {
-      return hostVariables().friendlyOsVersion;
-    },
-    get bootTime() {
-      return hostVariables().bootTime;
-    },
-    get uptime() {
-      return hostVariables().uptime;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<HostOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
+      } else {
+        queue.output(result.output);
+      }
+    });
+  });
 }

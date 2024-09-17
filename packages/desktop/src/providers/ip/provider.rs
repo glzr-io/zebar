@@ -1,57 +1,29 @@
-use std::sync::Arc;
-
 use anyhow::Context;
-use async_trait::async_trait;
 use reqwest::Client;
-use tokio::task::AbortHandle;
 
-use super::{ipinfo_res::IpinfoRes, IpProviderConfig, IpVariables};
-use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
-};
+use super::{ipinfo_res::IpinfoRes, IpOutput, IpProviderConfig};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct IpProvider {
-  pub config: Arc<IpProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  http_client: Arc<Client>,
+  config: IpProviderConfig,
+  http_client: Client,
 }
 
 impl IpProvider {
   pub fn new(config: IpProviderConfig) -> IpProvider {
     IpProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      http_client: Arc::new(Client::new()),
+      config,
+      http_client: Client::new(),
     }
   }
-}
 
-#[async_trait]
-impl IntervalProvider for IpProvider {
-  type Config = IpProviderConfig;
-  type State = Client;
-
-  fn config(&self) -> Arc<IpProviderConfig> {
-    self.config.clone()
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
   }
 
-  fn state(&self) -> Arc<Client> {
-    self.http_client.clone()
-  }
-
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    _: &IpProviderConfig,
-    http_client: &Client,
-  ) -> anyhow::Result<ProviderVariables> {
-    let res = http_client
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let res = self
+      .http_client
       .get("https://ipinfo.io/json")
       .send()
       .await?
@@ -60,7 +32,7 @@ impl IntervalProvider for IpProvider {
 
     let mut loc_parts = res.loc.split(',');
 
-    Ok(ProviderVariables::Ip(IpVariables {
+    Ok(ProviderOutput::Ip(IpOutput {
       address: res.ip,
       approx_city: res.city,
       approx_country: res.country,
@@ -75,3 +47,5 @@ impl IntervalProvider for IpProvider {
     }))
   }
 }
+
+impl_interval_provider!(IpProvider);

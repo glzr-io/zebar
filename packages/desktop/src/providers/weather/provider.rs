@@ -1,30 +1,60 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
 use reqwest::Client;
-use tokio::task::AbortHandle;
 
 use super::{
-  open_meteo_res::OpenMeteoRes, WeatherProviderConfig, WeatherStatus,
-  WeatherVariables,
+  open_meteo_res::OpenMeteoRes, WeatherOutput, WeatherProviderConfig,
+  WeatherStatus,
 };
-use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
-};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct WeatherProvider {
-  pub config: Arc<WeatherProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  http_client: Arc<Client>,
+  config: WeatherProviderConfig,
+  http_client: Client,
 }
 
 impl WeatherProvider {
   pub fn new(config: WeatherProviderConfig) -> WeatherProvider {
     WeatherProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      http_client: Arc::new(Client::new()),
+      config,
+      http_client: Client::new(),
     }
+  }
+
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
+  }
+
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let res = self
+      .http_client
+      .get("https://api.open-meteo.com/v1/forecast")
+      .query(&[
+        ("temperature_unit", "celsius"),
+        ("latitude", &self.config.latitude.to_string()),
+        ("longitude", &self.config.longitude.to_string()),
+        ("current_weather", "true"),
+        ("daily", "sunset,sunrise"),
+        ("timezone", "auto"),
+      ])
+      .send()
+      .await?
+      .json::<OpenMeteoRes>()
+      .await?;
+
+    let current_weather = res.current_weather;
+    let is_daytime = current_weather.is_day == 1;
+
+    Ok(ProviderOutput::Weather(WeatherOutput {
+      is_daytime,
+      status: Self::get_weather_status(
+        current_weather.weather_code,
+        is_daytime,
+      ),
+      celsius_temp: current_weather.temperature,
+      fahrenheit_temp: Self::celsius_to_fahrenheit(
+        current_weather.temperature,
+      ),
+      wind_speed: current_weather.wind_speed,
+    }))
   }
 
   fn celsius_to_fahrenheit(celsius_temp: f32) -> f32 {
@@ -70,60 +100,4 @@ impl WeatherProvider {
   }
 }
 
-#[async_trait]
-impl IntervalProvider for WeatherProvider {
-  type Config = WeatherProviderConfig;
-  type State = Client;
-
-  fn config(&self) -> Arc<WeatherProviderConfig> {
-    self.config.clone()
-  }
-
-  fn state(&self) -> Arc<Client> {
-    self.http_client.clone()
-  }
-
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    config: &WeatherProviderConfig,
-    http_client: &Client,
-  ) -> anyhow::Result<ProviderVariables> {
-    let res = http_client
-      .get("https://api.open-meteo.com/v1/forecast")
-      .query(&[
-        ("temperature_unit", "celsius"),
-        ("latitude", &config.latitude.to_string()),
-        ("longitude", &config.longitude.to_string()),
-        ("current_weather", "true"),
-        ("daily", "sunset,sunrise"),
-        ("timezone", "auto"),
-      ])
-      .send()
-      .await?
-      .json::<OpenMeteoRes>()
-      .await?;
-
-    let current_weather = res.current_weather;
-    let is_daytime = current_weather.is_day == 1;
-
-    Ok(ProviderVariables::Weather(WeatherVariables {
-      is_daytime,
-      status: Self::get_weather_status(
-        current_weather.weather_code,
-        is_daytime,
-      ),
-      celsius_temp: current_weather.temperature,
-      fahrenheit_temp: Self::celsius_to_fahrenheit(
-        current_weather.temperature,
-      ),
-      wind_speed: current_weather.wind_speed,
-    }))
-  }
-}
+impl_interval_provider!(WeatherProvider);

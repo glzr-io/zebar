@@ -1,9 +1,28 @@
-import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
-import type { CpuProviderConfig } from '~/user-config';
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
-export interface CpuVariables {
+export interface CpuProviderConfig {
+  type: 'cpu';
+
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
+}
+
+const cpuProviderConfigSchema = z.object({
+  type: z.literal('cpu'),
+  refreshInterval: z.coerce.number().default(5 * 1000),
+});
+
+export type CpuProvider = Provider<CpuProviderConfig, CpuOutput>;
+
+export interface CpuOutput {
   frequency: number;
   usage: number;
   logicalCoreCount: number;
@@ -13,28 +32,16 @@ export interface CpuVariables {
 
 export async function createCpuProvider(
   config: CpuProviderConfig,
-  owner: Owner,
-) {
-  const cpuVariables = await createProviderListener<
-    CpuProviderConfig,
-    CpuVariables
-  >(config, owner);
+): Promise<CpuProvider> {
+  const mergedConfig = cpuProviderConfigSchema.parse(config);
 
-  return {
-    get frequency() {
-      return cpuVariables().frequency;
-    },
-    get usage() {
-      return cpuVariables().usage;
-    },
-    get logicalCoreCount() {
-      return cpuVariables().logicalCoreCount;
-    },
-    get physicalCoreCount() {
-      return cpuVariables().physicalCoreCount;
-    },
-    get vendor() {
-      return cpuVariables().vendor;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<CpuOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
+      } else {
+        queue.output(result.output);
+      }
+    });
+  });
 }

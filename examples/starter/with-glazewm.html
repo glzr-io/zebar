@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css" />
+    <link rel="stylesheet" type="text/css" href="./styles.css" />
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react?dev",
+          "react-dom/client": "https://esm.sh/react-dom/client?dev",
+          "zebar": "https://esm.sh/zebar"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { init } from 'zebar';
+
+      const zebarCtx = await init();
+
+      const providers = await zebarCtx.createProviderGroup({
+        network: { type: 'network' },
+        glazewm: { type: 'glazewm' },
+        cpu: { type: 'cpu' },
+        date: { type: 'date', formatting: 'EEE d MMM t' },
+        battery: { type: 'battery' },
+        memory: { type: 'memory' },
+        weather: { type: 'weather' },
+      });
+
+      createRoot(document.getElementById('root')).render(<App />);
+
+      function App() {
+        const [output, setOutput] = useState(providers.outputMap);
+
+        useEffect(() => {
+          providers.onOutput(() => setOutput(providers.outputMap));
+        }, []);
+
+        // Get icon to show for current network status.
+        function getNetworkIcon() {
+          switch (output.network.defaultInterface?.type) {
+            case 'ethernet':
+              return <i className="nf nf-md-ethernet_cable"></i>;
+            case 'wifi':
+              if (output.network.defaultGateway?.signalStrength >= 80) {
+                return <i className="nf nf-md-wifi_strength_4"></i>;
+              } else if (
+                output.network.defaultGateway?.signalStrength >= 65
+              ) {
+                return <i className="nf nf-md-wifi_strength_3"></i>;
+              } else if (
+                output.network.defaultGateway?.signalStrength >= 40
+              ) {
+                return <i className="nf nf-md-wifi_strength_2"></i>;
+              } else if (
+                output.network.defaultGateway?.signalStrength >= 25
+              ) {
+                return <i className="nf nf-md-wifi_strength_1"></i>;
+              } else {
+                return <i className="nf nf-md-wifi_strength_outline"></i>;
+              }
+            default:
+              return (
+                <i className="nf nf-md-wifi_strength_off_outline"></i>
+              );
+          }
+        }
+
+        // Get icon to show for how much of the battery is charged.
+        function getBatteryIcon() {
+          if (output.battery.chargePercent > 90)
+            return <i className="nf nf-fa-battery_4"></i>;
+          if (output.battery.chargePercent > 70)
+            return <i className="nf nf-fa-battery_3"></i>;
+          if (output.battery.chargePercent > 40)
+            return <i className="nf nf-fa-battery_2"></i>;
+          if (output.battery.chargePercent > 20)
+            return <i className="nf nf-fa-battery_1"></i>;
+          return <i className="nf nf-fa-battery_0"></i>;
+        }
+
+        // Get icon to show for current weather status.
+        function getWeatherIcon() {
+          switch (output.weather.status) {
+            case 'clear_day':
+              return <i className="nf nf-weather-day_sunny"></i>;
+            case 'clear_night':
+              return <i className="nf nf-weather-night_clear"></i>;
+            case 'cloudy_day':
+              return <i className="nf nf-weather-day_cloudy"></i>;
+            case 'cloudy_night':
+              return <i className="nf nf-weather-night_alt_cloudy"></i>;
+            case 'light_rain_day':
+              return <i className="nf nf-weather-day_sprinkle"></i>;
+            case 'light_rain_night':
+              return <i className="nf nf-weather-night_alt_sprinkle"></i>;
+            case 'heavy_rain_day':
+              return <i className="nf nf-weather-day_rain"></i>;
+            case 'heavy_rain_night':
+              return <i className="nf nf-weather-night_alt_rain"></i>;
+            case 'snow_day':
+              return <i className="nf nf-weather-day_snow"></i>;
+            case 'snow_night':
+              return <i className="nf nf-weather-night_alt_snow"></i>;
+            case 'thunder_day':
+              return <i className="nf nf-weather-day_lightning"></i>;
+            case 'thunder_night':
+              return <i className="nf nf-weather-night_alt_lightning"></i>;
+          }
+        }
+
+        return (
+          <div className="app">
+            <div className="left">
+              <i className="logo nf nf-fa-windows"></i>
+              {output.glazewm && (
+                <div className="workspaces">
+                  {output.glazewm.currentWorkspaces.map(workspace => (
+                    <button
+                      className={`workspace ${workspace.hasFocus && 'focused'} ${workspace.isDisplayed && 'displayed'}`}
+                      onClick={() =>
+                        output.glazewm.runCommand(
+                          `focus --workspace ${workspace.name}`,
+                        )
+                      }
+                      key={workspace.name}
+                    >
+                      {workspace.displayName ?? workspace.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="center">{output.date.formatted}</div>
+
+            <div className="right">
+              {output.glazewm && (
+                <>
+                  {output.glazewm.bindingModes.map(bindingMode => (
+                    <button
+                      className="binding-mode"
+                      key={bindingMode.name}
+                    >
+                      {bindingMode.displayName ?? bindingMode.name}
+                    </button>
+                  ))}
+
+                  <button
+                    className={`tiling-direction nf ${output.glazewm.tilingDirection === 'horizontal' ? 'nf-md-swap_horizontal' : 'nf-md-swap_vertical'}`}
+                    onClick={() =>
+                      output.glazewm.runCommand(`toggle-tiling-direction`)
+                    }
+                  ></button>
+                </>
+              )}
+
+              {output.network && (
+                <div className="network">
+                  {getNetworkIcon()}
+                  {output.network.defaultGateway?.ssid}
+                </div>
+              )}
+
+              <div className="memory">
+                <i className="nf nf-fae-chip"></i>
+                {Math.round(output.memory.usage)}%
+              </div>
+
+              <div className="cpu">
+                <i className="nf nf-oct-cpu"></i>
+
+                {/* Change the text color if the CPU usage is high. */}
+                <span
+                  className={output.cpu.usage > 85 ? 'high-usage' : ''}
+                >
+                  {Math.round(output.cpu.usage)}%
+                </span>
+              </div>
+
+              {output.battery && (
+                <div className="battery">
+                  {/* Show icon for whether battery is charging. */}
+                  {output.battery.isCharging && (
+                    <i className="nf nf-md-power_plug charging-icon"></i>
+                  )}
+                  {getBatteryIcon()}
+                  {Math.round(output.battery.chargePercent)}%
+                </div>
+              )}
+
+              {output.weather && (
+                <div className="weather">
+                  {getWeatherIcon()}
+                  {Math.round(output.weather.celsiusTemp)}°C
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+    </script>
+  </body>
+</html>

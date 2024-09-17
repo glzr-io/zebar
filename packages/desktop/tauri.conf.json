@@ -1,17 +1,12 @@
 {
   "$schema": "node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "devUrl": "http://localhost:4200",
-    "frontendDist": "../client/dist"
+    "devUrl": null,
+    "frontendDist": null
   },
   "productName": "Zebar",
   "version": "0.0.0",
   "identifier": "com.glzr.zebar",
-  "plugins": {
-    "shell": {
-      "open": true
-    }
-  },
   "bundle": {
     "active": true,
     "icon": [
@@ -24,7 +19,7 @@
     "shortDescription": "Zebar",
     "category": "Utility",
     "publisher": "Glzr Software Pte. Ltd.",
-    "resources": ["resources/*"],
+    "resources": ["resources/*", "../../examples/*"],
     "targets": ["deb", "appimage", "msi", "dmg"],
     "windows": {
       "signCommand": "powershell -ExecutionPolicy Bypass -File ./resources/scripts/sign.ps1 -FilePath %1",
@@ -45,8 +40,7 @@
         "img-src": "'self' asset: http://asset.localhost blob: data: *"
       },
       "assetProtocol": {
-        "enable": true,
-        "scope": ["$HOME/.glzr/zebar/**"]
+        "enable": true
       }
     }
   }

@@ -1,23 +1,22 @@
 use serde::Serialize;
 
 #[cfg(windows)]
-use super::komorebi::KomorebiVariables;
+use super::komorebi::KomorebiOutput;
 use super::{
-  battery::BatteryVariables, cpu::CpuVariables, host::HostVariables,
-  ip::IpVariables, memory::MemoryVariables, network::NetworkVariables,
-  weather::WeatherVariables,
+  battery::BatteryOutput, cpu::CpuOutput, host::HostOutput, ip::IpOutput,
+  memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
 };
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum ProviderVariables {
-  Battery(BatteryVariables),
-  Cpu(CpuVariables),
-  Host(HostVariables),
-  Ip(IpVariables),
+pub enum ProviderOutput {
+  Battery(BatteryOutput),
+  Cpu(CpuOutput),
+  Host(HostOutput),
+  Ip(IpOutput),
   #[cfg(windows)]
-  Komorebi(KomorebiVariables),
-  Memory(MemoryVariables),
-  Network(NetworkVariables),
-  Weather(WeatherVariables),
+  Komorebi(KomorebiOutput),
+  Memory(MemoryOutput),
+  Network(NetworkOutput),
+  Weather(WeatherOutput),
 }

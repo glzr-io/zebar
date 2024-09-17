@@ -31,10 +31,9 @@ pnpm dev
 
 ## Architecture
 
-Zebar is split into 3 packages:
+Zebar is split into 2 packages:
 
 - `desktop` - a Tauri app which is a CLI that can spawn windows.
-- `client` - a SolidJS frontend which is spawned by Tauri on `zebar open <window_name>`.
 - `client-api` - business logic for communicating with Tauri.
 
 ### How to create a new provider?

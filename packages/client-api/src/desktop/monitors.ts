@@ -5,7 +5,6 @@ import {
   primaryMonitor as getPrimaryMonitor,
   getCurrentWindow,
 } from '@tauri-apps/api/window';
-import { createStore } from 'solid-js/store';
 
 import type { MonitorInfo } from './shared';
 
@@ -37,12 +36,12 @@ async function createMonitorCache() {
   // return value, and refresh it in an effect when displays are changed.
   // Ref https://github.com/tauri-apps/tauri/issues/8405
 
-  const [monitorCache, setMonitorCache] = createStore<MonitorCache>({
+  const monitorCache = {
     currentMonitor: currentMonitor ? toMonitorInfo(currentMonitor) : null,
     primaryMonitor: primaryMonitor ? toMonitorInfo(primaryMonitor) : null,
     secondaryMonitors: secondaryMonitors.map(toMonitorInfo),
     allMonitors: allMonitors.map(toMonitorInfo),
-  });
+  };
 
   getCurrentWindow().onResized(() => updateCurrentMonitor());
   getCurrentWindow().onMoved(() => updateCurrentMonitor());
@@ -51,7 +50,8 @@ async function createMonitorCache() {
   async function updateCurrentMonitor() {
     const currentMonitor = await getCurrentMonitor();
 
-    setMonitorCache({
+    // TODO: Avoid mutating the cache object.
+    Object.assign(monitorCache, {
       currentMonitor: currentMonitor
         ? toMonitorInfo(currentMonitor)
         : null,

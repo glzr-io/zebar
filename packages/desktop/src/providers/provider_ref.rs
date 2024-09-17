@@ -1,159 +1,173 @@
-use std::time::{Duration, Instant};
+use std::sync::Arc;
 
 use anyhow::bail;
 use serde::Serialize;
-use tokio::{sync::mpsc, task};
-use tracing::info;
+use serde_json::json;
+use tauri::{AppHandle, Emitter};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task,
+};
+use tracing::{info, warn};
 
 #[cfg(windows)]
 use super::komorebi::KomorebiProvider;
 use super::{
-  battery::BatteryProvider, config::ProviderConfig, cpu::CpuProvider,
-  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, provider::Provider,
-  provider_manager::SharedProviderState, variables::ProviderVariables,
-  weather::WeatherProvider,
+  battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
+  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
+  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
+  SharedProviderState,
 };
 
 /// Reference to an active provider.
-#[derive(Debug, Clone)]
 pub struct ProviderRef {
-  pub config_hash: String,
-  pub min_refresh_interval: Option<Duration>,
-  pub cache: Option<ProviderCache>,
-  pub emit_output_tx: mpsc::Sender<ProviderOutput>,
-  pub refresh_tx: mpsc::Sender<()>,
-  pub stop_tx: mpsc::Sender<()>,
+  /// Cache for provider output.
+  cache: Arc<Mutex<Option<Box<ProviderResult>>>>,
+
+  /// Sender channel for emitting provider output/error to frontend
+  /// clients.
+  emit_result_tx: mpsc::Sender<ProviderResult>,
+
+  /// Sender channel for stopping the provider.
+  stop_tx: mpsc::Sender<()>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ProviderCache {
-  pub timestamp: Instant,
-  pub output: Box<ProviderOutput>,
-}
-
-/// Output emitted to frontend clients.
-#[derive(Serialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ProviderOutput {
-  pub config_hash: String,
-  pub variables: VariablesResult,
-}
-
-/// Provider variable output emitted to frontend clients.
+/// Provider output/error emitted to frontend clients.
 ///
-/// This is used instead of a normal `Result` type to serialize it in a
-/// nicer way.
+/// This is used instead of a normal `Result` type in order to serialize it
+/// in a nicer way.
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub enum VariablesResult {
-  Data(ProviderVariables),
+pub enum ProviderResult {
+  Output(ProviderOutput),
   Error(String),
 }
 
-/// Implements conversion from an `anyhow::Result`.
-impl From<anyhow::Result<ProviderVariables>> for VariablesResult {
-  fn from(result: anyhow::Result<ProviderVariables>) -> Self {
+/// Implements conversion from `anyhow::Result`.
+impl From<anyhow::Result<ProviderOutput>> for ProviderResult {
+  fn from(result: anyhow::Result<ProviderOutput>) -> Self {
     match result {
-      Ok(data) => VariablesResult::Data(data),
-      Err(err) => VariablesResult::Error(err.to_string()),
+      Ok(output) => ProviderResult::Output(output),
+      Err(err) => ProviderResult::Error(err.to_string()),
     }
   }
 }
 
 impl ProviderRef {
-  pub fn new(
-    config_hash: String,
+  /// Creates a new `ProviderRef` instance.
+  pub async fn new(
+    app_handle: &AppHandle,
     config: ProviderConfig,
-    emit_output_tx: mpsc::Sender<ProviderOutput>,
-    shared_state: &SharedProviderState,
+    config_hash: String,
+    shared_state: SharedProviderState,
   ) -> anyhow::Result<Self> {
-    let provider = Self::create_provider(config, shared_state)?;
+    let cache = Arc::new(Mutex::new(None));
 
-    let (refresh_tx, refresh_rx) = mpsc::channel::<()>(1);
     let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
+    let (emit_result_tx, emit_result_rx) =
+      mpsc::channel::<ProviderResult>(1);
 
-    let min_refresh_interval = provider.min_refresh_interval();
-    let config_hash_clone = config_hash.clone();
-    let emit_output_tx_clone = emit_output_tx.clone();
+    Self::start_output_listener(
+      app_handle.clone(),
+      config_hash.clone(),
+      cache.clone(),
+      emit_result_rx,
+    );
 
-    task::spawn(async move {
-      Self::start_provider(
-        provider,
-        config_hash_clone,
-        emit_output_tx_clone,
-        refresh_rx,
-        stop_rx,
-      )
-      .await;
-    });
+    Self::start_provider(
+      config,
+      config_hash,
+      shared_state,
+      emit_result_tx.clone(),
+      stop_rx,
+    )?;
 
     Ok(Self {
-      config_hash,
-      min_refresh_interval,
-      cache: None,
-      emit_output_tx,
-      refresh_tx,
+      cache,
+      emit_result_tx,
       stop_tx,
     })
   }
 
-  /// Starts the provider.
-  async fn start_provider(
-    mut provider: Box<dyn Provider + Send>,
+  fn start_output_listener(
+    app_handle: AppHandle,
     config_hash: String,
-    emit_output_tx: mpsc::Sender<ProviderOutput>,
-    mut refresh_rx: mpsc::Receiver<()>,
-    mut stop_rx: mpsc::Receiver<()>,
+    cache: Arc<Mutex<Option<Box<ProviderResult>>>>,
+    mut emit_result_rx: mpsc::Receiver<ProviderResult>,
   ) {
-    let mut has_started = false;
+    task::spawn(async move {
+      while let Some(output) = emit_result_rx.recv().await {
+        info!("Emitting for provider: {}", config_hash);
 
-    // Loop to avoid exiting the select on refresh.
-    loop {
-      let config_hash = config_hash.clone();
-      let emit_output_tx = emit_output_tx.clone();
+        let output = Box::new(output);
+        let payload = json!({
+          "configHash": config_hash.clone(),
+          "result": *output.clone(),
+        });
 
-      tokio::select! {
-        // Default match arm which handles initialization of the provider.
-        // This has a precondition to avoid running again on refresh.
-        _ = {
-          info!("Starting provider: {}", config_hash);
-          has_started = true;
-          provider.on_start(&config_hash, emit_output_tx.clone())
-        }, if !has_started => break,
+        if let Err(err) = app_handle.emit("provider-emit", payload) {
+          warn!("Error emitting provider output: {:?}", err);
+        }
 
-        // On refresh, re-emit provider variables and continue looping.
-        Some(_) = refresh_rx.recv() => {
-          info!("Refreshing provider: {}", config_hash);
-          _ = provider.on_refresh(&config_hash, emit_output_tx).await;
-        },
-
-        // On stop, perform any necessary clean up and exit the loop.
-        Some(_) = stop_rx.recv() => {
-          info!("Stopping provider: {}", config_hash);
-          _ = provider.on_stop().await;
-          break;
-        },
+        // Update the provider's output cache.
+        if let Ok(mut providers) = cache.try_lock() {
+          *providers = Some(output);
+        } else {
+          warn!("Failed to update provider output cache.");
+        }
       }
-    }
+    });
+  }
 
-    info!("Provider stopped: {}", config_hash);
+  /// Starts the provider in a separate task.
+  fn start_provider(
+    config: ProviderConfig,
+    config_hash: String,
+    shared_state: SharedProviderState,
+    emit_result_tx: mpsc::Sender<ProviderResult>,
+    mut stop_rx: mpsc::Receiver<()>,
+  ) -> anyhow::Result<()> {
+    let provider = Self::create_provider(config, shared_state)?;
+
+    task::spawn(async move {
+      // TODO: Add arc `should_stop` to be passed to `run`.
+
+      let run = provider.run(emit_result_tx);
+      tokio::pin!(run);
+
+      // Ref: https://tokio.rs/tokio/tutorial/select#resuming-an-async-operation
+      loop {
+        tokio::select! {
+          // Default match arm which continuously runs the provider.
+          _ = run => break,
+
+          // On stop, perform any necessary clean up and exit the loop.
+          Some(_) = stop_rx.recv() => {
+            info!("Stopping provider: {}", config_hash);
+            _ = provider.on_stop().await;
+            break;
+          },
+        }
+      }
+
+      info!("Provider stopped: {}", config_hash);
+    });
+
+    Ok(())
   }
 
   fn create_provider(
     config: ProviderConfig,
-    shared_state: &SharedProviderState,
-  ) -> anyhow::Result<Box<dyn Provider + Send>> {
-    let provider: Box<dyn Provider + Send> = match config {
+    shared_state: SharedProviderState,
+  ) -> anyhow::Result<Box<dyn Provider>> {
+    let provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
-        Box::new(BatteryProvider::new(config)?)
+        Box::new(BatteryProvider::new(config))
       }
       ProviderConfig::Cpu(config) => {
         Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
       }
-      ProviderConfig::Host(config) => {
-        Box::new(HostProvider::new(config, shared_state.sysinfo.clone()))
-      }
+      ProviderConfig::Host(config) => Box::new(HostProvider::new(config)),
       ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
       #[cfg(windows)]
       ProviderConfig::Komorebi(config) => {
@@ -176,28 +190,16 @@ impl ProviderRef {
     Ok(provider)
   }
 
-  /// Updates cache with the given output.
-  pub fn update_cache(&mut self, output: Box<ProviderOutput>) {
-    self.cache = Some(ProviderCache {
-      timestamp: Instant::now(),
-      output,
-    });
-  }
-
-  /// Refreshes the provider.
+  /// Re-emits the latest provider output.
   ///
-  /// Since the previous output of providers is cached, if within the
-  /// minimum refresh interval, send the previous output.
+  /// No-ops if the provider hasn't outputted yet, since the provider will
+  /// anyways emit its output after initialization.
   pub async fn refresh(&self) -> anyhow::Result<()> {
-    let min_refresh_interval =
-      self.min_refresh_interval.unwrap_or(Duration::MAX);
+    let cache = { self.cache.lock().await.clone() };
 
-    match &self.cache {
-      Some(cache) if cache.timestamp.elapsed() >= min_refresh_interval => {
-        self.emit_output_tx.send(*cache.output.clone()).await?;
-      }
-      _ => self.refresh_tx.send(()).await?,
-    };
+    if let Some(cache) = cache {
+      self.emit_result_tx.send(*cache).await?;
+    }
 
     Ok(())
   }

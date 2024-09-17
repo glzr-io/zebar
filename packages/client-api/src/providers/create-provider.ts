@@ -1,57 +1,114 @@
-import type { Owner } from 'solid-js';
+import type { ZebarContext } from '~/zebar-context.model';
+import {
+  createBatteryProvider,
+  type BatteryProvider,
+  type BatteryProviderConfig,
+} from './battery/create-battery-provider';
+import {
+  createCpuProvider,
+  type CpuProvider,
+  type CpuProviderConfig,
+} from './cpu/create-cpu-provider';
+import {
+  createDateProvider,
+  type DateProvider,
+  type DateProviderConfig,
+} from './date/create-date-provider';
+import {
+  createGlazeWmProvider,
+  type GlazeWmProvider,
+  type GlazeWmProviderConfig,
+} from './glazewm/create-glazewm-provider';
+import {
+  createHostProvider,
+  type HostProvider,
+  type HostProviderConfig,
+} from './host/create-host-provider';
+import {
+  createIpProvider,
+  type IpProvider,
+  type IpProviderConfig,
+} from './ip/create-ip-provider';
+import {
+  createKomorebiProvider,
+  type KomorebiProvider,
+  type KomorebiProviderConfig,
+} from './komorebi/create-komorebi-provider';
+import {
+  createMemoryProvider,
+  type MemoryProvider,
+  type MemoryProviderConfig,
+} from './memory/create-memory-provider';
+import {
+  createNetworkProvider,
+  type NetworkProvider,
+  type NetworkProviderConfig,
+} from './network/create-network-provider';
+import {
+  createWeatherProvider,
+  type WeatherProvider,
+  type WeatherProviderConfig,
+} from './weather/create-weather-provider';
 
-import { createBatteryProvider } from './battery/create-battery-provider';
-import { createCpuProvider } from './cpu/create-cpu-provider';
-import { createDateProvider } from './date/create-date-provider';
-import { createGlazeWmProvider } from './glazewm/create-glazewm-provider';
-import { createHostProvider } from './host/create-host-provider';
-import { createIpProvider } from './ip/create-ip-provider';
-import { createKomorebiProvider } from './komorebi/create-komorebi-provider';
-import { createMemoryProvider } from './memory/create-memory-provider';
-import { createMonitorsProvider } from './monitors/create-monitors-provider';
-import { createNetworkProvider } from './network/create-network-provider';
-import { createSelfProvider } from './self/create-self-provider';
-import { createUtilProvider } from './util/create-util-provider';
-import { createWeatherProvider } from './weather/create-weather-provider';
-import { ProviderType, type ProviderConfig } from '~/user-config';
-import type { ElementContext } from '~/element-context.model';
-import type { PickPartial } from '~/utils';
+export interface ProviderConfigMap {
+  battery: BatteryProviderConfig;
+  cpu: CpuProviderConfig;
+  date: DateProviderConfig;
+  glazewm: GlazeWmProviderConfig;
+  host: HostProviderConfig;
+  ip: IpProviderConfig;
+  komorebi: KomorebiProviderConfig;
+  memory: MemoryProviderConfig;
+  network: NetworkProviderConfig;
+  weather: WeatherProviderConfig;
+}
 
-export async function createProvider(
-  elementContext: PickPartial<
-    ElementContext,
-    'parsedConfig' | 'providers'
-  >,
-  config: ProviderConfig,
-  owner: Owner,
-) {
+export interface ProviderMap {
+  battery: BatteryProvider;
+  cpu: CpuProvider;
+  date: DateProvider;
+  glazewm: GlazeWmProvider;
+  host: HostProvider;
+  ip: IpProvider;
+  komorebi: KomorebiProvider;
+  memory: MemoryProvider;
+  network: NetworkProvider;
+  weather: WeatherProvider;
+}
+
+export type ProviderType = keyof ProviderConfigMap;
+
+export type ProviderConfig = ProviderConfigMap[keyof ProviderConfigMap];
+
+export type ProviderOutput = ProviderMap[keyof ProviderMap]['output'];
+
+/**
+ * Docs {@link ZebarContext.createProvider}
+ */
+export function createProvider<T extends ProviderConfig>(
+  config: T,
+): Promise<ProviderMap[T['type']]> {
   switch (config.type) {
-    case ProviderType.BATTERY:
-      return createBatteryProvider(config, owner);
-    case ProviderType.CPU:
-      return createCpuProvider(config, owner);
-    case ProviderType.DATE:
-      return createDateProvider(config, owner);
-    case ProviderType.GLAZEWM:
-      return createGlazeWmProvider(config, owner);
-    case ProviderType.HOST:
-      return createHostProvider(config, owner);
-    case ProviderType.IP:
-      return createIpProvider(config, owner);
-    case ProviderType.KOMOREBI:
-      return createKomorebiProvider(config, owner);
-    case ProviderType.MEMORY:
-      return createMemoryProvider(config, owner);
-    case ProviderType.MONITORS:
-      return createMonitorsProvider(config, owner);
-    case ProviderType.NETWORK:
-      return createNetworkProvider(config, owner);
-    case ProviderType.SELF:
-      return createSelfProvider(elementContext);
-    case ProviderType.UTIL:
-      return createUtilProvider(config, owner);
-    case ProviderType.WEATHER:
-      return createWeatherProvider(config, owner);
+    case 'battery':
+      return createBatteryProvider(config) as any;
+    case 'cpu':
+      return createCpuProvider(config) as any;
+    case 'date':
+      return createDateProvider(config) as any;
+    case 'glazewm':
+      return createGlazeWmProvider(config) as any;
+    case 'host':
+      return createHostProvider(config) as any;
+    case 'ip':
+      return createIpProvider(config) as any;
+    case 'komorebi':
+      return createKomorebiProvider(config) as any;
+    case 'memory':
+      return createMemoryProvider(config) as any;
+    case 'network':
+      return createNetworkProvider(config) as any;
+    case 'weather':
+      return createWeatherProvider(config) as any;
     default:
       throw new Error('Not a supported provider type.');
   }

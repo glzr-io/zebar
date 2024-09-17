@@ -1,46 +1,97 @@
 use std::{
-  io::{BufRead, BufReader},
-  sync::Arc,
+  io::{BufReader, Read},
   time::Duration,
 };
 
+use anyhow::Context;
 use async_trait::async_trait;
-use komorebi_client::{Container, Monitor, Window, Workspace};
-use tokio::{
-  sync::mpsc::Sender,
-  task::{self, AbortHandle},
+use komorebi_client::{
+  Container, Monitor, SocketMessage, Window, Workspace,
 };
+use tokio::{sync::mpsc::Sender, time};
 use tracing::debug;
 
 use super::{
   KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
-  KomorebiProviderConfig, KomorebiWindow, KomorebiWorkspace,
+  KomorebiOutput, KomorebiProviderConfig, KomorebiWindow,
+  KomorebiWorkspace,
 };
-use crate::providers::{
-  komorebi::KomorebiVariables,
-  provider::Provider,
-  provider_ref::{ProviderOutput, VariablesResult},
-  variables::ProviderVariables,
-};
+use crate::providers::{Provider, ProviderOutput, ProviderResult};
 
 const SOCKET_NAME: &str = "zebar.sock";
 
 pub struct KomorebiProvider {
-  pub config: Arc<KomorebiProviderConfig>,
-  abort_handle: Option<AbortHandle>,
+  _config: KomorebiProviderConfig,
 }
 
 impl KomorebiProvider {
   pub fn new(config: KomorebiProviderConfig) -> KomorebiProvider {
-    KomorebiProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-    }
+    KomorebiProvider { _config: config }
   }
 
-  fn transform_response(
-    state: komorebi_client::State,
-  ) -> KomorebiVariables {
+  async fn create_socket(
+    &self,
+    emit_result_tx: Sender<ProviderResult>,
+  ) -> anyhow::Result<()> {
+    let socket = komorebi_client::subscribe(SOCKET_NAME)
+      .context("Failed to initialize Komorebi socket.")?;
+
+    debug!("Connected to Komorebi socket.");
+
+    for incoming in socket.incoming() {
+      debug!("Incoming Komorebi socket message.");
+
+      match incoming {
+        Ok(stream) => {
+          let mut buffer = Vec::new();
+          let mut reader = BufReader::new(stream);
+
+          // Shutdown has been sent.
+          if matches!(reader.read_to_end(&mut buffer), Ok(0)) {
+            debug!("Komorebi shutdown.");
+
+            // Attempt to reconnect to Komorebi.
+            while komorebi_client::send_message(
+              &SocketMessage::AddSubscriberSocket(SOCKET_NAME.to_string()),
+            )
+            .is_err()
+            {
+              debug!("Attempting to reconnect to Komorebi.");
+              time::sleep(Duration::from_secs(15)).await;
+            }
+          }
+
+          // Transform and emit the incoming Komorebi state.
+          if let Ok(notification) =
+            serde_json::from_str::<komorebi_client::Notification>(
+              &String::from_utf8(buffer).unwrap(),
+            )
+          {
+            emit_result_tx
+              .send(
+                Ok(ProviderOutput::Komorebi(Self::transform_response(
+                  notification.state,
+                )))
+                .into(),
+              )
+              .await;
+          }
+        }
+        Err(_) => {
+          emit_result_tx
+            .send(
+              Err(anyhow::anyhow!("Failed to read Komorebi stream."))
+                .into(),
+            )
+            .await;
+        }
+      }
+    }
+
+    Ok(())
+  }
+
+  fn transform_response(state: komorebi_client::State) -> KomorebiOutput {
     let all_monitors = state
       .monitors
       .elements()
@@ -48,7 +99,7 @@ impl KomorebiProvider {
       .map(Self::transform_monitor)
       .collect();
 
-    KomorebiVariables {
+    KomorebiOutput {
       all_monitors,
       focused_monitor_index: state.monitors.focused_idx(),
     }
@@ -123,75 +174,9 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
-  fn min_refresh_interval(&self) -> Option<Duration> {
-    // State should always be up to date.
-    None
-  }
-
-  async fn on_start(
-    &mut self,
-    config_hash: &str,
-    emit_output_tx: Sender<ProviderOutput>,
-  ) {
-    let config_hash = config_hash.to_string();
-
-    let task_handle = task::spawn(async move {
-      let socket = komorebi_client::subscribe(SOCKET_NAME).unwrap();
-      debug!("Connected to Komorebi socket.");
-
-      for incoming in socket.incoming() {
-        debug!("Incoming Komorebi socket message.");
-
-        match incoming {
-          Ok(data) => {
-            let reader = BufReader::new(data.try_clone().unwrap());
-
-            for line in reader.lines().flatten() {
-              if let Ok(notification) = serde_json::from_str::<
-                komorebi_client::Notification,
-              >(&line)
-              {
-                // Transform and emit the incoming Komorebi state.
-                _ = emit_output_tx
-                  .send(ProviderOutput {
-                    config_hash: config_hash.clone(),
-                    variables: VariablesResult::Data(
-                      ProviderVariables::Komorebi(
-                        Self::transform_response(notification.state),
-                      ),
-                    ),
-                  })
-                  .await;
-              }
-            }
-          }
-          Err(error) => {
-            _ = emit_output_tx
-              .send(ProviderOutput {
-                config_hash: config_hash.to_string(),
-                variables: VariablesResult::Error(error.to_string()),
-              })
-              .await;
-          }
-        }
-      }
-    });
-
-    self.abort_handle = Some(task_handle.abort_handle());
-    _ = task_handle.await;
-  }
-
-  async fn on_refresh(
-    &mut self,
-    _config_hash: &str,
-    _emit_output_tx: Sender<ProviderOutput>,
-  ) {
-    // No-op.
-  }
-
-  async fn on_stop(&mut self) {
-    if let Some(handle) = &self.abort_handle {
-      handle.abort();
+  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
+    if let Err(err) = self.create_socket(emit_result_tx.clone()).await {
+      emit_result_tx.send(Err(err).into()).await;
     }
   }
 }

@@ -3,7 +3,7 @@ use serde::Serialize;
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct NetworkVariables {
+pub struct NetworkOutput {
   pub default_interface: Option<NetworkInterface>,
   pub default_gateway: Option<NetworkGateway>,
   pub interfaces: Vec<NetworkInterface>,
@@ -13,8 +13,18 @@ pub struct NetworkVariables {
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkTraffic {
-  pub received: u64,
-  pub transmitted: u64,
+  pub received: NetworkTrafficMeasure,
+  pub transmitted: NetworkTrafficMeasure,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkTrafficMeasure {
+  pub bytes: u64,
+  pub si_value: f64,
+  pub si_unit: String,
+  pub iec_value: f64,
+  pub iec_unit: String,
 }
 
 #[derive(Serialize, Debug, Clone)]

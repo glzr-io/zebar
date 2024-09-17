@@ -1,17 +1,26 @@
-import { createEffect, runWithOwner, type Owner } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import { z } from 'zod';
 
-import type { KomorebiProviderConfig } from '~/user-config';
-import { createProviderListener } from '../create-provider-listener';
-import { getMonitors } from '~/desktop';
+import { getMonitors, onProviderEmit } from '~/desktop';
 import { getCoordinateDistance } from '~/utils';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
 
-interface KomorebiResponse {
-  allMonitors: KomorebiMonitor[];
-  focusedMonitorIndex: number;
+export interface KomorebiProviderConfig {
+  type: 'komorebi';
 }
 
-export interface KomorebiProvider {
+const komorebiProviderConfigSchema = z.object({
+  type: z.literal('komorebi'),
+});
+
+export type KomorebiProvider = Provider<
+  KomorebiProviderConfig,
+  KomorebiOutput
+>;
+
+export interface KomorebiOutput {
   /**
    * Workspace displayed on the current monitor.
    */
@@ -46,6 +55,11 @@ export interface KomorebiProvider {
    * Monitor that is nearest to this Zebar window.
    */
   currentMonitor: KomorebiMonitor;
+}
+
+interface KomorebiResponse {
+  allMonitors: KomorebiMonitor[];
+  focusedMonitorIndex: number;
 }
 
 export interface KomorebiMonitor {
@@ -109,94 +123,71 @@ export type KomorebiLayoutFlip =
 
 export async function createKomorebiProvider(
   config: KomorebiProviderConfig,
-  owner: Owner,
 ): Promise<KomorebiProvider> {
-  const monitors = await getMonitors();
+  const mergedConfig = komorebiProviderConfigSchema.parse(config);
 
-  const providerListener = await createProviderListener<
-    KomorebiProviderConfig,
-    KomorebiResponse
-  >(config, owner);
+  // TODO: Update state when monitors change.
+  return createBaseProvider(mergedConfig, async queue => {
+    const monitors = await getMonitors();
 
-  const [komorebiVariables, setKomorebiVariables] = createStore(
-    await getVariables(),
-  );
+    async function getUpdatedState(res: KomorebiResponse) {
+      const currentPosition = {
+        x: monitors.currentMonitor!.x,
+        y: monitors.currentMonitor!.y,
+      };
 
-  runWithOwner(owner, () => {
-    createEffect(async () => setKomorebiVariables(await getVariables()));
+      // Get Komorebi monitor that corresponds to the Zebar window's monitor.
+      const currentKomorebiMonitor = res.allMonitors.reduce((a, b) =>
+        getCoordinateDistance(currentPosition, {
+          x: a.workAreaSize.left,
+          y: a.workAreaSize.top,
+        }) <
+        getCoordinateDistance(currentPosition, {
+          x: b.workAreaSize.left,
+          y: b.workAreaSize.top,
+        })
+          ? a
+          : b,
+      );
+
+      const displayedKomorebiWorkspace =
+        currentKomorebiMonitor.workspaces[
+          currentKomorebiMonitor.focusedWorkspaceIndex
+        ]!;
+
+      const allKomorebiWorkspaces = res.allMonitors.flatMap(
+        monitor => monitor.workspaces,
+      );
+
+      const focusedKomorebiMonitor =
+        res.allMonitors[res.focusedMonitorIndex]!;
+
+      const focusedKomorebiWorkspace =
+        focusedKomorebiMonitor.workspaces[
+          focusedKomorebiMonitor.focusedWorkspaceIndex
+        ]!;
+
+      return {
+        displayedWorkspace: displayedKomorebiWorkspace,
+        focusedWorkspace: focusedKomorebiWorkspace,
+        currentWorkspaces: currentKomorebiMonitor.workspaces,
+        allWorkspaces: allKomorebiWorkspaces,
+        focusedMonitor: focusedKomorebiMonitor,
+        currentMonitor: currentKomorebiMonitor,
+        allMonitors: res.allMonitors,
+      };
+    }
+
+    return onProviderEmit<KomorebiResponse>(
+      mergedConfig,
+      async ({ result }) => {
+        if ('error' in result) {
+          queue.error(result.error);
+        } else {
+          const updatedState = await getUpdatedState(result.output);
+          queue.output(updatedState);
+        }
+      },
+    );
   });
-
-  async function getVariables() {
-    const state = providerListener();
-
-    const currentPosition = {
-      x: monitors.currentMonitor!.x,
-      y: monitors.currentMonitor!.y,
-    };
-
-    // Get Komorebi monitor that corresponds to the Zebar window's monitor.
-    const currentKomorebiMonitor = state.allMonitors.reduce((a, b) =>
-      getCoordinateDistance(currentPosition, {
-        x: a.workAreaSize.left,
-        y: a.workAreaSize.top,
-      }) <
-      getCoordinateDistance(currentPosition, {
-        x: b.workAreaSize.left,
-        y: b.workAreaSize.top,
-      })
-        ? a
-        : b,
-    );
-
-    const displayedKomorebiWorkspace =
-      currentKomorebiMonitor.workspaces[
-        currentKomorebiMonitor.focusedWorkspaceIndex
-      ]!;
-
-    const allKomorebiWorkspaces = state.allMonitors.flatMap(
-      monitor => monitor.workspaces,
-    );
-
-    const focusedKomorebiMonitor =
-      state.allMonitors[state.focusedMonitorIndex]!;
-
-    const focusedKomorebiWorkspace =
-      focusedKomorebiMonitor.workspaces[
-        focusedKomorebiMonitor.focusedWorkspaceIndex
-      ]!;
-
-    return {
-      displayedWorkspace: displayedKomorebiWorkspace,
-      focusedWorkspace: focusedKomorebiWorkspace,
-      currentWorkspaces: currentKomorebiMonitor.workspaces,
-      allWorkspaces: allKomorebiWorkspaces,
-      focusedMonitor: focusedKomorebiMonitor,
-      currentMonitor: currentKomorebiMonitor,
-      allMonitors: state.allMonitors,
-    };
-  }
-
-  return {
-    get displayedWorkspace() {
-      return komorebiVariables.displayedWorkspace;
-    },
-    get focusedWorkspace() {
-      return komorebiVariables.focusedWorkspace;
-    },
-    get currentWorkspaces() {
-      return komorebiVariables.currentWorkspaces;
-    },
-    get allWorkspaces() {
-      return komorebiVariables.allWorkspaces;
-    },
-    get allMonitors() {
-      return komorebiVariables.allMonitors;
-    },
-    get focusedMonitor() {
-      return komorebiVariables.focusedMonitor;
-    },
-    get currentMonitor() {
-      return komorebiVariables.currentMonitor;
-    },
-  };
 }

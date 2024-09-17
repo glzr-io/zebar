@@ -1,9 +1,31 @@
-import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
-import type { NetworkProviderConfig } from '~/user-config';
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
-export interface NetworkVariables {
+export interface NetworkProviderConfig {
+  type: 'network';
+
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
+}
+
+const networkProviderConfigSchema = z.object({
+  type: z.literal('network'),
+  refreshInterval: z.coerce.number().default(5 * 1000),
+});
+
+export type NetworkProvider = Provider<
+  NetworkProviderConfig,
+  NetworkOutput
+>;
+
+export interface NetworkOutput {
   defaultInterface: NetworkInterface | null;
   defaultGateway: NetworkGateway | null;
   interfaces: NetworkInterface[];
@@ -52,31 +74,30 @@ export enum InterfaceType {
 }
 
 export interface NetworkTraffic {
-  received: number | null;
-  transmitted: number | null;
+  received: NetworkTrafficMeasure;
+  transmitted: NetworkTrafficMeasure;
+}
+
+export interface NetworkTrafficMeasure {
+  bytes: number;
+  siValue: number;
+  siUnit: string;
+  iecValue: number;
+  iecUnit: string;
 }
 
 export async function createNetworkProvider(
   config: NetworkProviderConfig,
-  owner: Owner,
-) {
-  const networkVariables = await createProviderListener<
-    NetworkProviderConfig,
-    NetworkVariables
-  >(config, owner);
+): Promise<NetworkProvider> {
+  const mergedConfig = networkProviderConfigSchema.parse(config);
 
-  return {
-    get defaultInterface() {
-      return networkVariables().defaultInterface;
-    },
-    get defaultGateway() {
-      return networkVariables().defaultGateway;
-    },
-    get interfaces() {
-      return networkVariables().interfaces;
-    },
-    get traffic() {
-      return networkVariables().traffic;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<NetworkOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
+      } else {
+        queue.output(result.output);
+      }
+    });
+  });
 }

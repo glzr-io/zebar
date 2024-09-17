@@ -1,9 +1,31 @@
-import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
-import type { BatteryProviderConfig } from '~/user-config';
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
-export interface BatteryVariables {
+export interface BatteryProviderConfig {
+  type: 'battery';
+
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
+}
+
+const batteryProviderConfigSchema = z.object({
+  type: z.literal('battery'),
+  refreshInterval: z.coerce.number().default(60 * 1000),
+});
+
+export type BatteryProvider = Provider<
+  BatteryProviderConfig,
+  BatteryOutput
+>;
+
+export interface BatteryOutput {
   chargePercent: number;
   cycleCount: number;
   healthPercent: number;
@@ -17,40 +39,16 @@ export interface BatteryVariables {
 
 export async function createBatteryProvider(
   config: BatteryProviderConfig,
-  owner: Owner,
-) {
-  const batteryVariables = await createProviderListener<
-    BatteryProviderConfig,
-    BatteryVariables
-  >(config, owner);
+): Promise<BatteryProvider> {
+  const mergedConfig = batteryProviderConfigSchema.parse(config);
 
-  return {
-    get chargePercent() {
-      return batteryVariables().chargePercent;
-    },
-    get cycleCount() {
-      return batteryVariables().cycleCount;
-    },
-    get healthPercent() {
-      return batteryVariables().healthPercent;
-    },
-    get powerConsumption() {
-      return batteryVariables().powerConsumption;
-    },
-    get state() {
-      return batteryVariables().state;
-    },
-    get isCharging() {
-      return batteryVariables().isCharging;
-    },
-    get timeTillEmpty() {
-      return batteryVariables().timeTillEmpty;
-    },
-    get timeTillFull() {
-      return batteryVariables().timeTillFull;
-    },
-    get voltage() {
-      return batteryVariables().voltage;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<BatteryOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
+      } else {
+        queue.output(result.output);
+      }
+    });
+  });
 }

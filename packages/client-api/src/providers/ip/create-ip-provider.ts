@@ -1,9 +1,28 @@
-import type { Owner } from 'solid-js';
+import { z } from 'zod';
 
-import type { IpProviderConfig } from '~/user-config';
-import { createProviderListener } from '../create-provider-listener';
+import {
+  createBaseProvider,
+  type Provider,
+} from '../create-base-provider';
+import { onProviderEmit } from '~/desktop';
 
-export interface IpVariables {
+export interface IpProviderConfig {
+  type: 'ip';
+
+  /**
+   * How often this provider refreshes in milliseconds.
+   */
+  refreshInterval?: number;
+}
+
+const ipProviderConfigSchema = z.object({
+  type: z.literal('ip'),
+  refreshInterval: z.coerce.number().default(60 * 60 * 1000),
+});
+
+export type IpProvider = Provider<IpProviderConfig, IpOutput>;
+
+export interface IpOutput {
   address: string;
   approxCity: string;
   approxCountry: string;
@@ -13,28 +32,16 @@ export interface IpVariables {
 
 export async function createIpProvider(
   config: IpProviderConfig,
-  owner: Owner,
-) {
-  const ipVariables = await createProviderListener<
-    IpProviderConfig,
-    IpVariables
-  >(config, owner);
+): Promise<IpProvider> {
+  const mergedConfig = ipProviderConfigSchema.parse(config);
 
-  return {
-    get address() {
-      return ipVariables().address;
-    },
-    get approxCity() {
-      return ipVariables().approxCity;
-    },
-    get approxCountry() {
-      return ipVariables().approxCountry;
-    },
-    get approxLatitude() {
-      return ipVariables().approxLatitude;
-    },
-    get approxLongitude() {
-      return ipVariables().approxLongitude;
-    },
-  };
+  return createBaseProvider(mergedConfig, async queue => {
+    return onProviderEmit<IpOutput>(mergedConfig, ({ result }) => {
+      if ('error' in result) {
+        queue.error(result.error);
+      } else {
+        queue.output(result.output);
+      }
+    });
+  });
 }

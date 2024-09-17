@@ -1,20 +1,26 @@
 {
   "name": "zebar",
-  "version": "0.0.0",
+  "version": "2.0.0",
+  "description": "Client API for Zebar - a tool for creating customizable taskbars, desktop widgets, and popups.",
+  "repository": "github:glzr-io/zebar",
+  "license": "GPL-3.0-only",
+  "author": "Lars Berger",
+  "sideEffects": false,
   "type": "module",
   "exports": {
-    "import": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
-  "main": "./dist/index.js",
   "module": "./dist/index.js",
-  "browser": {},
   "types": "./dist/index.d.ts",
-  "typesVersions": {},
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup src/index.ts --format esm --dts",
     "dev": "npm run build -- --watch src",
     "prepublishOnly": "npm run build"
   },
@@ -22,17 +28,14 @@
     "@tauri-apps/api": "2.0.0-beta.15",
     "@tauri-apps/plugin-dialog": "2.0.0-beta.7",
     "@tauri-apps/plugin-shell": "2.0.0-beta.8",
-    "glazewm": "1.4.1",
+    "glazewm": "1.4.3",
     "luxon": "3.4.4",
-    "solid-js": "1.8.14",
-    "yaml": "2.3.4",
     "zod": "3.22.4"
   },
   "devDependencies": {
     "@types/luxon": "3.4.2",
     "esbuild": "0.20.0",
     "tsup": "8.0.2",
-    "tsup-preset-solid": "2.2.0",
     "typescript": "5.3.3"
   }
 }

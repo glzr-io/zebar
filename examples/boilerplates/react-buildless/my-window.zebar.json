@@ -1,0 +1,23 @@
+{
+  "$schema": "TODO",
+  "htmlPath": "./index.html",
+  "launchOptions": {
+    "zOrder": "normal",
+    "shownInTaskbar": false,
+    "focused": false,
+    "resizable": false,
+    "transparent": false,
+    "placements": [
+      {
+        "anchor": "top_left",
+        "offsetX": "0px",
+        "offsetY": "0px",
+        "width": "100%",
+        "height": "40px",
+        "monitorSelection": {
+          "type": "all"
+        }
+      }
+    ]
+  }
+}

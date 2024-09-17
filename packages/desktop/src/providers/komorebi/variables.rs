@@ -3,7 +3,7 @@ use serde::Serialize;
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct KomorebiVariables {
+pub struct KomorebiOutput {
   pub all_monitors: Vec<KomorebiMonitor>,
   pub focused_monitor_index: usize,
 }

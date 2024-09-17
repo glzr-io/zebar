@@ -1,0 +1,23 @@
+body {
+  color: rgb(255 255 255 / 90%);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+.app {
+  text-align: center;
+}
+
+.chip {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgb(84, 66, 220);
+  margin-right: 4px;
+}

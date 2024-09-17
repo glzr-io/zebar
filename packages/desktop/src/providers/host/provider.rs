@@ -1,59 +1,23 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
 use sysinfo::System;
-use tokio::{sync::Mutex, task::AbortHandle};
 
-use super::{HostProviderConfig, HostVariables};
-use crate::providers::{
-  provider::IntervalProvider, variables::ProviderVariables,
-};
+use super::{HostOutput, HostProviderConfig};
+use crate::{impl_interval_provider, providers::ProviderOutput};
 
 pub struct HostProvider {
-  pub config: Arc<HostProviderConfig>,
-  abort_handle: Option<AbortHandle>,
-  sysinfo: Arc<Mutex<System>>,
+  config: HostProviderConfig,
 }
 
 impl HostProvider {
-  pub fn new(
-    config: HostProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
-  ) -> HostProvider {
-    HostProvider {
-      config: Arc::new(config),
-      abort_handle: None,
-      sysinfo,
-    }
-  }
-}
-
-#[async_trait]
-impl IntervalProvider for HostProvider {
-  type Config = HostProviderConfig;
-  type State = Mutex<System>;
-
-  fn config(&self) -> Arc<HostProviderConfig> {
-    self.config.clone()
+  pub fn new(config: HostProviderConfig) -> HostProvider {
+    HostProvider { config }
   }
 
-  fn state(&self) -> Arc<Mutex<System>> {
-    self.sysinfo.clone()
+  fn refresh_interval_ms(&self) -> u64 {
+    self.config.refresh_interval
   }
 
-  fn abort_handle(&self) -> &Option<AbortHandle> {
-    &self.abort_handle
-  }
-
-  fn set_abort_handle(&mut self, abort_handle: AbortHandle) {
-    self.abort_handle = Some(abort_handle)
-  }
-
-  async fn get_refreshed_variables(
-    _: &HostProviderConfig,
-    __: &Mutex<System>,
-  ) -> anyhow::Result<ProviderVariables> {
-    Ok(ProviderVariables::Host(HostVariables {
+  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    Ok(ProviderOutput::Host(HostOutput {
       hostname: System::host_name(),
       os_name: System::name(),
       os_version: System::os_version(),
@@ -63,3 +27,5 @@ impl IntervalProvider for HostProvider {
     }))
   }
 }
+
+impl_interval_provider!(HostProvider);

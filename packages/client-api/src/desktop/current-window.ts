@@ -5,7 +5,7 @@ import {
   type Window,
 } from '@tauri-apps/api/window';
 
-import type { ZOrder } from '~/user-config';
+import { WindowZOrder } from '~/user-config';
 import { createLogger } from '~/utils';
 import { setAlwaysOnTop, setSkipTaskbar } from './desktop-commands';
 
@@ -17,7 +17,7 @@ export interface WindowPosition {
 }
 
 export interface WindowStyles {
-  zOrder: ZOrder;
+  zOrder: WindowZOrder;
   shownInTaskbar: boolean;
   resizable: boolean;
 }
@@ -66,7 +66,10 @@ export async function setWindowStyles(styles: Partial<WindowStyles>) {
   ]);
 }
 
-async function setWindowZOrder(window: Window, zOrder?: ZOrder) {
+export async function setWindowZOrder(
+  window: Window,
+  zOrder?: WindowZOrder,
+) {
   if (zOrder === 'always_on_bottom') {
     await window.setAlwaysOnBottom(true);
   } else if (zOrder === 'always_on_top') {
