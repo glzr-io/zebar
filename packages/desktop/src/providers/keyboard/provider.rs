@@ -56,4 +56,4 @@ impl KeyboardProvider {
   }
 }
 
-impl_interval_provider!(KeyboardProvider);
+impl_interval_provider!(KeyboardProvider, false);

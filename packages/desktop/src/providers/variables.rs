@@ -7,7 +7,7 @@ use super::{
 #[cfg(windows)]
 use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum ProviderOutput {
   Battery(BatteryOutput),

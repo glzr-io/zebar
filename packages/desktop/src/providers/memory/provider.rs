@@ -43,4 +43,4 @@ impl MemoryProvider {
   }
 }
 
-impl_interval_provider!(MemoryProvider);
+impl_interval_provider!(MemoryProvider, true);

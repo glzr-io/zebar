@@ -36,7 +36,7 @@ pub struct ProviderRef {
 ///
 /// This is used instead of a normal `Result` type in order to serialize it
 /// in a nicer way.
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ProviderResult {
   Output(ProviderOutput),

@@ -48,4 +48,4 @@ impl IpProvider {
   }
 }
 
-impl_interval_provider!(IpProvider);
+impl_interval_provider!(IpProvider, false);

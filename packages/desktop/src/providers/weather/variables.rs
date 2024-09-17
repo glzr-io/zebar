@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WeatherOutput {
   pub is_daytime: bool,
@@ -10,7 +10,7 @@ pub struct WeatherOutput {
   pub wind_speed: f32,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WeatherStatus {
   ClearDay,

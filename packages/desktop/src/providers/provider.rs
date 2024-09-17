@@ -20,7 +20,7 @@ pub trait Provider: Send + Sync {
 /// method.
 #[macro_export]
 macro_rules! impl_interval_provider {
-  ($type:ty) => {
+  ($type:ty, $allow_identical_emits:expr) => {
     #[async_trait::async_trait]
     impl crate::providers::Provider for $type {
       async fn run(
@@ -38,14 +38,25 @@ macro_rules! impl_interval_provider {
         interval
           .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
+        let mut last_interval_res: Option<
+          crate::providers::ProviderResult,
+        > = None;
+
         loop {
           interval.tick().await;
 
-          let res =
-            emit_result_tx.send(self.run_interval().await.into()).await;
+          let interval_res = self.run_interval().await.into();
 
-          if let Err(err) = res {
-            tracing::error!("Error sending provider result: {:?}", err);
+          if $allow_identical_emits
+            || last_interval_res.as_ref() != Some(&interval_res)
+          {
+            let send_res = emit_result_tx.send(interval_res.clone()).await;
+
+            if let Err(err) = send_res {
+              tracing::error!("Error sending provider result: {:?}", err);
+            }
+
+            last_interval_res = Some(interval_res);
           }
         }
       }
