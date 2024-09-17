@@ -4,9 +4,9 @@ mod cpu;
 mod host;
 mod ip;
 #[cfg(windows)]
-mod komorebi;
+mod keyboard;
 #[cfg(windows)]
-mod language;
+mod komorebi;
 mod memory;
 mod network;
 mod provider;

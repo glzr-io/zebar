@@ -454,7 +454,7 @@ Self provider doesn't take any config options.
 | `parsedConfig` | Parsed config for this element.                      | `WindowConfig \| GroupConfig \| TemplateConfig` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `globalConfig` | Global user config.                                  | `GlobalConfig`                                  | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
-### Language (Windows only)
+### Keyboard (Windows only)
 
 ### Provider config
 
@@ -466,7 +466,7 @@ Self provider doesn't take any config options.
 
 | Variable      | Description                           | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `language`    | Current language, for example 'en-US' | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24">
+| `layout`    | Current layout, for example 'en-US' | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24">
 
 ## Util
 

@@ -17,7 +17,7 @@ use super::{
   SharedProviderState,
 };
 #[cfg(windows)]
-use super::{komorebi::KomorebiProvider, language::LanguageProvider};
+use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
 
 /// Reference to an active provider.
 pub struct ProviderRef {
@@ -184,8 +184,8 @@ impl ProviderRef {
         Box::new(WeatherProvider::new(config))
       }
       #[cfg(windows)]
-      ProviderConfig::Language(config) => {
-        Box::new(LanguageProvider::new(config))
+      ProviderConfig::Keyboard(config) => {
+        Box::new(KeyboardProvider::new(config))
       }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),

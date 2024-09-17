@@ -5,7 +5,7 @@ use super::{
   memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
 };
 #[cfg(windows)]
-use super::{komorebi::KomorebiOutput, language::LanguageVariables};
+use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
@@ -20,5 +20,5 @@ pub enum ProviderOutput {
   Network(NetworkOutput),
   Weather(WeatherOutput),
   #[cfg(windows)]
-  Language(LanguageVariables),
+  Keyboard(KeyboardOutput),
 }

@@ -8,7 +8,7 @@ use super::{
 };
 #[cfg(windows)]
 use super::{
-  komorebi::KomorebiProviderConfig, language::LanguageProviderConfig,
+  keyboard::KeyboardProviderConfig, komorebi::KomorebiProviderConfig,
 };
 
 #[derive(Deserialize, Debug)]
@@ -24,5 +24,5 @@ pub enum ProviderConfig {
   Network(NetworkProviderConfig),
   Weather(WeatherProviderConfig),
   #[cfg(windows)]
-  Language(LanguageProviderConfig),
+  Keyboard(KeyboardProviderConfig),
 }
