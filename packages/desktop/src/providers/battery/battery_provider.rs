@@ -1,4 +1,5 @@
 use anyhow::Context;
+use serde::{Deserialize, Serialize};
 use starship_battery::{
   units::{
     electric_potential::volt, power::watt, ratio::percent,
@@ -7,8 +8,27 @@ use starship_battery::{
   Manager, State,
 };
 
-use super::{BatteryOutput, BatteryProviderConfig};
 use crate::{impl_interval_provider, providers::ProviderOutput};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct BatteryProviderConfig {
+  pub refresh_interval: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatteryOutput {
+  pub charge_percent: f32,
+  pub health_percent: f32,
+  pub state: String,
+  pub is_charging: bool,
+  pub time_till_full: Option<f32>,
+  pub time_till_empty: Option<f32>,
+  pub power_consumption: f32,
+  pub voltage: f32,
+  pub cycle_count: Option<u32>,
+}
 
 pub struct BatteryProvider {
   config: BatteryProviderConfig,

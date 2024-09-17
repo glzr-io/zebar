@@ -1,8 +1,4 @@
-mod config;
 mod open_meteo_res;
-mod provider;
-mod variables;
+mod weather_provider;
 
-pub use config::*;
-pub use provider::*;
-pub use variables::*;
+pub use weather_provider::*;

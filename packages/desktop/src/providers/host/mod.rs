@@ -1,7 +1,3 @@
-mod config;
-mod provider;
-mod variables;
+mod host_provider;
 
-pub use config::*;
-pub use provider::*;
-pub use variables::*;
+pub use host_provider::*;

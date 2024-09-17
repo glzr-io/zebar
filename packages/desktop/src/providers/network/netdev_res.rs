@@ -3,15 +3,6 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NetworkOutput {
-  pub default_interface: Option<NetworkInterface>,
-  pub default_gateway: Option<NetworkGateway>,
-  pub interfaces: Vec<NetworkInterface>,
-  pub traffic: NetworkTraffic,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct NetworkTraffic {
   pub received: NetworkTrafficMeasure,
   pub transmitted: NetworkTrafficMeasure,

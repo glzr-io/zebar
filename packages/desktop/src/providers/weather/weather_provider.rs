@@ -1,10 +1,43 @@
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 
-use super::{
-  open_meteo_res::OpenMeteoRes, WeatherOutput, WeatherProviderConfig,
-  WeatherStatus,
-};
+use super::open_meteo_res::OpenMeteoRes;
 use crate::{impl_interval_provider, providers::ProviderOutput};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct WeatherProviderConfig {
+  pub refresh_interval: u64,
+  pub latitude: f32,
+  pub longitude: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WeatherOutput {
+  pub is_daytime: bool,
+  pub status: WeatherStatus,
+  pub celsius_temp: f32,
+  pub fahrenheit_temp: f32,
+  pub wind_speed: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WeatherStatus {
+  ClearDay,
+  ClearNight,
+  CloudyDay,
+  CloudyNight,
+  LightRainDay,
+  LightRainNight,
+  HeavyRainDay,
+  HeavyRainNight,
+  SnowDay,
+  SnowNight,
+  ThunderDay,
+  ThunderNight,
+}
 
 pub struct WeatherProvider {
   config: WeatherProviderConfig,

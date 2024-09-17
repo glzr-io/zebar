@@ -1,20 +1,35 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use netdev::interface::get_interfaces;
+use serde::{Deserialize, Serialize};
 use sysinfo::Networks;
 use tokio::sync::Mutex;
 
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
-  InterfaceType, NetworkGateway, NetworkInterface, NetworkOutput,
-  NetworkProviderConfig, NetworkTraffic, NetworkTrafficMeasure,
+  InterfaceType, NetworkGateway, NetworkInterface, NetworkTraffic,
+  NetworkTrafficMeasure,
 };
 use crate::{
   common::{to_iec_bytes, to_si_bytes},
   impl_interval_provider,
   providers::ProviderOutput,
 };
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkProviderConfig {
+  pub refresh_interval: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkOutput {
+  pub default_interface: Option<NetworkInterface>,
+  pub default_gateway: Option<NetworkGateway>,
+  pub interfaces: Vec<NetworkInterface>,
+  pub traffic: NetworkTraffic,
+}
 
 pub struct NetworkProvider {
   config: NetworkProviderConfig,

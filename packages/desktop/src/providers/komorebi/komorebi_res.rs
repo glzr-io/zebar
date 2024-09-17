@@ -3,13 +3,6 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KomorebiOutput {
-  pub all_monitors: Vec<KomorebiMonitor>,
-  pub focused_monitor_index: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct KomorebiMonitor {
   pub id: isize,
   pub device_id: String,

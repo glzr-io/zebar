@@ -1,5 +1,4 @@
 mod battery;
-mod config;
 mod cpu;
 mod host;
 mod ip;
@@ -10,13 +9,14 @@ mod komorebi;
 mod memory;
 mod network;
 mod provider;
+mod provider_config;
 mod provider_manager;
+mod provider_output;
 mod provider_ref;
-mod variables;
 mod weather;
 
-pub use config::*;
 pub use provider::*;
+pub use provider_config::*;
 pub use provider_manager::*;
+pub use provider_output::*;
 pub use provider_ref::*;
-pub use variables::*;
