@@ -1,253 +1,50 @@
-# Zebar
+<div align="center">
 
-**Zebar lets you create customizable and cross-platform taskbars, desktop widgets, and popups.**
+  <br>
+  <img src="https://github.com/user-attachments/assets/d1e10485-2cbb-4434-9d98-5c74702eebcc" width="350" alt="Zebar logo" />
+  <br>
 
-![sample-config-bar](https://github.com/glzr-io/zebar/assets/34844898/859cd563-5d7b-4236-b9bd-88acdf82d7e4)
+# Zebar 🦓
 
-[🔧 Development & how to contribute](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md)
+**Zebar lets you create customizable and cross-platform desktop widgets.**
 
-#### Readme contents
+[![Discord invite][discord-badge]][discord-link]
+[![Good first issues][issues-badge]][issues-link]
 
-1. [Installation](#%EF%B8%8F-installation)
-2. [Intro to Zebar](#-intro-to-zebar)
-   - [Styled with HTML + CSS](#concept-1-styled-with-html--css)
-   - [Reactive "providers"](#concept-2-reactive-providers)
-   - [Templating language](#concept-3-templating-language)
-3. [Providers](#-providers)
+[Installation](#%EF%B8%8F-installation) •
+[Intro](#-intro-to-zebar) •
+[FAQ](#-faq) •
+[Contributing ↗](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md)
+
+![zebar-demo](https://github.com/user-attachments/assets/7a3aa5d2-2c7a-4171-9ede-d88839b91666)
+
+</div>
 
 ## ⚙️ Installation
 
 **Downloads for Windows, MacOS, and Linux are available in the [latest release](https://github.com/glzr-io/zebar/releases)**.
 
-A default start script can also be downloaded from the release. Run the script after install to launch the default bar, which will create a config file located at `%userprofile%/.glzr/zebar/config.yaml`.
-
-## ➡️ Usage with Komorebi
-
-Modify the `float_rules` in the Komorebi config options (at `%userprofile%/komorebi.json`).
-
-```json
-{
-  "float_rules": [
-    {
-      "kind": "Exe",
-      "id": "Zebar.exe",
-      "matching_strategy": "Equals"
-    }
-  ]
-}
-```
-
-And in the Zebar config (if using the default generated one), replace the GlazeWM element with the following:
-
-```yaml
-    template/workspaces:
-      styles: |
-        display: flex;
-        align-items: center;
-
-        .workspace {
-          background: rgba(255, 255, 255, 0.05);
-          margin-right: 4px;
-          width: 30px;
-          height: 30px;
-          color: #ffffffe6;
-          border: none;
-          border-radius: 2px;
-        }
-
-        .workspace.active {
-          background: rgba(255, 255, 255, 0.1);
-        }
-      providers: ['komorebi']
-      template: |
-        @for (workspace of komorebi.currentWorkspaces) {
-          <button class="workspace {{ workspace === komorebi.focusedWorkspace && 'active' }}">
-            {{ workspace.name }}
-          </button>
-        }
-```
+For building locally, follow the instructions [here](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md).
 
 ## 🌟 Intro to Zebar
 
-There's 3 big differences that set Zebar apart from other similar projects:
+When Zebar is first launched, a set of default widget configs are generated to `%userprofile%/.glzr/zebar`. This includes various examples and templates to get you started with creating your own widgets.
 
-- Styled with HTML + CSS
-- Reactive "providers" for modifying the bar on the fly
-- Templating language
+To create a new widget, simply copy its config file into the `%userprofile%/.glzr/zebar` directory.
 
-### Concept 1: Styled with HTML + CSS
+Widgets are powered by native webviews (_similar_ to Electron, but less resource heavy). Every widget has its own config file and a corresponding HTML file for the markup and styling of the window. This is an ordinary HTML file, so any frontend framework (React, Angular, Vue, etc.) can be used.
 
-The **_entire_** html + css of the bar can be customized via the user config. CSS can be added to an element via the `styles` property, and child divs can be created via `template/<id>` and `group/<id>` properties.
+Zebar exposes various system information (refered to as "providers") which can be used and displayed by your frontend. This includes stats like CPU usage, battery info, various window manager integrations, and lots more.
 
-A basic config might look like this:
+## ❓ FAQ
 
-```yaml
-# Define a new window with an ID of 'example', which can then be launched
-# by running 'zebar open example'.
-window/example:
-  width: '200'
-  height: '200'
-  position_x: '0'
-  position_y: '0'
-  styles: |
-    background: lightgreen;
-    height: 100%;
-    width: 100%;
-  # Add a child div for showing CPU usage. It uses the CPU provider to
-  # get a variable for the current usage (more on that below).
-  template/cpu:
-    providers: ['cpu']
-    template: |
-      <p>{{ cpu.usage }}</p>
-```
+**Q: Help! On Windows, Zebar is failing to start?**
 
-Running `zebar open example` in a terminal will create an instance of this window config. It'll launch a 200x200 window in the corner of the screen where the CPU changes over time.
-
-<p align="middle">
-  <img align="top" src="https://github.com/glzr-io/zebar/assets/34844898/e5cd7b7e-97ab-4a6b-b952-8ed8302b710f">
-  <img align="top" src="https://github.com/glzr-io/zebar/assets/34844898/3ed88f73-808d-4734-8b99-411cfb2e2b38">
-</p>
-<p align="middle">
-  <i>The resulting window and underlying HTML from the above config.</i>
-</p>
-
-`group/<id>` properties are used to add a child div, whereas `template/<id>` properties are used to add a child div that can have a custom HTML template. `group/<id>` properties can be nested infinitely, whereas `template/<id>` properties cannot be nested. The order of these config properties matters as can be seen from the resulting HTML (pic 3).
-
-```yaml
-window/example:
-  width: '200'
-  height: '200'
-  position_x: '0'
-  position_y: '0'
-  group/nested1:
-    group/nested2:
-      group/nested3:
-        template/my_template1:
-          template: |
-            <span>The mitochondria is the powerhouse of the cell</span>
-            <img src="https://google.com/mitochondria.jpg">
-  template/my_template2:
-    template: |
-      <span>Another template</span>
-```
-
-<p align="middle">
-  <img align="top" src="https://github.com/glzr-io/zebar/assets/34844898/3ea640bf-f1db-4adf-bdfe-93634960d215" width="400px">
-</p>
-<p align="middle">
-  <i>The resulting HTML from the above config.</i>
-</p>
-
-### Concept 2: Reactive "providers"
-
-Rather than having predefined components (eg. a cpu component, battery component, etc), Zebar instead introduces **providers**. Providers are a collection of functions and/or variables that can change over time. When a variable changes, it'll cause a reactive change **_wherever_** it is used in the config.
-
-```yaml
-window/example:
-  providers: ['cpu', 'memory']
-  width: '200'
-  height: '200'
-  # Set position of the window to be based off current memory/cpu usage. We
-  # need to round the values since `position_x` and `position_y` only accept
-  # whole numbers.
-  position_x: '{{ Math.round(cpu.usage) }}'
-  position_y: '{{ Math.round(memory.usage) }}'
-  template/cpu_and_memory:
-    template: |
-      CPU usage: {{ cpu.usage }}
-      Memory usage: {{ memory.usage}}
-```
-
-The above will create a window that jumps around the screen whenever cpu and memory usage changes. _All config properties are reactive to changes in providers._
-
-Providers "trickle down", meaning that a provider declared on a parent element (eg. `window/example`) will be available to any elements below (eg. `template/cpu-and-memory`). So we don't have to repeat declaring a CPU provider if we need it in multiple places; instead move the provider to a parent element.
-
-Providers can also optionally take some config options. For example, the CPU provider refreshes every 5 seconds by default but that can be changed by defining the providers as such:
-
-```yaml
-window/example:
-  providers:
-    - type: 'cpu'
-      refresh_interval: 3000
-    - type: 'weather'
-      latitude: 51.509865
-      longitude: -0.118092
-```
-
-A full list of providers and their configs is available [here](#-providers).
-
-### Lastly, concept 3: Templating language
-
-Zebar's templating language has support for interpolation tags, if-else statements, for-loops, and switch statements. Just like providers, the templating syntax can be used on any config property (this includes switch, if-else statements etc).
-
-#### Interpolation tags
-
-```yaml
-window/example:
-  providers: ['weather']
-  # Window is only resizable when there is nice weather.
-  resizable: "{{ weather.status === 'sunny_day' }}"
-```
-
-Any arbitrary JavaScript is accepted within interpolation tags (eg. `{{ Math.random() }}`). However, it'll only re-evaluated when a provider changes.
-
-```yaml
-window/example:
-  template/weather:
-    providers: ['weather']
-    # Template will only change when weather temperature variable is updated.
-    template: |
-      <span>Random number: {{ Math.random() }}</span>
-      <span>Temperature: {{ weather.celsiusTemp }}</span>
-```
-
-#### If-else statements
-
-```yaml
-window/example:
-  template/weather:
-    providers: ['weather']
-    styles: |
-      .hot {
-        color: red;
-      }
-    template: |
-      @if (weather.celsiusTemp > 30) {
-        <p class="hot">It's hot yo</p>
-      } @else if (weather.celsiusTemp > 20) {
-        <p>It's not that bad</p>
-      } @else {
-        <p>It's chilly here</p>
-      }
-```
-
-#### For-loops
-
-```yaml
-window/example:
-  template/fruit:
-    template: |
-      @for (fruit of ['apple', 'orange', 'pineapple']) {
-        <span>{{ fruit }}</span>
-      }
-```
-
-#### Switch statements
-
-```yaml
-window/example:
-  template/weather:
-    providers: ['weather']
-    template: |
-      @switch (weather.status) {
-        @case ('clear_day') {<i class="nf nf-weather-day_sunny"></i>}
-        @case ('cloudy_day') {<i class="nf nf-weather-day_cloudy"></i>}
-        @case ('snow_day') {<i class="nf nf-weather-day_snow"></i>}
-        @default {<i class="nf nf-weather-day_sunny"></i>}
-      }
-```
+In some cases, updating to the latest Microsoft Webview2 version is needed ([download](https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH)).
 
 ## 🧩 Providers
+
+Through the `zebar` NPM package, Zebar exposes various system information via reactive "providers". Providers are a collection of functions and variables that can change over time.
 
 - [battery](#Battery)
 - [cpu](#CPU)
@@ -255,22 +52,21 @@ window/example:
 - [glazewm](#GlazeWM)
 - [host](#Host)
 - [ip](#IP)
+- [keyboard](#Keyboard)
+- [komorebi](#Komorebi)
 - [memory](#Memory)
-- [monitors](#Monitors)
 - [network](#Network)
-- [self](#Self)
-- [util](#Util)
 - [weather](#Weather)
 
 ### Battery
 
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
-### Variables
+#### Outputs
 
 | Variable           | Description                                                                                                          | Return type                                                        | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -286,13 +82,13 @@ window/example:
 
 ### CPU
 
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
-### Variables
+#### Outputs
 
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -304,49 +100,58 @@ window/example:
 
 ## Date
 
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `1000`        |
-| `timezone`         | Timezone either as UTC-Offset or ANA timezone      | `string`    | `local`       |
-| `locale`           | ISO-639-1 local that affects the output of toFormat  | `string`    |       |
+| `formatting`         | Formatting of the current date into a custom string format. Affects the output of [`formatted`](#outputs-2). <br><br>Refer to [table of tokens](https://moment.github.io/luxon/#/formatting?id=table-of-tokens) for available date/time tokens. <br><br> **Examples:**<br> <br> - `'yyyy LLL dd'` -> `2023 Feb 13`<br> - `"HH 'hours and' mm 'minutes'"` -> `20 hours and 55 minutes` | `string`    | `EEE	d MMM t`       |
+| `timezone`         | Either a UTC offset (eg. `UTC+8`) or an IANA timezone (eg. `America/New_York`). Affects the output of [`formatted`](#outputs-2).<br><br> A full list of available IANA timezones can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List).| `string`    | `local`       |
+| `locale`           | An ISO-639-1 locale, which is either a 2-letter language code (eg. `en`) or a 4-letter language + country code (eg. `en-gb`). Affects the output of [`formatted`](#outputs-2).<br><br> A full list of ISO-639-1 locales can be found [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes#Table).  | `string`    |       |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `1000`        |
 
-### Variables
+#### Outputs
 
 | Variable | Description                                                                                                              | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | -------- | ------------------------------------------------------------------------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `formatted` | Current date/time as a formatted string. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `new`    | Current date/time as a JavaScript `Date` object. Uses `new Date()` under the hood.                                       | `Date`      | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `now`    | Current date/time as milliseconds since epoch. Uses `Date.now()` under the hood.                                         | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `iso`    | Current date/time as an ISO-8601 string (eg. `2017-04-22T20:47:05.335-04:00`). Uses `date.toISOString()` under the hood. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
-### Functions
-
-| Function   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `toFormat` | Format a given date/time into a custom string format. Refer to [table of tokens](https://moment.github.io/luxon/#/formatting?id=table-of-tokens) for available date/time tokens. <br><br> **Examples:**<br> <br> - `toFormat(now, 'yyyy LLL dd')` -> `2023 Feb 13`<br> - `toFormat(now, "HH 'hours and' mm 'minutes'")` -> `20 hours and 55 minutes`<br> <br> **Parameters:**<br> <br> - `now`: _`number`_ Date/time as milliseconds since epoch.<br> - `format`: _`string`_ Custom string format. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-
 ### GlazeWM
 
-### Provider config
+#### Config
 
-GlazeWM provider doesn't take any config options.
+No config options.
 
-### Variables
+#### Outputs
 
 | Variable              | Description | Return type   | Supported OS                                                                                                                      |
 | --------------------- | ----------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `workspacesOnMonitor` | TODO        | `Workspace[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `displayedWorkspace` | Workspace displayed on the current monitor.        | `Workspace` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `focusedWorkspace` | Workspace that currently has focus (on any monitor).        | `Workspace` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `currentWorkspaces` | Workspaces on the current monitor.        | `Workspace[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allWorkspaces` | Workspaces across all monitors.        | `Workspace[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allMonitors` | All monitors.        | `Monitor[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `focusedMonitor` | Monitor that currently has focus.        | `Monitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `currentMonitor` | Monitor that is nearest to this Zebar window.        | `Monitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `focusedContainer` | Container that currently has focus (on any monitor).        | `Container` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `tilingDirection` | Tiling direction of the focused container.        | `TilingDirection` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `bindingModes` | Active binding modes;        | `BindingModeConfig[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+| Function   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runCommand` | Invokes a WM command. <br><br> **Examples:**<br> <br> - `runCommand("focus --workspace 1")`<br> - `runCommand("set-floating", containerId)`<br> <br> **Parameters:**<br> <br> - `command`: _`string`_ WM command to run (e.g. `"focus --workspace 1"`).<br> - `subjectContainerId`: _`string \| undefined`_ (Optional) ID of container to use as subject. If not provided, this defaults to the currently focused container. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 ## Host
 
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `60000`       |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `60000`       |
 
-### Variables
+#### Outputs
 
 | Variable            | Description                                                                                                                                                                                                                                                  | Return type      | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -359,13 +164,13 @@ GlazeWM provider doesn't take any config options.
 
 ### IP
 
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `3600000`     |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `3600000`     |
 
-### Variables
+#### Outputs
 
 | Variable          | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ----------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -377,13 +182,13 @@ GlazeWM provider doesn't take any config options.
 
 ### Memory
 
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
-### Variables
+#### Outputs
 
 | Variable      | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -395,38 +200,24 @@ GlazeWM provider doesn't take any config options.
 | `usedSwap`    | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `totalSwap`   | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
-### Monitors
-
-### Provider config
-
-Monitors provider doesn't take any config options.
-
-### Variables
-
-| Variable    | Description | Return type                | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
-| ----------- | ----------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `primary`   | TODO        | `MonitorInfo \| undefined` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `secondary` | TODO        | `MonitorInfo[]`            | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `all`       | TODO        | `MonitorInfo[]`            | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-
 ### Network
 
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
-### Variables
+#### Outputs
 
 | Variable           | Description                            | Return type          | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------ | -------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `defaultInterface` | TODO                                   | `NetworkInterface`   | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `defaultGateway`   | TODO                                   | `Gateway`            | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `interfaces`       | TODO                                   | `NetworkInterface[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `traffic`          | Returns the network traffic per second | `NetworkTraffic`     | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `traffic`          | Returns the network traffic per second. | `NetworkTraffic`     | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
-### Return types
+#### Return types
 
 ### NetworkTraffic
 
@@ -435,63 +226,62 @@ Monitors provider doesn't take any config options.
 | `received`    | Received bytes per second.    | `number`    |
 | `transmitted` | Transmitted bytes per second. | `number`    |
 
-### Self
+### Keyboard
 
-### Provider config
-
-Self provider doesn't take any config options.
-
-### Variables
-
-| Variable       | Description                                          | Return type                                     | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------- | ---------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `args`         | Args used to open the window.                        | `Record<string, string>`                        | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `env`          | Environment variables when window was opened.        | `Record<string, string>`                        | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `providers`    | Map of this element's providers and their variables. | `Record<string, unknown>`                       | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `id`           | ID of this element.                                  | `string`                                        | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `type`         | Type of this element.                                | `ElementType`                                   | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `rawConfig`    | Unparsed config for this element.                    | `unknown`                                       | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `parsedConfig` | Parsed config for this element.                      | `WindowConfig \| GroupConfig \| TemplateConfig` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `globalConfig` | Global user config.                                  | `GlobalConfig`                                  | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-
-### Keyboard (Windows only)
-
-### Provider config
+#### Config
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
 
-### Variables
+#### Outputs
 
 | Variable      | Description                           | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`    | Current layout, for example 'en-US' | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24">
+| `layout`    | Current keyboard layout, for example 'en-US'. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24">
 
-## Util
+### Komorebi
 
-## Functions
+#### Config
 
-| Function       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `convertBytes` | Convert a given number (bytes) into a custom string format. The smallest data unit is Kb/KB/KiB. <br><br>**Parameters**<br><br> - `bytes`: _`number`_ Bytes to convert.<br> - `decimals`: _`number`_ The number of decimals to convert the bytes up to. Default: 0. <br> - `unitType`: _`DataUnit`_ The unit type to convert the bytes to. Default: 'bits'. There are 3 options: <br>&nbsp;&nbsp;1, 'bits': ('b', 'Kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Zb', 'Yb')<br>&nbsp;&nbsp;2, 'si_bytes': bytes using SI standard ('B', 'KB', 'MB', ... , 'YB')<br>&nbsp;&nbsp;3, 'iec_bytes': bytes using IEC standard ('B', 'KiB', 'MiB', ... , 'YiB').<br><br>**Examples:**<br><br> - `convertBytes(1024, 2, 'bits')` -> `8.19 Kb`<br> - `convertBytes(1024, 2, 'si_bytes')` -> `1.02 KB`<br> - `convertBytes(1024, 2, 'iec_bytes')` -> `1.00 KiB`<br> - `convertBytes(500, 1, 'iec_bytes')` -> `0.5 KiB`<br> - `convertBytes(2000, 2, 'iec_bytes')` -> `1.95 KiB` | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+No config options.
+
+#### Outputs
+
+| Variable              | Description | Return type   | Supported OS                                                                                                                      |
+| --------------------- | ----------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `displayedWorkspace` | Workspace displayed on the current monitor.        | `KomorebiWorkspace` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `focusedWorkspace` | Workspace that currently has focus (on any monitor).        | `KomorebiWorkspace` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `currentWorkspaces` | Workspaces on the current monitor.        | `KomorebiWorkspace[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allWorkspaces` | Workspaces across all monitors.        | `KomorebiWorkspace[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allMonitors` | All monitors.        | `KomorebiMonitor[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `focusedMonitor` | Monitor that currently has focus.        | `KomorebiMonitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `currentMonitor` | Monitor that is nearest to this Zebar window.        | `KomorebiMonitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
 
 ### Weather
 
-### Provider config
+#### Config
 
 | Option             | Description                                                                                            | Option type           | Default value |
 | ------------------ | ------------------------------------------------------------------------------------------------------ | --------------------- | ------------- |
-| `refresh_interval` | How often this provider refreshes in milliseconds.                                                     | `number`              | `3600000`     |
 | `latitude`         | Latitude to retrieve weather for. If not provided, latitude is instead estimated based on public IP.   | `number \| undefined` | `undefined`   |
 | `longitude`        | Longitude to retrieve weather for. If not provided, longitude is instead estimated based on public IP. | `number \| undefined` | `undefined`   |
+| `refreshInterval` | How often this provider refreshes in milliseconds.                                                     | `number`              | `3600000`     |
 
-### Variables
+#### Outputs
 
 | Variable          | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ----------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `address`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `approxCity`      | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `approxCountry`   | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `approxLatitude`  | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `approxLongitude` | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `isDaytime`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `status`      | TODO        | `WeatherStatus`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `celsiusTemp`   | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `fahrenheitTemp`  | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `windSpeed` | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+[discord-badge]: https://img.shields.io/discord/1041662798196908052.svg?logo=discord&colorB=7289DA
+[discord-link]: https://discord.gg/ud6z3qjRvM
+[downloads-badge]: https://img.shields.io/github/downloads/glzr-io/glazewm/total?logo=github&logoColor=white
+[downloads-link]: https://github.com/glzr-io/glazewm/releases
+[issues-badge]: https://img.shields.io/badge/good_first_issues-7057ff
+[issues-link]: https://github.com/glzr-io/zebar/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22
