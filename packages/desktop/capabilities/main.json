@@ -4,26 +4,26 @@
   "description": "Default capabilities",
   "windows": ["*"],
   "remote": {
-    "urls": ["http://asset.localhost"]
+    "urls": ["http://asset.localhost", "asset://localhost"]
   },
   "permissions": [
-    "app:default",
+    "core:app:default",
     "dialog:allow-message",
-    "event:default",
-    "path:allow-resolve-directory",
-    "path:default",
-    "window:default",
-    "window:allow-center",
-    "window:allow-close",
-    "window:allow-hide",
-    "window:allow-show",
-    "window:allow-maximize",
-    "window:allow-minimize",
-    "window:allow-set-skip-taskbar",
-    "window:allow-set-always-on-bottom",
-    "window:allow-set-always-on-top",
-    "window:allow-set-resizable",
-    "window:allow-set-position",
-    "window:allow-set-size"
+    "core:event:default",
+    "core:path:allow-resolve-directory",
+    "core:path:default",
+    "core:window:default",
+    "core:window:allow-center",
+    "core:window:allow-close",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-maximize",
+    "core:window:allow-minimize",
+    "core:window:allow-set-skip-taskbar",
+    "core:window:allow-set-always-on-bottom",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-resizable",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size"
   ]
 }
