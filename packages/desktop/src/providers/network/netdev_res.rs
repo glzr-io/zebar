@@ -5,7 +5,9 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct NetworkTraffic {
   pub received: NetworkTrafficMeasure,
+  pub total_received: NetworkTrafficMeasure,
   pub transmitted: NetworkTrafficMeasure,
+  pub total_transmitted: NetworkTrafficMeasure,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
