@@ -127,13 +127,8 @@ impl WindowFactory {
         config_path.display()
       );
 
-      // TODO: Url-encode the HTML path to get this working on MacOS/Linux.
       let webview_url = WebviewUrl::App(
-        format!(
-          "http://asset.localhost/{}",
-          html_path.to_unicode_string()
-        )
-        .into(),
+        Self::to_asset_url(&html_path.to_unicode_string()).into(),
       );
 
       // Note that window label needs to be globally unique.
@@ -191,6 +186,17 @@ impl WindowFactory {
     }
 
     Ok(())
+  }
+
+  /// Converts a config path to a Tauri asset URL.
+  ///
+  /// Returns a string that can be used as a webview URL.
+  pub fn to_asset_url(config_path: &str) -> String {
+    if cfg!(target_os = "windows") {
+      format!("http://asset.localhost/{}", config_path)
+    } else {
+      format!("asset://localhost/{}", config_path)
+    }
   }
 
   /// Registers window events for a given window.
