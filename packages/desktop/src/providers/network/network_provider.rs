@@ -55,13 +55,13 @@ impl NetworkProvider {
     let interfaces = get_interfaces();
     let default_interface = netdev::get_default_interface().ok();
 
-    let received = Self::total_bytes_received(&netinfo);
-    let received_per_sec =
-      received.0 / self.config.refresh_interval * 1000;
+    let (received, total_received) = Self::total_bytes_received(&netinfo);
+    let received_per_sec = received / self.config.refresh_interval * 1000;
 
-    let transmitted = Self::total_bytes_transmitted(&netinfo);
+    let (transmitted, total_transmitted) =
+      Self::total_bytes_transmitted(&netinfo);
     let transmitted_per_sec =
-      transmitted.0 / self.config.refresh_interval * 1000;
+      transmitted / self.config.refresh_interval * 1000;
 
     Ok(ProviderOutput::Network(NetworkOutput {
       default_interface: default_interface
@@ -80,11 +80,13 @@ impl NetworkProvider {
         .collect(),
       traffic: NetworkTraffic {
         received: Self::to_network_traffic_measure(received_per_sec)?,
-        total_received: Self::to_network_traffic_measure(received.1)?,
+        total_received: Self::to_network_traffic_measure(total_received)?,
         transmitted: Self::to_network_traffic_measure(
           transmitted_per_sec,
         )?,
-        total_transmitted: Self::to_network_traffic_measure(transmitted.1)?,
+        total_transmitted: Self::to_network_traffic_measure(
+          total_transmitted,
+        )?,
       },
     }))
   }
@@ -108,30 +110,36 @@ impl NetworkProvider {
   ///
   /// Returns the total bytes received by every network interface.
   fn total_bytes_received(networks: &sysinfo::Networks) -> (u64, u64) {
-    let mut received_total: Vec<u64> = Vec::new();
-    let mut total_received: Vec<u64> = Vec::new();
+    let mut bytes_received: Vec<u64> = Vec::new();
+    let mut total_bytes_received: Vec<u64> = Vec::new();
 
     for (_interface_name, network) in networks {
-      received_total.push(network.received());
-      total_received.push(network.total_received());
+      bytes_received.push(network.received());
+      total_bytes_received.push(network.total_received());
     }
 
-    (received_total.iter().sum(), total_received.iter().sum())
+    (
+      bytes_received.iter().sum(),
+      total_bytes_received.iter().sum(),
+    )
   }
 
   /// Gets the total network (up) usage.
   ///
   /// Returns the total bytes transmitted by every network interface.
   fn total_bytes_transmitted(networks: &sysinfo::Networks) -> (u64, u64) {
-    let mut transmitted_total: Vec<u64> = Vec::new();
-    let mut total_transmitted: Vec<u64> = Vec::new();
+    let mut bytes_transmitted: Vec<u64> = Vec::new();
+    let mut total_bytes_transmitted: Vec<u64> = Vec::new();
 
     for (_interface_name, network) in networks {
-      transmitted_total.push(network.transmitted());
-      total_transmitted.push(network.total_transmitted());
+      bytes_transmitted.push(network.transmitted());
+      total_bytes_transmitted.push(network.total_transmitted());
     }
 
-    (transmitted_total.iter().sum(), total_transmitted.iter().sum())
+    (
+      bytes_transmitted.iter().sum(),
+      total_bytes_transmitted.iter().sum(),
+    )
   }
 
   /// Transforms a `netdev::Interface` into a `NetworkInterface`.
