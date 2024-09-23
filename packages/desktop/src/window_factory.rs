@@ -188,14 +188,14 @@ impl WindowFactory {
     Ok(())
   }
 
-  /// Converts a config path to a Tauri asset URL.
+  /// Converts a file path to a Tauri asset URL.
   ///
   /// Returns a string that can be used as a webview URL.
-  pub fn to_asset_url(config_path: &str) -> String {
+  pub fn to_asset_url(file_path: &str) -> String {
     if cfg!(target_os = "windows") {
-      format!("http://asset.localhost/{}", config_path)
+      format!("http://asset.localhost/{}", file_path)
     } else {
-      format!("asset://localhost/{}", config_path)
+      format!("asset://localhost/{}", file_path)
     }
   }
 
