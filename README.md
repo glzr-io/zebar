@@ -221,10 +221,22 @@ No config options.
 
 ### NetworkTraffic
 
-| Variable      | Description                   | Return type |
-| ------------- | ----------------------------- | ----------- |
-| `received`    | Received bytes per second.    | `number`    |
-| `transmitted` | Transmitted bytes per second. | `number`    |
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `received`         | Received bytes per second.    | `NetworkTrafficMeasure` |
+| `transmitted`      | Transmitted bytes per second. | `NetworkTrafficMeasure` |
+| `totalReceived`    | Total received bytes.         | `NetworkTrafficMeasure` |
+| `totalTransmitted` | Total transmitted bytes.      | `NetworkTrafficMeasure` |
+
+### NetworkTrafficMeasure
+
+| Variable   | Description                                                                 | Return type |
+| ---------- | --------------------------------------------------------------------------- | ----------- |
+| `bytes`    | Raw byte value.                                                             | `number`    |
+| `siValue`  | Bytes converted in according to the SI standard. 1000 bytes in a kilobyte.  | `number`    |
+| `siUnit`   | Unit of the converted bytes in according to the SI standard. KB, MB, ...    | `string`    |
+| `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
+| `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
 
 ### Keyboard
 
