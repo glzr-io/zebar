@@ -75,7 +75,9 @@ export enum InterfaceType {
 
 export interface NetworkTraffic {
   received: NetworkTrafficMeasure;
+  total_received: NetworkTrafficMeasure; 
   transmitted: NetworkTrafficMeasure;
+  total_transmitted: NetworkTrafficMeasure;
 }
 
 export interface NetworkTrafficMeasure {
