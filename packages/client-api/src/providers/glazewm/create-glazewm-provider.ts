@@ -10,6 +10,7 @@ import {
   type Monitor,
   type RunCommandResponse,
   type TilingDirectionChangedEvent,
+  type UnlistenFn,
   type Workspace,
   type WorkspaceActivatedEvent,
   type WorkspaceDeactivatedEvent,
@@ -108,14 +109,19 @@ export async function createGlazeWmProvider(
   const mergedConfig = glazeWmProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    try {
-      const monitors = await getMonitors();
-      const client = new WmClient();
+    const monitors = await getMonitors();
+    const client = new WmClient();
+    let unlistenEvents: null | UnlistenFn = null;
 
+    client.onDisconnect(() =>
+      queue.error('Failed to connect to GlazeWM IPC server.'),
+    );
+
+    client.onConnect(async () => {
       let state = await getInitialState();
       queue.output(state);
 
-      const unlisten = await client.subscribeMany(
+      unlistenEvents ??= await client.subscribeMany(
         [
           WmEventType.BINDING_MODES_CHANGED,
           WmEventType.FOCUS_CHANGED,
@@ -243,15 +249,11 @@ export async function createGlazeWmProvider(
           allMonitors: glazeWmMonitors,
         };
       }
+    });
 
-      return () => {
-        unlisten();
-        client.closeConnection();
-      };
-    } catch (err) {
-      // TODO: Implement retries.
-      queue.error((err as Error).message);
-      return () => {};
-    }
+    return () => {
+      unlistenEvents?.();
+      client.closeConnection();
+    };
   });
 }

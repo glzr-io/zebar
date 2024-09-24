@@ -104,11 +104,13 @@ export async function createProviderGroup<T extends ProviderGroupConfig>(
 
     provider.onOutput(() => {
       outputMap = { ...outputMap, [name]: provider.output };
+      errorMap = { ...errorMap, [name]: null };
       outputListeners.forEach(listener => listener(outputMap));
     });
 
     provider.onError(() => {
       errorMap = { ...errorMap, [name]: provider.error };
+      outputMap = { ...outputMap, [name]: null };
       errorListeners.forEach(listener => listener(errorMap));
     });
   }
