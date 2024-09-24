@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use netdev::interface::get_interfaces;
 use serde::{Deserialize, Serialize};
 use sysinfo::Networks;
 use tokio::sync::Mutex;
@@ -52,14 +51,14 @@ impl NetworkProvider {
     let mut netinfo = self.netinfo.lock().await;
     netinfo.refresh();
 
-    let interfaces = get_interfaces();
+    let interfaces = netdev::get_interfaces();
     let default_interface = netdev::get_default_interface().ok();
 
-    let (received, total_received) = Self::total_bytes_received(&netinfo);
+    let (received, total_received) = Self::bytes_received(&netinfo);
     let received_per_sec = received / self.config.refresh_interval * 1000;
 
     let (transmitted, total_transmitted) =
-      Self::total_bytes_transmitted(&netinfo);
+      Self::bytes_transmitted(&netinfo);
     let transmitted_per_sec =
       transmitted / self.config.refresh_interval * 1000;
 
@@ -106,14 +105,15 @@ impl NetworkProvider {
     })
   }
 
-  /// Gets the total network (down) usage.
+  /// Gets the network (down) usage by every network interface.
   ///
-  /// Returns the total bytes received by every network interface.
-  fn total_bytes_received(networks: &sysinfo::Networks) -> (u64, u64) {
+  /// Returns a tuple of the bytes received since last refresh and total
+  /// bytes received.
+  fn bytes_received(networks: &sysinfo::Networks) -> (u64, u64) {
     let mut bytes_received: Vec<u64> = Vec::new();
     let mut total_bytes_received: Vec<u64> = Vec::new();
 
-    for (_interface_name, network) in networks {
+    for (_, network) in networks {
       bytes_received.push(network.received());
       total_bytes_received.push(network.total_received());
     }
@@ -124,14 +124,15 @@ impl NetworkProvider {
     )
   }
 
-  /// Gets the total network (up) usage.
+  /// Gets the network (up) usage by every network interface.
   ///
-  /// Returns the total bytes transmitted by every network interface.
-  fn total_bytes_transmitted(networks: &sysinfo::Networks) -> (u64, u64) {
+  /// Returns a tuple of the bytes transmitted since last refresh and total
+  /// bytes transmitted.
+  fn bytes_transmitted(networks: &sysinfo::Networks) -> (u64, u64) {
     let mut bytes_transmitted: Vec<u64> = Vec::new();
     let mut total_bytes_transmitted: Vec<u64> = Vec::new();
 
-    for (_interface_name, network) in networks {
+    for (_, network) in networks {
       bytes_transmitted.push(network.transmitted());
       total_bytes_transmitted.push(network.total_transmitted());
     }
