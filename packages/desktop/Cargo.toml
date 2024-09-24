@@ -10,23 +10,23 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "2.0.0-beta", features = [] }
+tauri-build = { version = "2.0.0-rc", features = [] }
 
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
 clap = { version = "4", features = ["derive"] }
 reqwest = { version = "0.11", features = ["json"] }
-tauri = { version = "2.0.0-beta", features = [
+tauri = { version = "2.0.0-rc", features = [
   "devtools",
   "macos-private-api",
   "protocol-asset",
   "tray-icon",
 ] }
-tauri-plugin-dialog = "2.0.0-beta"
-tauri-plugin-http = "2.0.0-beta"
-tauri-plugin-shell = "2.0.0-beta"
-tauri-plugin-single-instance = "2.0.0-beta"
+tauri-plugin-dialog = "2.0.0-rc"
+tauri-plugin-http = "2.0.0-rc"
+tauri-plugin-shell = "2.0.0-rc"
+tauri-plugin-single-instance = "2.0.0-rc"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 starship-battery = "0.8"
@@ -39,12 +39,14 @@ regex = "1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
-windows = { version = "0.57", features = [
+windows = { version = "0.58", features = [
   "Win32_Globalization",
   "Win32_System_Console",
   "Win32_System_SystemServices",
+  "Win32_System_Threading",
   "Win32_UI_WindowsAndMessaging",
   "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_TextServices",
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
