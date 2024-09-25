@@ -1,6 +1,6 @@
 import { Window as TauriWindow } from '@tauri-apps/api/window';
 
-import type { WindowConfig, WindowZOrder } from '~/user-config';
+import type { WidgetInstanceConfig, ZOrder } from '~/user-config';
 import type {
   ProviderConfig,
   ProviderGroup,
@@ -9,25 +9,17 @@ import type {
 } from './providers';
 
 export interface ZebarContext {
-  currentWindow: ZebarWindow;
-
-  allWindows: ZebarWindow;
-
-  currentMonitor: Monitor;
-
-  allMonitors: Monitor;
+  currentInstance: WidgetInstance;
 
   /**
-   * Opens a new window by a relative path to its config file.
+   * Opens a new widget instance by a relative path to its config file.
    */
-  openWindow(
-    configPath: string,
-    args?: Record<string, string>,
-  ): Promise<void>;
+  launchInstance(configPath: string): Promise<void>;
 
   /**
-   * Creates an instance of a provider. Alternatively, multiple
-   * providers can be created using {@link createProviderGroup}.
+   * Creates a provider, which is a collection of functions and variables
+   * that can change over time. Alternatively, multiple providers can be
+   * created using {@link createProviderGroup}.
    *
    * Waits until the provider has emitted either its first output or first
    * error. The provider will continue to output until its `stop` function is
@@ -41,39 +33,40 @@ export interface ZebarContext {
   ): Promise<ProviderMap[T['type']]>;
 
   /**
-   * Creates multiple provider instances at once. Alternatively, a single
-   * provider can be created using {@link createProvider}.
+   * Creates multiple providers at once. A provider is a collection of
+   * functions and variables that can change over time. Alternatively, a
+   * single provider can be created using {@link createProvider}.
    */
   createProviderGroup<T extends ProviderGroupConfig>(
     configMap: T,
   ): Promise<ProviderGroup<T>>;
 }
 
-export interface ZebarWindow {
+export interface WidgetInstance {
   /**
-   * Unique identifier for the window.
+   * Unique identifier for the widget instance.
    */
-  windowId: string;
+  id: string;
 
   /**
-   * Parsed window config.
+   * Parsed config of the widget instance.
    */
-  config: WindowConfig;
+  config: WidgetInstanceConfig;
 
   /**
-   * Absolute path to the window's config file.
+   * Absolute path to the widget config file.
    */
   configPath: string;
 
   /**
-   * Tauri window instance.
+   * Underlying Tauri window.
    */
   tauri: TauriWindow;
 
   /**
-   * Sets the z-order of the window.
+   * Sets the z-order of the underlying window.
    */
-  setZOrder(zOrder: WindowZOrder): Promise<void>;
+  setZOrder(zOrder: ZOrder): Promise<void>;
 }
 
 export interface Monitor {

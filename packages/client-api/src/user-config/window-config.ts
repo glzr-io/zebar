@@ -1,13 +1,13 @@
-export interface WindowConfig {
+export interface WidgetInstanceConfig {
   /**
    * Whether to show the window above/below all others.
    */
-  z_order: WindowZOrder;
+  zOrder: ZOrder;
 
   /**
    * Whether the window should be shown in the taskbar.
    */
-  shown_in_taskbar: boolean;
+  shownInTaskbar: boolean;
 
   /**
    * Whether the window should have resize handles.
@@ -20,17 +20,12 @@ export interface WindowConfig {
   transparent: boolean;
 
   /**
-   * Entry point HTML file for the window.
-   */
-  html_path: string;
-
-  /**
    * Where to place the window.
    */
   placements: WindowPlacement[];
 }
 
-export enum WindowZOrder {
+export enum ZOrder {
   ALWAYS_ON_BOTTOM = 'always_on_bottom',
   ALWAYS_ON_TOP = 'always_on_top',
   NORMAL = 'normal',

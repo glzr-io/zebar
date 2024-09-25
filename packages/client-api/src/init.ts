@@ -26,7 +26,7 @@ export async function init(): Promise<ZebarContext> {
 
     // @ts-ignore - TODO
     return {
-      openWindow: async (configPath: string) => {
+      launchInstance: async (configPath: string) => {
         // Ensure the config path ends with '.zebar.json'.
         const filePath = configPath.endsWith('.zebar.json')
           ? configPath
@@ -42,7 +42,7 @@ export async function init(): Promise<ZebarContext> {
       },
       createProvider,
       createProviderGroup,
-      currentWindow: {
+      currentInstance: {
         ...windowState,
         tauri: currentWindow,
         setZOrder: zOrder => {
