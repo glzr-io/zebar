@@ -26,7 +26,7 @@ export async function init(): Promise<ZebarContext> {
 
     // @ts-ignore - TODO
     return {
-      launchInstance: async (configPath: string) => {
+      startWidget: async (configPath: string) => {
         // Ensure the config path ends with '.zebar.json'.
         const filePath = configPath.endsWith('.zebar.json')
           ? configPath
@@ -42,17 +42,14 @@ export async function init(): Promise<ZebarContext> {
       },
       createProvider,
       createProviderGroup,
-      currentInstance: {
+      currentWidget: {
         ...windowState,
         tauri: currentWindow,
         setZOrder: zOrder => {
           return setWindowZOrder(currentWindow, zOrder);
         },
       },
-      allWindows: [],
-      currentMonitor: {},
-      allMonitors: [],
-    } as ZebarContext;
+    };
   } catch (err) {
     logger.error('Failed to initialize window:', err);
 

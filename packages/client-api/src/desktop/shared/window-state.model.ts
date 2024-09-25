@@ -1,9 +1,9 @@
-import type { WidgetInstanceConfig } from '~/user-config';
+import type { WidgetConfig } from '~/user-config';
 
 export interface WindowState {
   windowId: string;
 
-  config: WidgetInstanceConfig;
+  config: WidgetConfig;
 
   configPath: string;
 }

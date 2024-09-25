@@ -1,14 +1,12 @@
 {
   "$schema": "TODO",
   "htmlPath": "./vanilla.html",
-  "instanceOptions": {
-    "zOrder": "normal",
-    "shownInTaskbar": false,
-    "focused": false,
-    "resizable": false,
-    "transparent": false
-  },
-  "defaultInstances": [
+  "zOrder": "normal",
+  "shownInTaskbar": false,
+  "focused": false,
+  "resizable": false,
+  "transparent": false,
+  "defaultPlacements": [
     {
       "anchor": "top_left",
       "offsetX": "0px",

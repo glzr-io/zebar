@@ -1,6 +1,6 @@
 import { Window as TauriWindow } from '@tauri-apps/api/window';
 
-import type { WidgetInstanceConfig, ZOrder } from '~/user-config';
+import type { WidgetConfig, ZOrder } from '~/user-config';
 import type {
   ProviderConfig,
   ProviderGroup,
@@ -9,12 +9,12 @@ import type {
 } from './providers';
 
 export interface ZebarContext {
-  currentInstance: WidgetInstance;
+  currentWidget: Widget;
 
   /**
    * Opens a new widget instance by a relative path to its config file.
    */
-  launchInstance(configPath: string): Promise<void>;
+  startWidget(configPath: string): Promise<void>;
 
   /**
    * Creates a provider, which is a collection of functions and variables
@@ -42,16 +42,16 @@ export interface ZebarContext {
   ): Promise<ProviderGroup<T>>;
 }
 
-export interface WidgetInstance {
+export interface Widget {
   /**
    * Unique identifier for the widget instance.
    */
-  id: string;
+  instanceId: string;
 
   /**
    * Parsed config of the widget instance.
    */
-  config: WidgetInstanceConfig;
+  config: WidgetConfig;
 
   /**
    * Absolute path to the widget config file.

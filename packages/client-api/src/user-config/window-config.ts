@@ -1,8 +1,18 @@
-export interface WidgetInstanceConfig {
+export interface WidgetConfig {
+  /**
+   * Entry point HTML file for the window.
+   */
+  htmlPath: string;
+
   /**
    * Whether to show the window above/below all others.
    */
   zOrder: ZOrder;
+
+  /**
+   * Whether the window should be focused when opened.
+   */
+  focused: boolean;
 
   /**
    * Whether the window should be shown in the taskbar.
@@ -15,47 +25,57 @@ export interface WidgetInstanceConfig {
   resizable: boolean;
 
   /**
-   * Whether the window is transparent.
+   * Whether the window frame should be transparent.
    */
   transparent: boolean;
 
   /**
    * Where to place the window.
    */
-  placements: WindowPlacement[];
+  defaultPlacements: WidgetPlacement[];
 }
 
-export enum ZOrder {
-  ALWAYS_ON_BOTTOM = 'always_on_bottom',
-  ALWAYS_ON_TOP = 'always_on_top',
-  NORMAL = 'normal',
+export type ZOrder = 'always_on_bottom' | 'always_on_top' | 'normal';
+
+export interface WidgetPlacement {
+  /**
+   * Anchor-point of the window.
+   */
+  anchor: WindowAnchor;
+
+  /**
+   * Offset from the anchor-point.
+   */
+  offsetX: LengthValue;
+
+  /**
+   * Offset from the anchor-point.
+   */
+  offsetY: LengthValue;
+
+  /**
+   * Width of the window in % or physical pixels.
+   */
+  width: LengthValue;
+
+  /**
+   * Height of the window in % or physical pixels.
+   */
+  height: LengthValue;
+
+  /**
+   * Monitor(s) to place the window on.
+   */
+  monitor_selection: MonitorSelection;
 }
 
-export interface WindowPlacement {
-  /**
-   * The monitor index to place the window on.
-   */
-  monitor_index: 0;
-
-  /**
-   * TODO: Add description.
-   */
-  position: WindowPosition;
-
-  /**
-   * TODO: Add description.
-   */
-  offset_x: 20;
-
-  /**
-   * TODO: Add description.
-   */
-  offset_y: 20;
-}
-
-export enum WindowPosition {
-  TOP = 'top',
-  BOTTOM = 'bottom',
-  LEFT = 'left',
-  RIGHT = 'right',
-}
+export type PlacementAnchor =
+  | 'top_left'
+  | 'top_center'
+  | 'top_right'
+  | 'center_left'
+  | 'center'
+  | 'center_right'
+  | 'bottom_left'
+  | 'bottom_center'
+  | 'bottom_right';
