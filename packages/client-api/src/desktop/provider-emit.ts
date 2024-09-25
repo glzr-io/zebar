@@ -6,7 +6,7 @@ import {
 import type { ProviderConfig } from '~/providers';
 
 import { createLogger, simpleHash } from '~/utils';
-import { listenProvider, unlistenProvider } from './desktop-commands';
+import { desktopCommands } from './desktop-commands';
 
 const logger = createLogger('desktop-events');
 
@@ -36,10 +36,9 @@ export async function onProviderEmit<T = unknown>(
   const unlisten = await (listenPromise ??
     (listenPromise = listenProviderEmit()));
 
-  await listenProvider({
+  await desktopCommands.listenProvider({
     configHash,
     config,
-    trackedAccess: [],
   });
 
   return async () => {
@@ -47,7 +46,7 @@ export async function onProviderEmit<T = unknown>(
       callback => callback.configHash !== configHash,
     );
 
-    await unlistenProvider(configHash);
+    await desktopCommands.unlistenProvider(configHash);
 
     // Unlisten when there are no active callbacks.
     if (callbacks.length === 0) {

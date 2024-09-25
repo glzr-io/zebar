@@ -157,7 +157,7 @@ impl WindowFactory {
       };
 
       _ = window.eval(&format!(
-        "window.__ZEBAR_INITIAL_STATE={}",
+        "window.__ZEBAR_STATE={0}; sessionStorage.setItem('ZEBAR_STATE', JSON.stringify({0}))",
         serde_json::to_string(&state)?
       ));
 

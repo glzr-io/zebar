@@ -162,8 +162,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       })
     })
     .invoke_handler(tauri::generate_handler![
-      commands::get_window_state,
-      commands::open_window,
+      commands::start_widget,
       commands::listen_provider,
       commands::unlisten_provider,
       commands::set_always_on_top,

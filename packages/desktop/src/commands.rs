@@ -6,19 +6,11 @@ use crate::{
   common::WindowExt,
   config::Config,
   providers::{ProviderConfig, ProviderManager},
-  window_factory::{WindowFactory, WindowState},
+  window_factory::WindowFactory,
 };
 
 #[tauri::command]
-pub async fn get_window_state(
-  window_id: String,
-  window_factory: State<'_, Arc<WindowFactory>>,
-) -> anyhow::Result<Option<WindowState>, String> {
-  Ok(window_factory.state_by_id(&window_id).await)
-}
-
-#[tauri::command]
-pub async fn open_window(
+pub async fn start_widget(
   config_path: String,
   config: State<'_, Arc<Config>>,
   window_factory: State<'_, Arc<WindowFactory>>,
@@ -41,11 +33,10 @@ pub async fn open_window(
 pub async fn listen_provider(
   config_hash: String,
   config: ProviderConfig,
-  tracked_access: Vec<String>,
   provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .create(config_hash, config, tracked_access)
+    .create(config_hash, config)
     .await
     .map_err(|err| err.to_string())
 }

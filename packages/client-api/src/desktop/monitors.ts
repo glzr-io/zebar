@@ -1,20 +1,50 @@
 import {
-  type Monitor,
+  type Monitor as TauriMonitor,
   availableMonitors as getAvailableMonitors,
   currentMonitor as getCurrentMonitor,
   primaryMonitor as getPrimaryMonitor,
   getCurrentWindow,
 } from '@tauri-apps/api/window';
 
-import type { MonitorInfo } from './shared';
+export interface Monitor {
+  /**
+   * Human-readable name of the monitor.
+   */
+  name: string | null;
+
+  /**
+   * Width of monitor in physical pixels.
+   */
+  width: number;
+
+  /**
+   * Height of monitor in physical pixels.
+   */
+  height: number;
+
+  /**
+   * X-coordinate of monitor in physical pixels.
+   */
+  x: number;
+
+  /**
+   * Y-coordinate of monitor in physical pixels.
+   */
+  y: number;
+
+  /**
+   * Scale factor to map physical pixels to logical pixels.
+   */
+  scaleFactor: number;
+}
 
 let createCachePromise: Promise<MonitorCache> | null = null;
 
 interface MonitorCache {
-  currentMonitor: MonitorInfo | null;
-  primaryMonitor: MonitorInfo | null;
-  secondaryMonitors: MonitorInfo[];
-  allMonitors: MonitorInfo[];
+  currentMonitor: Monitor | null;
+  primaryMonitor: Monitor | null;
+  secondaryMonitors: Monitor[];
+  allMonitors: Monitor[];
 }
 
 export async function getMonitors() {
@@ -37,10 +67,10 @@ async function createMonitorCache() {
   // Ref https://github.com/tauri-apps/tauri/issues/8405
 
   const monitorCache = {
-    currentMonitor: currentMonitor ? toMonitorInfo(currentMonitor) : null,
-    primaryMonitor: primaryMonitor ? toMonitorInfo(primaryMonitor) : null,
-    secondaryMonitors: secondaryMonitors.map(toMonitorInfo),
-    allMonitors: allMonitors.map(toMonitorInfo),
+    currentMonitor: currentMonitor ? toMonitor(currentMonitor) : null,
+    primaryMonitor: primaryMonitor ? toMonitor(primaryMonitor) : null,
+    secondaryMonitors: secondaryMonitors.map(toMonitor),
+    allMonitors: allMonitors.map(toMonitor),
   };
 
   getCurrentWindow().onResized(() => updateCurrentMonitor());
@@ -52,16 +82,14 @@ async function createMonitorCache() {
 
     // TODO: Avoid mutating the cache object.
     Object.assign(monitorCache, {
-      currentMonitor: currentMonitor
-        ? toMonitorInfo(currentMonitor)
-        : null,
+      currentMonitor: currentMonitor ? toMonitor(currentMonitor) : null,
     });
   }
 
   return monitorCache;
 }
 
-function isMatch(monitorA: Monitor, monitorB: Monitor) {
+function isMatch(monitorA: TauriMonitor, monitorB: TauriMonitor) {
   return (
     monitorA.name === monitorB.name &&
     monitorA.position.x === monitorB.position.x &&
@@ -71,13 +99,13 @@ function isMatch(monitorA: Monitor, monitorB: Monitor) {
   );
 }
 
-function toMonitorInfo(monitor: Monitor): MonitorInfo {
+function toMonitor(monitor: TauriMonitor): Monitor {
   return {
-    name: monitor.name ?? '',
-    scaleFactor: monitor.scaleFactor,
+    name: monitor.name,
     width: monitor.size.width,
     height: monitor.size.height,
     x: monitor.position.x,
     y: monitor.position.y,
+    scaleFactor: monitor.scaleFactor,
   };
 }
