@@ -1,5 +1,5 @@
 {
-  "$schema": "TODO",
+  "$schema": "https://github.com/glzr-io/zebar/raw/v2.1.0/resources/widget-schema.json",
   "htmlPath": "./vanilla.html",
   "zOrder": "normal",
   "shownInTaskbar": false,
