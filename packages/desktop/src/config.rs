@@ -21,14 +21,14 @@ pub struct SettingsConfig {
   #[serde(rename = "$schema")]
   schema: Option<String>,
 
-  /// Relative paths to window configs to launch on startup.
+  /// Relative paths to widget configs to launch on startup.
   pub startup_configs: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WindowConfig {
-  /// JSON schema URL to validate the window config file.
+pub struct WidgetConfig {
+  /// JSON schema URL to validate the widget config file.
   #[serde(rename = "$schema")]
   schema: Option<String>,
 
@@ -36,14 +36,14 @@ pub struct WindowConfig {
   pub html_path: PathBuf,
 
   /// Default options for when the window is opened.
-  pub launch_options: WindowLaunchOptions,
+  pub launch_options: WidgetLaunchOptions,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WindowLaunchOptions {
+pub struct WidgetLaunchOptions {
   /// Whether to show the window above/below all others.
-  pub z_order: WindowZOrder,
+  pub z_order: ZOrder,
 
   /// Whether the window should be shown in the taskbar.
   pub shown_in_taskbar: bool,
@@ -57,13 +57,13 @@ pub struct WindowLaunchOptions {
   /// Whether the window frame should be transparent.
   pub transparent: bool,
 
-  /// Where to place the window.
-  pub placements: Vec<WindowPlacement>,
+  /// Where to place the widget.
+  pub placements: Vec<WidgetPlacement>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum WindowZOrder {
+pub enum ZOrder {
   AlwaysOnBottom,
   AlwaysOnTop,
   Normal,
@@ -71,9 +71,9 @@ pub enum WindowZOrder {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WindowPlacement {
+pub struct WidgetPlacement {
   /// Anchor-point of the window.
-  pub anchor: WindowAnchor,
+  pub anchor: AnchorPoint,
 
   /// Offset from the anchor-point.
   pub offset_x: LengthValue,
@@ -93,7 +93,7 @@ pub struct WindowPlacement {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum WindowAnchor {
+pub enum AnchorPoint {
   TopLeft,
   TopCenter,
   TopRight,
@@ -126,28 +126,28 @@ pub struct Config {
   /// Global settings.
   pub settings: Arc<Mutex<SettingsConfig>>,
 
-  /// List of window configs.
-  pub window_configs: Arc<Mutex<Vec<WindowConfigEntry>>>,
+  /// List of widget configs.
+  pub widget_configs: Arc<Mutex<Vec<WidgetConfigEntry>>>,
 
   _settings_change_rx: broadcast::Receiver<SettingsConfig>,
 
   pub settings_change_tx: broadcast::Sender<SettingsConfig>,
 
-  _window_configs_change_rx: broadcast::Receiver<Vec<WindowConfigEntry>>,
+  _widget_configs_change_rx: broadcast::Receiver<Vec<WidgetConfigEntry>>,
 
-  pub window_configs_change_tx: broadcast::Sender<Vec<WindowConfigEntry>>,
+  pub widget_configs_change_tx: broadcast::Sender<Vec<WidgetConfigEntry>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct WindowConfigEntry {
-  /// Absolute path to the window config file.
+pub struct WidgetConfigEntry {
+  /// Absolute path to the widget's config file.
   pub config_path: PathBuf,
 
-  /// Absolute path to the window's HTML file.
+  /// Absolute path to the widget's HTML file.
   pub html_path: PathBuf,
 
-  /// Parsed window config.
-  pub config: WindowConfig,
+  /// Parsed widget config.
+  pub config: WidgetConfig,
 }
 
 impl Config {
@@ -167,21 +167,21 @@ impl Config {
     };
 
     let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
-    let window_configs = Self::read_window_configs(&config_dir)?;
+    let widget_configs = Self::read_widget_configs(&config_dir)?;
 
     let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
-    let (window_configs_change_tx, _window_configs_change_rx) =
+    let (widget_configs_change_tx, _widget_configs_change_rx) =
       broadcast::channel(16);
 
     Ok(Self {
       app_handle: app_handle.clone(),
       config_dir: config_dir.to_absolute()?,
       settings: Arc::new(Mutex::new(settings)),
-      window_configs: Arc::new(Mutex::new(window_configs)),
+      widget_configs: Arc::new(Mutex::new(widget_configs)),
       _settings_change_rx,
       settings_change_tx,
-      _window_configs_change_rx,
-      window_configs_change_tx,
+      _widget_configs_change_rx,
+      widget_configs_change_tx,
     })
   }
 
@@ -189,7 +189,7 @@ impl Config {
   pub async fn reload(&self) -> anyhow::Result<()> {
     let new_settings =
       Self::read_settings_or_init(&self.app_handle, &self.config_dir)?;
-    let new_window_configs = Self::read_window_configs(&self.config_dir)?;
+    let new_widget_configs = Self::read_widget_configs(&self.config_dir)?;
 
     {
       let mut settings = self.settings.lock().await;
@@ -197,12 +197,12 @@ impl Config {
     }
 
     {
-      let mut window_configs = self.window_configs.lock().await;
-      *window_configs = new_window_configs.clone();
+      let mut widget_configs = self.widget_configs.lock().await;
+      *widget_configs = new_widget_configs.clone();
     }
 
     self.settings_change_tx.send(new_settings)?;
-    self.window_configs_change_tx.send(new_window_configs)?;
+    self.widget_configs_change_tx.send(new_widget_configs)?;
 
     Ok(())
   }
@@ -263,13 +263,13 @@ impl Config {
     Ok(())
   }
 
-  /// Recursively aggregates all valid window configs in the given
+  /// Recursively aggregates all valid widget configs in the given
   /// directory.
   ///
   /// Returns a list of `ConfigEntry` instances.
-  fn read_window_configs(
+  fn read_widget_configs(
     dir: &PathBuf,
-  ) -> anyhow::Result<Vec<WindowConfigEntry>> {
+  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
     let mut configs = Vec::new();
 
     let entries = fs::read_dir(dir).with_context(|| {
@@ -282,9 +282,9 @@ impl Config {
 
       if path.is_dir() {
         // Recursively aggregate configs in subdirectories.
-        configs.extend(Self::read_window_configs(&path)?);
+        configs.extend(Self::read_widget_configs(&path)?);
       } else if has_extension(&path, ".zebar.json") {
-        let parse_res = read_and_parse_json::<WindowConfig>(&path)
+        let parse_res = read_and_parse_json::<WidgetConfig>(&path)
           .and_then(|config| {
             let config_path = path.to_absolute()?;
 
@@ -301,7 +301,7 @@ impl Config {
                 )
               })?;
 
-            Ok(WindowConfigEntry {
+            Ok(WidgetConfigEntry {
               config,
               config_path,
               html_path,
@@ -311,7 +311,7 @@ impl Config {
         match parse_res {
           Ok(config) => {
             info!(
-              "Found valid window config at: {}",
+              "Found valid widget config at: {}",
               config.config_path.display()
             );
 
@@ -331,10 +331,10 @@ impl Config {
     Ok(configs)
   }
 
-  /// Initializes settings and window configs at the given path.
+  /// Initializes settings and widget configs at the given path.
   ///
   /// `settings.json` is initialized with either `starter/vanilla.json` or
-  /// `starter/with-glazewm.json` as startup config. Window configs are
+  /// `starter/with-glazewm.json` as startup config. Widget configs are
   /// initialized from `examples/` directory.
   fn create_from_examples(
     app_handle: &AppHandle,
@@ -372,14 +372,14 @@ impl Config {
     Ok(())
   }
 
-  pub async fn window_configs(&self) -> Vec<WindowConfigEntry> {
-    self.window_configs.lock().await.clone()
+  pub async fn widget_configs(&self) -> Vec<WidgetConfigEntry> {
+    self.widget_configs.lock().await.clone()
   }
 
-  /// Returns the window configs to open on startup.
-  pub async fn startup_window_configs(
+  /// Returns the widget configs to open on startup.
+  pub async fn startup_widget_configs(
     &self,
-  ) -> anyhow::Result<Vec<WindowConfigEntry>> {
+  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
     let startup_configs =
       { self.settings.lock().await.startup_configs.clone() };
 
@@ -388,11 +388,11 @@ impl Config {
     for config_path in startup_configs {
       let abs_config_path = self.join_config_dir(&config_path);
       let config = self
-        .window_config_by_path(&abs_config_path)
+        .widget_config_by_path(&abs_config_path)
         .await
         .unwrap_or(None)
         .context(format!(
-          "Failed to get window config at {}.",
+          "Failed to get widget config at {}.",
           abs_config_path.display()
         ))?;
 
@@ -409,7 +409,7 @@ impl Config {
     &self,
     config_path: &PathBuf,
   ) -> anyhow::Result<()> {
-    let startup_configs = self.startup_window_configs().await?;
+    let startup_configs = self.startup_widget_configs().await?;
 
     // Check if the config is already set to be launched on startup.
     if startup_configs
@@ -470,16 +470,16 @@ impl Config {
       .map(Into::into)
   }
 
-  /// Returns the window config at the given absolute path.
-  pub async fn window_config_by_path(
+  /// Returns the widget config at the given absolute path.
+  pub async fn widget_config_by_path(
     &self,
     config_path: &PathBuf,
-  ) -> anyhow::Result<Option<WindowConfigEntry>> {
+  ) -> anyhow::Result<Option<WidgetConfigEntry>> {
     let formatted_config_path =
       PathBuf::from(config_path).to_absolute()?;
 
-    let window_configs = self.window_configs.lock().await;
-    let config_entry = window_configs
+    let widget_configs = self.widget_configs.lock().await;
+    let config_entry = widget_configs
       .iter()
       .find(|entry| entry.config_path == formatted_config_path);
 

@@ -21,60 +21,61 @@ use tracing::{error, info};
 
 use crate::{
   common::{PathExt, WindowExt},
-  config::{Config, WindowAnchor, WindowConfig, WindowConfigEntry},
+  config::{AnchorPoint, Config, WidgetConfig, WidgetConfigEntry},
   monitor_state::MonitorState,
 };
 
-/// Manages the creation of Zebar windows.
-pub struct WindowFactory {
+/// Manages the creation of Zebar widgets.
+pub struct WidgetFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
 
-  _close_rx: broadcast::Receiver<WindowState>,
+  _close_rx: broadcast::Receiver<WidgetState>,
 
-  pub close_tx: broadcast::Sender<WindowState>,
+  pub close_tx: broadcast::Sender<WidgetState>,
 
   /// Reference to `Config`.
   config: Arc<Config>,
 
-  _open_rx: broadcast::Receiver<WindowState>,
+  _open_rx: broadcast::Receiver<WidgetState>,
 
-  pub open_tx: broadcast::Sender<WindowState>,
+  pub open_tx: broadcast::Sender<WidgetState>,
 
   /// Reference to `MonitorState`.
   ///
-  /// Used for window positioning.
+  /// Used for widget positioning.
   monitor_state: Arc<MonitorState>,
 
-  /// Running total of windows created.
+  /// Running total of widgets created.
   ///
-  /// Used to generate unique window labels.
-  window_count: Arc<AtomicU32>,
+  /// Used to generate unique widget ID's which are used as Tauri window
+  /// labels.
+  widget_count: Arc<AtomicU32>,
 
-  /// Map of window labels to window states.
-  window_states: Arc<Mutex<HashMap<String, WindowState>>>,
+  /// Map of widget ID's to their states.
+  widget_states: Arc<Mutex<HashMap<String, WidgetState>>>,
 }
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct WindowState {
-  /// Unique identifier for the window.
+pub struct WidgetState {
+  /// Unique identifier for the widget.
   ///
-  /// Used as the window label.
-  pub window_id: String,
+  /// Used as the Tauri window label.
+  pub id: String,
 
-  /// User-defined config for the window.
-  pub config: WindowConfig,
+  /// User-defined config for the widget.
+  pub config: WidgetConfig,
 
-  /// Absolute path to the window's config file.
+  /// Absolute path to the widget's config file.
   pub config_path: PathBuf,
 
-  /// Absolute path to the window's HTML file.
+  /// Absolute path to the widget's HTML file.
   pub html_path: PathBuf,
 }
 
-impl WindowFactory {
-  /// Creates a new `WindowFactory` instance.
+impl WidgetFactory {
+  /// Creates a new `WidgetFactory` instance.
   pub fn new(
     app_handle: &AppHandle,
     config: Arc<Config>,
@@ -91,27 +92,27 @@ impl WindowFactory {
       _open_rx,
       open_tx,
       monitor_state,
-      window_count: Arc::new(AtomicU32::new(0)),
-      window_states: Arc::new(Mutex::new(HashMap::new())),
+      widget_count: Arc::new(AtomicU32::new(0)),
+      widget_states: Arc::new(Mutex::new(HashMap::new())),
     }
   }
 
-  /// Opens windows from a given config entry.
+  /// Opens widget from a given config entry.
   pub async fn open(
     &self,
-    config_entry: WindowConfigEntry,
+    config_entry: WidgetConfigEntry,
   ) -> anyhow::Result<()> {
-    let WindowConfigEntry {
+    let WidgetConfigEntry {
       config,
       config_path,
       html_path,
     } = &config_entry;
 
-    for (size, position) in self.window_placements(config).await {
-      // Use running window count as a unique ID for the window.
+    for (size, position) in self.widget_placements(config).await {
+      // Use running widget count as a unique label for the Tauri window.
       let new_count =
-        self.window_count.fetch_add(1, Ordering::Relaxed) + 1;
-      let window_id = new_count.to_string();
+        self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
+      let widget_id = new_count.to_string();
 
       if !html_path.exists() {
         bail!(
@@ -122,7 +123,7 @@ impl WindowFactory {
       }
 
       info!(
-        "Creating window #{} from {}",
+        "Creating window for widget #{} from {}",
         new_count,
         config_path.display()
       );
@@ -134,7 +135,7 @@ impl WindowFactory {
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
-        window_id.clone(),
+        widget_id.clone(),
         webview_url,
       )
       .title("Zebar")
@@ -149,8 +150,8 @@ impl WindowFactory {
       .resizable(config.launch_options.resizable)
       .build()?;
 
-      let state = WindowState {
-        window_id: window_id.clone(),
+      let state = WidgetState {
+        id: widget_id.clone(),
         config: config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
@@ -178,10 +179,10 @@ impl WindowFactory {
         let _ = window.set_position(position);
       }
 
-      let mut window_states = self.window_states.lock().await;
-      window_states.insert(state.window_id.clone(), state.clone());
+      let mut widget_states = self.widget_states.lock().await;
+      widget_states.insert(state.id.clone(), state.clone());
 
-      self.register_window_events(&window, window_id);
+      self.register_window_events(&window, widget_id);
       self.open_tx.send(state)?;
     }
 
@@ -199,26 +200,26 @@ impl WindowFactory {
     }
   }
 
-  /// Registers window events for a given window.
+  /// Registers window events for a given widget.
   fn register_window_events(
     &self,
     window: &tauri::WebviewWindow,
-    window_id: String,
+    widget_id: String,
   ) {
-    let window_states = self.window_states.clone();
+    let widget_states = self.widget_states.clone();
     let close_tx = self.close_tx.clone();
 
     window.on_window_event(move |event| {
       if let WindowEvent::Destroyed = event {
-        let window_states = window_states.clone();
+        let widget_states = widget_states.clone();
         let close_tx = close_tx.clone();
-        let window_id = window_id.clone();
+        let widget_id = widget_id.clone();
 
         task::spawn(async move {
-          let mut window_states = window_states.lock().await;
+          let mut widget_states = widget_states.lock().await;
 
-          // Remove the window state and broadcast the close event.
-          if let Some(state) = window_states.remove(&window_id) {
+          // Remove the widget state and broadcast the close event.
+          if let Some(state) = widget_states.remove(&widget_id) {
             if let Err(err) = close_tx.send(state) {
               error!("Failed to send window close event: {:?}", err);
             }
@@ -229,9 +230,9 @@ impl WindowFactory {
   }
 
   /// Returns coordinates for window placement based on the given config.
-  async fn window_placements(
+  async fn widget_placements(
     &self,
-    config: &WindowConfig,
+    config: &WidgetConfig,
   ) -> Vec<(LogicalSize<f64>, LogicalPosition<f64>)> {
     let mut placements = vec![];
 
@@ -243,32 +244,32 @@ impl WindowFactory {
 
       for monitor in monitors {
         let (anchor_x, anchor_y) = match placement.anchor {
-          WindowAnchor::TopLeft => (monitor.x, monitor.y),
-          WindowAnchor::TopCenter => {
+          AnchorPoint::TopLeft => (monitor.x, monitor.y),
+          AnchorPoint::TopCenter => {
             (monitor.x + (monitor.width as i32 / 2), monitor.y)
           }
-          WindowAnchor::TopRight => {
+          AnchorPoint::TopRight => {
             (monitor.x + monitor.width as i32, monitor.y)
           }
-          WindowAnchor::CenterLeft => {
+          AnchorPoint::CenterLeft => {
             (monitor.x, monitor.y + (monitor.height as i32 / 2))
           }
-          WindowAnchor::Center => (
+          AnchorPoint::Center => (
             monitor.x + (monitor.width as i32 / 2),
             monitor.y + (monitor.height as i32 / 2),
           ),
-          WindowAnchor::CenterRight => (
+          AnchorPoint::CenterRight => (
             monitor.x + monitor.width as i32,
             monitor.y + (monitor.height as i32 / 2),
           ),
-          WindowAnchor::BottomLeft => {
+          AnchorPoint::BottomLeft => {
             (monitor.x, monitor.y + monitor.height as i32)
           }
-          WindowAnchor::BottomCenter => (
+          AnchorPoint::BottomCenter => (
             monitor.x + (monitor.width as i32 / 2),
             monitor.y + monitor.height as i32,
           ),
-          WindowAnchor::BottomRight => (
+          AnchorPoint::BottomRight => (
             monitor.x + monitor.width as i32,
             monitor.y + monitor.height as i32,
           ),
@@ -297,65 +298,65 @@ impl WindowFactory {
     placements
   }
 
-  /// Closes a single window by a given window ID.
-  pub fn close_by_id(&self, window_id: &str) -> anyhow::Result<()> {
+  /// Closes a single widget by a given widget ID.
+  pub fn stop_by_id(&self, widget_id: &str) -> anyhow::Result<()> {
     let window = self
       .app_handle
-      .get_webview_window(window_id)
-      .context("No window found with the given ID.")?;
+      .get_webview_window(widget_id)
+      .context("No Tauri window found for the given widget ID.")?;
 
     window.close()?;
 
     Ok(())
   }
 
-  /// Closes all windows with the given config path.
-  pub async fn close_by_path(
+  /// Closes all widgets with the given config path.
+  pub async fn stop_by_path(
     &self,
     config_path: &PathBuf,
   ) -> anyhow::Result<()> {
-    let window_states = self.states_by_config_path().await;
+    let widget_states = self.states_by_config_path().await;
 
-    let found_window_states = window_states
+    let found_widget_states = widget_states
       .get(config_path)
-      .context("No windows found with the given config path.")?;
+      .context("No widgets found with the given config path.")?;
 
-    for window_state in found_window_states {
-      self.close_by_id(&window_state.window_id)?;
+    for widget_state in found_widget_states {
+      self.stop_by_id(&widget_state.id)?;
     }
 
     Ok(())
   }
 
-  /// Relaunches all currently open windows.
+  /// Relaunches all currently open widgets.
   pub async fn relaunch_all(&self) -> anyhow::Result<()> {
-    let window_states = self.states_by_config_path().await;
+    let widget_states = self.states_by_config_path().await;
 
-    for (config_path, _) in window_states {
-      let _ = self.close_by_path(&config_path).await;
+    for (config_path, _) in widget_states {
+      let _ = self.stop_by_path(&config_path).await;
 
-      let window_config = self
+      let widget_config = self
         .config
-        .window_config_by_path(&config_path)
+        .widget_config_by_path(&config_path)
         .await?
-        .context("Window config not found.")?;
+        .context("Widget config not found.")?;
 
-      self.open(window_config).await?;
+      self.open(widget_config).await?;
     }
 
     Ok(())
   }
 
-  /// Returns window state by a given window ID.
-  pub async fn state_by_id(&self, window_id: &str) -> Option<WindowState> {
-    self.window_states.lock().await.get(window_id).cloned()
+  /// Returns widget state by a given widget ID.
+  pub async fn state_by_id(&self, widget_id: &str) -> Option<WidgetState> {
+    self.widget_states.lock().await.get(widget_id).cloned()
   }
 
-  /// Returns window states grouped by their config paths.
+  /// Returns widget states grouped by their config paths.
   pub async fn states_by_config_path(
     &self,
-  ) -> HashMap<PathBuf, Vec<WindowState>> {
-    self.window_states.lock().await.values().fold(
+  ) -> HashMap<PathBuf, Vec<WidgetState>> {
+    self.widget_states.lock().await.values().fold(
       HashMap::new(),
       |mut acc, state| {
         acc

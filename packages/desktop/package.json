@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "build": "npm run tauri build -- --verbose",
-    "dev": "npm run tauri dev -- -- -- open-all --config-dir=../../examples",
+    "dev": "npm run tauri dev -- -- -- startup --config-dir=../../examples",
     "format": "cargo fmt",
     "lint": "cargo fmt --check",
     "tauri": "tauri"
