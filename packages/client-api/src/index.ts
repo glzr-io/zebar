@@ -1,7 +1,7 @@
 export * from './providers';
 export {
-  currentWindow,
   currentWidget,
+  currentWindow,
   startWidget,
   type Widget,
   type Window,

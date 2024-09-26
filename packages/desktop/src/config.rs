@@ -35,44 +35,37 @@ pub struct WidgetConfig {
   /// Relative path to entry point HTML file.
   pub html_path: PathBuf,
 
-  /// Default options for when the window is opened.
-  pub launch_options: WidgetLaunchOptions,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WidgetLaunchOptions {
-  /// Whether to show the window above/below all others.
+  /// Whether to show the Tauri window above/below all others.
   pub z_order: ZOrder,
 
-  /// Whether the window should be shown in the taskbar.
+  /// Whether the Tauri window should be shown in the taskbar.
   pub shown_in_taskbar: bool,
 
-  /// Whether the window should be focused when opened.
+  /// Whether the Tauri window should be focused when opened.
   pub focused: bool,
 
-  /// Whether the window should have resize handles.
+  /// Whether the Tauri window should have resize handles.
   pub resizable: bool,
 
-  /// Whether the window frame should be transparent.
+  /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
   /// Where to place the widget.
-  pub placements: Vec<WidgetPlacement>,
+  pub default_placements: Vec<WidgetPlacement>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ZOrder {
-  AlwaysOnBottom,
-  AlwaysOnTop,
+  BottomMost,
   Normal,
+  TopMost,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPlacement {
-  /// Anchor-point of the window.
+  /// Anchor-point of the widget.
   pub anchor: AnchorPoint,
 
   /// Offset from the anchor-point.
@@ -81,13 +74,13 @@ pub struct WidgetPlacement {
   /// Offset from the anchor-point.
   pub offset_y: LengthValue,
 
-  /// Width of the window in % or physical pixels.
+  /// Width of the widget in % or physical pixels.
   pub width: LengthValue,
 
-  /// Height of the window in % or physical pixels.
+  /// Height of the widget in % or physical pixels.
   pub height: LengthValue,
 
-  /// Monitor(s) to place the window on.
+  /// Monitor(s) to place the widget on.
   pub monitor_selection: MonitorSelection,
 }
 

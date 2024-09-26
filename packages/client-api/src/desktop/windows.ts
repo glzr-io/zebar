@@ -11,7 +11,7 @@ export interface Window {
   readonly tauri: ReturnType<typeof getCurrentWindow>;
 
   /**
-   * Sets the z-order of the window.
+   * Sets the z-order of the Tauri window.
    */
   setZOrder(zOrder: ZOrder): Promise<void>;
 }

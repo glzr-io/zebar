@@ -52,7 +52,7 @@ export interface KomorebiOutput {
   focusedMonitor: KomorebiMonitor;
 
   /**
-   * Monitor that is nearest to this Zebar window.
+   * Monitor that is nearest to this Zebar widget.
    */
   currentMonitor: KomorebiMonitor;
 }

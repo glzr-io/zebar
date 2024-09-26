@@ -141,13 +141,13 @@ impl WidgetFactory {
       .title("Zebar")
       .inner_size(size.width, size.height)
       .position(position.x, position.y)
-      .focused(config.launch_options.focused)
-      .skip_taskbar(!config.launch_options.shown_in_taskbar)
+      .focused(config.focused)
+      .skip_taskbar(!config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
-      .transparent(config.launch_options.transparent)
+      .transparent(config.transparent)
       .shadow(false)
       .decorations(false)
-      .resizable(config.launch_options.resizable)
+      .resizable(config.resizable)
       .build()?;
 
       let state = WidgetState {
@@ -168,7 +168,7 @@ impl WidgetFactory {
       let _ = window
         .as_ref()
         .window()
-        .set_tool_window(!config.launch_options.shown_in_taskbar);
+        .set_tool_window(!config.shown_in_taskbar);
 
       // On Windows, there's an issue where the window size is constrained
       // when initially created. To work around this, apply the size and
@@ -236,7 +236,7 @@ impl WidgetFactory {
   ) -> Vec<(LogicalSize<f64>, LogicalPosition<f64>)> {
     let mut placements = vec![];
 
-    for placement in config.launch_options.placements.iter() {
+    for placement in config.default_placements.iter() {
       let monitors = self
         .monitor_state
         .monitors_by_selection(&placement.monitor_selection)

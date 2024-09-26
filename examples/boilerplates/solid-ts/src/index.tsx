@@ -4,18 +4,6 @@ import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import * as zebar from 'zebar';
 
-// import { init } from 'zebar';
-// const zebarCtx = await init();
-
-// zebarCtx.widgets.start('./starter/vanilla');
-// zebarCtx.startWidget('./starter/vanilla');
-// zebarCtx.currentInstance.tauri.setZOrder('alwaysOnTop');
-
-// zebarCtx.instanceId;
-// zebarCtx.config;
-// zebarCtx.currentWidget.tauriWindow.getPosition();
-// zebarCtx.setZOrder('always_on_top');
-
 const providers = await zebar.createProviderGroup({
   cpu: { type: 'cpu' },
   battery: { type: 'battery' },
@@ -23,10 +11,6 @@ const providers = await zebar.createProviderGroup({
   weather: { type: 'weather' },
   keyboard: { type: 'keyboard' },
 });
-
-const monitor = zebar.currentMonitor();
-const window = zebar.currentWindow();
-const widget = zebar.currentWidget();
 
 render(() => <App />, document.getElementById('root')!);
 
