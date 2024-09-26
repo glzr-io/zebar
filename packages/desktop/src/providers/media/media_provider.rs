@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tokio::{sync::mpsc::Sender, time};
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
   Media::Control::{
@@ -9,7 +10,10 @@ use windows::{
   },
 };
 
-use crate::impl_interval_provider;
+use crate::{
+  impl_interval_provider,
+  providers::{Provider, ProviderOutput, ProviderResult},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -35,7 +39,9 @@ pub struct MediaProvider {
 }
 
 impl MediaProvider {
-  pub fn new() -> anyhow::Result<MediaProvider> {
+  pub fn new(
+    config: MediaProviderConfig,
+  ) -> anyhow::Result<MediaProvider> {
     let session_manager =
       GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?
         .get()?;
@@ -46,7 +52,7 @@ impl MediaProvider {
       current_session,
     };
 
-    let media_props = provider.get_media_properties()?; 
+    let media_props = provider.get_media_properties()?;
     println!("{:?}", media_props.title);
 
     Ok(provider)
@@ -61,6 +67,14 @@ impl MediaProvider {
       album: media_properties.AlbumTitle()?.to_string(),
       album_artist: media_properties.AlbumArtist()?.to_string(),
     })
+  }
+}
+
+impl Provider for MediaProvider {
+  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
+    if let Err(err) = self.create_socket(emit_result_tx.clone()).await {
+      emit_result_tx.send(Err(err).into()).await;
+    }
   }
 }
 

@@ -12,7 +12,7 @@ use tracing::{info, warn};
 
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
-  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
+  ip::IpProvider, media::MediaProvider, memory::MemoryProvider, network::NetworkProvider,
   weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
   SharedProviderState,
 };
@@ -172,6 +172,9 @@ impl ProviderRef {
       #[cfg(windows)]
       ProviderConfig::Komorebi(config) => {
         Box::new(KomorebiProvider::new(config))
+      }
+      ProviderConfig::Media(config) => {
+        Box::new(MediaProvider::new(config))
       }
       ProviderConfig::Memory(config) => {
         Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))

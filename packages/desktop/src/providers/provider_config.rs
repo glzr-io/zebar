@@ -20,7 +20,7 @@ pub enum ProviderConfig {
   Ip(IpProviderConfig),
   #[cfg(windows)]
   Komorebi(KomorebiProviderConfig),
-  // Media(MediaProviderConfig),
+  Media(MediaProviderConfig),
   Memory(MemoryProviderConfig),
   Network(NetworkProviderConfig),
   Weather(WeatherProviderConfig),
