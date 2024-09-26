@@ -6,12 +6,17 @@ export interface Widget {
   /**
    * Unique identifier for the widget instance.
    */
-  instanceId: string;
+  id: string;
 
   /**
-   * Absolute path to the widget config file.
+   * Absolute path to the widget's config file.
    */
   configPath: string;
+
+  /**
+   * Absolute path to the widget's HTML file.
+   */
+  htmlPath: string;
 }
 
 function getWidgetState(): Widget {
@@ -32,8 +37,9 @@ export function currentWidget(): Widget {
   const state = getWidgetState();
 
   return {
-    instanceId: state.instanceId,
+    id: state.id,
     configPath: state.configPath,
+    htmlPath: state.htmlPath,
   };
 }
 
