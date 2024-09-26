@@ -3,8 +3,8 @@ use serde::Deserialize;
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
   host::HostProviderConfig, ip::IpProviderConfig,
-  memory::MemoryProviderConfig, network::NetworkProviderConfig,
-  weather::WeatherProviderConfig,
+  media::MediaProviderConfig, memory::MemoryProviderConfig,
+  network::NetworkProviderConfig, weather::WeatherProviderConfig,
 };
 #[cfg(windows)]
 use super::{
@@ -20,6 +20,7 @@ pub enum ProviderConfig {
   Ip(IpProviderConfig),
   #[cfg(windows)]
   Komorebi(KomorebiProviderConfig),
+  // Media(MediaProviderConfig),
   Memory(MemoryProviderConfig),
   Network(NetworkProviderConfig),
   Weather(WeatherProviderConfig),
