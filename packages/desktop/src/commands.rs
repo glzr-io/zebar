@@ -6,33 +6,25 @@ use crate::{
   common::WindowExt,
   config::Config,
   providers::{ProviderConfig, ProviderManager},
-  window_factory::{WindowFactory, WindowState},
+  widget_factory::WidgetFactory,
 };
 
 #[tauri::command]
-pub async fn get_window_state(
-  window_id: String,
-  window_factory: State<'_, Arc<WindowFactory>>,
-) -> anyhow::Result<Option<WindowState>, String> {
-  Ok(window_factory.state_by_id(&window_id).await)
-}
-
-#[tauri::command]
-pub async fn open_window(
+pub async fn start_widget(
   config_path: String,
   config: State<'_, Arc<Config>>,
-  window_factory: State<'_, Arc<WindowFactory>>,
+  widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
-  let window_config = config
-    .window_config_by_path(&PathBuf::from(config_path))
+  let widget_config = config
+    .widget_config_by_path(&PathBuf::from(config_path))
     .await
     .and_then(|opt| {
-      opt.ok_or_else(|| anyhow::anyhow!("Window config not found."))
+      opt.ok_or_else(|| anyhow::anyhow!("Widget config not found."))
     })
     .map_err(|err| err.to_string())?;
 
-  window_factory
-    .open(window_config)
+  widget_factory
+    .open(widget_config)
     .await
     .map_err(|err| err.to_string())
 }
@@ -41,11 +33,10 @@ pub async fn open_window(
 pub async fn listen_provider(
   config_hash: String,
   config: ProviderConfig,
-  tracked_access: Vec<String>,
   provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .create(config_hash, config, tracked_access)
+    .create(config_hash, config)
     .await
     .map_err(|err| err.to_string())
 }

@@ -70,7 +70,7 @@ export interface GlazeWmOutput {
   focusedMonitor: Monitor;
 
   /**
-   * Monitor that is nearest to this Zebar window.
+   * Monitor that is nearest to this Zebar widget.
    */
   currentMonitor: Monitor;
 
@@ -213,7 +213,7 @@ export async function createGlazeWmProvider(
 
         const { monitors: glazeWmMonitors } = await client.queryMonitors();
 
-        // Get GlazeWM monitor that corresponds to the Zebar window's monitor.
+        // Get GlazeWM monitor that corresponds to the widget's monitor.
         const currentGlazeWmMonitor = glazeWmMonitors.reduce((a, b) =>
           getCoordinateDistance(currentPosition, a) <
           getCoordinateDistance(currentPosition, b)

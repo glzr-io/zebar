@@ -1,4 +1,3 @@
-import type { ZebarContext } from '~/zebar-context.model';
 import {
   createProvider,
   type ProviderConfig,
@@ -80,7 +79,9 @@ export type ProviderGroup<T extends ProviderGroupConfig> = {
 };
 
 /**
- * Docs {@link ZebarContext.createProviderGroup}
+ * Creates multiple providers at once. A provider is a collection of
+ * functions and variables that can change over time. Alternatively, a
+ * single provider can be created using {@link createProvider}.
  */
 export async function createProviderGroup<T extends ProviderGroupConfig>(
   configMap: T,

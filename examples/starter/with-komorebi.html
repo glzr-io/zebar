@@ -24,11 +24,9 @@
     <script type="text/babel" data-type="module">
       import React, { useState, useEffect } from 'react';
       import { createRoot } from 'react-dom/client';
-      import { init } from 'zebar';
+      import * as zebar from 'zebar';
 
-      const zebarCtx = await init();
-
-      const providers = await zebarCtx.createProviderGroup({
+      const providers = await zebar.createProviderGroup({
         network: { type: 'network' },
         komorebi: { type: 'komorebi' },
         cpu: { type: 'cpu' },

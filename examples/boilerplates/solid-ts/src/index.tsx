@@ -2,11 +2,9 @@
 import './index.css';
 import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
-import { init } from 'zebar';
+import * as zebar from 'zebar';
 
-const zebarCtx = await init();
-
-const providers = await zebarCtx.createProviderGroup({
+const providers = await zebar.createProviderGroup({
   cpu: { type: 'cpu' },
   battery: { type: 'battery' },
   memory: { type: 'memory' },

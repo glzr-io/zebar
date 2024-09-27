@@ -38,7 +38,6 @@ impl ProviderManager {
     &self,
     config_hash: String,
     config: ProviderConfig,
-    _tracked_access: Vec<String>,
   ) -> anyhow::Result<()> {
     {
       let mut providers = self.providers.lock().await;

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::bail;
+use serde::Serialize;
 use tauri::AppHandle;
 use tokio::{
   sync::{broadcast, Mutex},
@@ -8,12 +8,9 @@ use tokio::{
 };
 use tracing::info;
 
-use crate::{cli::OutputMonitorsArgs, config::MonitorSelection};
+use crate::config::MonitorSelection;
 
 pub struct MonitorState {
-  /// Handle to the Tauri application.
-  app_handle: AppHandle,
-
   _change_rx: broadcast::Receiver<Vec<Monitor>>,
 
   pub change_tx: broadcast::Sender<Vec<Monitor>>,
@@ -22,7 +19,7 @@ pub struct MonitorState {
   monitors: Arc<Mutex<Vec<Monitor>>>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Monitor {
   pub name: Option<String>,
   pub is_primary: bool,
@@ -48,7 +45,6 @@ impl MonitorState {
     );
 
     Self {
-      app_handle: app_handle.clone(),
       monitors,
       _change_rx,
       change_tx,
@@ -121,34 +117,11 @@ impl MonitorState {
   }
 
   /// Returns a string representation of the monitors.
-  pub fn output_str(
-    &self,
-    args: OutputMonitorsArgs,
-  ) -> anyhow::Result<String> {
+  pub fn output_str(&self) -> anyhow::Result<String> {
     let monitors = self.monitors.try_lock()?;
 
-    if monitors.len() == 0 {
-      bail!("No monitors found")
-    }
-
-    let mut monitors_str = String::new();
-
-    for monitor in monitors.iter() {
-      monitors_str += &format!(
-      "MONITOR_NAME=\"{}\" MONITOR_X=\"{}\" MONITOR_Y=\"{}\" MONITOR_WIDTH=\"{}\" MONITOR_HEIGHT=\"{}\" MONITOR_SCALE_FACTOR=\"{}\"",
-      monitor.name.clone().unwrap_or("".into()),
-      monitor.x,
-      monitor.y,
-      monitor.width,
-      monitor.height,
-      monitor.scale_factor
-    );
-
-      monitors_str += match args.print0 {
-        true => "\0",
-        false => "\n",
-      };
-    }
+    let monitors_str =
+      serde_json::to_string::<Vec<Monitor>>(monitors.as_ref())?;
 
     Ok(monitors_str)
   }
