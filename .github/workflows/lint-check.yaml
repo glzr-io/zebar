@@ -1,6 +1,9 @@
 name: Lint check
 
-on: push
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   lint-check:
