@@ -58,9 +58,9 @@ export async function createWeatherProvider(
   const mergedConfig: WeatherProviderConfig = {
     ...weatherProviderConfigSchema.parse(config),
     longitude:
-      config.longitude ?? (await getIpProvider()).output!.approxLongitude,
+      config.longitude ?? (await getIpProvider()).output?.approxLongitude,
     latitude:
-      config.latitude ?? (await getIpProvider()).output!.approxLatitude,
+      config.latitude ?? (await getIpProvider()).output?.approxLatitude,
   };
 
   async function getIpProvider() {
@@ -70,6 +70,13 @@ export async function createWeatherProvider(
   }
 
   return createBaseProvider(mergedConfig, async queue => {
+    if (!mergedConfig.latitude || !mergedConfig.longitude) {
+      queue.error(
+        'Failed to fetch estimate for latitude/longitude from IP address.',
+      );
+      return () => {};
+    }
+
     return onProviderEmit<WeatherOutput>(mergedConfig, ({ result }) => {
       if ('error' in result) {
         queue.error(result.error);
