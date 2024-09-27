@@ -352,7 +352,7 @@ impl Config {
     };
 
     let default_settings = SettingsConfig {
-      schema: Some("TODO".into()),
+      schema: Some("https://github.com/glzr-io/zebar/raw/v2.1.0/resources/settings-schema.json".into()),
       startup_configs: vec![default_startup_config.into()],
     };
 
