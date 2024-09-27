@@ -256,67 +256,82 @@ impl Config {
     Ok(())
   }
 
-  /// Recursively aggregates all valid widget configs in the given
-  /// directory.
+  /// Aggregates all valid widget configs at the 2nd-level of the given
+  /// directory (i.e. `<CONFIG_DIR>/*/*.zebar.json`).
   ///
-  /// Returns a list of `ConfigEntry` instances.
+  /// Returns a vector of `WidgetConfigEntry` instances.
   fn read_widget_configs(
     dir: &PathBuf,
   ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
-    let mut configs = Vec::new();
-
-    let entries = fs::read_dir(dir).with_context(|| {
+    let dir_entries = fs::read_dir(dir).with_context(|| {
       format!("Failed to read directory: {}", dir.display())
     })?;
 
-    for entry in entries {
-      let entry = entry?;
-      let path = entry.path();
+    // Scan the 2nd-level of the directory for config files.
+    let config_files = dir_entries
+      .into_iter()
+      .filter_map(|entry| {
+        let path = entry.ok()?.path();
+        if path.is_dir() {
+          Some(fs::read_dir(path).ok()?)
+        } else {
+          None
+        }
+      })
+      .flatten()
+      .filter_map(|entry| {
+        let path = entry.ok()?.path();
+        if path.is_file() && has_extension(&path, ".zebar.json") {
+          Some(path)
+        } else {
+          None
+        }
+      })
+      .collect::<Vec<PathBuf>>();
 
-      if path.is_dir() {
-        // Recursively aggregate configs in subdirectories.
-        configs.extend(Self::read_widget_configs(&path)?);
-      } else if has_extension(&path, ".zebar.json") {
-        let parse_res = read_and_parse_json::<WidgetConfig>(&path)
-          .and_then(|config| {
-            let config_path = path.to_absolute()?;
+    let mut configs = Vec::new();
 
-            let html_path = path
-              .parent()
-              .and_then(|parent| {
-                parent.join(&config.html_path).to_absolute().ok()
-              })
-              .with_context(|| {
-                format!(
-                  "HTML file not found at {} for config {}.",
-                  config.html_path.display(),
-                  config_path.display()
-                )
-              })?;
+    // Parse the found config files.
+    for path in config_files {
+      let parse_res =
+        read_and_parse_json::<WidgetConfig>(&path).and_then(|config| {
+          let config_path = path.to_absolute()?;
 
-            Ok(WidgetConfigEntry {
-              config,
-              config_path,
-              html_path,
+          let html_path = path
+            .parent()
+            .and_then(|parent| {
+              parent.join(&config.html_path).to_absolute().ok()
             })
-          });
+            .with_context(|| {
+              format!(
+                "HTML file not found at {} for config {}.",
+                config.html_path.display(),
+                config_path.display()
+              )
+            })?;
 
-        match parse_res {
-          Ok(config) => {
-            info!(
-              "Found valid widget config at: {}",
-              config.config_path.display()
-            );
+          Ok(WidgetConfigEntry {
+            config,
+            config_path,
+            html_path,
+          })
+        });
 
-            configs.push(config);
-          }
-          Err(err) => {
-            error!(
-              "Failed to parse config at {}: {:?}",
-              path.display(),
-              err
-            );
-          }
+      match parse_res {
+        Ok(config) => {
+          info!(
+            "Found valid widget config at: {}",
+            config.config_path.display()
+          );
+
+          configs.push(config);
+        }
+        Err(err) => {
+          error!(
+            "Failed to parse config at {}: {:?}",
+            path.display(),
+            err
+          );
         }
       }
     }
