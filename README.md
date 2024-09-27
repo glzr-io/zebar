@@ -26,13 +26,25 @@
 
 For building locally, follow the instructions [here](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md).
 
+## 🏁 Getting started
+
+On first launch, Zebar generates some default widgets to `%userprofile%/.glzr/zebar`. This includes various examples and templates to get you started with creating your own widgets.
+
+To create your own widget, a good way to start is by making a copy of one of the boilerplate configs created on first launch.
+
+Widgets can be shared easily:
+1. Zip your widget configuration.
+2. Unzip it into the `%userprofile%/.glzr/zebar` directory.
+
 ## 🌟 Intro to Zebar
 
-When Zebar is first launched, a set of default widget configs are generated to `%userprofile%/.glzr/zebar`. This includes various examples and templates to get you started with creating your own widgets.
+Widgets are powered by native webviews (_similar_ to Electron, but more lightweight).
 
-To create a new widget, simply copy its config file into the `%userprofile%/.glzr/zebar` directory.
+Each widget consists of:
+1. A config file (with a `.zebar.json` extension).
+2. An HTML file for markup and styling.
 
-Widgets are powered by native webviews (_similar_ to Electron, but less resource heavy). Every widget has its own config file and a corresponding HTML file for the markup and styling of the widget. This is an ordinary HTML file, so any frontend framework (React, Angular, Vue, etc.) can be used.
+Any frontend framework can be used and boilerplates (e.g. for React, SolidJS) are included in the default widget configs.
 
 Zebar exposes various system information (refered to as "providers") which can be used and displayed by your frontend. This includes stats like CPU usage, battery info, various window manager integrations, and lots more.
 
