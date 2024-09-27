@@ -95,7 +95,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       task::block_in_place(|| {
         block_on(async move {
           let config_dir_override = match cli.command() {
-            CliCommand::OpenWidgetDefaults(args) => args.config_dir,
+            CliCommand::OpenWidgetDefault(args) => args.config_dir,
             CliCommand::Startup(args) => args.config_dir,
             _ => None,
           };
@@ -166,7 +166,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       })
     })
     .invoke_handler(tauri::generate_handler![
-      commands::start_widget,
+      commands::open_widget_default,
       commands::listen_provider,
       commands::unlisten_provider,
       commands::set_always_on_top,
@@ -273,7 +273,7 @@ async fn open_widgets_by_cli_command(
   widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
   let widget_configs = match cli.command() {
-    CliCommand::OpenWidgetDefaults(args) => {
+    CliCommand::OpenWidgetDefault(args) => {
       let widget_config = config
         .widget_config_by_path(&config.join_config_dir(&args.config_path))
         .await?

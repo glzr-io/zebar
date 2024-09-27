@@ -22,10 +22,10 @@ pub enum CliCommand {
   /// Opens a widget by its config path. Uses its default placements.
   ///
   /// Config path is relative within the Zebar config directory (e.g.
-  /// `zebar open-widget ./material/config.yaml`).
+  /// `zebar open-widget-default ./material/config.yaml`).
   ///
   /// Starts Zebar if it is not already running.
-  OpenWidgetDefaults(OpenWidgetDefaultsArgs),
+  OpenWidgetDefault(OpenWidgetDefaultArgs),
 
   /// Opens all widgets that are set to launch on startup.
   ///
@@ -47,7 +47,7 @@ pub enum CliCommand {
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]
-pub struct OpenWidgetDefaultsArgs {
+pub struct OpenWidgetDefaultArgs {
   /// Relative file path to widget config within the Zebar config
   /// directory.
   pub config_path: PathBuf,

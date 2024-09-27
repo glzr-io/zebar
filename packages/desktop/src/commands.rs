@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[tauri::command]
-pub async fn start_widget(
+pub async fn open_widget_default(
   config_path: String,
   config: State<'_, Arc<Config>>,
   widget_factory: State<'_, Arc<WidgetFactory>>,

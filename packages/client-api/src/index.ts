@@ -2,7 +2,7 @@ export * from './providers';
 export {
   currentWidget,
   currentWindow,
-  startWidget,
+  openWidgetDefault,
   type Widget,
   type Window,
 } from './desktop';

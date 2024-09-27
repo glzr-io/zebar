@@ -44,9 +44,11 @@ export function currentWidget(): Widget {
 }
 
 /**
- * Opens a new widget instance by a relative path to its config file.
+ * Opens a widget by its config path. Uses its default placements.
+ *
+ * Config path is relative within the Zebar config directory.
  */
-export async function startWidget(configPath: string) {
+export async function openWidgetDefault(configPath: string) {
   // Ensure the config path ends with '.zebar.json'.
   const filePath = configPath.endsWith('.zebar.json')
     ? configPath
@@ -58,5 +60,5 @@ export async function startWidget(configPath: string) {
     filePath,
   );
 
-  return desktopCommands.startWidget(absolutePath);
+  return desktopCommands.openWidgetDefault(absolutePath);
 }

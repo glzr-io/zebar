@@ -9,15 +9,15 @@ import type { ProviderConfig } from '~/providers';
 const logger = createLogger('desktop-commands');
 
 export const desktopCommands = {
-  startWidget,
+  openWidgetDefault,
   listenProvider,
   unlistenProvider,
   setAlwaysOnTop,
   setSkipTaskbar,
 };
 
-function startWidget(configPath: string): Promise<void> {
-  return invoke<void>('start_widget', { configPath });
+function openWidgetDefault(configPath: string): Promise<void> {
+  return invoke<void>('open_widget_default', { configPath });
 }
 
 function listenProvider(args: {
