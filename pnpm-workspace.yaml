@@ -1,4 +1,3 @@
 packages:
   - 'packages/*'
-  - 'examples/starter/*'
-  - 'examples/boilerplates/*'
+  - 'examples/*'
