@@ -50,33 +50,12 @@ export interface WeatherOutput {
   windSpeed: number;
 }
 
-export async function createWeatherProvider(
+export function createWeatherProvider(
   config: WeatherProviderConfig,
-): Promise<WeatherProvider> {
-  let ipProvider: IpProvider | null = null;
-
-  const mergedConfig: WeatherProviderConfig = {
-    ...weatherProviderConfigSchema.parse(config),
-    longitude:
-      config.longitude ?? (await getIpProvider()).output?.approxLongitude,
-    latitude:
-      config.latitude ?? (await getIpProvider()).output?.approxLatitude,
-  };
-
-  async function getIpProvider() {
-    return (
-      ipProvider ?? (ipProvider = await createProvider({ type: 'ip' }))
-    );
-  }
+): WeatherProvider {
+  const mergedConfig = weatherProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    if (!mergedConfig.latitude || !mergedConfig.longitude) {
-      queue.error(
-        'Failed to fetch estimate for latitude/longitude from IP address.',
-      );
-      return () => {};
-    }
-
     return onProviderEmit<WeatherOutput>(mergedConfig, ({ result }) => {
       if ('error' in result) {
         queue.error(result.error);

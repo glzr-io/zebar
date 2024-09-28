@@ -30,9 +30,7 @@ export interface IpOutput {
   approxLongitude: number;
 }
 
-export async function createIpProvider(
-  config: IpProviderConfig,
-): Promise<IpProvider> {
+export function createIpProvider(config: IpProviderConfig): IpProvider {
   const mergedConfig = ipProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {

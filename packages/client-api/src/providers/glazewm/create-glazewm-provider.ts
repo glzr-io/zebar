@@ -103,9 +103,9 @@ export interface GlazeWmOutput {
   ): Promise<RunCommandResponse>;
 }
 
-export async function createGlazeWmProvider(
+export function createGlazeWmProvider(
   config: GlazeWmProviderConfig,
-): Promise<GlazeWmProvider> {
+): GlazeWmProvider {
   const mergedConfig = glazeWmProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {

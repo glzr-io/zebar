@@ -32,9 +32,9 @@ export interface MemoryOutput {
   totalSwap: number;
 }
 
-export async function createMemoryProvider(
+export function createMemoryProvider(
   config: MemoryProviderConfig,
-): Promise<MemoryProvider> {
+): MemoryProvider {
   const mergedConfig = memoryProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {

@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use serde::Serialize;
 use tauri::AppHandle;
 use tokio::{
-  sync::{broadcast, Mutex, RwLock},
+  sync::{broadcast, RwLock},
   task,
 };
 use tracing::info;

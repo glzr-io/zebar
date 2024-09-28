@@ -29,9 +29,9 @@ export interface KeyboardOutput {
   layout: string;
 }
 
-export async function createKeyboardProvider(
+export function createKeyboardProvider(
   config: KeyboardProviderConfig,
-): Promise<KeyboardProvider> {
+): KeyboardProvider {
   const mergedConfig = keyboardProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {

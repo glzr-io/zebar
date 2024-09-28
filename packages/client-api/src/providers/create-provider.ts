@@ -93,16 +93,15 @@ export type ProviderOutput = ProviderMap[keyof ProviderMap]['output'];
  * that can change over time. Alternatively, multiple providers can be
  * created using {@link createProviderGroup}.
  *
- * Waits until the provider has emitted either its first output or first
- * error. The provider will continue to output until its `stop` function is
+ * The provider will continue to output until its `stop` function is
  * called.
  *
- * @throws If the provider config is invalid. *Does not throw* if the
- * provider's first emission is an error.
+ * @throws If the provider config is invalid. Errors are emitted via the
+ * `onError` method.
  */
 export function createProvider<T extends ProviderConfig>(
   config: T,
-): Promise<ProviderMap[T['type']]> {
+): ProviderMap[T['type']] {
   switch (config.type) {
     case 'battery':
       return createBatteryProvider(config) as any;

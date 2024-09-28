@@ -1,4 +1,3 @@
-import { Deferred } from '~/utils';
 import type { ProviderConfig } from './create-provider';
 
 export interface Provider<TConfig, TOutput> {
@@ -52,6 +51,7 @@ export interface Provider<TConfig, TOutput> {
 }
 
 type UnlistenFn = () => void | Promise<void>;
+// type UnlistenFn = () => Promise<void>;
 
 /**
  * Fetches next output or error from the provider.
@@ -59,15 +59,15 @@ type UnlistenFn = () => void | Promise<void>;
 type ProviderFetcher<T> = (queue: {
   output: (nextOutput: T) => void;
   error: (nextError: string) => void;
-}) => UnlistenFn | Promise<UnlistenFn>;
+}) => Promise<UnlistenFn>;
 
-export async function createBaseProvider<
+export function createBaseProvider<
   TConfig extends ProviderConfig,
   TOutput,
 >(
   config: TConfig,
   fetcher: ProviderFetcher<TOutput>,
-): Promise<Provider<TConfig, TOutput>> {
+): Provider<TConfig, TOutput> {
   const outputListeners = new Set<(output: TOutput) => void>();
   const errorListeners = new Set<(error: string) => void>();
 
@@ -77,28 +77,19 @@ export async function createBaseProvider<
     hasError: false,
   };
 
-  let unlisten: UnlistenFn | null = await startFetcher();
+  let unlisten: Promise<UnlistenFn> | null = startFetcher();
 
-  async function startFetcher() {
-    const hasFirstEmit = new Deferred<void>();
-
-    const unlisten = await fetcher({
+  function startFetcher() {
+    return fetcher({
       output: output => {
         latestEmission = { output, error: null, hasError: false };
         outputListeners.forEach(listener => listener(output));
-        hasFirstEmit.resolve();
       },
       error: error => {
         latestEmission = { output: null, error, hasError: true };
         errorListeners.forEach(listener => listener(error));
-        hasFirstEmit.resolve();
       },
     });
-
-    // Wait for the first emission.
-    await hasFirstEmit.promise;
-
-    return unlisten;
   }
 
   return {
@@ -114,17 +105,22 @@ export async function createBaseProvider<
     config,
     restart: async () => {
       if (unlisten) {
-        await unlisten();
+        await (
+          await unlisten
+        )();
       }
 
-      await startFetcher();
+      unlisten = startFetcher();
     },
     stop: async () => {
       outputListeners.clear();
       errorListeners.clear();
 
       if (unlisten) {
-        await unlisten();
+        await (
+          await unlisten
+        )();
+        unlisten = null;
       }
     },
     onOutput: callback => {

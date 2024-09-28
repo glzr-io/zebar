@@ -37,9 +37,9 @@ export interface BatteryOutput {
   voltage: number | null;
 }
 
-export async function createBatteryProvider(
+export function createBatteryProvider(
   config: BatteryProviderConfig,
-): Promise<BatteryProvider> {
+): BatteryProvider {
   const mergedConfig = batteryProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
