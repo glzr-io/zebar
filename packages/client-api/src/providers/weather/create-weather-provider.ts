@@ -53,26 +53,9 @@ export interface WeatherOutput {
 export function createWeatherProvider(
   config: WeatherProviderConfig,
 ): WeatherProvider {
-  let ipProvider: IpProvider | null = null;
-
-  const mergedConfig: WeatherProviderConfig = {
-    ...weatherProviderConfigSchema.parse(config),
-    longitude: config.longitude ?? getIpProvider().output?.approxLongitude,
-    latitude: config.latitude ?? getIpProvider().output?.approxLatitude,
-  };
-
-  async function getIpProvider() {
-    return ipProvider ?? (ipProvider = createProvider({ type: 'ip' }));
-  }
+  const mergedConfig = weatherProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    if (!mergedConfig.latitude || !mergedConfig.longitude) {
-      queue.error(
-        'Failed to fetch estimate for latitude/longitude from IP address.',
-      );
-      return () => {};
-    }
-
     return onProviderEmit<WeatherOutput>(mergedConfig, ({ result }) => {
       if ('error' in result) {
         queue.error(result.error);

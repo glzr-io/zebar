@@ -85,7 +85,7 @@ export function createDateProvider(
 ): DateProvider {
   const mergedConfig = dateProviderConfigSchema.parse(config);
 
-  return createBaseProvider(mergedConfig, queue => {
+  return createBaseProvider(mergedConfig, async queue => {
     queue.output(getDateValue());
 
     const interval = setInterval(
