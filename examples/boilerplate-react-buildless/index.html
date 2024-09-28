@@ -28,7 +28,7 @@
       import { createRoot } from 'https://esm.sh/react-dom@18/client?dev';
       import * as zebar from 'https://esm.sh/zebar@2';
 
-      const providers = await zebar.createProviderGroup({
+      const providers = zebar.createProviderGroup({
         cpu: { type: 'cpu' },
         battery: { type: 'battery' },
         memory: { type: 'memory' },
@@ -46,11 +46,13 @@
 
         return (
           <div className="app">
-            <div className="chip">CPU usage: {output.cpu.usage}</div>
+            <div className="chip">CPU usage: {output.cpu?.usage}</div>
             <div className="chip">
               Battery charge: {output.battery?.chargePercent}
             </div>
-            <div className="chip">Memory usage: {output.memory.usage}</div>
+            <div className="chip">
+              Memory usage: {output.memory?.usage}
+            </div>
             <div className="chip">
               Weather temp: {output.weather?.celsiusTemp}
             </div>
