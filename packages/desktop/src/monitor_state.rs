@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use serde::Serialize;
 use tauri::AppHandle;
 use tokio::{
-  sync::{broadcast, Mutex},
+  sync::{broadcast, Mutex, RwLock},
   task,
 };
 use tracing::info;
@@ -16,7 +16,7 @@ pub struct MonitorState {
   pub change_tx: broadcast::Sender<Vec<Monitor>>,
 
   /// Available monitors sorted from left-to-right and top-to-bottom.
-  monitors: Arc<Mutex<Vec<Monitor>>>,
+  monitors: Arc<RwLock<Vec<Monitor>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -36,7 +36,7 @@ impl MonitorState {
     let (change_tx, _change_rx) = broadcast::channel(16);
 
     let monitors =
-      Arc::new(Mutex::new(Self::available_monitors(app_handle)));
+      Arc::new(RwLock::new(Self::available_monitors(app_handle)));
 
     Self::listen_changes(
       app_handle.clone(),
@@ -57,21 +57,29 @@ impl MonitorState {
   /// monitor disconnections. Does not update on working area changes.
   fn listen_changes(
     app_handle: AppHandle,
-    monitors: Arc<Mutex<Vec<Monitor>>>,
+    monitors: Arc<RwLock<Vec<Monitor>>>,
     change_tx: broadcast::Sender<Vec<Monitor>>,
   ) {
     task::spawn(async move {
+      let mut interval = tokio::time::interval(Duration::from_secs(4));
+
+      interval
+        .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
       loop {
+        interval.tick().await;
         let new_monitors = Self::available_monitors(&app_handle);
-        let mut monitors = monitors.lock().await;
 
-        if *monitors != new_monitors {
+        let should_update = {
+          let current_monitors = monitors.read().await;
+          *current_monitors != new_monitors
+        };
+
+        if should_update {
           info!("Detected change in monitors.");
-          let _ = change_tx.send(new_monitors.clone());
-          *monitors = new_monitors;
+          *monitors.write().await = new_monitors.clone();
+          let _ = change_tx.send(new_monitors);
         }
-
-        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
       }
     });
   }
@@ -118,7 +126,7 @@ impl MonitorState {
 
   /// Returns a string representation of the monitors.
   pub fn output_str(&self) -> anyhow::Result<String> {
-    let monitors = self.monitors.try_lock()?;
+    let monitors = self.monitors.try_read()?;
 
     let monitors_str =
       serde_json::to_string::<Vec<Monitor>>(monitors.as_ref())?;
@@ -130,7 +138,7 @@ impl MonitorState {
     &self,
     monitor_selection: &MonitorSelection,
   ) -> Vec<Monitor> {
-    let monitors = self.monitors.lock().await.clone();
+    let monitors = self.monitors.read().await.clone();
 
     match monitor_selection {
       MonitorSelection::All => monitors,
