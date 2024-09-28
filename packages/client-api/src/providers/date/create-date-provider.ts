@@ -80,9 +80,9 @@ export interface DateOutput {
   iso: string;
 }
 
-export async function createDateProvider(
+export function createDateProvider(
   config: DateProviderConfig,
-): Promise<DateProvider> {
+): DateProvider {
   const mergedConfig = dateProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, queue => {

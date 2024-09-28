@@ -30,9 +30,7 @@ export interface CpuOutput {
   vendor: string;
 }
 
-export async function createCpuProvider(
-  config: CpuProviderConfig,
-): Promise<CpuProvider> {
+export function createCpuProvider(config: CpuProviderConfig): CpuProvider {
   const mergedConfig = cpuProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {

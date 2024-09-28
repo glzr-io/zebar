@@ -50,23 +50,19 @@ export interface WeatherOutput {
   windSpeed: number;
 }
 
-export async function createWeatherProvider(
+export function createWeatherProvider(
   config: WeatherProviderConfig,
-): Promise<WeatherProvider> {
+): WeatherProvider {
   let ipProvider: IpProvider | null = null;
 
   const mergedConfig: WeatherProviderConfig = {
     ...weatherProviderConfigSchema.parse(config),
-    longitude:
-      config.longitude ?? (await getIpProvider()).output?.approxLongitude,
-    latitude:
-      config.latitude ?? (await getIpProvider()).output?.approxLatitude,
+    longitude: config.longitude ?? getIpProvider().output?.approxLongitude,
+    latitude: config.latitude ?? getIpProvider().output?.approxLatitude,
   };
 
   async function getIpProvider() {
-    return (
-      ipProvider ?? (ipProvider = await createProvider({ type: 'ip' }))
-    );
+    return ipProvider ?? (ipProvider = createProvider({ type: 'ip' }));
   }
 
   return createBaseProvider(mergedConfig, async queue => {

@@ -88,9 +88,9 @@ export interface NetworkTrafficMeasure {
   iecUnit: string;
 }
 
-export async function createNetworkProvider(
+export function createNetworkProvider(
   config: NetworkProviderConfig,
-): Promise<NetworkProvider> {
+): NetworkProvider {
   const mergedConfig = networkProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {

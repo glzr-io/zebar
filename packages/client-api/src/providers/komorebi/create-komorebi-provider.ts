@@ -121,9 +121,9 @@ export type KomorebiLayoutFlip =
   | 'vertical'
   | 'horizontal_and_vertical';
 
-export async function createKomorebiProvider(
+export function createKomorebiProvider(
   config: KomorebiProviderConfig,
-): Promise<KomorebiProvider> {
+): KomorebiProvider {
   const mergedConfig = komorebiProviderConfigSchema.parse(config);
 
   // TODO: Update state when monitors change.

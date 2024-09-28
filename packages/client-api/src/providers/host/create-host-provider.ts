@@ -31,9 +31,9 @@ export interface HostOutput {
   uptime: number;
 }
 
-export async function createHostProvider(
+export function createHostProvider(
   config: HostProviderConfig,
-): Promise<HostProvider> {
+): HostProvider {
   const mergedConfig = hostProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
