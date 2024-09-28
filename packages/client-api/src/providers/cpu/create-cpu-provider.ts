@@ -1,34 +1,17 @@
 import { z } from 'zod';
 
-import {
-  createBaseProvider,
-  type Provider,
-} from '../create-base-provider';
+import { createBaseProvider } from '../create-base-provider';
 import { onProviderEmit } from '~/desktop';
-
-export interface CpuProviderConfig {
-  type: 'cpu';
-
-  /**
-   * How often this provider refreshes in milliseconds.
-   */
-  refreshInterval?: number;
-}
+import type {
+  CpuOutput,
+  CpuProvider,
+  CpuProviderConfig,
+} from './cpu-provider-types';
 
 const cpuProviderConfigSchema = z.object({
   type: z.literal('cpu'),
   refreshInterval: z.coerce.number().default(5 * 1000),
 });
-
-export type CpuProvider = Provider<CpuProviderConfig, CpuOutput>;
-
-export interface CpuOutput {
-  frequency: number;
-  usage: number;
-  logicalCoreCount: number;
-  physicalCoreCount: number;
-  vendor: string;
-}
 
 export function createCpuProvider(config: CpuProviderConfig): CpuProvider {
   const mergedConfig = cpuProviderConfigSchema.parse(config);

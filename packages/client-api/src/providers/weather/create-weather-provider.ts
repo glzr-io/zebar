@@ -1,34 +1,12 @@
 import { z } from 'zod';
 
-import type { IpProvider } from '../ip/create-ip-provider';
-import { WeatherStatus } from './weather-status.enum';
-import {
-  createBaseProvider,
-  type Provider,
-} from '../create-base-provider';
+import { createBaseProvider } from '../create-base-provider';
 import { onProviderEmit } from '~/desktop';
-import { createProvider } from '../create-provider';
-
-export interface WeatherProviderConfig {
-  type: 'weather';
-
-  /**
-   * Latitude to retrieve weather for. If not provided, latitude is instead
-   * estimated based on public IP.
-   */
-  latitude?: number;
-
-  /**
-   * Longitude to retrieve weather for. If not provided, longitude is instead
-   * estimated based on public IP.
-   */
-  longitude?: number;
-
-  /**
-   * How often this provider refreshes in milliseconds.
-   */
-  refreshInterval?: number;
-}
+import type {
+  WeatherOutput,
+  WeatherProvider,
+  WeatherProviderConfig,
+} from './weather-provider-types';
 
 const weatherProviderConfigSchema = z.object({
   type: z.literal('weather'),
@@ -36,19 +14,6 @@ const weatherProviderConfigSchema = z.object({
   longitude: z.coerce.number().optional(),
   refreshInterval: z.coerce.number().default(60 * 60 * 1000),
 });
-
-export type WeatherProvider = Provider<
-  WeatherProviderConfig,
-  WeatherOutput
->;
-
-export interface WeatherOutput {
-  isDaytime: boolean;
-  status: WeatherStatus;
-  celsiusTemp: number;
-  fahrenheitTemp: number;
-  windSpeed: number;
-}
 
 export function createWeatherProvider(
   config: WeatherProviderConfig,

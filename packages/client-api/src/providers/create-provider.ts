@@ -1,58 +1,55 @@
-import {
-  createBatteryProvider,
-  type BatteryProvider,
-  type BatteryProviderConfig,
-} from './battery/create-battery-provider';
-import {
-  createCpuProvider,
-  type CpuProvider,
-  type CpuProviderConfig,
-} from './cpu/create-cpu-provider';
-import {
-  createDateProvider,
-  type DateProvider,
-  type DateProviderConfig,
-} from './date/create-date-provider';
-import {
-  createGlazeWmProvider,
-  type GlazeWmProvider,
-  type GlazeWmProviderConfig,
-} from './glazewm/create-glazewm-provider';
-import {
-  createHostProvider,
-  type HostProvider,
-  type HostProviderConfig,
-} from './host/create-host-provider';
-import {
-  createIpProvider,
-  type IpProvider,
-  type IpProviderConfig,
-} from './ip/create-ip-provider';
-import {
-  createKomorebiProvider,
-  type KomorebiProvider,
-  type KomorebiProviderConfig,
-} from './komorebi/create-komorebi-provider';
-import {
-  createMemoryProvider,
-  type MemoryProvider,
-  type MemoryProviderConfig,
-} from './memory/create-memory-provider';
-import {
-  createNetworkProvider,
-  type NetworkProvider,
-  type NetworkProviderConfig,
-} from './network/create-network-provider';
-import {
-  createWeatherProvider,
-  type WeatherProvider,
-  type WeatherProviderConfig,
-} from './weather/create-weather-provider';
-import {
-  createKeyboardProvider,
-  type KeyboardProvider,
-  type KeyboardProviderConfig,
-} from './keyboard/create-keyboard-provider';
+import { createBatteryProvider } from './battery/create-battery-provider';
+import type {
+  BatteryProviderConfig,
+  BatteryProvider,
+} from './battery/battery-provider-types';
+import { createCpuProvider } from './cpu/create-cpu-provider';
+import type {
+  CpuProviderConfig,
+  CpuProvider,
+} from './cpu/cpu-provider-types';
+import { createDateProvider } from './date/create-date-provider';
+import type {
+  DateProviderConfig,
+  DateProvider,
+} from './date/date-provider-types';
+import { createGlazeWmProvider } from './glazewm/create-glazewm-provider';
+import type {
+  GlazeWmProviderConfig,
+  GlazeWmProvider,
+} from './glazewm/glazewm-provider-types';
+import { createHostProvider } from './host/create-host-provider';
+import type {
+  HostProviderConfig,
+  HostProvider,
+} from './host/host-provider-types';
+import { createIpProvider } from './ip/create-ip-provider';
+import type { IpProviderConfig, IpProvider } from './ip/ip-provider-types';
+import { createKeyboardProvider } from './keyboard/create-keyboard-provider';
+import type {
+  KeyboardProviderConfig,
+  KeyboardProvider,
+} from './keyboard/keyboard-provider-types';
+import { createKomorebiProvider } from './komorebi/create-komorebi-provider';
+import type {
+  KomorebiProviderConfig,
+  KomorebiProvider,
+} from './komorebi/komorebi-provider-types';
+import { createMemoryProvider } from './memory/create-memory-provider';
+import type {
+  MemoryProviderConfig,
+  MemoryProvider,
+} from './memory/memory-provider-types';
+import { createNetworkProvider } from './network/create-network-provider';
+import type {
+  NetworkProviderConfig,
+  NetworkProvider,
+} from './network/network-provider-types';
+import { createWeatherProvider } from './weather/create-weather-provider';
+import type {
+  WeatherProviderConfig,
+  WeatherProvider,
+} from './weather/weather-provider-types';
 
 export interface ProviderConfigMap {
   battery: BatteryProviderConfig;

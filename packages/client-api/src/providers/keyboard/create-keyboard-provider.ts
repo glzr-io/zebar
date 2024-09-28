@@ -1,33 +1,17 @@
 import { z } from 'zod';
 
-import {
-  createBaseProvider,
-  type Provider,
-} from '../create-base-provider';
+import { createBaseProvider } from '../create-base-provider';
 import { onProviderEmit } from '~/desktop';
-
-export interface KeyboardProviderConfig {
-  type: 'keyboard';
-
-  /**
-   * How often this provider refreshes in milliseconds.
-   */
-  refreshInterval?: number;
-}
+import type {
+  KeyboardOutput,
+  KeyboardProvider,
+  KeyboardProviderConfig,
+} from './keyboard-provider-types';
 
 const keyboardProviderConfigSchema = z.object({
   type: z.literal('keyboard'),
   refreshInterval: z.coerce.number().default(1000),
 });
-
-export type KeyboardProvider = Provider<
-  KeyboardProviderConfig,
-  KeyboardOutput
->;
-
-export interface KeyboardOutput {
-  layout: string;
-}
 
 export function createKeyboardProvider(
   config: KeyboardProviderConfig,
