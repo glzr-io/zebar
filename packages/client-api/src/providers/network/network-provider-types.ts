@@ -43,24 +43,23 @@ export interface NetworkGateway {
   signalStrength: number | null;
 }
 
-export enum InterfaceType {
-  UNKNOWN = 'unknown',
-  ETHERNET = 'ethernet',
-  TOKEN_RING = 'token_ring',
-  FDDI = 'fddi',
-  PPP = 'ppp',
-  LOOPBACK = 'loopback',
-  SLIP = 'slip',
-  ATM = 'atm',
-  GENERIC_MODEM = 'generic_modem',
-  ISDN = 'isdn',
-  WIFI = 'wifi',
-  DSL = 'dsl',
-  TUNNEL = 'tunnel',
-  HIGH_PERFORMANCE_SERIAL_BUS = 'high_performance_serial_bus',
-  MOBILE_BROADBAND = 'mobile_broadband',
-  BRIDGE = 'bridge',
-}
+export type InterfaceType =
+  | 'unknown'
+  | 'ethernet'
+  | 'token_ring'
+  | 'fddi'
+  | 'ppp'
+  | 'loopback'
+  | 'slip'
+  | 'atm'
+  | 'generic_modem'
+  | 'isdn'
+  | 'wifi'
+  | 'dsl'
+  | 'tunnel'
+  | 'high_performance_serial_bus'
+  | 'mobile_broadband'
+  | 'bridge';
 
 export interface NetworkTraffic {
   received: NetworkTrafficMeasure;

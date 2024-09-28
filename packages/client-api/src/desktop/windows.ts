@@ -2,7 +2,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { desktopCommands } from './desktop-commands';
 
-export type ZOrder = 'always_on_bottom' | 'always_on_top' | 'normal';
+export type ZOrder = 'bottom_most' | 'top_most' | 'normal';
 
 export interface Window {
   /**
@@ -29,9 +29,9 @@ export function currentWindow(): Window {
 }
 
 async function setZOrder(zOrder: ZOrder) {
-  if (zOrder === 'always_on_bottom') {
+  if (zOrder === 'bottom_most') {
     await getCurrentWindow().setAlwaysOnBottom(true);
-  } else if (zOrder === 'always_on_top') {
+  } else if (zOrder === 'top_most') {
     await desktopCommands.setAlwaysOnTop();
   } else {
     await getCurrentWindow().setAlwaysOnTop(false);
