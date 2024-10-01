@@ -20,6 +20,7 @@ pub struct MonitorState {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Monitor {
   pub name: Option<String>,
   pub is_primary: bool,
