@@ -68,11 +68,13 @@ async fn main() -> anyhow::Result<()> {
 fn output_query(args: QueryArgs) -> anyhow::Result<()> {
   match args {
     QueryArgs::Monitors => {
-      let _ = tauri::Builder::default().setup(|app| {
-        let monitors = MonitorState::new(app.handle());
-        cli::print_and_exit(monitors.output_str());
-        Ok(())
-      });
+      tauri::Builder::default()
+        .setup(|app| {
+          let monitors = MonitorState::new(app.handle());
+          cli::print_and_exit(monitors.output_str());
+          Ok(())
+        })
+        .run(tauri::generate_context!())?;
 
       Ok(())
     }
