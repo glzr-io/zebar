@@ -233,7 +233,7 @@ impl WidgetFactory {
   async fn widget_placements(
     &self,
     config: &WidgetConfig,
-  ) -> Vec<(LogicalSize<f64>, LogicalPosition<f64>)> {
+  ) -> Vec<(PhysicalSize<f64>, PhysicalPosition<f64>)> {
     let mut placements = vec![];
 
     for placement in config.default_placements.iter() {
@@ -275,20 +275,30 @@ impl WidgetFactory {
           ),
         };
 
-        let size = LogicalSize::from_physical(
+        let size = {
+          let size = PhysicalSize::<f64>::from_logical(
+            LogicalSize::new(
+              placement.width.to_px(monitor.width as i32),
+              placement.height.to_px(monitor.height as i32),
+            ),
+            monitor.scale_factor,
+          );
           PhysicalSize::new(
-            placement.width.to_px(monitor.width as i32),
-            placement.height.to_px(monitor.height as i32),
+            f64::min(size.width, monitor.width as f64),
+            f64::min(size.height, monitor.height as f64),
+          )
+        };
+
+        let offset = PhysicalPosition::<f64>::from_logical(
+          LogicalPosition::new(
+            placement.offset_x.to_px(monitor.width as i32),
+            placement.offset_y.to_px(monitor.height as i32),
           ),
           monitor.scale_factor,
         );
-
-        let position = LogicalPosition::from_physical(
-          PhysicalPosition::new(
-            anchor_x + placement.offset_x.to_px(monitor.width as i32),
-            anchor_y + placement.offset_y.to_px(monitor.height as i32),
-          ),
-          monitor.scale_factor,
+        let position = PhysicalPosition::new(
+          anchor_x as f64 + offset.x,
+          anchor_y as f64 + offset.y,
         );
 
         placements.push((size, position));
