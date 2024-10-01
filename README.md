@@ -52,7 +52,7 @@ Zebar exposes various system information (refered to as "providers") which can b
 
 **Q: Help! On Windows, Zebar is failing to start?**
 
-In some cases, updating to the latest Microsoft Webview2 version is needed ([download](https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH)).
+In some cases, updating to the latest Microsoft Webview2 version is needed ([standalone download](https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH#download)). Run the "Evergreen Standalone Installer" as adminstrator.
 
 ## 🧩 Providers
 
