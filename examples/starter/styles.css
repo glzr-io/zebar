@@ -102,6 +102,10 @@ body,
   color: #900029;
 }
 
+.battery {
+  position: relative;
+}
+
 .battery .charging-icon {
   position: absolute;
   font-size: 11px;
