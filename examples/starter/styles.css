@@ -108,7 +108,7 @@ body,
 
 .battery .charging-icon {
   position: absolute;
-  font-size: 11px;
-  left: 7px;
-  top: 2px;
+  font-size: 7px;
+  left: -8px;
+  top: 3px;
 }
