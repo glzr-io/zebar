@@ -177,6 +177,9 @@ impl WidgetFactory {
       {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
+        let _ = window.set_size(size);
+        // Is it also required to set the position twice or only the size?
+        let _ = window.set_position(position);
       }
 
       let mut widget_states = self.widget_states.lock().await;
