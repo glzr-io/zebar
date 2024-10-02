@@ -10,8 +10,8 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use tauri::{
-  AppHandle, LogicalPosition, LogicalSize, Manager, PhysicalPosition,
-  PhysicalSize, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
+  WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -278,30 +278,28 @@ impl WidgetFactory {
           ),
         };
 
-        let size = {
-          let size = PhysicalSize::<f64>::from_logical(
-            LogicalSize::new(
-              placement.width.to_px(monitor.width as i32),
-              placement.height.to_px(monitor.height as i32),
-            ),
-            monitor.scale_factor,
-          );
-          PhysicalSize::new(
-            f64::min(size.width, monitor.width as f64),
-            f64::min(size.height, monitor.height as f64),
-          )
-        };
-
-        let offset = PhysicalPosition::<f64>::from_logical(
-          LogicalPosition::new(
-            placement.offset_x.to_px(monitor.width as i32),
-            placement.offset_y.to_px(monitor.height as i32),
-          ),
-          monitor.scale_factor,
+        let width = placement
+          .width
+          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
+        let height = placement.height.to_px_scaled(
+          monitor.height as i32,
+          monitor.scale_factor as f32,
         );
-        let position = PhysicalPosition::new(
-          anchor_x as f64 + offset.x,
-          anchor_y as f64 + offset.y,
+        let size = PhysicalSize::<f64>::new(
+          i32::min(width, monitor.width as i32) as f64,
+          i32::min(height, monitor.height as i32) as f64,
+        );
+
+        let offset_x = placement
+          .offset_x
+          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
+        let offset_y = placement.offset_y.to_px_scaled(
+          monitor.height as i32,
+          monitor.scale_factor as f32,
+        );
+        let position = PhysicalPosition::<f64>::new(
+          (anchor_x + offset_x) as f64,
+          (anchor_y + offset_y) as f64,
         );
 
         placements.push((size, position));
