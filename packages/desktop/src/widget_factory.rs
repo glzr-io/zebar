@@ -148,6 +148,18 @@ impl WidgetFactory {
       .resizable(config.resizable)
       .build()?;
 
+      info!("Positioning widget to {:?} {:?}", size, position);
+      let _ = window.set_size(size);
+      let _ = window.set_position(position);
+
+      // On Windows, we need to set the position twice to account for
+      // different monitor scale factors.
+      #[cfg(target_os = "windows")]
+      {
+        let _ = window.set_size(size);
+        let _ = window.set_position(position);
+      }
+
       let state = WidgetState {
         id: widget_id.clone(),
         config: config.clone(),
@@ -167,17 +179,6 @@ impl WidgetFactory {
         .as_ref()
         .window()
         .set_tool_window(!config.shown_in_taskbar);
-
-      // On Windows, there's an issue where the window size is constrained
-      // when initially created. To work around this, apply the size and
-      // position settings again after launch.
-      #[cfg(target_os = "windows")]
-      {
-        let _ = window.set_size(size);
-        let _ = window.set_position(position);
-        let _ = window.set_size(size);
-        let _ = window.set_position(position);
-      }
 
       let mut widget_states = self.widget_states.lock().await;
       widget_states.insert(state.id.clone(), state.clone());
