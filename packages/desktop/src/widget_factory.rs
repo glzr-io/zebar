@@ -246,62 +246,65 @@ impl WidgetFactory {
         .await;
 
       for monitor in monitors {
+        let monitor_width = monitor.width as i32;
+        let monitor_height = monitor.height as i32;
+
+        // Pixel values should be scaled by the monitor's scale factor,
+        // whereas percentage values are left as-is. This is
+        // because the percentage values are already relative to
+        // the monitor's size.
+        let window_width = placement
+          .width
+          .to_px_scaled(monitor_width, monitor.scale_factor);
+
+        let window_height = placement
+          .height
+          .to_px_scaled(monitor_height, monitor.scale_factor);
+
+        let window_size =
+          PhysicalSize::new(window_width.into(), window_height.into());
+
         let (anchor_x, anchor_y) = match placement.anchor {
           AnchorPoint::TopLeft => (monitor.x, monitor.y),
           AnchorPoint::TopCenter => {
-            (monitor.x + (monitor.width as i32 / 2), monitor.y)
+            (monitor.x + (monitor_width / 2), monitor.y)
           }
-          AnchorPoint::TopRight => {
-            (monitor.x + monitor.width as i32, monitor.y)
-          }
+          AnchorPoint::TopRight => (monitor.x + monitor_width, monitor.y),
           AnchorPoint::CenterLeft => {
-            (monitor.x, monitor.y + (monitor.height as i32 / 2))
+            (monitor.x, monitor.y + (monitor_height / 2))
           }
           AnchorPoint::Center => (
-            monitor.x + (monitor.width as i32 / 2),
-            monitor.y + (monitor.height as i32 / 2),
+            monitor.x + (monitor_width / 2),
+            monitor.y + (monitor_height / 2),
           ),
-          AnchorPoint::CenterRight => (
-            monitor.x + monitor.width as i32,
-            monitor.y + (monitor.height as i32 / 2),
-          ),
-          AnchorPoint::BottomLeft => {
-            (monitor.x, monitor.y + monitor.height as i32)
+          AnchorPoint::CenterRight => {
+            (monitor.x + monitor_width, monitor.y + (monitor_height / 2))
           }
-          AnchorPoint::BottomCenter => (
-            monitor.x + (monitor.width as i32 / 2),
-            monitor.y + monitor.height as i32,
-          ),
-          AnchorPoint::BottomRight => (
-            monitor.x + monitor.width as i32,
-            monitor.y + monitor.height as i32,
-          ),
+          AnchorPoint::BottomLeft => {
+            (monitor.x, monitor.y + monitor_height)
+          }
+          AnchorPoint::BottomCenter => {
+            (monitor.x + (monitor_width / 2), monitor.y + monitor_height)
+          }
+          AnchorPoint::BottomRight => {
+            (monitor.x + monitor_width, monitor.y + monitor_height)
+          }
         };
-
-        let width = placement
-          .width
-          .to_px_scaled(monitor.width as i32, monitor.scale_factor);
-
-        let height = placement
-          .height
-          .to_px_scaled(monitor.height as i32, monitor.scale_factor);
-
-        let size = PhysicalSize::new(width.into(), height.into());
 
         let offset_x = placement
           .offset_x
-          .to_px_scaled(monitor.width as i32, monitor.scale_factor);
+          .to_px_scaled(monitor_width, monitor.scale_factor);
 
         let offset_y = placement
           .offset_y
-          .to_px_scaled(monitor.height as i32, monitor.scale_factor);
+          .to_px_scaled(monitor_height, monitor.scale_factor);
 
-        let position = PhysicalPosition::new(
+        let window_position = PhysicalPosition::new(
           (anchor_x + offset_x).into(),
           (anchor_y + offset_y).into(),
         );
 
-        placements.push((size, position));
+        placements.push((window_size, window_position));
       }
     }
 
