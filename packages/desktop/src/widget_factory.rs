@@ -139,8 +139,6 @@ impl WidgetFactory {
         webview_url,
       )
       .title("Zebar")
-      .inner_size(size.width, size.height)
-      .position(position.x, position.y)
       .focused(config.focused)
       .skip_taskbar(!config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
@@ -149,6 +147,18 @@ impl WidgetFactory {
       .decorations(false)
       .resizable(config.resizable)
       .build()?;
+
+      info!("Positioning widget to {:?} {:?}", size, position);
+      let _ = window.set_size(size);
+      let _ = window.set_position(position);
+
+      // On Windows, we need to set the position twice to account for
+      // different monitor scale factors.
+      #[cfg(target_os = "windows")]
+      {
+        let _ = window.set_size(size);
+        let _ = window.set_position(position);
+      }
 
       let state = WidgetState {
         id: widget_id.clone(),
@@ -169,18 +179,6 @@ impl WidgetFactory {
         .as_ref()
         .window()
         .set_tool_window(!config.shown_in_taskbar);
-
-      // On Windows, there's an issue where the window size is constrained
-      // when initially created. To work around this, apply the size and
-      // position settings again after launch.
-      #[cfg(target_os = "windows")]
-      {
-        let _ = window.set_size(size);
-        let _ = window.set_position(position);
-        let _ = window.set_size(size);
-        // Is it also required to set the position twice or only the size?
-        let _ = window.set_position(position);
-      }
 
       let mut widget_states = self.widget_states.lock().await;
       widget_states.insert(state.id.clone(), state.clone());
@@ -236,7 +234,7 @@ impl WidgetFactory {
   async fn widget_placements(
     &self,
     config: &WidgetConfig,
-  ) -> Vec<(PhysicalSize<f64>, PhysicalPosition<f64>)> {
+  ) -> Vec<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     let mut placements = vec![];
 
     for placement in config.default_placements.iter() {
@@ -246,63 +244,69 @@ impl WidgetFactory {
         .await;
 
       for monitor in monitors {
+        let monitor_width = monitor.width as i32;
+        let monitor_height = monitor.height as i32;
+
+        // Pixel values should be scaled by the monitor's scale factor,
+        // whereas percentage values are left as-is. This is
+        // because the percentage values are already relative to
+        // the monitor's size.
+        let window_width = placement
+          .width
+          .to_px_scaled(monitor_width, monitor.scale_factor);
+
+        let window_height = placement
+          .height
+          .to_px_scaled(monitor_height, monitor.scale_factor);
+
+        let window_size = PhysicalSize::new(window_width, window_height);
+
         let (anchor_x, anchor_y) = match placement.anchor {
           AnchorPoint::TopLeft => (monitor.x, monitor.y),
-          AnchorPoint::TopCenter => {
-            (monitor.x + (monitor.width as i32 / 2), monitor.y)
-          }
+          AnchorPoint::TopCenter => (
+            monitor.x + (monitor_width / 2) - (window_size.width / 2),
+            monitor.y,
+          ),
           AnchorPoint::TopRight => {
-            (monitor.x + monitor.width as i32, monitor.y)
+            (monitor.x + monitor_width - window_size.width, monitor.y)
           }
-          AnchorPoint::CenterLeft => {
-            (monitor.x, monitor.y + (monitor.height as i32 / 2))
-          }
+          AnchorPoint::CenterLeft => (
+            monitor.x,
+            monitor.y + (monitor_height / 2) - (window_size.height / 2),
+          ),
           AnchorPoint::Center => (
-            monitor.x + (monitor.width as i32 / 2),
-            monitor.y + (monitor.height as i32 / 2),
+            monitor.x + (monitor_width / 2) - (window_size.width / 2),
+            monitor.y + (monitor_height / 2) - (window_size.height / 2),
           ),
           AnchorPoint::CenterRight => (
-            monitor.x + monitor.width as i32,
-            monitor.y + (monitor.height as i32 / 2),
+            monitor.x + monitor_width - window_size.width,
+            monitor.y + (monitor_height / 2) - (window_size.height / 2),
           ),
           AnchorPoint::BottomLeft => {
-            (monitor.x, monitor.y + monitor.height as i32)
+            (monitor.x, monitor.y + monitor_height - window_size.height)
           }
           AnchorPoint::BottomCenter => (
-            monitor.x + (monitor.width as i32 / 2),
-            monitor.y + monitor.height as i32,
+            monitor.x + (monitor_width / 2) - (window_size.width / 2),
+            monitor.y + monitor_height - window_size.height,
           ),
           AnchorPoint::BottomRight => (
-            monitor.x + monitor.width as i32,
-            monitor.y + monitor.height as i32,
+            monitor.x + monitor_width - window_size.width,
+            monitor.y + monitor_height - window_size.height,
           ),
         };
 
-        let width = placement
-          .width
-          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
-        let height = placement.height.to_px_scaled(
-          monitor.height as i32,
-          monitor.scale_factor as f32,
-        );
-        let size = PhysicalSize::<f64>::new(
-          i32::min(width, monitor.width as i32) as f64,
-          i32::min(height, monitor.height as i32) as f64,
-        );
-
         let offset_x = placement
           .offset_x
-          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
-        let offset_y = placement.offset_y.to_px_scaled(
-          monitor.height as i32,
-          monitor.scale_factor as f32,
-        );
-        let position = PhysicalPosition::<f64>::new(
-          (anchor_x + offset_x) as f64,
-          (anchor_y + offset_y) as f64,
-        );
+          .to_px_scaled(monitor_width, monitor.scale_factor);
 
-        placements.push((size, position));
+        let offset_y = placement
+          .offset_y
+          .to_px_scaled(monitor_height, monitor.scale_factor);
+
+        let window_position =
+          PhysicalPosition::new(anchor_x + offset_x, anchor_y + offset_y);
+
+        placements.push((window_size, window_position));
       }
     }
 
