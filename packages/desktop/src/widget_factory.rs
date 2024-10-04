@@ -139,8 +139,6 @@ impl WidgetFactory {
         webview_url,
       )
       .title("Zebar")
-      .inner_size(size.width, size.height)
-      .position(position.x, position.y)
       .focused(config.focused)
       .skip_taskbar(!config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
@@ -178,7 +176,6 @@ impl WidgetFactory {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
         let _ = window.set_size(size);
-        // Is it also required to set the position twice or only the size?
         let _ = window.set_position(position);
       }
 
@@ -236,7 +233,7 @@ impl WidgetFactory {
   async fn widget_placements(
     &self,
     config: &WidgetConfig,
-  ) -> Vec<(PhysicalSize<f64>, PhysicalPosition<f64>)> {
+  ) -> Vec<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     let mut placements = vec![];
 
     for placement in config.default_placements.iter() {
@@ -261,34 +258,40 @@ impl WidgetFactory {
           .height
           .to_px_scaled(monitor_height, monitor.scale_factor);
 
-        let window_size =
-          PhysicalSize::new(window_width.into(), window_height.into());
+        let window_size = PhysicalSize::new(window_width, window_height);
 
         let (anchor_x, anchor_y) = match placement.anchor {
           AnchorPoint::TopLeft => (monitor.x, monitor.y),
-          AnchorPoint::TopCenter => {
-            (monitor.x + (monitor_width / 2), monitor.y)
-          }
-          AnchorPoint::TopRight => (monitor.x + monitor_width, monitor.y),
-          AnchorPoint::CenterLeft => {
-            (monitor.x, monitor.y + (monitor_height / 2))
-          }
-          AnchorPoint::Center => (
-            monitor.x + (monitor_width / 2),
-            monitor.y + (monitor_height / 2),
+          AnchorPoint::TopCenter => (
+            monitor.x + (monitor_width / 2) - (window_size.width / 2),
+            monitor.y,
           ),
-          AnchorPoint::CenterRight => {
-            (monitor.x + monitor_width, monitor.y + (monitor_height / 2))
+          AnchorPoint::TopRight => {
+            (monitor.x + monitor_width - window_size.width, monitor.y)
           }
+          AnchorPoint::CenterLeft => (
+            monitor.x,
+            monitor.y + (monitor_height / 2) - (window_size.height / 2),
+          ),
+          AnchorPoint::Center => (
+            monitor.x + (monitor_width / 2) - (window_size.width / 2),
+            monitor.y + (monitor_height / 2) - (window_size.height / 2),
+          ),
+          AnchorPoint::CenterRight => (
+            monitor.x + monitor_width - window_size.width,
+            monitor.y + (monitor_height / 2) - (window_size.height / 2),
+          ),
           AnchorPoint::BottomLeft => {
-            (monitor.x, monitor.y + monitor_height)
+            (monitor.x, monitor.y + monitor_height - window_size.height)
           }
-          AnchorPoint::BottomCenter => {
-            (monitor.x + (monitor_width / 2), monitor.y + monitor_height)
-          }
-          AnchorPoint::BottomRight => {
-            (monitor.x + monitor_width, monitor.y + monitor_height)
-          }
+          AnchorPoint::BottomCenter => (
+            monitor.x + (monitor_width / 2) - (window_size.width / 2),
+            monitor.y + monitor_height - window_size.height,
+          ),
+          AnchorPoint::BottomRight => (
+            monitor.x + monitor_width - window_size.width,
+            monitor.y + monitor_height - window_size.height,
+          ),
         };
 
         let offset_x = placement
@@ -299,10 +302,8 @@ impl WidgetFactory {
           .offset_y
           .to_px_scaled(monitor_height, monitor.scale_factor);
 
-        let window_position = PhysicalPosition::new(
-          (anchor_x + offset_x).into(),
-          (anchor_y + offset_y).into(),
-        );
+        let window_position =
+          PhysicalPosition::new(anchor_x + offset_x, anchor_y + offset_y);
 
         placements.push((window_size, window_position));
       }
