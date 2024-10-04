@@ -280,26 +280,25 @@ impl WidgetFactory {
 
         let width = placement
           .width
-          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
-        let height = placement.height.to_px_scaled(
-          monitor.height as i32,
-          monitor.scale_factor as f32,
-        );
-        let size = PhysicalSize::<f64>::new(
-          i32::min(width, monitor.width as i32) as f64,
-          i32::min(height, monitor.height as i32) as f64,
-        );
+          .to_px_scaled(monitor.width as i32, monitor.scale_factor);
+
+        let height = placement
+          .height
+          .to_px_scaled(monitor.height as i32, monitor.scale_factor);
+
+        let size = PhysicalSize::new(width.into(), height.into());
 
         let offset_x = placement
           .offset_x
-          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
-        let offset_y = placement.offset_y.to_px_scaled(
-          monitor.height as i32,
-          monitor.scale_factor as f32,
-        );
-        let position = PhysicalPosition::<f64>::new(
-          (anchor_x + offset_x) as f64,
-          (anchor_y + offset_y) as f64,
+          .to_px_scaled(monitor.width as i32, monitor.scale_factor);
+
+        let offset_y = placement
+          .offset_y
+          .to_px_scaled(monitor.height as i32, monitor.scale_factor);
+
+        let position = PhysicalPosition::new(
+          (anchor_x + offset_x).into(),
+          (anchor_y + offset_y).into(),
         );
 
         placements.push((size, position));

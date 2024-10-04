@@ -28,7 +28,7 @@ pub struct Monitor {
   pub y: i32,
   pub width: u32,
   pub height: u32,
-  pub scale_factor: f64,
+  pub scale_factor: f32,
 }
 
 impl MonitorState {
@@ -107,7 +107,7 @@ impl MonitorState {
             y: monitor.position().y,
             width: monitor.size().width,
             height: monitor.size().height,
-            scale_factor: monitor.scale_factor(),
+            scale_factor: monitor.scale_factor() as f32,
           })
           .collect()
       })
