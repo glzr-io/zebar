@@ -10,8 +10,8 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use tauri::{
-  AppHandle, LogicalPosition, LogicalSize, Manager, PhysicalPosition,
-  PhysicalSize, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
+  WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -177,6 +177,9 @@ impl WidgetFactory {
       {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
+        let _ = window.set_size(size);
+        // Is it also required to set the position twice or only the size?
+        let _ = window.set_position(position);
       }
 
       let mut widget_states = self.widget_states.lock().await;
@@ -233,7 +236,7 @@ impl WidgetFactory {
   async fn widget_placements(
     &self,
     config: &WidgetConfig,
-  ) -> Vec<(LogicalSize<f64>, LogicalPosition<f64>)> {
+  ) -> Vec<(PhysicalSize<f64>, PhysicalPosition<f64>)> {
     let mut placements = vec![];
 
     for placement in config.default_placements.iter() {
@@ -275,20 +278,28 @@ impl WidgetFactory {
           ),
         };
 
-        let size = LogicalSize::from_physical(
-          PhysicalSize::new(
-            placement.width.to_px(monitor.width as i32),
-            placement.height.to_px(monitor.height as i32),
-          ),
-          monitor.scale_factor,
+        let width = placement
+          .width
+          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
+        let height = placement.height.to_px_scaled(
+          monitor.height as i32,
+          monitor.scale_factor as f32,
+        );
+        let size = PhysicalSize::<f64>::new(
+          i32::min(width, monitor.width as i32) as f64,
+          i32::min(height, monitor.height as i32) as f64,
         );
 
-        let position = LogicalPosition::from_physical(
-          PhysicalPosition::new(
-            anchor_x + placement.offset_x.to_px(monitor.width as i32),
-            anchor_y + placement.offset_y.to_px(monitor.height as i32),
-          ),
-          monitor.scale_factor,
+        let offset_x = placement
+          .offset_x
+          .to_px_scaled(monitor.width as i32, monitor.scale_factor as f32);
+        let offset_y = placement.offset_y.to_px_scaled(
+          monitor.height as i32,
+          monitor.scale_factor as f32,
+        );
+        let position = PhysicalPosition::<f64>::new(
+          (anchor_x + offset_x) as f64,
+          (anchor_y + offset_y) as f64,
         );
 
         placements.push((size, position));
