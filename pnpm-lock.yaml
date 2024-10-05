@@ -77,6 +77,25 @@ importers:
         specifier: 5.3.3
         version: 5.3.3
 
+  packages/settings-ui:
+    dependencies:
+      solid-js:
+        specifier: 1.8.11
+        version: 1.8.11
+      zebar:
+        specifier: ^2.0.0
+        version: link:../client-api
+    devDependencies:
+      typescript:
+        specifier: 5.3.3
+        version: 5.3.3
+      vite:
+        specifier: 5.0.11
+        version: 5.0.11(@types/node@20.11.17)(sass@1.70.0)
+      vite-plugin-solid:
+        specifier: 2.8.2
+        version: 2.8.2(solid-js@1.8.11)(vite@5.0.11(@types/node@20.11.17)(sass@1.70.0))
+
 packages:
 
   '@ampproject/remapping@2.2.1':
