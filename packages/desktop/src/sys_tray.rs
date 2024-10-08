@@ -5,7 +5,7 @@ use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
   tray::{TrayIcon, TrayIconBuilder},
-  AppHandle, Wry,
+  AppHandle, WebviewUrl, WebviewWindowBuilder, Wry,
 };
 use tokio::task;
 use tracing::{error, info};
@@ -20,6 +20,7 @@ use crate::{
 enum MenuEvent {
   ShowConfigFolder,
   ReloadConfigs,
+  OpenSettings,
   Exit,
   ToggleWidgetConfig { enable: bool, path: PathBuf },
   ToggleStartupWidgetConfig { enable: bool, path: PathBuf },
@@ -30,6 +31,7 @@ impl ToString for MenuEvent {
     match self {
       MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
       MenuEvent::ReloadConfigs => "reload_configs".to_string(),
+      MenuEvent::OpenSettings => "open_settings".to_string(),
       MenuEvent::Exit => "exit".to_string(),
       MenuEvent::ToggleWidgetConfig { enable, path } => {
         format!(
@@ -58,6 +60,7 @@ impl FromStr for MenuEvent {
     match parts.as_slice() {
       ["show", "config", "folder"] => Ok(Self::ShowConfigFolder),
       ["reload", "configs"] => Ok(Self::ReloadConfigs),
+      ["open", "settings"] => Ok(Self::OpenSettings),
       ["exit"] => Ok(Self::Exit),
       ["toggle", "widget", "config", enable @ ("true" | "false"), path @ ..] => {
         Ok(Self::ToggleWidgetConfig {
@@ -182,6 +185,7 @@ impl SysTray {
       .item(&configs_menu)
       .text(MenuEvent::ShowConfigFolder, "Show config folder")
       .text(MenuEvent::ReloadConfigs, "Reload configs")
+      .text(MenuEvent::OpenSettings, "Open settings")
       .separator();
 
     // Add submenus for currently active widget.
@@ -228,6 +232,18 @@ impl SysTray {
         info!("Opening config folder from system tray.");
 
         config.reload().await
+      }
+      MenuEvent::OpenSettings => {
+        info!("Opening settings window from system tray.");
+
+        let window = WebviewWindowBuilder::new(
+          &app_handle,
+          "settings",
+          WebviewUrl::default(),
+        )
+        .build()?;
+
+        Ok(())
       }
       MenuEvent::Exit => {
         info!("Exiting through system tray.");
