@@ -4,11 +4,12 @@
   "description": "",
   "scripts": {
     "build": "vite build",
-    "dev": "vite build --watch"
+    "dev": "vite"
   },
   "dependencies": {
     "class-variance-authority": "0.7.0",
     "clsx": "2.1.1",
+    "smorf": "1.0.0",
     "solid-js": "1.8.11",
     "tailwind-merge": "2.5.3",
     "tailwindcss": "3.4.13 ",
