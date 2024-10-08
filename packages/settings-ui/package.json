@@ -7,11 +7,9 @@
     "dev": "vite"
   },
   "dependencies": {
-    "class-variance-authority": "0.7.0",
-    "clsx": "2.1.1",
+    "@glzr/components": "1.0.0",
     "smorf": "1.0.0",
     "solid-js": "1.9.2",
-    "tailwind-merge": "2.5.3",
     "tailwindcss": "3.4.13 ",
     "tailwindcss-animate": "1.0.7",
     "zebar": "^2.0.0"
