@@ -1,22 +1,22 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { createSignal } from 'solid-js';
+import { Button, NumberInput } from '@glzr/components';
+import { TextInput } from '@glzr/components';
+import { FormLabel } from '@glzr/components';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+} from '@glzr/components';
+import { Switch } from '@glzr/components';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
+} from '@glzr/components';
+// import { PlusCircle } from 'lucide-react';
 
 type InstanceConfig = {
   anchor: string;
@@ -25,22 +25,22 @@ type InstanceConfig = {
   monitor: string;
 };
 
-export default function WidgetSettings() {
-  const [htmlPath, setHtmlPath] = useState('');
-  const [zOrder, setZOrder] = useState('normal');
-  const [shownInTaskbar, setShownInTaskbar] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [resizable, setResizable] = useState(true);
-  const [transparent, setTransparent] = useState(false);
-  const [windowEffect, setWindowEffect] = useState('none');
-  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
-  const [defaultInstances, setDefaultInstances] = useState<
+export function WidgetSettings() {
+  const [htmlPath, setHtmlPath] = createSignal('');
+  const [zOrder, setZOrder] = createSignal('normal');
+  const [shownInTaskbar, setShownInTaskbar] = createSignal(false);
+  const [focused, setFocused] = createSignal(false);
+  const [resizable, setResizable] = createSignal(true);
+  const [transparent, setTransparent] = createSignal(false);
+  const [windowEffect, setWindowEffect] = createSignal('none');
+  const [backgroundColor, setBackgroundColor] = createSignal('#ffffff');
+  const [defaultInstances, setDefaultInstances] = createSignal<
     InstanceConfig[]
   >([]);
 
   const addNewInstance = () => {
     setDefaultInstances([
-      ...defaultInstances,
+      ...defaultInstances(),
       {
         anchor: 'top-left',
         offsetX: 0,
@@ -55,7 +55,7 @@ export default function WidgetSettings() {
     key: keyof InstanceConfig,
     value: string | number,
   ) => {
-    const newInstances = [...defaultInstances];
+    const newInstances = [...defaultInstances()];
     newInstances[index] = { ...newInstances[index], [key]: value };
     setDefaultInstances(newInstances);
   };
@@ -69,10 +69,10 @@ export default function WidgetSettings() {
           <CardTitle>HTML Path</CardTitle>
         </CardHeader>
         <CardContent>
-          <Input
+          <TextInput
             id="html-path"
-            value={htmlPath}
-            onChange={e => setHtmlPath(e.target.value)}
+            value={htmlPath()}
+            onChange={setHtmlPath}
             placeholder="/path/to/widget.html"
           />
         </CardContent>
@@ -85,8 +85,8 @@ export default function WidgetSettings() {
         <CardContent class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="z-order">Z-Order</Label>
-              <Select value={zOrder} onValueChange={setZOrder}>
+              <FormLabel for="z-order">Z-Order</FormLabel>
+              {/* <Select value={zOrder} onChange={setZOrder}>
                 <SelectTrigger id="z-order">
                   <SelectValue placeholder="Select Z-Order" />
                 </SelectTrigger>
@@ -99,12 +99,12 @@ export default function WidgetSettings() {
                     Bottom-most (on desktop)
                   </SelectItem>
                 </SelectContent>
-              </Select>
+              </Select> */}
             </div>
 
             <div>
-              <Label htmlFor="window-effect">Window Effect</Label>
-              <Select value={windowEffect} onValueChange={setWindowEffect}>
+              <FormLabel for="window-effect">Window Effect</FormLabel>
+              {/* <Select value={windowEffect} onValueChange={setWindowEffect}>
                 <SelectTrigger id="window-effect">
                   <SelectValue placeholder="Select Window Effect" />
                 </SelectTrigger>
@@ -113,45 +113,47 @@ export default function WidgetSettings() {
                   <SelectItem value="acrylic">Acrylic</SelectItem>
                   <SelectItem value="none">None</SelectItem>
                 </SelectContent>
-              </Select>
+              </Select> */}
             </div>
           </div>
 
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <Label htmlFor="shown-in-taskbar">Shown in taskbar</Label>
-              <Switch
+              <FormLabel for="shown-in-taskbar">
+                Shown in taskbar
+              </FormLabel>
+              {/* <Switch
                 id="shown-in-taskbar"
                 checked={shownInTaskbar}
                 onCheckedChange={setShownInTaskbar}
-              />
+              /> */}
             </div>
 
             <div class="flex items-center justify-between">
-              <Label htmlFor="focused">Focused</Label>
-              <Switch
+              <FormLabel for="focused">Focused</FormLabel>
+              {/* <Switch
                 id="focused"
                 checked={focused}
                 onCheckedChange={setFocused}
-              />
+              /> */}
             </div>
 
             <div class="flex items-center justify-between">
-              <Label htmlFor="resizable">Resizable</Label>
-              <Switch
+              <FormLabel for="resizable">Resizable</FormLabel>
+              {/* <Switch
                 id="resizable"
                 checked={resizable}
                 onCheckedChange={setResizable}
-              />
+              /> */}
             </div>
 
             <div class="flex items-center justify-between">
-              <Label htmlFor="transparent">Transparent</Label>
-              <Switch
+              <FormLabel for="transparent">Transparent</FormLabel>
+              {/* <Switch
                 id="transparent"
                 checked={transparent}
                 onCheckedChange={setTransparent}
-              />
+              /> */}
             </div>
           </div>
         </CardContent>
@@ -162,18 +164,18 @@ export default function WidgetSettings() {
           <CardTitle>Inputs</CardTitle>
         </CardHeader>
         <CardContent>
-          <Label htmlFor="background-color">Background Color</Label>
+          <FormLabel for="background-color">Background Color</FormLabel>
           <div class="flex items-center space-x-2">
-            <Input
+            <TextInput
               id="background-color"
               type="color"
-              value={backgroundColor}
-              onChange={e => setBackgroundColor(e.target.value)}
+              value={backgroundColor()}
+              onChange={setBackgroundColor}
               class="w-12 h-12 p-1 rounded"
             />
-            <Input
-              value={backgroundColor}
-              onChange={e => setBackgroundColor(e.target.value)}
+            <TextInput
+              value={backgroundColor()}
+              onChange={setBackgroundColor}
               class="flex-grow"
             />
           </div>
@@ -185,12 +187,12 @@ export default function WidgetSettings() {
           <CardTitle>Default Instances</CardTitle>
         </CardHeader>
         <CardContent class="space-y-4">
-          {defaultInstances.map((instance, index) => (
+          {defaultInstances().map((instance, index) => (
             <div class="border p-4 rounded-md space-y-2">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor={`anchor-${index}`}>Anchor</Label>
-                  <Select
+                  <FormLabel for={`anchor-${index}`}>Anchor</FormLabel>
+                  {/* <Select
                     value={instance.anchor}
                     onValueChange={value =>
                       updateInstance(index, 'anchor', value)
@@ -209,12 +211,12 @@ export default function WidgetSettings() {
                         Bottom Right
                       </SelectItem>
                     </SelectContent>
-                  </Select>
+                  </Select> */}
                 </div>
 
                 <div>
-                  <Label htmlFor={`monitor-${index}`}>Monitor</Label>
-                  <Select
+                  <FormLabel for={`monitor-${index}`}>Monitor</FormLabel>
+                  {/* <Select
                     value={instance.monitor}
                     onValueChange={value =>
                       updateInstance(index, 'monitor', value)
@@ -228,40 +230,26 @@ export default function WidgetSettings() {
                       <SelectItem value="secondary">Secondary</SelectItem>
                       <SelectItem value="all">All</SelectItem>
                     </SelectContent>
-                  </Select>
+                  </Select> */}
                 </div>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor={`offset-x-${index}`}>Offset X</Label>
-                  <Input
+                  <FormLabel for={`offset-x-${index}`}>Offset X</FormLabel>
+                  <NumberInput
                     id={`offset-x-${index}`}
-                    type="number"
                     value={instance.offsetX}
-                    onChange={e =>
-                      updateInstance(
-                        index,
-                        'offsetX',
-                        parseInt(e.target.value),
-                      )
-                    }
+                    onChange={e => updateInstance(index, 'offsetX', e)}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor={`offset-y-${index}`}>Offset Y</Label>
-                  <Input
+                  <FormLabel for={`offset-y-${index}`}>Offset Y</FormLabel>
+                  <NumberInput
                     id={`offset-y-${index}`}
-                    type="number"
                     value={instance.offsetY}
-                    onChange={e =>
-                      updateInstance(
-                        index,
-                        'offsetY',
-                        parseInt(e.target.value),
-                      )
-                    }
+                    onChange={e => updateInstance(index, 'offsetY', e)}
                   />
                 </div>
               </div>
@@ -269,7 +257,7 @@ export default function WidgetSettings() {
           ))}
 
           <Button onClick={addNewInstance} class="w-full">
-            <PlusCircle class="mr-2 h-4 w-4" /> Add New Instance Config
+            {/* <PlusCircle class="mr-2 h-4 w-4" /> Add New Instance Config */}
           </Button>
         </CardContent>
       </Card>

@@ -84,10 +84,10 @@ importers:
         version: 1.9.2
       tsup:
         specifier: 7.2.0
-        version: 7.2.0(postcss@8.4.35)(typescript@5.0.4)
+        version: 7.2.0(postcss@8.4.47)(typescript@5.0.4)
       tsup-preset-solid:
         specifier: 2.1.0
-        version: 2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.35)(typescript@5.0.4))
+        version: 2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.47)(typescript@5.0.4))
       typescript:
         specifier: 5.0.4
         version: 5.0.4
@@ -140,7 +140,7 @@ importers:
         version: 0.20.0
       tsup:
         specifier: 8.0.2
-        version: 8.0.2(postcss@8.4.35)(typescript@5.3.3)
+        version: 8.0.2(postcss@8.4.47)(typescript@5.3.3)
       typescript:
         specifier: 5.3.3
         version: 5.3.3
@@ -175,6 +175,9 @@ importers:
         specifier: ^2.0.0
         version: link:../client-api
     devDependencies:
+      postcss:
+        specifier: 8.4.47
+        version: 8.4.47
       typescript:
         specifier: 5.3.3
         version: 5.3.3
@@ -1649,6 +1652,9 @@ packages:
   picocolors@1.0.0:
     resolution: {integrity: sha512-1fygroTLlHu66zi26VoTDv8yRgm0Fccecssto+MhsZ0D/DGW2sm8E8AjW7NU5VVTRt5GxbeZ5qBuJr+HyLYkjQ==}
 
+  picocolors@1.1.0:
+    resolution: {integrity: sha512-TQ92mBOW0l3LeMeyLV6mzy/kWr8lkd/hp3mTg7wYK7zJhuBStmGMBG0BdeDZS/dZx1IukaX6Bk11zcln25o1Aw==}
+
   picomatch@2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
@@ -1700,6 +1706,10 @@ packages:
 
   postcss@8.4.35:
     resolution: {integrity: sha512-u5U8qYpBCpN13BsiEB0CbR1Hhh4Gc0zLFuedrHJKMctHCHAGrMdG0PRM/KErzAL3CU6/eckEtmHNB3x6e3c0vA==}
+    engines: {node: ^10 || ^12 || >=14}
+
+  postcss@8.4.47:
+    resolution: {integrity: sha512-56rxCq7G/XfB4EkXq9Egn5GCqugWvDFjafDOThIdMBsI15iqPqR5r15TfSr1YPYeEI19YeaXMCbY6u88Y76GLQ==}
     engines: {node: ^10 || ^12 || >=14}
 
   prettier-plugin-astro@0.12.3:
@@ -1857,6 +1867,10 @@ packages:
 
   source-map-js@1.0.2:
     resolution: {integrity: sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==}
+    engines: {node: '>=0.10.0'}
+
+  source-map-js@1.2.1:
+    resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
   source-map@0.8.0-beta.0:
@@ -3420,6 +3434,8 @@ snapshots:
 
   picocolors@1.0.0: {}
 
+  picocolors@1.1.0: {}
+
   picomatch@2.3.1: {}
 
   pify@2.3.0: {}
@@ -3445,6 +3461,13 @@ snapshots:
     optionalDependencies:
       postcss: 8.4.35
 
+  postcss-load-config@4.0.2(postcss@8.4.47):
+    dependencies:
+      lilconfig: 3.0.0
+      yaml: 2.3.4
+    optionalDependencies:
+      postcss: 8.4.47
+
   postcss-nested@6.2.0(postcss@8.4.35):
     dependencies:
       postcss: 8.4.35
@@ -3462,6 +3485,12 @@ snapshots:
       nanoid: 3.3.7
       picocolors: 1.0.0
       source-map-js: 1.0.2
+
+  postcss@8.4.47:
+    dependencies:
+      nanoid: 3.3.7
+      picocolors: 1.1.0
+      source-map-js: 1.2.1
 
   prettier-plugin-astro@0.12.3:
     dependencies:
@@ -3627,6 +3656,8 @@ snapshots:
 
   source-map-js@1.0.2: {}
 
+  source-map-js@1.2.1: {}
+
   source-map@0.8.0-beta.0:
     dependencies:
       whatwg-url: 7.1.0
@@ -3750,37 +3781,14 @@ snapshots:
       - solid-js
       - supports-color
 
-  tsup-preset-solid@2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.35)(typescript@5.0.4)):
+  tsup-preset-solid@2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.47)(typescript@5.0.4)):
     dependencies:
       esbuild-plugin-solid: 0.5.0(esbuild@0.20.0)(solid-js@1.9.2)
-      tsup: 7.2.0(postcss@8.4.35)(typescript@5.0.4)
+      tsup: 7.2.0(postcss@8.4.47)(typescript@5.0.4)
     transitivePeerDependencies:
       - esbuild
       - solid-js
       - supports-color
-
-  tsup@7.2.0(postcss@8.4.35)(typescript@5.0.4):
-    dependencies:
-      bundle-require: 4.0.2(esbuild@0.18.20)
-      cac: 6.7.14
-      chokidar: 3.5.3
-      debug: 4.3.4
-      esbuild: 0.18.20
-      execa: 5.1.1
-      globby: 11.1.0
-      joycon: 3.1.1
-      postcss-load-config: 4.0.2(postcss@8.4.35)
-      resolve-from: 5.0.0
-      rollup: 3.29.5
-      source-map: 0.8.0-beta.0
-      sucrase: 3.35.0
-      tree-kill: 1.2.2
-    optionalDependencies:
-      postcss: 8.4.35
-      typescript: 5.0.4
-    transitivePeerDependencies:
-      - supports-color
-      - ts-node
 
   tsup@7.2.0(postcss@8.4.35)(typescript@5.5.3):
     dependencies:
@@ -3805,7 +3813,30 @@ snapshots:
       - supports-color
       - ts-node
 
-  tsup@8.0.2(postcss@8.4.35)(typescript@5.3.3):
+  tsup@7.2.0(postcss@8.4.47)(typescript@5.0.4):
+    dependencies:
+      bundle-require: 4.0.2(esbuild@0.18.20)
+      cac: 6.7.14
+      chokidar: 3.5.3
+      debug: 4.3.4
+      esbuild: 0.18.20
+      execa: 5.1.1
+      globby: 11.1.0
+      joycon: 3.1.1
+      postcss-load-config: 4.0.2(postcss@8.4.47)
+      resolve-from: 5.0.0
+      rollup: 3.29.5
+      source-map: 0.8.0-beta.0
+      sucrase: 3.35.0
+      tree-kill: 1.2.2
+    optionalDependencies:
+      postcss: 8.4.47
+      typescript: 5.0.4
+    transitivePeerDependencies:
+      - supports-color
+      - ts-node
+
+  tsup@8.0.2(postcss@8.4.47)(typescript@5.3.3):
     dependencies:
       bundle-require: 4.0.2(esbuild@0.19.11)
       cac: 6.7.14
@@ -3815,14 +3846,14 @@ snapshots:
       execa: 5.1.1
       globby: 11.1.0
       joycon: 3.1.1
-      postcss-load-config: 4.0.2(postcss@8.4.35)
+      postcss-load-config: 4.0.2(postcss@8.4.47)
       resolve-from: 5.0.0
       rollup: 4.10.0
       source-map: 0.8.0-beta.0
       sucrase: 3.35.0
       tree-kill: 1.2.2
     optionalDependencies:
-      postcss: 8.4.35
+      postcss: 8.4.47
       typescript: 5.3.3
     transitivePeerDependencies:
       - supports-color
