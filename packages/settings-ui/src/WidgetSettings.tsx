@@ -1,16 +1,11 @@
 import { createSignal } from 'solid-js';
-import { Button, NumberInput } from '@glzr/components';
-import { TextInput } from '@glzr/components';
-import { FormLabel } from '@glzr/components';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@glzr/components';
-import { Switch } from '@glzr/components';
-import {
+  Button,
+  NumberInput,
+  TextInput,
+  FormLabel,
+  SelectInput,
+  SwitchInput,
   Card,
   CardContent,
   CardHeader,
@@ -86,34 +81,40 @@ export function WidgetSettings() {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <FormLabel for="z-order">Z-Order</FormLabel>
-              {/* <Select value={zOrder} onChange={setZOrder}>
-                <SelectTrigger id="z-order">
-                  <SelectValue placeholder="Select Z-Order" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="top-most">
-                    Top-most (above all)
-                  </SelectItem>
-                  <SelectItem value="bottom-most">
-                    Bottom-most (on desktop)
-                  </SelectItem>
-                </SelectContent>
-              </Select> */}
+              <SelectInput
+                value={zOrder()}
+                onChange={setZOrder}
+                placeholder="Select Z-Order"
+                options={[
+                  {
+                    value: 'normal',
+                    label: 'Normal',
+                  },
+                  {
+                    value: 'top-most',
+                    label: 'Top-most (above all)',
+                  },
+                  {
+                    value: 'bottom-most',
+                    label: 'Bottom-most (on desktop)',
+                  },
+                ]}
+              />
             </div>
 
             <div>
               <FormLabel for="window-effect">Window Effect</FormLabel>
-              {/* <Select value={windowEffect} onValueChange={setWindowEffect}>
-                <SelectTrigger id="window-effect">
-                  <SelectValue placeholder="Select Window Effect" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mica">Mica</SelectItem>
-                  <SelectItem value="acrylic">Acrylic</SelectItem>
-                  <SelectItem value="none">None</SelectItem>
-                </SelectContent>
-              </Select> */}
+
+              <SelectInput
+                value={windowEffect()}
+                onChange={setWindowEffect}
+                placeholder="Select Window Effect"
+                options={[
+                  { value: 'mica', label: 'Mica' },
+                  { value: 'acrylic', label: 'Acrylic' },
+                  { value: 'none', label: 'None' },
+                ]}
+              />
             </div>
           </div>
 
@@ -122,38 +123,38 @@ export function WidgetSettings() {
               <FormLabel for="shown-in-taskbar">
                 Shown in taskbar
               </FormLabel>
-              {/* <Switch
+              <SwitchInput
                 id="shown-in-taskbar"
-                checked={shownInTaskbar}
-                onCheckedChange={setShownInTaskbar}
-              /> */}
+                value={shownInTaskbar()}
+                onChange={setShownInTaskbar}
+              />
             </div>
 
             <div class="flex items-center justify-between">
               <FormLabel for="focused">Focused</FormLabel>
-              {/* <Switch
+              <SwitchInput
                 id="focused"
-                checked={focused}
-                onCheckedChange={setFocused}
-              /> */}
+                value={focused()}
+                onChange={setFocused}
+              />
             </div>
 
             <div class="flex items-center justify-between">
               <FormLabel for="resizable">Resizable</FormLabel>
-              {/* <Switch
+              <SwitchInput
                 id="resizable"
-                checked={resizable}
-                onCheckedChange={setResizable}
-              /> */}
+                value={resizable()}
+                onChange={setResizable}
+              />
             </div>
 
             <div class="flex items-center justify-between">
               <FormLabel for="transparent">Transparent</FormLabel>
-              {/* <Switch
+              <SwitchInput
                 id="transparent"
-                checked={transparent}
-                onCheckedChange={setTransparent}
-              /> */}
+                value={transparent()}
+                onChange={setTransparent}
+              />
             </div>
           </div>
         </CardContent>
@@ -192,45 +193,33 @@ export function WidgetSettings() {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <FormLabel for={`anchor-${index}`}>Anchor</FormLabel>
-                  {/* <Select
+                  <SelectInput
                     value={instance.anchor}
-                    onValueChange={value =>
+                    onChange={value =>
                       updateInstance(index, 'anchor', value)
                     }
-                  >
-                    <SelectTrigger id={`anchor-${index}`}>
-                      <SelectValue placeholder="Select Anchor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="top-left">Top Left</SelectItem>
-                      <SelectItem value="top-right">Top Right</SelectItem>
-                      <SelectItem value="bottom-left">
-                        Bottom Left
-                      </SelectItem>
-                      <SelectItem value="bottom-right">
-                        Bottom Right
-                      </SelectItem>
-                    </SelectContent>
-                  </Select> */}
+                    options={[
+                      { value: 'top-left', label: 'Top Left' },
+                      { value: 'top-right', label: 'Top Right' },
+                      { value: 'bottom-left', label: 'Bottom Left' },
+                      { value: 'bottom-right', label: 'Bottom Right' },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <FormLabel for={`monitor-${index}`}>Monitor</FormLabel>
-                  {/* <Select
+                  <SelectInput
                     value={instance.monitor}
-                    onValueChange={value =>
+                    onChange={value =>
                       updateInstance(index, 'monitor', value)
                     }
-                  >
-                    <SelectTrigger id={`monitor-${index}`}>
-                      <SelectValue placeholder="Select Monitor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="primary">Primary</SelectItem>
-                      <SelectItem value="secondary">Secondary</SelectItem>
-                      <SelectItem value="all">All</SelectItem>
-                    </SelectContent>
-                  </Select> */}
+                    options={[
+                      { value: 'primary', label: 'Primary' },
+                      { value: 'secondary', label: 'Secondary' },
+                      { value: 'all', label: 'All' },
+                    ]}
+                  />
                 </div>
               </div>
 
