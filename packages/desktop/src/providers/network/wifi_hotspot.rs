@@ -18,8 +18,10 @@ pub struct WifiHotstop {
 }
 
 #[derive(Debug)]
+#[cfg(target_os = "windows")]
 struct WlanHandle(HANDLE);
 
+#[cfg(target_os = "windows")]
 impl Drop for WlanHandle {
   fn drop(&mut self) {
     unsafe {
@@ -28,7 +30,7 @@ impl Drop for WlanHandle {
   }
 }
 
-/// Gets wifi ssid and signal stregth using winapi
+/// Gets wifi ssid and signal strength using winapi
 pub fn default_gateway_wifi() -> anyhow::Result<WifiHotstop> {
   #[cfg(not(target_os = "windows"))]
   {
@@ -100,7 +102,8 @@ pub fn default_gateway_wifi() -> anyhow::Result<WifiHotstop> {
       .skip_while(|&byte| byte == 0)
       .collect::<Vec<_>>();
     ssid_vec.reverse();
-    let ssid = String::from_utf8(ssid_vec).unwrap();
+    let ssid =
+      String::from_utf8(ssid_vec).context("Incorrectly formatted ssid")?;
 
     Ok(WifiHotstop {
       ssid: Some(ssid),
