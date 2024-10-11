@@ -75,7 +75,7 @@ importers:
     devDependencies:
       '@glzr/style-guide':
         specifier: 1.1.0
-        version: 1.1.0(prettier@3.1.1)(typescript@5.0.4)
+        version: 1.1.0(prettier@3.1.1)(typescript@5.5.3)
       prettier:
         specifier: 3.1.1
         version: 3.1.1
@@ -84,13 +84,13 @@ importers:
         version: 1.9.2
       tsup:
         specifier: 7.2.0
-        version: 7.2.0(postcss@8.4.47)(typescript@5.0.4)
+        version: 7.2.0(postcss@8.4.47)(typescript@5.5.3)
       tsup-preset-solid:
         specifier: 2.1.0
-        version: 2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.47)(typescript@5.0.4))
+        version: 2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.47)(typescript@5.5.3))
       typescript:
-        specifier: 5.0.4
-        version: 5.0.4
+        specifier: 5.5.3
+        version: 5.5.3
 
   examples/boilerplate-solid-ts:
     dependencies:
@@ -2013,11 +2013,6 @@ packages:
     resolution: {integrity: sha512-yOGpmOAL7CkKe/91I5O3gPICmJNLJ1G4zFYVAsRHg7M64biSnPtRj0WNQt++bRkjYOqjWXrhnUw1utzmVErAdg==}
     engines: {node: '>=16'}
 
-  typescript@5.0.4:
-    resolution: {integrity: sha512-cW9T5W9xY37cc+jfEnaUvX91foxtHkza3Nw3wkoF4sSlKn0MONdkdEndig/qPBWXNkmplh3NzayQzCiHM4/hqw==}
-    engines: {node: '>=12.20'}
-    hasBin: true
-
   typescript@5.3.3:
     resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
     engines: {node: '>=14.17'}
@@ -2576,14 +2571,6 @@ snapshots:
       '@floating-ui/utils': 0.2.8
 
   '@floating-ui/utils@0.2.8': {}
-
-  '@glzr/style-guide@1.1.0(prettier@3.1.1)(typescript@5.0.4)':
-    dependencies:
-      prettier-plugin-astro: 0.12.3
-      prettier-plugin-packagejson: 2.4.5(prettier@3.1.1)
-    optionalDependencies:
-      prettier: 3.1.1
-      typescript: 5.0.4
 
   '@glzr/style-guide@1.1.0(prettier@3.1.1)(typescript@5.5.3)':
     dependencies:
@@ -3579,7 +3566,7 @@ snapshots:
     dependencies:
       chokidar: 3.5.3
       immutable: 4.3.4
-      source-map-js: 1.0.2
+      source-map-js: 1.2.1
     optional: true
 
   semver@6.3.1: {}
@@ -3781,10 +3768,10 @@ snapshots:
       - solid-js
       - supports-color
 
-  tsup-preset-solid@2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.47)(typescript@5.0.4)):
+  tsup-preset-solid@2.1.0(esbuild@0.20.0)(solid-js@1.9.2)(tsup@7.2.0(postcss@8.4.47)(typescript@5.5.3)):
     dependencies:
       esbuild-plugin-solid: 0.5.0(esbuild@0.20.0)(solid-js@1.9.2)
-      tsup: 7.2.0(postcss@8.4.47)(typescript@5.0.4)
+      tsup: 7.2.0(postcss@8.4.47)(typescript@5.5.3)
     transitivePeerDependencies:
       - esbuild
       - solid-js
@@ -3813,7 +3800,7 @@ snapshots:
       - supports-color
       - ts-node
 
-  tsup@7.2.0(postcss@8.4.47)(typescript@5.0.4):
+  tsup@7.2.0(postcss@8.4.47)(typescript@5.5.3):
     dependencies:
       bundle-require: 4.0.2(esbuild@0.18.20)
       cac: 6.7.14
@@ -3831,7 +3818,7 @@ snapshots:
       tree-kill: 1.2.2
     optionalDependencies:
       postcss: 8.4.47
-      typescript: 5.0.4
+      typescript: 5.5.3
     transitivePeerDependencies:
       - supports-color
       - ts-node
@@ -3860,8 +3847,6 @@ snapshots:
       - ts-node
 
   type-fest@4.26.1: {}
-
-  typescript@5.0.4: {}
 
   typescript@5.3.3: {}
 
