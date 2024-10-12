@@ -26,6 +26,9 @@ importers:
       '@kobalte/core':
         specifier: 0.13.7
         version: 0.13.7(solid-js@1.9.2)
+      '@tabler/icons-solidjs':
+        specifier: 3.19.0
+        version: 3.19.0(solid-js@1.9.2)
       class-variance-authority:
         specifier: 0.7.0
         version: 0.7.0
@@ -1003,6 +1006,14 @@ packages:
 
   '@swc/helpers@0.5.13':
     resolution: {integrity: sha512-UoKGxQ3r5kYI9dALKJapMmuK+1zWM/H17Z1+iwnNmzcJRnfFuevZs375TA5rW31pu4BS4NoSy1fRsexDXfWn5w==}
+
+  '@tabler/icons-solidjs@3.19.0':
+    resolution: {integrity: sha512-wtYft78GxbQvLu/I6XAqBdXGmLsw/oDnniL9/BcFmSQLthtqLEZiq3V7dwF924U364cc/NysTXoWbQMRR45uCA==}
+    peerDependencies:
+      solid-js: ^1.4.7
+
+  '@tabler/icons@3.19.0':
+    resolution: {integrity: sha512-A4WEWqpdbTfnpFEtwXqwAe9qf9sp1yRPvzppqAuwcoF0q5YInqB+JkJtSFToCyBpPVeLxJUxxkapLvt2qQgnag==}
 
   '@tauri-apps/api@2.0.0-rc.5':
     resolution: {integrity: sha512-JWs69pE9NsQdcqTpEVBepAZ08+jgQWuthIiTiaWRq/YlCLgnqq0KfC9sDem55uJ0YpgsytZuyj+m6b6q8oiD2g==}
@@ -2785,6 +2796,13 @@ snapshots:
   '@swc/helpers@0.5.13':
     dependencies:
       tslib: 2.6.2
+
+  '@tabler/icons-solidjs@3.19.0(solid-js@1.9.2)':
+    dependencies:
+      '@tabler/icons': 3.19.0
+      solid-js: 1.9.2
+
+  '@tabler/icons@3.19.0': {}
 
   '@tauri-apps/api@2.0.0-rc.5': {}
 
