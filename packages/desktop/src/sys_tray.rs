@@ -236,11 +236,12 @@ impl SysTray {
       MenuEvent::OpenSettings => {
         info!("Opening settings window from system tray.");
 
-        let window = WebviewWindowBuilder::new(
+        let _ = WebviewWindowBuilder::new(
           &app_handle,
           "settings",
           WebviewUrl::default(),
         )
+        .title("Settings - Zebar")
         .build()?;
 
         Ok(())
