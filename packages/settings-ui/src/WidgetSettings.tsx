@@ -22,6 +22,7 @@ type WidgetSettings = {
 };
 
 type WidgetPreset = {
+  name: string;
   anchor:
     | 'top_left'
     | 'top_center'
@@ -51,10 +52,11 @@ export function WidgetSettings() {
     presets: [],
   });
 
-  function addNewInstance() {
+  function addNewPreset() {
     widgetForm.setValue('presets', presets => [
       ...presets,
       {
+        name: 'default',
         anchor: 'center',
         offsetX: '0px',
         offsetY: '0px',
@@ -163,6 +165,16 @@ export function WidgetSettings() {
         <CardContent class="space-y-4">
           {widgetForm.value.presets.map((_, index) => (
             <div class="border p-4 rounded-md space-y-2">
+              <Field of={widgetForm} path={`presets.${index}.name`}>
+                {inputProps => (
+                  <TextField
+                    id={`name-${index}`}
+                    label="Preset name"
+                    {...inputProps()}
+                  />
+                )}
+              </Field>
+
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Field of={widgetForm} path={`presets.${index}.anchor`}>
                   {inputProps => (
@@ -235,8 +247,8 @@ export function WidgetSettings() {
             </div>
           ))}
 
-          <Button onClick={addNewInstance} class="w-full">
-            Add new instance config +
+          <Button onClick={addNewPreset} class="w-full">
+            Add new preset +
           </Button>
         </CardContent>
       </Card>
