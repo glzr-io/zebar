@@ -7,8 +7,14 @@ import {
   TextField,
   SelectField,
   SwitchField,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  cn,
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
+import { createMemo, createSignal, For } from 'solid-js';
 
 type WidgetSettings = {
   htmlPath: string;
@@ -52,11 +58,19 @@ export function WidgetSettings() {
     presets: [],
   });
 
+  const presetNames = createMemo(() =>
+    widgetForm.value.presets.map(preset => preset.name),
+  );
+
+  const [selectedPreset, setSelectedPreset] = createSignal<string | null>(
+    null,
+  );
+
   function addNewPreset() {
     widgetForm.setValue('presets', presets => [
       ...presets,
       {
-        name: 'default',
+        name: presets.length ? `default${presets.length + 1}` : 'default',
         anchor: 'center',
         offsetX: '0px',
         offsetY: '0px',
@@ -67,6 +81,14 @@ export function WidgetSettings() {
         },
       },
     ]);
+
+    if (!selectedPreset()) {
+      setSelectedPreset(widgetForm.value.presets[0].name);
+    }
+  }
+
+  function openWidgetWithPreset() {
+    // TODO: Implement this.
   }
 
   return (
@@ -253,7 +275,53 @@ export function WidgetSettings() {
         </CardContent>
       </Card>
 
-      <Button class="w-full">Launch Default</Button>
+      <div class="flex items-center">
+        <Button
+          variant="outline"
+          class="rounded-r-none"
+          onClick={() => openWidgetWithPreset()}
+        >
+          {selectedPreset() ?? 'Select'}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Button
+              variant="outline"
+              class="rounded-l-none border-l-0 px-2"
+            >
+              <svg
+                class="size-3"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="m6 9l6 6l6-6"
+                />
+              </svg>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <For each={presetNames()}>
+              {presetName => (
+                <DropdownMenuItem
+                  onClick={() => setSelectedPreset(presetName)}
+                  class={cn({
+                    'bg-accent text-accent-foreground':
+                      presetName === selectedPreset(),
+                  })}
+                >
+                  {presetName}
+                </DropdownMenuItem>
+              )}
+            </For>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }
