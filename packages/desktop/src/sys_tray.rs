@@ -4,7 +4,10 @@ use anyhow::{bail, Context};
 use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
-  tray::{TrayIcon, TrayIconBuilder},
+  tray::{
+    MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder,
+    TrayIconEvent,
+  },
   AppHandle, WebviewUrl, WebviewWindowBuilder, Wry,
 };
 use tokio::task;
@@ -107,38 +110,49 @@ impl SysTray {
   }
 
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {
-    let config = self.config.clone();
-    let widget_factory = self.widget_factory.clone();
     let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
 
     let tray_icon = TrayIconBuilder::with_id("tray")
       .icon(self.icon_image()?)
       .menu(&self.create_tray_menu().await?)
       .tooltip(tooltip)
-      .on_menu_event(move |app, event| {
-        let app_handle = app.clone();
-        let config = config.clone();
-        let widget_factory = widget_factory.clone();
+      .menu_on_left_click(false)
+      .on_tray_icon_event({
+        let app_handle = self.app_handle.clone();
+        let config = self.config.clone();
+        let widget_factory = self.widget_factory.clone();
 
-        task::spawn(async move {
-          let event = MenuEvent::from_str(event.id.as_ref());
-
-          if let Ok(event) = event {
-            info!("Received tray menu event: {}", event.to_string());
-
-            let res = Self::handle_menu_event(
-              event,
-              app_handle,
-              config,
-              widget_factory,
-            )
-            .await;
-
-            if let Err(err) = res {
-              error!("{:?}", err);
-            }
+        // Show the settings window on left click.
+        move |_, event| {
+          if let TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Down,
+            ..
+          } = event
+          {
+            Self::handle_menu_event(
+              MenuEvent::OpenSettings,
+              app_handle.clone(),
+              config.clone(),
+              widget_factory.clone(),
+            );
           }
-        });
+        }
+      })
+      .on_menu_event({
+        let config = self.config.clone();
+        let widget_factory = self.widget_factory.clone();
+
+        move |app_handle, event| {
+          if let Ok(menu_event) = MenuEvent::from_str(event.id.as_ref()) {
+            Self::handle_menu_event(
+              menu_event,
+              app_handle.clone(),
+              config.clone(),
+              widget_factory.clone(),
+            );
+          }
+        }
       })
       .build(&self.app_handle)?;
 
@@ -182,10 +196,10 @@ impl SysTray {
       .await?;
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
+      .text(MenuEvent::OpenSettings, "Settings")
       .item(&configs_menu)
       .text(MenuEvent::ShowConfigFolder, "Show config folder")
       .text(MenuEvent::ReloadConfigs, "Reload configs")
-      .text(MenuEvent::OpenSettings, "Open settings")
       .separator();
 
     // Add submenus for currently active widget.
@@ -214,76 +228,80 @@ impl SysTray {
   }
 
   /// Callback for system tray menu events.
-  async fn handle_menu_event(
+  fn handle_menu_event(
     event: MenuEvent,
     app_handle: AppHandle,
     config: Arc<Config>,
     widget_factory: Arc<WidgetFactory>,
-  ) -> anyhow::Result<()> {
-    match event {
-      MenuEvent::ShowConfigFolder => {
-        info!("Opening config folder from system tray.");
+  ) {
+    task::spawn(async move {
+      info!("Received tray menu event: {:?}", event);
 
-        config
+      let event_res = match event {
+        MenuEvent::ShowConfigFolder => config
           .open_config_dir()
-          .context("Failed to open config folder.")
-      }
-      MenuEvent::ReloadConfigs => {
-        info!("Opening config folder from system tray.");
-
-        config.reload().await
-      }
-      MenuEvent::OpenSettings => {
-        info!("Opening settings window from system tray.");
-
-        let _ = WebviewWindowBuilder::new(
-          &app_handle,
-          "settings",
-          WebviewUrl::default(),
-        )
-        .title("Settings - Zebar")
-        .build()?;
-
-        Ok(())
-      }
-      MenuEvent::Exit => {
-        info!("Exiting through system tray.");
-
-        app_handle.exit(0);
-
-        Ok(())
-      }
-      MenuEvent::ToggleWidgetConfig { enable, path } => {
-        info!(
-          "Widget config '{}' to be enabled: {}",
-          path.display(),
-          enable
-        );
-
-        match enable {
-          true => {
-            let widget_config = config
-              .widget_config_by_path(&path)
-              .await?
-              .context("Widget config not found.")?;
-
-            widget_factory.open(widget_config).await
-          }
-          false => widget_factory.stop_by_path(&path).await,
+          .context("Failed to open config folder."),
+        MenuEvent::ReloadConfigs => config.reload().await,
+        MenuEvent::OpenSettings => Self::open_settings_window(&app_handle),
+        MenuEvent::Exit => {
+          app_handle.exit(0);
+          Ok(())
         }
-      }
-      MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
-        info!(
-          "Widget config '{}' to be launched on startup: {}",
-          path.display(),
-          enable
-        );
-
-        match enable {
-          true => config.add_startup_config(&path).await,
-          false => config.remove_startup_config(&path).await,
+        MenuEvent::ToggleWidgetConfig { enable, path } => {
+          Self::toggle_widget_config(enable, path, config, widget_factory)
+            .await
         }
+        MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
+          Self::toggle_startup_widget_config(enable, path, config).await
+        }
+      };
+
+      if let Err(err) = event_res {
+        error!("Error handling menu event: {:?}", err);
       }
+    });
+  }
+
+  fn open_settings_window(app_handle: &AppHandle) -> anyhow::Result<()> {
+    WebviewWindowBuilder::new(
+      app_handle,
+      "settings",
+      WebviewUrl::default(),
+    )
+    .title("Settings - Zebar")
+    .build()
+    .context("Failed to build settings window")?;
+
+    Ok(())
+  }
+
+  async fn toggle_widget_config(
+    enable: bool,
+    config_path: PathBuf,
+    config: Arc<Config>,
+    widget_factory: Arc<WidgetFactory>,
+  ) -> anyhow::Result<()> {
+    match enable {
+      true => {
+        let widget_config = config
+          .widget_config_by_path(&config_path)
+          .await?
+          .context("Widget config not found.")?;
+
+        widget_factory.open(widget_config).await
+      }
+      false => widget_factory.stop_by_path(&config_path).await,
+    }
+  }
+
+  async fn toggle_startup_widget_config(
+    enable: bool,
+    config_path: PathBuf,
+    config: Arc<Config>,
+  ) -> anyhow::Result<()> {
+    match enable {
+      true => config.add_startup_config(&config_path).await,
+      false => config.remove_startup_config(&config_path).await,
     }
   }
 
