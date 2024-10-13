@@ -16,12 +16,15 @@ export interface FileItem {
   children?: FileItem[];
 }
 
-export interface FileTreeProps {
+export interface WidgetConfigTreeProps {
   files: FileItem[];
   onSelect: (file: FileItem) => void;
 }
 
-export function FileTree({ files, onSelect }: FileTreeProps) {
+export function WidgetConfigTree({
+  files,
+  onSelect,
+}: WidgetConfigTreeProps) {
   const [expanded, setExpanded] = createSignal<Record<string, boolean>>(
     {},
   );

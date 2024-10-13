@@ -8,6 +8,10 @@ body,
   height: 100%;
 }
 
+.tabler-icon {
+  stroke-width: 1;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

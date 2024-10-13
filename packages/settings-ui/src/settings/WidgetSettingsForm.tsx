@@ -46,8 +46,8 @@ type WidgetPreset = {
   };
 };
 
-export function WidgetSettings() {
-  const widgetForm = createForm<WidgetSettings>({
+export function WidgetSettingsForm() {
+  const settingsForm = createForm<WidgetSettings>({
     htmlPath: '',
     zOrder: 'normal',
     shownInTaskbar: false,
@@ -59,7 +59,7 @@ export function WidgetSettings() {
   });
 
   const presetNames = createMemo(() =>
-    widgetForm.value.presets.map(preset => preset.name),
+    settingsForm.value.presets.map(preset => preset.name),
   );
 
   const [selectedPreset, setSelectedPreset] = createSignal<string | null>(
@@ -67,7 +67,7 @@ export function WidgetSettings() {
   );
 
   function addNewPreset() {
-    widgetForm.setValue('presets', presets => [
+    settingsForm.setValue('presets', presets => [
       ...presets,
       {
         name: presets.length ? `default${presets.length + 1}` : 'default',
@@ -83,7 +83,7 @@ export function WidgetSettings() {
     ]);
 
     if (!selectedPreset()) {
-      setSelectedPreset(widgetForm.value.presets[0].name);
+      setSelectedPreset(settingsForm.value.presets[0].name);
     }
   }
 
@@ -97,11 +97,11 @@ export function WidgetSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Widget Settings</CardTitle>
+          <CardTitle>Widget settings</CardTitle>
         </CardHeader>
 
         <CardContent class="space-y-4">
-          <Field of={widgetForm} path="htmlPath">
+          <Field of={settingsForm} path="htmlPath">
             {inputProps => (
               <TextField
                 id="html-path"
@@ -112,7 +112,7 @@ export function WidgetSettings() {
             )}
           </Field>
 
-          <Field of={widgetForm} path="zOrder">
+          <Field of={settingsForm} path="zOrder">
             {inputProps => (
               <SelectField
                 id="z-order"
@@ -137,7 +137,7 @@ export function WidgetSettings() {
             )}
           </Field>
 
-          <Field of={widgetForm} path="shownInTaskbar">
+          <Field of={settingsForm} path="shownInTaskbar">
             {inputProps => (
               <SwitchField
                 id="shown-in-taskbar"
@@ -147,7 +147,7 @@ export function WidgetSettings() {
             )}
           </Field>
 
-          <Field of={widgetForm} path="focused">
+          <Field of={settingsForm} path="focused">
             {inputProps => (
               <SwitchField
                 id="focused"
@@ -157,7 +157,7 @@ export function WidgetSettings() {
             )}
           </Field>
 
-          <Field of={widgetForm} path="resizable">
+          <Field of={settingsForm} path="resizable">
             {inputProps => (
               <SwitchField
                 id="resizable"
@@ -167,7 +167,7 @@ export function WidgetSettings() {
             )}
           </Field>
 
-          <Field of={widgetForm} path="transparent">
+          <Field of={settingsForm} path="transparent">
             {inputProps => (
               <SwitchField
                 id="transparent"
@@ -185,9 +185,9 @@ export function WidgetSettings() {
         </CardHeader>
 
         <CardContent class="space-y-4">
-          {widgetForm.value.presets.map((_, index) => (
+          {settingsForm.value.presets.map((_, index) => (
             <div class="border p-4 rounded-md space-y-2">
-              <Field of={widgetForm} path={`presets.${index}.name`}>
+              <Field of={settingsForm} path={`presets.${index}.name`}>
                 {inputProps => (
                   <TextField
                     id={`name-${index}`}
@@ -198,7 +198,7 @@ export function WidgetSettings() {
               </Field>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <Field of={widgetForm} path={`presets.${index}.anchor`}>
+                <Field of={settingsForm} path={`presets.${index}.anchor`}>
                   {inputProps => (
                     <SelectField
                       id={`anchor-${index}`}
@@ -223,7 +223,7 @@ export function WidgetSettings() {
                 </Field>
 
                 <Field
-                  of={widgetForm}
+                  of={settingsForm}
                   path={`presets.${index}.monitorSelection.type`}
                 >
                   {inputProps => (
@@ -245,7 +245,7 @@ export function WidgetSettings() {
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {/* TODO: Change to px/percent input. */}
-                <Field of={widgetForm} path={`presets.${index}.offsetX`}>
+                <Field of={settingsForm} path={`presets.${index}.offsetX`}>
                   {inputProps => (
                     <TextField
                       id={`offset-x-${index}`}
@@ -256,7 +256,7 @@ export function WidgetSettings() {
                 </Field>
 
                 {/* TODO: Change to px/percent input. */}
-                <Field of={widgetForm} path={`presets.${index}.offsetY`}>
+                <Field of={settingsForm} path={`presets.${index}.offsetY`}>
                   {inputProps => (
                     <TextField
                       id={`offset-y-${index}`}

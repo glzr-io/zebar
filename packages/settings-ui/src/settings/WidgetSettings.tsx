@@ -1,5 +1,5 @@
-import { FileItem, FileTree } from './FileTree';
-import { WidgetSettings } from './WidgetSettings';
+import { FileItem, WidgetConfigTree } from './WidgetConfigTree';
+import { WidgetSettingsForm } from './WidgetSettingsForm';
 
 const initialFiles: FileItem[] = [
   {
@@ -26,13 +26,13 @@ const initialFiles: FileItem[] = [
     children: [
       {
         name: 'Vacation.jpg',
-        type: 'image',
+        type: 'file',
         size: '3.2 MB',
         modified: '2023-09-28',
       },
       {
         name: 'Family.png',
-        type: 'image',
+        type: 'file',
         size: '2.9 MB',
         modified: '2023-09-29',
       },
@@ -40,23 +40,23 @@ const initialFiles: FileItem[] = [
   },
   {
     name: 'Music.mp3',
-    type: 'audio',
+    type: 'file',
     size: '5.4 MB',
     modified: '2023-10-01',
   },
   {
     name: 'Video.mp4',
-    type: 'video',
+    type: 'file',
     size: '15.7 MB',
     modified: '2023-10-02',
   },
 ];
 
-export function App() {
+export function WidgetSettings() {
   return (
     <div class="app">
-      <FileTree files={initialFiles} onSelect={() => {}} />
-      <WidgetSettings />
+      <WidgetConfigTree files={initialFiles} onSelect={() => {}} />
+      <WidgetSettingsForm />
     </div>
   );
 }
