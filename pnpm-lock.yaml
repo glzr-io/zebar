@@ -165,18 +165,15 @@ importers:
       '@solidjs/router':
         specifier: 0.14.8
         version: 0.14.8(solid-js@1.9.2)
+      '@tauri-apps/api':
+        specifier: 2.0.0-rc.5
+        version: 2.0.0-rc.5
       smorf:
         specifier: 1.0.0
         version: link:../../../smorf
       solid-js:
         specifier: 1.9.2
         version: 1.9.2
-      tailwindcss:
-        specifier: '3.4.13 '
-        version: 3.4.13
-      tailwindcss-animate:
-        specifier: 1.0.7
-        version: 1.0.7(tailwindcss@3.4.13)
       zebar:
         specifier: ^2.0.0
         version: link:../client-api
@@ -184,6 +181,12 @@ importers:
       postcss:
         specifier: 8.4.47
         version: 8.4.47
+      tailwindcss:
+        specifier: '3.4.13 '
+        version: 3.4.13
+      tailwindcss-animate:
+        specifier: 1.0.7
+        version: 1.0.7(tailwindcss@3.4.13)
       typescript:
         specifier: 5.3.3
         version: 5.3.3

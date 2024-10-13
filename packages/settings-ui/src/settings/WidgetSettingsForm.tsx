@@ -15,39 +15,10 @@ import {
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
 import { createMemo, createSignal, For } from 'solid-js';
-
-type WidgetSettings = {
-  htmlPath: string;
-  zOrder: 'normal' | 'top_most' | 'bottom_most';
-  shownInTaskbar: boolean;
-  focused: boolean;
-  resizable: boolean;
-  transparent: boolean;
-  backgroundColor: string;
-  presets: WidgetPreset[];
-};
-
-type WidgetPreset = {
-  name: string;
-  anchor:
-    | 'top_left'
-    | 'top_center'
-    | 'top_right'
-    | 'center'
-    | 'bottom_left'
-    | 'bottom_center'
-    | 'bottom_right';
-  offsetX: string;
-  offsetY: string;
-  width: string;
-  height: string;
-  monitorSelection: {
-    type: 'all' | 'primary' | 'secondary';
-  };
-};
+import { WidgetConfig } from './WidgetSettings';
 
 export function WidgetSettingsForm() {
-  const settingsForm = createForm<WidgetSettings>({
+  const settingsForm = createForm<WidgetConfig>({
     htmlPath: '',
     zOrder: 'normal',
     shownInTaskbar: false,
