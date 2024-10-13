@@ -4,10 +4,17 @@ use tauri::{State, Window};
 
 use crate::{
   common::WindowExt,
-  config::Config,
+  config::{Config, WidgetConfigEntry},
   providers::{ProviderConfig, ProviderManager},
   widget_factory::WidgetFactory,
 };
+
+#[tauri::command]
+pub async fn widget_configs(
+  config: State<'_, Arc<Config>>,
+) -> Result<Vec<WidgetConfigEntry>, String> {
+  Ok(config.widget_configs().await)
+}
 
 #[tauri::command]
 pub async fn open_widget_default(

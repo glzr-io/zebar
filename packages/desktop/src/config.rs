@@ -51,6 +51,7 @@ pub struct WidgetConfig {
   pub transparent: bool,
 
   /// Where to place the widget.
+  /// TODO: Rename to `presets`.
   pub default_placements: Vec<WidgetPlacement>,
 }
 
@@ -131,7 +132,8 @@ pub struct Config {
   pub widget_configs_change_tx: broadcast::Sender<Vec<WidgetConfigEntry>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WidgetConfigEntry {
   /// Absolute path to the widget's config file.
   pub config_path: PathBuf,

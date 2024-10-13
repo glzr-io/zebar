@@ -168,6 +168,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       })
     })
     .invoke_handler(tauri::generate_handler![
+      commands::widget_configs,
       commands::open_widget_default,
       commands::listen_provider,
       commands::unlisten_provider,
