@@ -1,87 +1,72 @@
 import {
+  cn,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   IconChevronDown,
-  IconChevronRight,
   IconFile,
   IconFolder,
 } from '@glzr/components';
-import { createSignal } from 'solid-js';
+import { createMemo, createSignal, For } from 'solid-js';
 
-type FileType = 'file' | 'folder';
-
-export interface FileItem {
-  name: string;
-  type: FileType;
-  size?: string;
-  modified?: string;
-  children?: FileItem[];
-}
+import { WidgetConfigEntry } from './WidgetSettings';
 
 export interface WidgetConfigTreeProps {
-  files: FileItem[];
-  onSelect: (file: FileItem) => void;
+  configs: WidgetConfigEntry[];
+  onSelect: (entry: WidgetConfigEntry) => void;
 }
 
-export function WidgetConfigTree({
-  files,
-  onSelect,
-}: WidgetConfigTreeProps) {
-  const [expanded, setExpanded] = createSignal<Record<string, boolean>>(
-    {},
+export function WidgetConfigTree(props: WidgetConfigTreeProps) {
+  const configTree = createMemo(() => {
+    const tree: Record<string, WidgetConfigEntry[]> = {};
+
+    props.configs.forEach(config => {
+      const folder = config.configPath.split(/[/\\]/).at(-2);
+      tree[folder] = [...(tree[folder] ?? []), config];
+    });
+
+    return tree;
+  });
+
+  const [selectedFile, setSelectedFile] = createSignal<string | null>(
+    null,
   );
 
-  const toggleExpand = (name: string) => {
-    setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
-  };
-
-  const renderFileItem = (file: FileItem, level: number) => {
-    const isExpanded = expanded()[file.name];
-    const hasChildren = file.children && file.children.length > 0;
-
-    return (
-      <div class="select-none">
-        <div
-          class="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 cursor-pointer"
-          style={{ 'padding-left': `${level * 16}px` }}
-          onClick={() => {
-            if (hasChildren) {
-              toggleExpand(file.name);
-            }
-            onSelect(file);
-          }}
-        >
-          {hasChildren && (
-            <button
-              onClick={() => toggleExpand(file.name)}
-              class="focus:outline-none"
-            >
-              {isExpanded ? (
-                <IconChevronDown class="w-4 h-4" />
-              ) : (
-                <IconChevronRight class="w-4 h-4" />
-              )}
-            </button>
+  return (
+    <div class="border p-4">
+      <h2 class="text-lg font-semibold mb-2">Widget configs</h2>
+      <div class="space-y-1">
+        <For each={Object.entries(configTree())}>
+          {([folder, configs]) => (
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger class="flex items-center space-x-2 px-2 py-1 w-full text-left">
+                <IconChevronDown class="h-3 w-3" />
+                <span>{folder}</span>
+              </CollapsibleTrigger>
+              <CollapsibleContent class="pl-4">
+                {configs.map(config => (
+                  <div
+                    class={cn(
+                      'flex items-center space-x-2 py-1 rounded-md cursor-pointer',
+                      selectedFile() === config.configPath && 'bg-accent',
+                    )}
+                    onClick={() => setSelectedFile(config.configPath)}
+                  >
+                    <IconFile class="h-4 w-4" />
+                    <span>{config.configPath.split(/[/\\]/).at(-1)}</span>
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
           )}
-          <FileIcon type={file.type} />
-          <span>{file.name}</span>
-        </div>
-
-        {hasChildren && isExpanded && (
-          <div>
-            {file.children!.map(child => renderFileItem(child, level + 1))}
-          </div>
-        )}
+        </For>
       </div>
-    );
-  };
 
-  return <div>{files.map(file => renderFileItem(file, 0))}</div>;
+      {selectedFile && (
+        <div class="mt-4 p-2 bg-muted rounded-md">
+          Selected: {selectedFile()}
+        </div>
+      )}
+    </div>
+  );
 }
-
-const FileIcon = ({ type }: { type: FileType }) => {
-  switch (type) {
-    case 'folder':
-      return <IconFolder class="w-4 h-4" />;
-    default:
-      return <IconFile class="w-4 h-4" />;
-  }
-};
