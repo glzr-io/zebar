@@ -1,11 +1,15 @@
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-use std::process::Command;
+use std::ffi::c_void;
 
 use anyhow::Context;
-use regex::Regex;
 #[cfg(target_os = "windows")]
-use windows::Win32::System::Threading::CREATE_NO_WINDOW;
+use windows::Win32::{
+  Foundation::{HANDLE, INVALID_HANDLE_VALUE, WIN32_ERROR},
+  NetworkManagement::WiFi::{
+    wlan_intf_opcode_current_connection, WlanCloseHandle,
+    WlanEnumInterfaces, WlanFreeMemory, WlanOpenHandle,
+    WlanQueryInterface, WLAN_CONNECTION_ATTRIBUTES,
+  },
+};
 
 #[derive(Debug)]
 pub struct WifiHotstop {
@@ -13,11 +17,20 @@ pub struct WifiHotstop {
   pub signal_strength: Option<u32>,
 }
 
-/// Runs the netsh command and parses the output to get the primary
-/// interface's SSID and signal strength.
-//
-/// Unclear if the primary interface is always the default interface
-/// returned by the netdev/defaultnet crate - requires more testing.
+#[derive(Debug)]
+#[cfg(target_os = "windows")]
+struct WlanHandle(HANDLE);
+
+#[cfg(target_os = "windows")]
+impl Drop for WlanHandle {
+  fn drop(&mut self) {
+    unsafe {
+      WlanCloseHandle(self.0, None);
+    }
+  }
+}
+
+/// Gets wifi ssid and signal strength using winapi
 pub fn default_gateway_wifi() -> anyhow::Result<WifiHotstop> {
   #[cfg(not(target_os = "windows"))]
   {
@@ -28,42 +41,73 @@ pub fn default_gateway_wifi() -> anyhow::Result<WifiHotstop> {
   }
   #[cfg(target_os = "windows")]
   {
-    let ssid_match = Regex::new(r"(?m)^\s*SSID\s*:\s*(.*?)\r?$").unwrap();
+    let mut pdw_negotiated_version = 0;
+    let mut wlan_handle = WlanHandle(INVALID_HANDLE_VALUE);
 
-    let signal_match =
-      Regex::new(r"(?m)^\s*Signal\s*:\s*(.*?)\r?$").unwrap();
+    WIN32_ERROR(unsafe {
+      WlanOpenHandle(
+        2,
+        None,
+        &mut pdw_negotiated_version,
+        &mut wlan_handle.0,
+      )
+    })
+    .ok()
+    .context("Failed to open Wlan handle")?;
 
-    let signal_strip = Regex::new(r"(\d+)%").unwrap();
+    let mut wlan_interface_info_list = std::ptr::null_mut();
+    WIN32_ERROR(unsafe {
+      WlanEnumInterfaces(
+        wlan_handle.0,
+        None,
+        &mut wlan_interface_info_list,
+      )
+    })
+    .ok()
+    .context("Failed to get Wlan interfaces")?;
 
-    let output = Command::new("netsh")
-      .args(&["wlan", "show", "interfaces"])
-      .creation_flags(CREATE_NO_WINDOW.0)
-      .output()
-      .context("Could not run netsh.")?;
+    let guid = (unsafe { *wlan_interface_info_list }).InterfaceInfo[0]
+      .InterfaceGuid;
+    unsafe { WlanFreeMemory(wlan_interface_info_list as *mut c_void) };
 
-    let output = String::from_utf8_lossy(&output.stdout);
+    let mut data_size = 0;
+    let mut pdata = std::ptr::null_mut();
 
-    let ssid = ssid_match
-      .captures(&output)
-      .context("Failed to parse WiFi hotspot SSID.")?
-      .get(1)
-      .map(|s| s.as_str().to_string());
+    WIN32_ERROR(unsafe {
+      WlanQueryInterface(
+        wlan_handle.0,
+        &guid,
+        wlan_intf_opcode_current_connection,
+        None,
+        &mut data_size,
+        &mut pdata,
+        None,
+      )
+    })
+    .ok()
+    .context("Failed to get connected Wlan interface")?;
 
-    let signal_str = signal_match
-      .captures(&output)
-      .context("Failed to parse WiFi hotspot signal strength.")?
-      .get(1)
-      .map(|s| s.as_str());
+    let wlan_connection_atributes =
+      pdata as *mut WLAN_CONNECTION_ATTRIBUTES;
+    let atributes =
+      unsafe { *wlan_connection_atributes }.wlanAssociationAttributes;
 
-    let signal = signal_str
-      .and_then(|s| signal_strip.captures(s))
-      .context("Failed to parse WiFi hotspot signal strength.")?
-      .get(1)
-      .and_then(|s| s.as_str().parse().ok());
+    unsafe { WlanFreeMemory(pdata) };
+
+    // needed to remove leading zeros in array
+    let ssid_arr = atributes.dot11Ssid.ucSSID;
+    let mut ssid_vec = ssid_arr
+      .into_iter()
+      .rev()
+      .skip_while(|&byte| byte == 0)
+      .collect::<Vec<_>>();
+    ssid_vec.reverse();
+    let ssid =
+      String::from_utf8(ssid_vec).context("Incorrectly formatted ssid")?;
 
     Ok(WifiHotstop {
-      ssid,
-      signal_strength: signal,
+      ssid: Some(ssid),
+      signal_strength: Some(atributes.wlanSignalQuality),
     })
   }
 }
