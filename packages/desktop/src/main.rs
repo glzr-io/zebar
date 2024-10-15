@@ -45,123 +45,29 @@ async fn main() -> anyhow::Result<()> {
     let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
   }
 
-  let cli = Cli::parse();
-
-  match cli.command() {
-    CliCommand::Query(args) => output_query(args),
-    _ => {
-      let start_res = start_app(cli);
-
-      // If unable to start Zebar, the error is fatal and a message dialog
-      // is shown.
-      if let Err(err) = &start_res {
-        // TODO: Show error dialog.
-        error!("{:?}", err);
-      };
-
-      start_res
-    }
-  }
-}
-
-/// Query state and print to the console.
-fn output_query(args: QueryArgs) -> anyhow::Result<()> {
-  match args {
-    QueryArgs::Monitors => {
-      tauri::Builder::default()
-        .setup(|app| {
-          let monitors = MonitorState::new(app.handle());
-          cli::print_and_exit(monitors.output_str());
-          Ok(())
-        })
-        .run(tauri::generate_context!())?;
-
-      Ok(())
-    }
-  }
-}
-
-/// Starts Zebar - either with a specific widget or all widgets.
-fn start_app(cli: Cli) -> anyhow::Result<()> {
-  tracing_subscriber::fmt()
-    .with_env_filter(
-      EnvFilter::from_env("LOG_LEVEL")
-        .add_directive(LevelFilter::INFO.into()),
-    )
-    .init();
-
   tauri::async_runtime::set(tokio::runtime::Handle::current());
 
   let app = tauri::Builder::default()
-    .setup(move |app| {
+    .setup(|app| {
       task::block_in_place(|| {
         block_on(async move {
-          let config_dir_override = match cli.command() {
-            CliCommand::OpenWidgetDefault(args) => args.config_dir,
-            CliCommand::Startup(args) => args.config_dir,
-            _ => None,
-          };
+          let cli = Cli::parse();
 
-          // Initialize `Config` in Tauri state.
-          let config =
-            Arc::new(Config::new(app.handle(), config_dir_override)?);
-          app.manage(config.clone());
+          match cli.command() {
+            CliCommand::Query(args) => output_query(app, args),
+            _ => {
+              let start_res = start_app(app, cli).await;
 
-          // Initialize `MonitorState` in Tauri state.
-          let monitor_state = Arc::new(MonitorState::new(app.handle()));
-          app.manage(monitor_state.clone());
+              // If unable to start Zebar, the error is fatal and a message
+              // dialog is shown.
+              if let Err(err) = &start_res {
+                // TODO: Show error dialog.
+                error!("{:?}", err);
+              };
 
-          // Initialize `WidgetFactory` in Tauri state.
-          let widget_factory = Arc::new(WidgetFactory::new(
-            app.handle(),
-            config.clone(),
-            monitor_state.clone(),
-          ));
-          app.manage(widget_factory.clone());
-
-          // If this is not the first instance of the app, this will emit
-          // within the original instance and exit immediately. The CLI
-          // command is guaranteed to be one of the open commands here.
-          setup_single_instance(
-            app,
-            config.clone(),
-            widget_factory.clone(),
-          )?;
-
-          // Prevent windows from showing up in the dock on MacOS.
-          #[cfg(target_os = "macos")]
-          app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-
-          // Allow assets to be resolved from the config directory.
-          app
-            .asset_protocol_scope()
-            .allow_directory(&config.config_dir, true)?;
-
-          app.handle().plugin(tauri_plugin_shell::init())?;
-          app.handle().plugin(tauri_plugin_http::init())?;
-          app.handle().plugin(tauri_plugin_dialog::init())?;
-
-          // Initialize `ProviderManager` in Tauri state.
-          let manager = Arc::new(ProviderManager::new(app.handle()));
-          app.manage(manager);
-
-          // Open widgets based on CLI command.
-          open_widgets_by_cli_command(
-            cli,
-            config.clone(),
-            widget_factory.clone(),
-          )
-          .await?;
-
-          // Add application icon to system tray.
-          let tray = SysTray::new(
-            app.handle(),
-            config.clone(),
-            widget_factory.clone(),
-          )
-          .await?;
-
-          listen_events(config, monitor_state, widget_factory, tray);
+              start_res
+            }
+          }?;
 
           Ok(())
         })
@@ -185,6 +91,84 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       }
     }
   });
+
+  Ok(())
+}
+
+/// Query state and print to the console.
+fn output_query(app: &tauri::App, args: QueryArgs) -> anyhow::Result<()> {
+  match args {
+    QueryArgs::Monitors => {
+      let monitors = MonitorState::new(&app.handle());
+      cli::print_and_exit(monitors.output_str());
+      Ok(())
+    }
+  }
+}
+
+/// Starts Zebar - either with a specific widget or all widgets.
+async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
+  tracing_subscriber::fmt()
+    .with_env_filter(
+      EnvFilter::from_env("LOG_LEVEL")
+        .add_directive(LevelFilter::INFO.into()),
+    )
+    .init();
+
+  let config_dir_override = match cli.command() {
+    CliCommand::OpenWidgetDefault(args) => args.config_dir,
+    CliCommand::Startup(args) => args.config_dir,
+    _ => None,
+  };
+
+  // Initialize `Config` in Tauri state.
+  let config = Arc::new(Config::new(app.handle(), config_dir_override)?);
+  app.manage(config.clone());
+
+  // Initialize `MonitorState` in Tauri state.
+  let monitor_state = Arc::new(MonitorState::new(app.handle()));
+  app.manage(monitor_state.clone());
+
+  // Initialize `WidgetFactory` in Tauri state.
+  let widget_factory = Arc::new(WidgetFactory::new(
+    app.handle(),
+    config.clone(),
+    monitor_state.clone(),
+  ));
+  app.manage(widget_factory.clone());
+
+  // If this is not the first instance of the app, this will emit within
+  // the original instance and exit immediately. The CLI command is
+  // guaranteed to be one of the open commands here.
+  setup_single_instance(app, config.clone(), widget_factory.clone())?;
+
+  // Prevent windows from showing up in the dock on MacOS.
+  #[cfg(target_os = "macos")]
+  app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+  // Allow assets to be resolved from the config directory.
+  app
+    .asset_protocol_scope()
+    .allow_directory(&config.config_dir, true)?;
+
+  app.handle().plugin(tauri_plugin_shell::init())?;
+  app.handle().plugin(tauri_plugin_http::init())?;
+  app.handle().plugin(tauri_plugin_dialog::init())?;
+
+  // Initialize `ProviderManager` in Tauri state.
+  let manager = Arc::new(ProviderManager::new(app.handle()));
+  app.manage(manager);
+
+  // Open widgets based on CLI command.
+  open_widgets_by_cli_command(cli, config.clone(), widget_factory.clone())
+    .await?;
+
+  // Add application icon to system tray.
+  let tray =
+    SysTray::new(app.handle(), config.clone(), widget_factory.clone())
+      .await?;
+
+  listen_events(config, monitor_state, widget_factory, tray);
 
   Ok(())
 }
