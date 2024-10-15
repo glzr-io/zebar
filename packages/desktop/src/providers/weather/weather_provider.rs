@@ -2,14 +2,20 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::open_meteo_res::OpenMeteoRes;
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  impl_interval_provider,
+  providers::{
+    ip::{IpProvider, IpProviderConfig},
+    ProviderOutput,
+  },
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct WeatherProviderConfig {
   pub refresh_interval: u64,
-  pub latitude: f32,
-  pub longitude: f32,
+  pub latitude: Option<f32>,
+  pub longitude: Option<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -57,13 +63,33 @@ impl WeatherProvider {
   }
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+    let (latitude, longitude) = {
+      match (self.config.latitude, self.config.longitude) {
+        (Some(lat), Some(lon)) => (lat, lon),
+        _ => {
+          let ip_output = IpProvider::new(IpProviderConfig {
+            refresh_interval: 0,
+          })
+          .run_interval()
+          .await?;
+
+          match ip_output {
+            ProviderOutput::Ip(ip_output) => {
+              (ip_output.approx_latitude, ip_output.approx_longitude)
+            }
+            _ => anyhow::bail!("Unexpected output from IP provider."),
+          }
+        }
+      }
+    };
+
     let res = self
       .http_client
       .get("https://api.open-meteo.com/v1/forecast")
       .query(&[
         ("temperature_unit", "celsius"),
-        ("latitude", &self.config.latitude.to_string()),
-        ("longitude", &self.config.longitude.to_string()),
+        ("latitude", &latitude.to_string()),
+        ("longitude", &longitude.to_string()),
         ("current_weather", "true"),
         ("daily", "sunset,sunrise"),
         ("timezone", "auto"),

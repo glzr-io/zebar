@@ -1,3 +1,8 @@
-export * from './user-config';
-export * from './zebar-context.model';
-export * from './init';
+export * from './providers';
+export {
+  currentWidget,
+  currentWindow,
+  openWidgetDefault,
+  type Widget,
+  type Window,
+} from './desktop';

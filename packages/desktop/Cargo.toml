@@ -45,10 +45,10 @@ windows = { version = "0.58", features = [
   "Win32_Globalization",
   "Win32_System_Console",
   "Win32_System_SystemServices",
-  "Win32_System_Threading",
   "Win32_UI_WindowsAndMessaging",
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_UI_TextServices",
+  "Win32_NetworkManagement_WiFi",
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

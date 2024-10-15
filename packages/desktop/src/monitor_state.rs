@@ -1,28 +1,26 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
-use anyhow::bail;
+use serde::Serialize;
 use tauri::AppHandle;
 use tokio::{
-  sync::{broadcast, Mutex},
+  sync::{broadcast, RwLock},
   task,
 };
 use tracing::info;
 
-use crate::{cli::OutputMonitorsArgs, config::MonitorSelection};
+use crate::config::MonitorSelection;
 
 pub struct MonitorState {
-  /// Handle to the Tauri application.
-  app_handle: AppHandle,
-
   _change_rx: broadcast::Receiver<Vec<Monitor>>,
 
   pub change_tx: broadcast::Sender<Vec<Monitor>>,
 
   /// Available monitors sorted from left-to-right and top-to-bottom.
-  monitors: Arc<Mutex<Vec<Monitor>>>,
+  monitors: Arc<RwLock<Vec<Monitor>>>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Monitor {
   pub name: Option<String>,
   pub is_primary: bool,
@@ -30,7 +28,7 @@ pub struct Monitor {
   pub y: i32,
   pub width: u32,
   pub height: u32,
-  pub scale_factor: f64,
+  pub scale_factor: f32,
 }
 
 impl MonitorState {
@@ -39,7 +37,7 @@ impl MonitorState {
     let (change_tx, _change_rx) = broadcast::channel(16);
 
     let monitors =
-      Arc::new(Mutex::new(Self::available_monitors(app_handle)));
+      Arc::new(RwLock::new(Self::available_monitors(app_handle)));
 
     Self::listen_changes(
       app_handle.clone(),
@@ -48,7 +46,6 @@ impl MonitorState {
     );
 
     Self {
-      app_handle: app_handle.clone(),
       monitors,
       _change_rx,
       change_tx,
@@ -61,21 +58,29 @@ impl MonitorState {
   /// monitor disconnections. Does not update on working area changes.
   fn listen_changes(
     app_handle: AppHandle,
-    monitors: Arc<Mutex<Vec<Monitor>>>,
+    monitors: Arc<RwLock<Vec<Monitor>>>,
     change_tx: broadcast::Sender<Vec<Monitor>>,
   ) {
     task::spawn(async move {
+      let mut interval = tokio::time::interval(Duration::from_secs(4));
+
+      interval
+        .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
       loop {
+        interval.tick().await;
         let new_monitors = Self::available_monitors(&app_handle);
-        let mut monitors = monitors.lock().await;
 
-        if *monitors != new_monitors {
+        let should_update = {
+          let current_monitors = monitors.read().await;
+          *current_monitors != new_monitors
+        };
+
+        if should_update {
           info!("Detected change in monitors.");
-          let _ = change_tx.send(new_monitors.clone());
-          *monitors = new_monitors;
+          *monitors.write().await = new_monitors.clone();
+          let _ = change_tx.send(new_monitors);
         }
-
-        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
       }
     });
   }
@@ -102,7 +107,7 @@ impl MonitorState {
             y: monitor.position().y,
             width: monitor.size().width,
             height: monitor.size().height,
-            scale_factor: monitor.scale_factor(),
+            scale_factor: monitor.scale_factor() as f32,
           })
           .collect()
       })
@@ -121,34 +126,11 @@ impl MonitorState {
   }
 
   /// Returns a string representation of the monitors.
-  pub fn output_str(
-    &self,
-    args: OutputMonitorsArgs,
-  ) -> anyhow::Result<String> {
-    let monitors = self.monitors.try_lock()?;
+  pub fn output_str(&self) -> anyhow::Result<String> {
+    let monitors = self.monitors.try_read()?;
 
-    if monitors.len() == 0 {
-      bail!("No monitors found")
-    }
-
-    let mut monitors_str = String::new();
-
-    for monitor in monitors.iter() {
-      monitors_str += &format!(
-      "MONITOR_NAME=\"{}\" MONITOR_X=\"{}\" MONITOR_Y=\"{}\" MONITOR_WIDTH=\"{}\" MONITOR_HEIGHT=\"{}\" MONITOR_SCALE_FACTOR=\"{}\"",
-      monitor.name.clone().unwrap_or("".into()),
-      monitor.x,
-      monitor.y,
-      monitor.width,
-      monitor.height,
-      monitor.scale_factor
-    );
-
-      monitors_str += match args.print0 {
-        true => "\0",
-        false => "\n",
-      };
-    }
+    let monitors_str =
+      serde_json::to_string::<Vec<Monitor>>(monitors.as_ref())?;
 
     Ok(monitors_str)
   }
@@ -157,7 +139,7 @@ impl MonitorState {
     &self,
     monitor_selection: &MonitorSelection,
   ) -> Vec<Monitor> {
-    let monitors = self.monitors.lock().await.clone();
+    let monitors = self.monitors.read().await.clone();
 
     match monitor_selection {
       MonitorSelection::All => monitors,

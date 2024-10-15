@@ -38,7 +38,7 @@ impl IpProvider {
     self.config.refresh_interval
   }
 
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+  pub async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
     let res = self
       .http_client
       .get("https://ipinfo.io/json")

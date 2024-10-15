@@ -49,6 +49,7 @@ JS package for communicating with the Tauri backend. Published to npm as [`zebar
 
    1. Add a new provider under [`client-api/src/providers/<YOUR_PROVIDER>`](https://github.com/glzr-io/zebar/tree/main/packages/client-api/src/providers).
    2. Modify [`create-provider.ts`](https://github.com/glzr-io/zebar/blob/main/packages/client-api/src/providers/create-provider.ts) to add the new provider to the `ProviderConfigMap` and `ProviderMap` types, and to create the provider in the switch statement within `createProvider`.
+   3. Export the provider's types from [`client-api/src/providers/index.ts`](https://github.com/glzr-io/zebar/blob/main/packages/client-api/src/providers/index.ts).
 
 2. **Add the backend logic for the provider.**
 

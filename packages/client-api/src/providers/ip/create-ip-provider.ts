@@ -1,38 +1,19 @@
 import { z } from 'zod';
 
-import {
-  createBaseProvider,
-  type Provider,
-} from '../create-base-provider';
+import { createBaseProvider } from '../create-base-provider';
 import { onProviderEmit } from '~/desktop';
-
-export interface IpProviderConfig {
-  type: 'ip';
-
-  /**
-   * How often this provider refreshes in milliseconds.
-   */
-  refreshInterval?: number;
-}
+import type {
+  IpOutput,
+  IpProvider,
+  IpProviderConfig,
+} from './ip-provider-types';
 
 const ipProviderConfigSchema = z.object({
   type: z.literal('ip'),
   refreshInterval: z.coerce.number().default(60 * 60 * 1000),
 });
 
-export type IpProvider = Provider<IpProviderConfig, IpOutput>;
-
-export interface IpOutput {
-  address: string;
-  approxCity: string;
-  approxCountry: string;
-  approxLatitude: number;
-  approxLongitude: number;
-}
-
-export async function createIpProvider(
-  config: IpProviderConfig,
-): Promise<IpProvider> {
+export function createIpProvider(config: IpProviderConfig): IpProvider {
   const mergedConfig = ipProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {

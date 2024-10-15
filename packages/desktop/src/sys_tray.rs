@@ -13,7 +13,7 @@ use tracing::{error, info};
 use crate::{
   common::PathExt,
   config::Config,
-  window_factory::{WindowFactory, WindowState},
+  widget_factory::{WidgetFactory, WidgetState},
 };
 
 #[derive(Debug, Clone)]
@@ -21,8 +21,8 @@ enum MenuEvent {
   ShowConfigFolder,
   ReloadConfigs,
   Exit,
-  ToggleWindowConfig { enable: bool, path: PathBuf },
-  ToggleStartupWindowConfig { enable: bool, path: PathBuf },
+  ToggleWidgetConfig { enable: bool, path: PathBuf },
+  ToggleStartupWidgetConfig { enable: bool, path: PathBuf },
 }
 
 impl ToString for MenuEvent {
@@ -31,16 +31,16 @@ impl ToString for MenuEvent {
       MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
       MenuEvent::ReloadConfigs => "reload_configs".to_string(),
       MenuEvent::Exit => "exit".to_string(),
-      MenuEvent::ToggleWindowConfig { enable, path } => {
+      MenuEvent::ToggleWidgetConfig { enable, path } => {
         format!(
-          "toggle_window_config_{}_{}",
+          "toggle_widget_config_{}_{}",
           enable,
           path.to_unicode_string()
         )
       }
-      MenuEvent::ToggleStartupWindowConfig { enable, path } => {
+      MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
         format!(
-          "toggle_startup_window_config_{}_{}",
+          "toggle_startup_widget_config_{}_{}",
           enable,
           path.to_unicode_string()
         )
@@ -59,14 +59,14 @@ impl FromStr for MenuEvent {
       ["show", "config", "folder"] => Ok(Self::ShowConfigFolder),
       ["reload", "configs"] => Ok(Self::ReloadConfigs),
       ["exit"] => Ok(Self::Exit),
-      ["toggle", "window", "config", enable @ ("true" | "false"), path @ ..] => {
-        Ok(Self::ToggleWindowConfig {
+      ["toggle", "widget", "config", enable @ ("true" | "false"), path @ ..] => {
+        Ok(Self::ToggleWidgetConfig {
           enable: *enable == "true",
           path: PathBuf::from(path.join("_")),
         })
       }
-      ["toggle", "startup", "window", "config", enable @ ("true" | "false"), path @ ..] => {
-        Ok(Self::ToggleStartupWindowConfig {
+      ["toggle", "startup", "widget", "config", enable @ ("true" | "false"), path @ ..] => {
+        Ok(Self::ToggleStartupWidgetConfig {
           enable: *enable == "true",
           path: PathBuf::from(path.join("_")),
         })
@@ -80,7 +80,7 @@ impl FromStr for MenuEvent {
 pub struct SysTray {
   app_handle: AppHandle,
   config: Arc<Config>,
-  window_factory: Arc<WindowFactory>,
+  widget_factory: Arc<WidgetFactory>,
   tray_icon: Option<TrayIcon>,
 }
 
@@ -89,12 +89,12 @@ impl SysTray {
   pub async fn new(
     app_handle: &AppHandle,
     config: Arc<Config>,
-    window_factory: Arc<WindowFactory>,
+    widget_factory: Arc<WidgetFactory>,
   ) -> anyhow::Result<Arc<SysTray>> {
     let mut sys_tray = Self {
       app_handle: app_handle.clone(),
       config,
-      window_factory,
+      widget_factory,
       tray_icon: None,
     };
 
@@ -105,7 +105,7 @@ impl SysTray {
 
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {
     let config = self.config.clone();
-    let window_factory = self.window_factory.clone();
+    let widget_factory = self.widget_factory.clone();
     let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
 
     let tray_icon = TrayIconBuilder::with_id("tray")
@@ -115,7 +115,7 @@ impl SysTray {
       .on_menu_event(move |app, event| {
         let app_handle = app.clone();
         let config = config.clone();
-        let window_factory = window_factory.clone();
+        let widget_factory = widget_factory.clone();
 
         task::spawn(async move {
           let event = MenuEvent::from_str(event.id.as_ref());
@@ -127,7 +127,7 @@ impl SysTray {
               event,
               app_handle,
               config,
-              window_factory,
+              widget_factory,
             )
             .await;
 
@@ -164,18 +164,18 @@ impl SysTray {
 
   /// Creates and returns the main system tray menu.
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
-    let window_states = self.window_factory.states_by_config_path().await;
+    let widget_states = self.widget_factory.states_by_config_path().await;
 
     let startup_config_paths = self
       .config
-      .startup_window_configs()
+      .startup_widget_configs()
       .await?
       .into_iter()
       .map(|entry| entry.config_path)
       .collect();
 
     let configs_menu = self
-      .create_configs_menu(&window_states, &startup_config_paths)
+      .create_configs_menu(&widget_states, &startup_config_paths)
       .await?;
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
@@ -184,9 +184,9 @@ impl SysTray {
       .text(MenuEvent::ReloadConfigs, "Reload configs")
       .separator();
 
-    // Add submenus for currently active windows.
-    if !window_states.is_empty() {
-      for (config_path, states) in window_states {
+    // Add submenus for currently active widget.
+    if !widget_states.is_empty() {
+      for (config_path, states) in widget_states {
         let label = format!(
           "({}) {}",
           states.len(),
@@ -214,7 +214,7 @@ impl SysTray {
     event: MenuEvent,
     app_handle: AppHandle,
     config: Arc<Config>,
-    window_factory: Arc<WindowFactory>,
+    widget_factory: Arc<WidgetFactory>,
   ) -> anyhow::Result<()> {
     match event {
       MenuEvent::ShowConfigFolder => {
@@ -236,28 +236,28 @@ impl SysTray {
 
         Ok(())
       }
-      MenuEvent::ToggleWindowConfig { enable, path } => {
+      MenuEvent::ToggleWidgetConfig { enable, path } => {
         info!(
-          "Window config '{}' to be enabled: {}",
+          "Widget config '{}' to be enabled: {}",
           path.display(),
           enable
         );
 
         match enable {
           true => {
-            let window_config = config
-              .window_config_by_path(&path)
+            let widget_config = config
+              .widget_config_by_path(&path)
               .await?
-              .context("Window config not found.")?;
+              .context("Widget config not found.")?;
 
-            window_factory.open(window_config).await
+            widget_factory.open(widget_config).await
           }
-          false => window_factory.close_by_path(&path).await,
+          false => widget_factory.stop_by_path(&path).await,
         }
       }
-      MenuEvent::ToggleStartupWindowConfig { enable, path } => {
+      MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
         info!(
-          "Window config '{}' to be launched on startup: {}",
+          "Widget config '{}' to be launched on startup: {}",
           path.display(),
           enable
         );
@@ -270,25 +270,25 @@ impl SysTray {
     }
   }
 
-  /// Creates and returns a submenu for the window configs.
+  /// Creates and returns a submenu for the widget configs.
   async fn create_configs_menu(
     &self,
-    window_states: &HashMap<PathBuf, Vec<WindowState>>,
+    widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
     startup_config_paths: &Vec<PathBuf>,
   ) -> anyhow::Result<Submenu<Wry>> {
     let mut configs_menu =
-      SubmenuBuilder::new(&self.app_handle, "Window configs");
+      SubmenuBuilder::new(&self.app_handle, "Widget configs");
 
-    // Add each window config to the menu.
-    for window_config in &self.config.window_configs().await {
+    // Add each widget config to the menu.
+    for widget_config in &self.config.widget_configs().await {
       let label =
-        Self::format_config_path(&self.config, &window_config.config_path);
+        Self::format_config_path(&self.config, &widget_config.config_path);
 
       let menu_item = self.create_config_menu(
-        &window_config.config_path,
+        &widget_config.config_path,
         &label,
-        window_states.contains_key(&window_config.config_path),
-        startup_config_paths.contains(&window_config.config_path),
+        widget_states.contains_key(&widget_config.config_path),
+        startup_config_paths.contains(&widget_config.config_path),
       )?;
 
       configs_menu = configs_menu.item(&menu_item);
@@ -297,7 +297,7 @@ impl SysTray {
     Ok(configs_menu.build()?)
   }
 
-  /// Creates and returns a submenu for the given window config.
+  /// Creates and returns a submenu for the given widget config.
   fn create_config_menu(
     &self,
     config_path: &PathBuf,
@@ -307,7 +307,7 @@ impl SysTray {
   ) -> anyhow::Result<Submenu<Wry>> {
     let enabled_item = CheckMenuItem::with_id(
       &self.app_handle,
-      MenuEvent::ToggleWindowConfig {
+      MenuEvent::ToggleWidgetConfig {
         enable: !is_enabled,
         path: config_path.clone(),
       },
@@ -319,7 +319,7 @@ impl SysTray {
 
     let startup_item = CheckMenuItem::with_id(
       &self.app_handle,
-      MenuEvent::ToggleStartupWindowConfig {
+      MenuEvent::ToggleStartupWidgetConfig {
         enable: !is_launched_on_startup,
         path: config_path.clone(),
       },

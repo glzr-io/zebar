@@ -15,14 +15,14 @@ importers:
         specifier: 3.2.5
         version: 3.2.5
 
-  examples/boilerplates/solid-ts:
+  examples/boilerplate-solid-ts:
     dependencies:
       solid-js:
         specifier: 1.8.11
         version: 1.8.11
       zebar:
         specifier: ^2.0.0
-        version: link:../../../packages/client-api
+        version: link:../../packages/client-api
     devDependencies:
       typescript:
         specifier: 5.3.3
@@ -46,8 +46,8 @@ importers:
         specifier: 2.0.0-rc.1
         version: 2.0.0-rc.1
       glazewm:
-        specifier: 1.5.2
-        version: 1.5.2
+        specifier: 1.6.0
+        version: 1.6.0
       luxon:
         specifier: 3.4.4
         version: 3.4.4
@@ -955,8 +955,8 @@ packages:
   git-hooks-list@3.1.0:
     resolution: {integrity: sha512-LF8VeHeR7v+wAbXqfgRlTSX/1BJR9Q1vEMR8JAz1cEg6GX07+zyj3sAdDvYjj/xnlIfVuGgj4qBei1K3hKH+PA==}
 
-  glazewm@1.5.2:
-    resolution: {integrity: sha512-qkh0dKtVRWM3pRCn6uaHpAiQ+qJJI5/aePNqBVUnCD/2aqRX5Dc2V3JB0bPhYhPZPr+lgodfiz/MusgpYYMRZA==}
+  glazewm@1.6.0:
+    resolution: {integrity: sha512-JHDuL0Fda9NQVm0mJap8XsBNAatWhAOJj6HBy7nzrXvj4wUkKdbytI0LLGDUm/aLOYeT+XqdLJpH7HImggr5ig==}
     engines: {node: '>=12'}
     peerDependencies:
       ws: '*'
@@ -2323,7 +2323,7 @@ snapshots:
 
   git-hooks-list@3.1.0: {}
 
-  glazewm@1.5.2:
+  glazewm@1.6.0:
     dependencies:
       tslib: 2.6.1
 

@@ -13,12 +13,12 @@ use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
-  cli::{Cli, CliCommand, OutputMonitorsArgs},
+  cli::{Cli, CliCommand, QueryArgs},
   config::Config,
   monitor_state::MonitorState,
   providers::ProviderManager,
   sys_tray::SysTray,
-  window_factory::WindowFactory,
+  widget_factory::WidgetFactory,
 };
 
 mod cli;
@@ -28,7 +28,7 @@ mod config;
 mod monitor_state;
 mod providers;
 mod sys_tray;
-mod window_factory;
+mod widget_factory;
 
 /// Main entry point for the application.
 ///
@@ -48,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
   let cli = Cli::parse();
 
   match cli.command() {
-    CliCommand::Monitors(args) => output_monitors(args),
+    CliCommand::Query(args) => output_query(args),
     _ => {
       let start_res = start_app(cli);
 
@@ -64,18 +64,24 @@ async fn main() -> anyhow::Result<()> {
   }
 }
 
-/// Prints available monitors to console.
-fn output_monitors(args: OutputMonitorsArgs) -> anyhow::Result<()> {
-  let _ = tauri::Builder::default().setup(|app| {
-    let monitors = MonitorState::new(app.handle());
-    cli::print_and_exit(monitors.output_str(args));
-    Ok(())
-  });
+/// Query state and print to the console.
+fn output_query(args: QueryArgs) -> anyhow::Result<()> {
+  match args {
+    QueryArgs::Monitors => {
+      tauri::Builder::default()
+        .setup(|app| {
+          let monitors = MonitorState::new(app.handle());
+          cli::print_and_exit(monitors.output_str());
+          Ok(())
+        })
+        .run(tauri::generate_context!())?;
 
-  Ok(())
+      Ok(())
+    }
+  }
 }
 
-/// Starts Zebar - either with a specific window or all windows.
+/// Starts Zebar - either with a specific widget or all widgets.
 fn start_app(cli: Cli) -> anyhow::Result<()> {
   tracing_subscriber::fmt()
     .with_env_filter(
@@ -91,8 +97,8 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
       task::block_in_place(|| {
         block_on(async move {
           let config_dir_override = match cli.command() {
-            CliCommand::Open(args) => args.config_dir,
-            CliCommand::OpenAll(args) => args.config_dir,
+            CliCommand::OpenWidgetDefault(args) => args.config_dir,
+            CliCommand::Startup(args) => args.config_dir,
             _ => None,
           };
 
@@ -105,13 +111,13 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           let monitor_state = Arc::new(MonitorState::new(app.handle()));
           app.manage(monitor_state.clone());
 
-          // Initialize `WindowFactory` in Tauri state.
-          let window_factory = Arc::new(WindowFactory::new(
+          // Initialize `WidgetFactory` in Tauri state.
+          let widget_factory = Arc::new(WidgetFactory::new(
             app.handle(),
             config.clone(),
             monitor_state.clone(),
           ));
-          app.manage(window_factory.clone());
+          app.manage(widget_factory.clone());
 
           // If this is not the first instance of the app, this will emit
           // within the original instance and exit immediately. The CLI
@@ -119,7 +125,7 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           setup_single_instance(
             app,
             config.clone(),
-            window_factory.clone(),
+            widget_factory.clone(),
           )?;
 
           // Prevent windows from showing up in the dock on MacOS.
@@ -139,11 +145,11 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           let manager = Arc::new(ProviderManager::new(app.handle()));
           app.manage(manager);
 
-          // Open windows based on CLI command.
-          open_windows_by_cli_command(
+          // Open widgets based on CLI command.
+          open_widgets_by_cli_command(
             cli,
             config.clone(),
-            window_factory.clone(),
+            widget_factory.clone(),
           )
           .await?;
 
@@ -151,19 +157,18 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
           let tray = SysTray::new(
             app.handle(),
             config.clone(),
-            window_factory.clone(),
+            widget_factory.clone(),
           )
           .await?;
 
-          listen_events(config, monitor_state, window_factory, tray);
+          listen_events(config, monitor_state, widget_factory, tray);
 
           Ok(())
         })
       })
     })
     .invoke_handler(tauri::generate_handler![
-      commands::get_window_state,
-      commands::open_window,
+      commands::open_widget_default,
       commands::listen_provider,
       commands::unlisten_provider,
       commands::set_always_on_top,
@@ -186,25 +191,25 @@ fn start_app(cli: Cli) -> anyhow::Result<()> {
 fn listen_events(
   config: Arc<Config>,
   monitor_state: Arc<MonitorState>,
-  window_factory: Arc<WindowFactory>,
+  widget_factory: Arc<WidgetFactory>,
   tray: Arc<SysTray>,
 ) {
-  let mut window_open_rx = window_factory.open_tx.subscribe();
-  let mut window_close_rx = window_factory.close_tx.subscribe();
+  let mut widget_open_rx = widget_factory.open_tx.subscribe();
+  let mut widget_close_rx = widget_factory.close_tx.subscribe();
   let mut settings_change_rx = config.settings_change_tx.subscribe();
   let mut monitors_change_rx = monitor_state.change_tx.subscribe();
-  let mut window_configs_change_rx =
-    config.window_configs_change_tx.subscribe();
+  let mut widget_configs_change_rx =
+    config.widget_configs_change_tx.subscribe();
 
   task::spawn(async move {
     loop {
       let res = tokio::select! {
-        Ok(_) = window_open_rx.recv() => {
-          info!("Window opened.");
+        Ok(_) = widget_open_rx.recv() => {
+          info!("Widget opened.");
           tray.refresh().await
         },
-        Ok(_) = window_close_rx.recv() => {
-          info!("Window closed.");
+        Ok(_) = widget_close_rx.recv() => {
+          info!("Widget closed.");
           tray.refresh().await
         },
         Ok(_) = settings_change_rx.recv() => {
@@ -213,11 +218,11 @@ fn listen_events(
         },
         Ok(_) = monitors_change_rx.recv() => {
           info!("Monitors changed.");
-          window_factory.relaunch_all().await
+          widget_factory.relaunch_all().await
         },
-        Ok(_) = window_configs_change_rx.recv() => {
-          info!("Window configs changed.");
-          window_factory.relaunch_all().await
+        Ok(_) = widget_configs_change_rx.recv() => {
+          info!("Widget configs changed.");
+          widget_factory.relaunch_all().await
         },
       };
 
@@ -232,19 +237,19 @@ fn listen_events(
 fn setup_single_instance(
   app: &tauri::App,
   config: Arc<Config>,
-  window_factory: Arc<WindowFactory>,
+  widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
   app.handle().plugin(tauri_plugin_single_instance::init(
     move |_, args, _| {
       let config = config.clone();
-      let window_factory = window_factory.clone();
+      let widget_factory = widget_factory.clone();
 
       task::spawn(async move {
         let res = match Cli::try_parse_from(args) {
           Ok(cli) => {
             // No-op if no subcommand is provided.
             if cli.command() != CliCommand::Empty {
-              open_windows_by_cli_command(cli, config, window_factory)
+              open_widgets_by_cli_command(cli, config, widget_factory)
                 .await
             } else {
               Ok(())
@@ -263,31 +268,31 @@ fn setup_single_instance(
   Ok(())
 }
 
-/// Opens windows based on CLI command.
-async fn open_windows_by_cli_command(
+/// Opens widgets based on CLI command.
+async fn open_widgets_by_cli_command(
   cli: Cli,
   config: Arc<Config>,
-  window_factory: Arc<WindowFactory>,
+  widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
-  let window_configs = match cli.command() {
-    CliCommand::Open(args) => {
-      let window_config = config
-        .window_config_by_path(&config.join_config_dir(&args.config_path))
+  let widget_configs = match cli.command() {
+    CliCommand::OpenWidgetDefault(args) => {
+      let widget_config = config
+        .widget_config_by_path(&config.join_config_dir(&args.config_path))
         .await?
         .with_context(|| {
           format!(
-            "Window config not found at {}.",
+            "Widget config not found at {}.",
             args.config_path.display()
           )
         })?;
 
-      vec![window_config]
+      vec![widget_config]
     }
-    _ => config.startup_window_configs().await?,
+    _ => config.startup_widget_configs().await?,
   };
 
-  for window_config in window_configs {
-    if let Err(err) = window_factory.open(window_config).await {
+  for widget_config in widget_configs {
+    if let Err(err) = widget_factory.open(widget_config).await {
       error!("Failed to open window: {:?}", err);
     }
   }

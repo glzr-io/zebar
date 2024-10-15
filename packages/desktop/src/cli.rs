@@ -19,33 +19,36 @@ impl Cli {
 
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum CliCommand {
-  /// Open a window by its config path.
+  /// Opens a widget by its config path. Uses its default placements.
   ///
   /// Config path is relative within the Zebar config directory (e.g.
-  /// `zebar open ./material/config.yaml`).
+  /// `zebar open-widget-default ./material/config.yaml`).
   ///
   /// Starts Zebar if it is not already running.
-  Open(OpenWindowArgs),
+  OpenWidgetDefault(OpenWidgetDefaultArgs),
 
-  /// Open all default windows.
+  /// Opens all widgets that are set to launch on startup.
   ///
   /// Starts Zebar if it is not already running.
-  OpenAll(OpenAllWindowsArgs),
+  Startup(StartupArgs),
 
-  /// Output available monitors.
-  Monitors(OutputMonitorsArgs),
+  /// Retrieves and outputs a specific part of the state.
+  ///
+  /// Requires an already running instance of Zebar.
+  #[clap(subcommand)]
+  Query(QueryArgs),
 
   /// Used when Zebar is launched with no arguments.
   ///
   /// If Zebar is already running, this command will no-op, otherwise it
-  /// will start Zebar and open all default windows.
+  /// will behave as `CliCommand::Startup`.
   #[clap(hide = true)]
   Empty,
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]
-pub struct OpenWindowArgs {
-  /// Relative file path to window config within the Zebar config
+pub struct OpenWidgetDefaultArgs {
+  /// Relative file path to widget config within the Zebar config
   /// directory.
   pub config_path: PathBuf,
 
@@ -57,7 +60,7 @@ pub struct OpenWindowArgs {
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]
-pub struct OpenAllWindowsArgs {
+pub struct StartupArgs {
   /// Absolute or relative path to the Zebar config directory.
   ///
   /// The default path is `%userprofile%/.glzr/zebar/`
@@ -65,14 +68,10 @@ pub struct OpenAllWindowsArgs {
   pub config_dir: Option<PathBuf>,
 }
 
-#[derive(Args, Clone, Debug, PartialEq)]
-pub struct OutputMonitorsArgs {
-  /// Use ASCII NUL character (character code 0) instead of newlines
-  /// for delimiting monitors.
-  ///
-  /// Useful for piping to `xargs -0`.
-  #[clap(short, long)]
-  pub print0: bool,
+#[derive(Clone, Debug, Parser, PartialEq)]
+pub enum QueryArgs {
+  /// Outputs available monitors.
+  Monitors,
 }
 
 /// Prints to stdout/stderror and exits the process.

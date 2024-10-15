@@ -1,4 +1,3 @@
-import type { ZebarContext } from '~/zebar-context.model';
 import {
   createProvider,
   type ProviderConfig,
@@ -80,11 +79,13 @@ export type ProviderGroup<T extends ProviderGroupConfig> = {
 };
 
 /**
- * Docs {@link ZebarContext.createProviderGroup}
+ * Creates multiple providers at once. A provider is a collection of
+ * functions and variables that can change over time. Alternatively, a
+ * single provider can be created using {@link createProvider}.
  */
-export async function createProviderGroup<T extends ProviderGroupConfig>(
+export function createProviderGroup<T extends ProviderGroupConfig>(
   configMap: T,
-): Promise<ProviderGroup<T>> {
+): ProviderGroup<T> {
   const outputListeners = new Set<
     (outputMap: ProviderGroup<T>['outputMap']) => void
   >();
@@ -93,15 +94,17 @@ export async function createProviderGroup<T extends ProviderGroupConfig>(
     (errorMap: ProviderGroup<T>['errorMap']) => void
   >();
 
-  const providerMap = await createProviderMap(configMap);
+  const providerMap = createProviderMap(configMap);
 
-  let outputMap = {} as ProviderGroup<T>['outputMap'];
-  let errorMap = {} as ProviderGroup<T>['errorMap'];
+  let outputMap = Object.fromEntries(
+    Object.keys(providerMap).map(name => [name, null]),
+  ) as ProviderGroup<T>['outputMap'];
+
+  let errorMap = Object.fromEntries(
+    Object.keys(providerMap).map(name => [name, null]),
+  ) as ProviderGroup<T>['errorMap'];
 
   for (const [name, provider] of Object.entries(providerMap)) {
-    outputMap = { ...outputMap, [name]: provider.output };
-    errorMap = { ...errorMap, [name]: provider.error };
-
     provider.onOutput(() => {
       outputMap = { ...outputMap, [name]: provider.output };
       errorMap = { ...errorMap, [name]: null };
@@ -149,14 +152,14 @@ export async function createProviderGroup<T extends ProviderGroupConfig>(
   };
 }
 
-async function createProviderMap<T extends ProviderGroupConfig>(
-  configMap: T,
-) {
-  const providerEntries = await Promise.all([
-    ...Object.entries(configMap).map(async ([key, value]) => {
-      return [key, await createProvider(value)] as const;
-    }),
-  ]);
-
-  return Object.fromEntries(providerEntries) as ProviderGroup<T>['raw'];
+/**
+ * Creates a map of names to provider instances.
+ */
+function createProviderMap<T extends ProviderGroupConfig>(configMap: T) {
+  return Object.fromEntries(
+    Object.entries(configMap).map(([name, config]) => [
+      name,
+      createProvider(config),
+    ]),
+  ) as ProviderGroup<T>['raw'];
 }
