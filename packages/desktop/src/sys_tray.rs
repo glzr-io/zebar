@@ -116,29 +116,6 @@ impl SysTray {
       .icon(self.icon_image()?)
       .menu(&self.create_tray_menu().await?)
       .tooltip(tooltip)
-      .menu_on_left_click(false)
-      .on_tray_icon_event({
-        let app_handle = self.app_handle.clone();
-        let config = self.config.clone();
-        let widget_factory = self.widget_factory.clone();
-
-        // Show the settings window on left click.
-        move |_, event| {
-          if let TrayIconEvent::Click {
-            button: MouseButton::Left,
-            button_state: MouseButtonState::Down,
-            ..
-          } = event
-          {
-            Self::handle_menu_event(
-              MenuEvent::OpenSettings,
-              app_handle.clone(),
-              config.clone(),
-              widget_factory.clone(),
-            );
-          }
-        }
-      })
       .on_menu_event({
         let config = self.config.clone();
         let widget_factory = self.widget_factory.clone();
@@ -153,10 +130,36 @@ impl SysTray {
             );
           }
         }
-      })
-      .build(&self.app_handle)?;
+      });
 
-    Ok(tray_icon)
+    // Show the settings window on left click (Windows-only).
+    #[cfg(windows)]
+    {
+      let tray_icon =
+        tray_icon.menu_on_left_click(false).on_tray_icon_event({
+          let app_handle = self.app_handle.clone();
+          let config = self.config.clone();
+          let widget_factory = self.widget_factory.clone();
+
+          move |_, event| {
+            if let TrayIconEvent::Click {
+              button: MouseButton::Left,
+              button_state: MouseButtonState::Down,
+              ..
+            } = event
+            {
+              Self::handle_menu_event(
+                MenuEvent::OpenSettings,
+                app_handle.clone(),
+                config.clone(),
+                widget_factory.clone(),
+              );
+            }
+          }
+        });
+    }
+
+    Ok(tray_icon.build(&self.app_handle)?)
   }
 
   pub async fn refresh(&self) -> anyhow::Result<()> {
