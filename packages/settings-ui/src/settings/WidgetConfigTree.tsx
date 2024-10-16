@@ -13,7 +13,7 @@ import { WidgetConfigEntry } from './WidgetSettings';
 
 export interface WidgetConfigTreeProps {
   configs: WidgetConfigEntry[];
-  onSelect: (entry: WidgetConfigEntry) => void;
+  onSelect: (configPath: string) => void;
 }
 
 export function WidgetConfigTree(props: WidgetConfigTreeProps) {

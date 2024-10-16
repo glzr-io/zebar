@@ -7,35 +7,24 @@ import {
   TextField,
   SelectField,
   SwitchField,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  cn,
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
-import { createMemo, createSignal, For } from 'solid-js';
+
 import { WidgetConfig } from './WidgetSettings';
+import { createEffect } from 'solid-js';
 
-export function WidgetSettingsForm() {
-  const settingsForm = createForm<WidgetConfig>({
-    htmlPath: '',
-    zOrder: 'normal',
-    shownInTaskbar: false,
-    focused: false,
-    resizable: true,
-    transparent: false,
-    backgroundColor: '#ffffff',
-    presets: [],
+export interface WidgetSettingsFormProps {
+  config: WidgetConfig;
+  onChange: (config: WidgetConfig) => void;
+}
+
+export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
+  const settingsForm = createForm<WidgetConfig>(props.config);
+
+  createEffect(() => {
+    console.log('change', settingsForm.value);
+    props.onChange(settingsForm.value);
   });
-
-  const presetNames = createMemo(() =>
-    settingsForm.value.presets.map(preset => preset.name),
-  );
-
-  const [selectedPreset, setSelectedPreset] = createSignal<string | null>(
-    null,
-  );
 
   function addNewPreset() {
     settingsForm.setValue('presets', presets => [
@@ -52,14 +41,6 @@ export function WidgetSettingsForm() {
         },
       },
     ]);
-
-    if (!selectedPreset()) {
-      setSelectedPreset(settingsForm.value.presets[0].name);
-    }
-  }
-
-  function openWidgetWithPreset() {
-    // TODO: Implement this.
   }
 
   return (
@@ -245,54 +226,6 @@ export function WidgetSettingsForm() {
           </Button>
         </CardContent>
       </Card>
-
-      <div class="flex items-center">
-        <Button
-          variant="outline"
-          class="rounded-r-none"
-          onClick={() => openWidgetWithPreset()}
-        >
-          {selectedPreset() ?? 'Select'}
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button
-              variant="outline"
-              class="rounded-l-none border-l-0 px-2"
-            >
-              <svg
-                class="size-3"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="m6 9l6 6l6-6"
-                />
-              </svg>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <For each={presetNames()}>
-              {presetName => (
-                <DropdownMenuItem
-                  onClick={() => setSelectedPreset(presetName)}
-                  class={cn({
-                    'bg-accent text-accent-foreground':
-                      presetName === selectedPreset(),
-                  })}
-                >
-                  {presetName}
-                </DropdownMenuItem>
-              )}
-            </For>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
     </div>
   );
 }
