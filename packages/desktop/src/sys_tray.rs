@@ -8,9 +8,9 @@ use tauri::{
     MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder,
     TrayIconEvent,
   },
-  AppHandle, WebviewUrl, WebviewWindowBuilder, Wry,
+  AppHandle, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Wry,
 };
-use tokio::task;
+use tokio::{sync::Mutex, task};
 use tracing::{error, info};
 
 use crate::{
@@ -88,6 +88,7 @@ pub struct SysTray {
   config: Arc<Config>,
   widget_factory: Arc<WidgetFactory>,
   tray_icon: Option<TrayIcon>,
+  settings_window: Arc<Mutex<Option<WebviewWindow>>>,
 }
 
 impl SysTray {
@@ -102,6 +103,7 @@ impl SysTray {
       config,
       widget_factory,
       tray_icon: None,
+      settings_window: Arc::new(Mutex::new(None)),
     };
 
     sys_tray.tray_icon = Some(sys_tray.create_tray_icon().await?);
@@ -118,6 +120,7 @@ impl SysTray {
       .tooltip(tooltip)
       .on_menu_event({
         let config = self.config.clone();
+        let settings_window = self.settings_window.clone();
         let widget_factory = self.widget_factory.clone();
 
         move |app_handle, event| {
@@ -125,6 +128,7 @@ impl SysTray {
             Self::handle_menu_event(
               menu_event,
               app_handle.clone(),
+              settings_window.clone(),
               config.clone(),
               widget_factory.clone(),
             );
@@ -151,6 +155,7 @@ impl SysTray {
               Self::handle_menu_event(
                 MenuEvent::OpenSettings,
                 app_handle.clone(),
+                settings_window.clone(),
                 config.clone(),
                 widget_factory.clone(),
               );
@@ -199,7 +204,7 @@ impl SysTray {
       .await?;
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
-      .text(MenuEvent::OpenSettings, "Settings")
+      .text(MenuEvent::OpenSettings, "Open settings")
       .item(&configs_menu)
       .text(MenuEvent::ShowConfigFolder, "Show config folder")
       .text(MenuEvent::ReloadConfigs, "Reload configs")
@@ -234,6 +239,7 @@ impl SysTray {
   fn handle_menu_event(
     event: MenuEvent,
     app_handle: AppHandle,
+    settings_window: Arc<Mutex<Option<WebviewWindow>>>,
     config: Arc<Config>,
     widget_factory: Arc<WidgetFactory>,
   ) {
@@ -245,7 +251,9 @@ impl SysTray {
           .open_config_dir()
           .context("Failed to open config folder."),
         MenuEvent::ReloadConfigs => config.reload().await,
-        MenuEvent::OpenSettings => Self::open_settings_window(&app_handle),
+        MenuEvent::OpenSettings => {
+          Self::open_settings_window(&app_handle, settings_window)
+        }
         MenuEvent::Exit => {
           app_handle.exit(0);
           Ok(())
@@ -265,17 +273,31 @@ impl SysTray {
     });
   }
 
-  fn open_settings_window(app_handle: &AppHandle) -> anyhow::Result<()> {
-    WebviewWindowBuilder::new(
-      app_handle,
-      "settings",
-      WebviewUrl::default(),
-    )
-    .title("Settings - Zebar")
-    .build()
-    .context("Failed to build settings window")?;
+  fn open_settings_window(
+    app_handle: &AppHandle,
+    settings_window: Arc<Mutex<Option<WebviewWindow>>>,
+  ) -> anyhow::Result<()> {
+    let mut settings_window = settings_window.try_lock()?;
 
-    Ok(())
+    match settings_window.as_ref() {
+      None => {
+        let window = WebviewWindowBuilder::new(
+          app_handle,
+          "settings",
+          WebviewUrl::default(),
+        )
+        .title("Settings - Zebar")
+        .focused(true)
+        .build()
+        .context("Failed to build the settings window.")?;
+
+        *settings_window = Some(window);
+        Ok(())
+      }
+      Some(window) => window
+        .set_focus()
+        .context("Failed to focus the settings window."),
+    }
   }
 
   async fn toggle_widget_config(
