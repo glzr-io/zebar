@@ -5,14 +5,14 @@ import {
   CollapsibleTrigger,
   IconChevronDown,
   IconFile,
-  IconFolder,
 } from '@glzr/components';
-import { createMemo, createSignal, For } from 'solid-js';
+import { createMemo, For } from 'solid-js';
 
 import { WidgetConfigEntry } from './WidgetSettings';
 
 export interface WidgetConfigTreeProps {
-  configs: WidgetConfigEntry[];
+  configEntries: WidgetConfigEntry[];
+  selectedEntry: WidgetConfigEntry | null;
   onSelect: (configPath: string) => void;
 }
 
@@ -20,17 +20,13 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
   const configTree = createMemo(() => {
     const tree: Record<string, WidgetConfigEntry[]> = {};
 
-    props.configs.forEach(config => {
+    props.configEntries.forEach(config => {
       const folder = config.configPath.split(/[/\\]/).at(-2);
       tree[folder] = [...(tree[folder] ?? []), config];
     });
 
     return tree;
   });
-
-  const [selectedFile, setSelectedFile] = createSignal<string | null>(
-    null,
-  );
 
   return (
     <div class="border p-4">
@@ -43,14 +39,16 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
                 <IconChevronDown class="h-3 w-3" />
                 <span>{folder}</span>
               </CollapsibleTrigger>
+
               <CollapsibleContent class="pl-4">
                 {configs.map(config => (
                   <div
                     class={cn(
                       'flex items-center space-x-2 py-1 rounded-md cursor-pointer',
-                      selectedFile() === config.configPath && 'bg-accent',
+                      props.selectedEntry?.configPath ===
+                        config.configPath && 'bg-accent',
                     )}
-                    onClick={() => setSelectedFile(config.configPath)}
+                    onClick={() => props.onSelect(config.configPath)}
                   >
                     <IconFile class="h-4 w-4" />
                     <span>{config.configPath.split(/[/\\]/).at(-1)}</span>
@@ -61,12 +59,6 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
           )}
         </For>
       </div>
-
-      {selectedFile && (
-        <div class="mt-4 p-2 bg-muted rounded-md">
-          Selected: {selectedFile()}
-        </div>
-      )}
     </div>
   );
 }

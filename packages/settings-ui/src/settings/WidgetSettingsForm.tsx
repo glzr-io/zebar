@@ -9,9 +9,9 @@ import {
   SwitchField,
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
+import { createEffect, on } from 'solid-js';
 
 import { WidgetConfig } from './WidgetSettings';
-import { createEffect } from 'solid-js';
 
 export interface WidgetSettingsFormProps {
   config: WidgetConfig;
@@ -20,6 +20,14 @@ export interface WidgetSettingsFormProps {
 
 export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
   const settingsForm = createForm<WidgetConfig>(props.config);
+
+  // Update the form on prop change.
+  createEffect(
+    on(
+      () => props.config,
+      config => settingsForm.setValue(config),
+    ),
+  );
 
   createEffect(() => {
     console.log('change', settingsForm.value);

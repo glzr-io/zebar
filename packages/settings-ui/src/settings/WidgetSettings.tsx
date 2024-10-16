@@ -9,10 +9,12 @@ import {
 } from '@glzr/components';
 import { invoke } from '@tauri-apps/api/core';
 import {
+  createEffect,
   createMemo,
   createResource,
   createSignal,
   For,
+  on,
   Show,
 } from 'solid-js';
 
@@ -67,9 +69,9 @@ export type WidgetPreset = {
 };
 
 export function WidgetSettings() {
-  const [widgetConfigs] = createResource(async () => {
+  const [configEntries] = createResource(async () => {
     const xx = await invoke<WidgetConfigEntry[]>('widget_configs');
-    console.log('widgetConfigs', xx);
+    console.log('widget_configs', xx);
     return xx;
   });
 
@@ -81,17 +83,29 @@ export function WidgetSettings() {
     null,
   );
 
+  const selectedConfigEntry = createMemo(() => {
+    const configPath = selectedConfigPath();
+    return (configEntries() ?? []).find(
+      entry => entry.configPath === configPath,
+    );
+  });
+
   const presetNames = createMemo(() =>
-    (widgetConfigs() ?? [])
-      .flatMap(entry => entry.config.presets)
-      .map(preset => preset.name),
+    (selectedConfigEntry()?.config.presets ?? []).map(
+      preset => preset.name,
+    ),
   );
 
-  const selectedConfig = createMemo(
-    () =>
-      (widgetConfigs() ?? []).find(
-        entry => entry.configPath === selectedConfigPath(),
-      )?.config,
+  // Initialize the selected preset when a config is selected.
+  createEffect(
+    on(
+      () => selectedConfigPath(),
+      () => {
+        if (selectedConfigEntry()) {
+          setSelectedPreset(selectedConfigEntry().config.presets[0]?.name);
+        }
+      },
+    ),
   );
 
   function onConfigChange(config: WidgetConfig) {
@@ -106,53 +120,61 @@ export function WidgetSettings() {
   return (
     <div class="grid grid-cols-[minmax(200px,_min(25%,_400px))_1fr]">
       <WidgetConfigTree
-        configs={widgetConfigs() ?? []}
+        configEntries={configEntries() ?? []}
+        selectedEntry={selectedConfigEntry()}
         onSelect={setSelectedConfigPath}
       />
 
-      <div>
-        <Show when={selectedConfig()}>
-          <WidgetSettingsForm
-            config={selectedConfig()}
-            onChange={onConfigChange}
-          />
-        </Show>
+      <Show
+        when={selectedConfigEntry()}
+        fallback={<p>No config selected.</p>}
+      >
+        {configEntry => (
+          <>
+            <WidgetSettingsForm
+              config={configEntry().config}
+              onChange={onConfigChange}
+            />
 
-        <div class="flex items-center">
-          <Button
-            variant="outline"
-            class="rounded-r-none"
-            onClick={() => openWidgetWithPreset()}
-          >
-            {selectedPreset() ?? 'Select'}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger>
+            <div class="flex items-center">
               <Button
                 variant="outline"
-                class="rounded-l-none border-l-0 px-2"
+                class="rounded-r-none"
+                onClick={() => openWidgetWithPreset()}
               >
-                <IconChevronDown class="size-3" />
+                {selectedPreset() ?? 'Select'}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <For each={presetNames()}>
-                {presetName => (
-                  <DropdownMenuItem
-                    onClick={() => setSelectedPreset(presetName)}
-                    class={cn({
-                      'bg-accent text-accent-foreground':
-                        presetName === selectedPreset(),
-                    })}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <Button
+                    variant="outline"
+                    class="rounded-l-none border-l-0 px-2"
                   >
-                    {presetName}
-                  </DropdownMenuItem>
-                )}
-              </For>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+                    <IconChevronDown class="size-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent>
+                  <For each={presetNames()}>
+                    {presetName => (
+                      <DropdownMenuItem
+                        onClick={() => setSelectedPreset(presetName)}
+                        class={cn({
+                          'bg-accent text-accent-foreground':
+                            presetName === selectedPreset(),
+                        })}
+                      >
+                        {presetName}
+                      </DropdownMenuItem>
+                    )}
+                  </For>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        )}
+      </Show>
     </div>
   );
 }
