@@ -36,68 +36,131 @@ pub struct MediaOutput {
 
 pub struct MediaProvider {
   _config: MediaProviderConfig,
-  session_manager:
-    Option<GlobalSystemMediaTransportControlsSessionManager>,
-  current_session: Option<GlobalSystemMediaTransportControlsSession>,
+  session_manager: GlobalSystemMediaTransportControlsSessionManager,
 }
 
 impl MediaProvider {
-  pub fn new(config: MediaProviderConfig) -> Result<MediaProvider> {
-    Ok(MediaProvider {
-      _config: config,
-      session_manager: None,
-      current_session: None,
-    })
-  }
-
-  fn bind_media_events(&mut self) -> Result<()> {
-    if let Ok(session_manager) =
-      GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?
+  pub fn new(config: MediaProviderConfig) -> MediaProvider {
+    let session_manager =
+      GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+        .expect("msg")
         .get()
-    {
-      self.session_manager = Some(session_manager);
-      self.current_session = self
-        .session_manager
-        .as_ref()
-        .unwrap()
-        .GetCurrentSession()
-        .ok();
+        .expect("msg");
+    println!("Session manager obtained.");
 
-      if let Some(current_session) = &self.current_session {
-        let media_properties_changed_handler = TypedEventHandler::new(
-          move |session: &Option<
-            GlobalSystemMediaTransportControlsSession,
-          >,
-                _| {
-            println!("Media properties changed event triggered.");
-            if let Some(session) = session {
-              if let Err(e) = Self::print_current_media_info(session) {
-                eprintln!("Failed to get media properties: {:?}", e);
-              }
-            } else {
-              println!("No session available on media properties change.");
-            }
-            Ok(())
-          },
-        );
-
-        if let Err(e) = current_session
-          .MediaPropertiesChanged(&media_properties_changed_handler)
-        {
-          eprintln!(
-            "Failed to attach media properties changed handler: {:?}",
-            e
-          );
-        } else {
-          println!("Media properties changed handler attached.");
-        }
+    // Initial check for the current session
+    if let Ok(current_session) = session_manager.GetCurrentSession() {
+      println!("Initial current session obtained.");
+      if let Err(e) =
+        MediaProvider::print_current_media_info(&current_session)
+      {
+        eprintln!("Failed to get media properties: {:?}", e);
       }
 
-      Ok(())
+      // Attach an event listener to the current session for media property
+      // changes
+      let media_properties_changed_handler = TypedEventHandler::new(
+        move |session: &Option<
+          GlobalSystemMediaTransportControlsSession,
+        >,
+              _| {
+          println!("Media properties changed event triggered.");
+          if let Some(session) = session {
+            if let Err(e) =
+              MediaProvider::print_current_media_info(session)
+            {
+              eprintln!("Failed to get media properties: {:?}", e);
+            }
+          } else {
+            println!("No session available on media properties change.");
+          }
+          Ok(())
+        },
+      );
+
+      if let Err(e) = current_session
+        .MediaPropertiesChanged(&media_properties_changed_handler)
+      {
+        eprintln!(
+          "Failed to attach media properties changed handler: {:?}",
+          e
+        );
+      } else {
+        println!("Media properties changed handler attached.");
+      }
     } else {
-      Err(anyhow::anyhow!(
-        "Failed to request media transport controls session manager"
-      ))
+      println!("No initial current session available.");
+    }
+
+    let session_changed_handler = TypedEventHandler::new(
+      |session_manager: &Option<
+        GlobalSystemMediaTransportControlsSessionManager,
+      >,
+       _| {
+        println!("Session changed event triggered.");
+        if let Some(session_manager) = session_manager {
+          if let Ok(current_session) = session_manager.GetCurrentSession()
+          {
+            println!("Current session obtained.");
+            if let Err(e) =
+              MediaProvider::print_current_media_info(&current_session)
+            {
+              eprintln!("Failed to get media properties: {:?}", e);
+            }
+
+            // Attach an event listener to the current session for media
+            // property changes
+            let media_properties_changed_handler = TypedEventHandler::new(
+              move |session: &Option<
+                GlobalSystemMediaTransportControlsSession,
+              >,
+                    _| {
+                println!("Media properties changed event triggered.");
+                if let Some(session) = session {
+                  if let Err(e) =
+                    MediaProvider::print_current_media_info(session)
+                  {
+                    eprintln!("Failed to get media properties: {:?}", e);
+                  }
+                } else {
+                  println!(
+                    "No session available on media properties change."
+                  );
+                }
+                Ok(())
+              },
+            );
+
+            if let Err(e) = current_session
+              .MediaPropertiesChanged(&media_properties_changed_handler)
+            {
+              eprintln!(
+                "Failed to attach media properties changed handler: {:?}",
+                e
+              );
+            } else {
+              println!("Media properties changed handler attached.");
+            }
+          } else {
+            println!("No current session available.");
+          }
+        } else {
+          println!("No session manager available.");
+        }
+        Ok(())
+      },
+    );
+
+    if let Err(e) =
+      session_manager.CurrentSessionChanged(&session_changed_handler)
+    {
+      eprintln!("Failed to attach session changed handler: {:?}", e);
+    } else {
+      println!("Event handler for session changes attached.");
+    }
+    MediaProvider {
+      _config: config,
+      session_manager,
     }
   }
 
@@ -116,9 +179,9 @@ impl MediaProvider {
 #[async_trait]
 impl Provider for MediaProvider {
   async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) = self.bind_media_events() {
-      // emit_result_tx.send(Err(err).into()).await;
-    }
+    // if let Err(err) = self.bind_media_events() {
+    // emit_result_tx.send(Err(err).into()).await;
+    // }
   }
 }
 

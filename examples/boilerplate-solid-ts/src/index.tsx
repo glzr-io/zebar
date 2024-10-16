@@ -9,6 +9,7 @@ const providers = zebar.createProviderGroup({
   battery: { type: 'battery' },
   memory: { type: 'memory' },
   weather: { type: 'weather' },
+  media: { type: 'media' },
 });
 
 render(() => <App />, document.getElementById('root')!);

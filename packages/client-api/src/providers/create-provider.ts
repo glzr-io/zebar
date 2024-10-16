@@ -59,6 +59,7 @@ export interface ProviderConfigMap {
   host: HostProviderConfig;
   ip: IpProviderConfig;
   komorebi: KomorebiProviderConfig;
+  // media: MediaProviderConfig;
   memory: MemoryProviderConfig;
   network: NetworkProviderConfig;
   weather: WeatherProviderConfig;
