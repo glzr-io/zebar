@@ -237,10 +237,10 @@ impl WidgetFactory {
   ) -> Vec<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     let mut placements = vec![];
 
-    for placement in config.default_placements.iter() {
+    for preset in config.presets.iter() {
       let monitors = self
         .monitor_state
-        .monitors_by_selection(&placement.monitor_selection)
+        .monitors_by_selection(&preset.monitor_selection)
         .await;
 
       for monitor in monitors {
@@ -251,17 +251,17 @@ impl WidgetFactory {
         // whereas percentage values are left as-is. This is
         // because the percentage values are already relative to
         // the monitor's size.
-        let window_width = placement
+        let window_width = preset
           .width
           .to_px_scaled(monitor_width, monitor.scale_factor);
 
-        let window_height = placement
+        let window_height = preset
           .height
           .to_px_scaled(monitor_height, monitor.scale_factor);
 
         let window_size = PhysicalSize::new(window_width, window_height);
 
-        let (anchor_x, anchor_y) = match placement.anchor {
+        let (anchor_x, anchor_y) = match preset.anchor {
           AnchorPoint::TopLeft => (monitor.x, monitor.y),
           AnchorPoint::TopCenter => (
             monitor.x + (monitor_width / 2) - (window_size.width / 2),
@@ -295,11 +295,11 @@ impl WidgetFactory {
           ),
         };
 
-        let offset_x = placement
+        let offset_x = preset
           .offset_x
           .to_px_scaled(monitor_width, monitor.scale_factor);
 
-        let offset_y = placement
+        let offset_y = preset
           .offset_y
           .to_px_scaled(monitor_height, monitor.scale_factor);
 

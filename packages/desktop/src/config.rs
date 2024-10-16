@@ -51,8 +51,8 @@ pub struct WidgetConfig {
   pub transparent: bool,
 
   /// Where to place the widget.
-  /// TODO: Rename to `presets`.
-  pub default_placements: Vec<WidgetPlacement>,
+  #[serde(alias = "defaultPlacements")]
+  pub presets: Vec<WidgetPreset>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -65,7 +65,10 @@ pub enum ZOrder {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WidgetPlacement {
+pub struct WidgetPreset {
+  #[serde(default = "default_preset_name")]
+  pub name: String,
+
   /// Anchor-point of the widget.
   pub anchor: AnchorPoint,
 
@@ -545,4 +548,10 @@ fn is_app_installed(app_name: &str) -> bool {
       .map(|output| output.status.success())
       .unwrap_or(false)
   }
+}
+
+/// Helper function for setting the default value for a
+/// `WidgetPreset::name` field.
+fn default_preset_name() -> String {
+  "default".into()
 }
