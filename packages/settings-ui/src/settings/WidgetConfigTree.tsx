@@ -29,7 +29,7 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
   });
 
   return (
-    <div class="border p-4">
+    <div class="border-r p-4 h-full">
       <h2 class="text-lg font-semibold mb-2">Widget configs</h2>
       <div class="space-y-1">
         <For each={Object.entries(configTree())}>

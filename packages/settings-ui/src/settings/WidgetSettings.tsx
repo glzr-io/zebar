@@ -118,7 +118,7 @@ export function WidgetSettings() {
   }
 
   return (
-    <div class="grid grid-cols-[minmax(200px,_min(25%,_400px))_1fr]">
+    <div class="grid grid-cols-[minmax(200px,_min(25%,_400px))_1fr] h-full">
       <WidgetConfigTree
         configEntries={configEntries() ?? []}
         selectedEntry={selectedConfigEntry()}
