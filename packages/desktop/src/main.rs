@@ -76,6 +76,7 @@ async fn main() -> anyhow::Result<()> {
     .invoke_handler(tauri::generate_handler![
       commands::widget_configs,
       commands::open_widget_default,
+      commands::update_widget_config,
       commands::listen_provider,
       commands::unlisten_provider,
       commands::set_always_on_top,

@@ -4,7 +4,7 @@ use tauri::{State, Window};
 
 use crate::{
   common::WindowExt,
-  config::{Config, WidgetConfigEntry},
+  config::{Config, WidgetConfig, WidgetConfigEntry},
   providers::{ProviderConfig, ProviderManager},
   widget_factory::WidgetFactory,
 };
@@ -32,6 +32,18 @@ pub async fn open_widget_default(
 
   widget_factory
     .open(widget_config)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn update_widget_config(
+  config_path: String,
+  new_config: WidgetConfig,
+  config: State<'_, Arc<Config>>,
+) -> Result<(), String> {
+  config
+    .update_widget_config(&PathBuf::from(config_path), new_config)
     .await
     .map_err(|err| err.to_string())
 }

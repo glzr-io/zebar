@@ -415,6 +415,41 @@ impl Config {
     Ok(result)
   }
 
+  /// Updates the widget config at the given path.
+  ///
+  /// Config path must be absolute.
+  pub async fn update_widget_config(
+    &self,
+    config_path: &PathBuf,
+    new_config: WidgetConfig,
+  ) -> anyhow::Result<()> {
+    info!("Updating widget config at {}.", config_path.display());
+
+    {
+      let mut widget_configs = self.widget_configs.lock().await;
+
+      let config_entry = widget_configs
+        .iter_mut()
+        .find(|entry| entry.config_path == *config_path)
+        .context(format!(
+          "Widget config not found at {}.",
+          config_path.display()
+        ))?;
+
+      // Update the config in state.
+      config_entry.config = new_config.clone();
+
+      // TODO: Update HTML path.
+
+      self.widget_configs_change_tx.send(widget_configs.clone())?;
+    }
+
+    // Write the updated config to file.
+    fs::write(&config_path, serde_json::to_string_pretty(&new_config)?)?;
+
+    Ok(())
+  }
+
   /// Adds the given config to be launched on startup.
   ///
   /// Config path must be absolute.
