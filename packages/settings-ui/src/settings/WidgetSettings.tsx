@@ -108,9 +108,15 @@ export function WidgetSettings() {
     ),
   );
 
-  function onConfigChange(config: WidgetConfig) {
-    // TODO: Send the updated config to the backend.
+  async function onConfigChange(newConfig: WidgetConfig) {
     // TODO: Update the `widgetConfigs` resource.
+    // TODO: Debounce updates to be every 3s.
+    console.log('onConfigChange', newConfig);
+
+    await invoke<void>('update_widget_config', {
+      configPath: selectedConfigPath(),
+      newConfig,
+    });
   }
 
   function openWidgetWithPreset() {
