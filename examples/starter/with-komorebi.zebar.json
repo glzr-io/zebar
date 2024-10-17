@@ -6,8 +6,9 @@
   "focused": false,
   "resizable": false,
   "transparent": false,
-  "defaultPlacements": [
+  "presets": [
     {
+      "name": "default",
       "anchor": "top_left",
       "offsetX": "0px",
       "offsetY": "0px",
