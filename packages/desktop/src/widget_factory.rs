@@ -21,7 +21,7 @@ use tracing::{error, info};
 
 use crate::{
   common::{PathExt, WindowExt},
-  config::{AnchorPoint, Config, WidgetConfig, WidgetConfigEntry},
+  config::{AnchorPoint, Config, WidgetConfig, WidgetConfigEntry, ZOrder},
   monitor_state::MonitorState,
 };
 
@@ -179,6 +179,15 @@ impl WidgetFactory {
         .as_ref()
         .window()
         .set_tool_window(!config.shown_in_taskbar);
+
+      // On MacOS, we need to set the window as above the menu bar for it
+      // to truly be always on top.
+      #[cfg(target_os = "macos")]
+      {
+        if config.z_order == ZOrder::TopMost {
+          let _ = window.as_ref().window().set_above_menu_bar();
+        }
+      }
 
       let mut widget_states = self.widget_states.lock().await;
       widget_states.insert(state.id.clone(), state.clone());

@@ -55,7 +55,7 @@ pub struct WidgetConfig {
   pub presets: Vec<WidgetPreset>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ZOrder {
   BottomMost,
