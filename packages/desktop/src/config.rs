@@ -250,7 +250,7 @@ impl Config {
 
     fs::write(
       &settings_path,
-      serde_json::to_string_pretty(&new_settings)?,
+      serde_json::to_string_pretty(&new_settings)? + "\n",
     )?;
 
     let mut settings = self.settings.lock().await;
@@ -379,7 +379,7 @@ impl Config {
     let settings_path = config_dir.join("settings.json");
     fs::write(
       &settings_path,
-      serde_json::to_string_pretty(&default_settings)?,
+      serde_json::to_string_pretty(&default_settings)? + "\n",
     )?;
 
     Ok(())
@@ -445,7 +445,10 @@ impl Config {
     }
 
     // Write the updated config to file.
-    fs::write(&config_path, serde_json::to_string_pretty(&new_config)?)?;
+    fs::write(
+      &config_path,
+      serde_json::to_string_pretty(&new_config)? + "\n",
+    )?;
 
     Ok(())
   }
