@@ -189,8 +189,10 @@ impl WidgetFactory {
         }
       }
 
-      let mut widget_states = self.widget_states.lock().await;
-      widget_states.insert(state.id.clone(), state.clone());
+      {
+        let mut widget_states = self.widget_states.lock().await;
+        widget_states.insert(state.id.clone(), state.clone());
+      }
 
       self.register_window_events(&window, widget_id);
       self.open_tx.send(state)?;
