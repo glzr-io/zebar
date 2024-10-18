@@ -130,7 +130,7 @@ export function WidgetSettings() {
   }
 
   return (
-    <div class="grid grid-cols-[minmax(200px,_min(25%,_400px))_1fr] h-full">
+    <div class="flex h-screen bg-background">
       <WidgetConfigTree
         configEntries={configEntries() ?? []}
         selectedEntry={selectedConfigEntry()}
@@ -142,8 +142,8 @@ export function WidgetSettings() {
         fallback={<p class="p-4">No config selected.</p>}
       >
         {configEntry => (
-          <>
-            <div class="container p-4">
+          <div class="flex-1 grid grid-rows-[90%_10%]">
+            <div class="container p-4 overflow-y-auto">
               <h1 class="text-2xl font-bold mb-1">
                 {configEntry().configPath.split(/[/\\]/).at(-1)}
               </h1>
@@ -158,43 +158,45 @@ export function WidgetSettings() {
               />
             </div>
 
-            <div class="flex items-center">
-              <Button
-                variant="outline"
-                class="rounded-r-none"
-                onClick={() => openWidgetWithPreset()}
-              >
-                {selectedPreset() ?? 'Select'}
-              </Button>
+            <div class="flex items-center justify-end border-t p-4">
+              <div class="flex items-center">
+                <Button
+                  variant="outline"
+                  class="rounded-r-none self-end"
+                  onClick={() => openWidgetWithPreset()}
+                >
+                  {selectedPreset() ?? 'Select'}
+                </Button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger>
-                  <Button
-                    variant="outline"
-                    class="rounded-l-none border-l-0 px-2"
-                  >
-                    <IconChevronDown class="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <Button
+                      variant="outline"
+                      class="rounded-l-none border-l-0 px-2"
+                    >
+                      <IconChevronDown class="size-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
 
-                <DropdownMenuContent>
-                  <For each={presetNames()}>
-                    {presetName => (
-                      <DropdownMenuItem
-                        onClick={() => setSelectedPreset(presetName)}
-                        class={cn({
-                          'bg-accent text-accent-foreground':
-                            presetName === selectedPreset(),
-                        })}
-                      >
-                        {presetName}
-                      </DropdownMenuItem>
-                    )}
-                  </For>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <DropdownMenuContent>
+                    <For each={presetNames()}>
+                      {presetName => (
+                        <DropdownMenuItem
+                          onClick={() => setSelectedPreset(presetName)}
+                          class={cn({
+                            'bg-accent text-accent-foreground':
+                              presetName === selectedPreset(),
+                          })}
+                        >
+                          {presetName}
+                        </DropdownMenuItem>
+                      )}
+                    </For>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </>
+          </div>
         )}
       </Show>
     </div>
