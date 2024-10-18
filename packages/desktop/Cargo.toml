@@ -10,23 +10,23 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "2.0.0-rc", features = [] }
+tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
 clap = { version = "4", features = ["derive"] }
 reqwest = { version = "0.11", features = ["json"] }
-tauri = { version = "2.0.0-rc", features = [
+tauri = { version = "2.0", features = [
   "devtools",
   "macos-private-api",
   "protocol-asset",
   "tray-icon",
 ] }
-tauri-plugin-dialog = "2.0.0-rc"
-tauri-plugin-http = "2.0.0-rc"
-tauri-plugin-shell = "2.0.0-rc"
-tauri-plugin-single-instance = "2.0.0-rc"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-http = "2.0"
+tauri-plugin-shell = "2.0"
+tauri-plugin-single-instance = "2.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 starship-battery = "0.8"

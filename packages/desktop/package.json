@@ -10,7 +10,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@tauri-apps/cli": "2.0.0-rc.16",
+    "@tauri-apps/cli": "2.0.3",
     "typescript": "5.3.3"
   }
 }

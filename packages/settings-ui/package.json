@@ -9,7 +9,7 @@
   "dependencies": {
     "@glzr/components": "1.0.0",
     "@solidjs/router": "0.14.8",
-    "@tauri-apps/api": "2.0.0-rc.5",
+    "@tauri-apps/api": "2.0.2",
     "smorf": "1.1.1",
     "solid-js": "1.9.2",
     "zebar": "^2.0.0"
