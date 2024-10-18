@@ -69,7 +69,7 @@ export type WidgetPreset = {
 };
 
 export function WidgetSettings() {
-  const [configEntries] = createResource(async () => {
+  const [configEntries, { mutate }] = createResource(async () => {
     const xx = await invoke<WidgetConfigEntry[]>('widget_configs');
     console.log('widget_configs', xx);
     return xx;
@@ -109,10 +109,16 @@ export function WidgetSettings() {
   );
 
   async function onConfigChange(newConfig: WidgetConfig) {
-    // TODO: Update the `widgetConfigs` resource.
-    // TODO: Debounce updates to be every 3s.
-    console.log('onConfigChange', newConfig);
+    // Update the state with the new config values.
+    mutate(entries =>
+      entries.map(entry =>
+        entry.configPath !== selectedConfigPath()
+          ? entry
+          : { ...entry, config: newConfig },
+      ),
+    );
 
+    // Send updated config values to backend.
     await invoke<void>('update_widget_config', {
       configPath: selectedConfigPath(),
       newConfig,
