@@ -144,7 +144,7 @@ export function WidgetSettings() {
         fallback={<p class="p-4">No config selected.</p>}
       >
         {configEntry => (
-          <main class="flex-1 grid grid-rows-[90%_10%]">
+          <main class="flex-1 grid grid-rows-[1fr_minmax(30px,_min(10%,_60px))]">
             <div class="container p-4 overflow-y-auto">
               <h1 class="text-2xl font-bold leading-none">
                 {configEntry().configPath.split(/[/\\]/).at(-1)}
