@@ -59,9 +59,7 @@ export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
   }
 
   return (
-    <div class="container mx-auto p-4 space-y-8">
-      <h1 class="text-2xl font-bold">Widget / %NAME%</h1>
-
+    <div class="space-y-8">
       <Card>
         <CardHeader>
           <CardTitle>Widget settings</CardTitle>

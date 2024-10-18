@@ -139,14 +139,24 @@ export function WidgetSettings() {
 
       <Show
         when={selectedConfigEntry()}
-        fallback={<p>No config selected.</p>}
+        fallback={<p class="p-4">No config selected.</p>}
       >
         {configEntry => (
           <>
-            <WidgetSettingsForm
-              config={configEntry().config}
-              onChange={onConfigChange}
-            />
+            <div class="container p-4">
+              <h1 class="text-2xl font-bold mb-1">
+                {configEntry().configPath.split(/[/\\]/).at(-1)}
+              </h1>
+
+              <p class="bg-muted text-xs font-mono rounded-sm mb-6 p-1 text-muted-foreground inline-block">
+                {configEntry().configPath}
+              </p>
+
+              <WidgetSettingsForm
+                config={configEntry().config}
+                onChange={onConfigChange}
+              />
+            </div>
 
             <div class="flex items-center">
               <Button
