@@ -131,20 +131,22 @@ export function WidgetSettings() {
 
   return (
     <div class="flex h-screen bg-background">
+      {/* Sidebar */}
       <WidgetConfigTree
         configEntries={configEntries() ?? []}
         selectedEntry={selectedConfigEntry()}
         onSelect={setSelectedConfigPath}
       />
 
+      {/* Main content area */}
       <Show
         when={selectedConfigEntry()}
         fallback={<p class="p-4">No config selected.</p>}
       >
         {configEntry => (
-          <div class="flex-1 grid grid-rows-[90%_10%]">
+          <main class="flex-1 grid grid-rows-[90%_10%]">
             <div class="container p-4 overflow-y-auto">
-              <h1 class="text-2xl font-bold mb-1">
+              <h1 class="text-2xl font-bold leading-none">
                 {configEntry().configPath.split(/[/\\]/).at(-1)}
               </h1>
 
@@ -158,6 +160,7 @@ export function WidgetSettings() {
               />
             </div>
 
+            {/* Action bar (10% height) */}
             <div class="flex items-center justify-end border-t p-4">
               <div class="flex items-center">
                 <Button
@@ -196,7 +199,7 @@ export function WidgetSettings() {
                 </DropdownMenu>
               </div>
             </div>
-          </div>
+          </main>
         )}
       </Show>
     </div>
