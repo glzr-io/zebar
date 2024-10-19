@@ -23,7 +23,7 @@ pub struct MediaOutput {
   pub track_number: i32,
   pub artist: String,
   pub album_title: String,
-  pub play_status: bool,
+  pub is_playing: bool,
 }
 
 impl Default for MediaOutput {
@@ -34,7 +34,7 @@ impl Default for MediaOutput {
       track_number: 0,
       artist: "None Playing".to_string(),
       album_title: "None Playing".to_string(),
-      play_status: false,
+      is_playing: false,
     }
   }
 }
@@ -92,7 +92,7 @@ impl MediaProvider {
           .unwrap_or_else(|_| "Unknown Artist".to_string());
 
         let playback_info = current_session.GetPlaybackInfo()?;
-        let play_status = matches!(
+        let is_playing = matches!(
                 playback_info.PlaybackStatus(),
                 Ok(GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing)
             );
@@ -103,7 +103,7 @@ impl MediaProvider {
           track_number,
           artist,
           album_title,
-          play_status,
+          is_playing,
         }));
       }
     }

@@ -14,7 +14,7 @@ export interface MediaOutput {
   trackNumber: number;
   artist: string;
   albumTitle: string;
-  playStatus: boolean;
+  isPlaying: boolean;
 }
 
 export type MediaProvider = Provider<MediaProviderConfig, MediaOutput>;
