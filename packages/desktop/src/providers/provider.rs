@@ -13,7 +13,6 @@ pub trait Provider: Send + Sync {
     // No-op by default.
   }
 }
-
 /// Implements the `Provider` trait for the given struct.
 ///
 /// Expects that the struct has a `refresh_interval_ms` and `run_interval`

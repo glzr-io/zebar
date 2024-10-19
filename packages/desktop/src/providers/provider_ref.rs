@@ -12,9 +12,9 @@ use tracing::{info, warn};
 
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
-  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
-  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
-  SharedProviderState,
+  ip::IpProvider, media::MediaProvider, memory::MemoryProvider,
+  network::NetworkProvider, weather::WeatherProvider, Provider,
+  ProviderConfig, ProviderOutput, SharedProviderState,
 };
 #[cfg(windows)]
 use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
@@ -180,6 +180,10 @@ impl ProviderRef {
         config,
         shared_state.netinfo.clone(),
       )),
+      #[cfg(windows)]
+      ProviderConfig::Media(config) => {
+        Box::new(MediaProvider::new(config))
+      }
       ProviderConfig::Weather(config) => {
         Box::new(WeatherProvider::new(config))
       }
@@ -190,7 +194,6 @@ impl ProviderRef {
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),
     };
-
     Ok(provider)
   }
 

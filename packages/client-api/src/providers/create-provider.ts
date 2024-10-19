@@ -51,6 +51,12 @@ import type {
   WeatherProvider,
 } from './weather/weather-provider-types';
 
+import type {
+  MediaProviderConfig,
+  MediaProvider,
+} from './media/media-provider-types';
+import { createMediaProvider } from './media/create-media-provider';
+
 export interface ProviderConfigMap {
   battery: BatteryProviderConfig;
   cpu: CpuProviderConfig;
@@ -62,6 +68,7 @@ export interface ProviderConfigMap {
   memory: MemoryProviderConfig;
   network: NetworkProviderConfig;
   weather: WeatherProviderConfig;
+  media: MediaProviderConfig;
   keyboard: KeyboardProviderConfig;
 }
 
@@ -76,6 +83,7 @@ export interface ProviderMap {
   memory: MemoryProvider;
   network: NetworkProvider;
   weather: WeatherProvider;
+  media: MediaProvider;
   keyboard: KeyboardProvider;
 }
 
@@ -120,6 +128,8 @@ export function createProvider<T extends ProviderConfig>(
       return createNetworkProvider(config) as any;
     case 'weather':
       return createWeatherProvider(config) as any;
+    case 'media':
+      return createMediaProvider(config) as any;
     case 'keyboard':
       return createKeyboardProvider(config) as any;
     default:

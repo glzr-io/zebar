@@ -11,3 +11,4 @@ export * from './network/network-provider-types';
 export * from './weather/weather-provider-types';
 export * from './create-provider';
 export * from './create-provider-group';
+export * from './media/media-provider-types';
