@@ -164,19 +164,18 @@ export function WidgetSettings() {
             <div class="flex items-center justify-end border-t p-4">
               <div class="flex items-center">
                 <Button
-                  variant="outline"
                   class="rounded-r-none self-end"
+                  disabled={presetNames().length === 0}
                   onClick={() => openWidgetWithPreset()}
                 >
-                  {selectedPreset() ?? 'Select'}
+                  {selectedPreset()
+                    ? `Open ${selectedPreset()}`
+                    : 'No presets'}
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger>
-                    <Button
-                      variant="outline"
-                      class="rounded-l-none border-l-0 px-2"
-                    >
+                    <Button class="rounded-l-none border-l-0 px-2">
                       <IconChevronDown class="size-3" />
                     </Button>
                   </DropdownMenuTrigger>
