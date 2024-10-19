@@ -11,7 +11,6 @@ import { createMemo, For } from 'solid-js';
 import { WidgetConfigEntry } from './WidgetSettings';
 
 export interface WidgetConfigTreeProps {
-  class?: string;
   configEntries: WidgetConfigEntry[];
   selectedEntry: WidgetConfigEntry | null;
   onSelect: (configPath: string) => void;
@@ -30,7 +29,7 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
   });
 
   return (
-    <div class={cn('border-r p-4 h-full', props.class)}>
+    <div class="border-r p-4 h-full w-[clamp(200px,20vw,300px)]">
       <h2 class="text-lg font-semibold mb-2">Widget configs</h2>
       <div class="space-y-1">
         <For each={Object.entries(configTree())}>

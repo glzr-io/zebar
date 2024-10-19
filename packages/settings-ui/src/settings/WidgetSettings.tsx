@@ -131,23 +131,22 @@ export function WidgetSettings() {
 
   return (
     <div class="flex h-screen bg-background">
-      {/* Sidebar */}
+      {/* Sidebar. */}
       <WidgetConfigTree
-        class="w-[clamp(200px,10%,300px)]"
         configEntries={configEntries() ?? []}
         selectedEntry={selectedConfigEntry()}
         onSelect={setSelectedConfigPath}
       />
 
-      {/* Main content area */}
+      {/* Main content area. */}
       <Show
         when={selectedConfigEntry()}
         fallback={<WidgetSettingsEmptyState />}
       >
         {configEntry => (
-          <main class="flex-1 grid grid-rows-[1fr_minmax(30px,_min(10%,_60px))]">
+          <main class="flex-1 grid grid-rows-[1fr_auto] overflow-hidden">
             <div class="container p-4 overflow-y-auto">
-              <h1 class="text-2xl font-bold leading-none">
+              <h1 class="text-2xl font-bold mb-1">
                 {configEntry().configPath.split(/[/\\]/).at(-1)}
               </h1>
 
@@ -161,7 +160,7 @@ export function WidgetSettings() {
               />
             </div>
 
-            {/* Action bar (10% height) */}
+            {/* Action bar. */}
             <div class="flex items-center justify-end border-t p-4">
               <div class="flex items-center">
                 <Button
