@@ -1,3 +1,5 @@
 packages:
   - 'packages/*'
   - 'examples/*'
+  - '../smorf'
+  - '../glzr-components'
