@@ -15,6 +15,7 @@ export interface MediaOutput {
   artist: string;
   albumTitle: string;
   isPlaying: boolean;
+  isSpotify: boolean;
 }
 
 export type MediaProvider = Provider<MediaProviderConfig, MediaOutput>;

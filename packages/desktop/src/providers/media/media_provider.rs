@@ -21,6 +21,7 @@ pub struct MediaOutput {
   pub artist: String,
   pub album_title: String,
   pub is_playing: bool,
+  pub is_spotify: bool,
 }
 
 impl Default for MediaOutput {
@@ -32,6 +33,7 @@ impl Default for MediaOutput {
       artist: "None Playing".to_string(),
       album_title: "None Playing".to_string(),
       is_playing: false,
+      is_spotify: false,
     }
   }
 }
@@ -67,22 +69,31 @@ impl MediaProvider {
       if let Ok(media_properties) =
         current_session.TryGetMediaPropertiesAsync()?.get()
       {
+        let is_spotify = current_session
+          .SourceAppUserModelId()
+          .map(|hs| hs.to_string().to_lowercase().contains("spotify"))
+          .unwrap_or(false);
+
         let title = media_properties
           .Title()
           .map(|hs| hs.to_string())
           .unwrap_or_else(|_| "Unknown Title".to_string());
+
         let sub_title = media_properties
           .Subtitle()
           .map(|hs| hs.to_string())
           .unwrap_or_else(|_| "Unknown Subtitle".to_string());
+
         let track_number = media_properties
           .TrackNumber()
           .map(|i| i as i32)
           .unwrap_or(0);
+
         let album_title = media_properties
           .AlbumTitle()
           .map(|hs| hs.to_string())
           .unwrap_or_else(|_| "Unknown Album".to_string());
+
         let artist = media_properties
           .Artist()
           .map(|hs| hs.to_string())
@@ -101,6 +112,7 @@ impl MediaProvider {
           artist,
           album_title,
           is_playing,
+          is_spotify,
         }));
       }
     }

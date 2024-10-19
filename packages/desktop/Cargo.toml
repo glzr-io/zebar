@@ -47,6 +47,8 @@ windows = { version = "0.58", features = [
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_UI_TextServices",
   "Win32_NetworkManagement_WiFi",
+  "Media_Control",
+  "Foundation"
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
