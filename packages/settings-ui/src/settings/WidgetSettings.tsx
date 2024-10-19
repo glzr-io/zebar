@@ -133,6 +133,7 @@ export function WidgetSettings() {
     <div class="flex h-screen bg-background">
       {/* Sidebar */}
       <WidgetConfigTree
+        class="w-[clamp(200px,10%,300px)]"
         configEntries={configEntries() ?? []}
         selectedEntry={selectedConfigEntry()}
         onSelect={setSelectedConfigPath}
@@ -141,7 +142,7 @@ export function WidgetSettings() {
       {/* Main content area */}
       <Show
         when={selectedConfigEntry()}
-        fallback={<p class="p-4">No config selected.</p>}
+        fallback={<WidgetSettingsEmptyState />}
       >
         {configEntry => (
           <main class="flex-1 grid grid-rows-[1fr_minmax(30px,_min(10%,_60px))]">
@@ -204,4 +205,8 @@ export function WidgetSettings() {
       </Show>
     </div>
   );
+}
+
+function WidgetSettingsEmptyState() {
+  return <p class="p-4">No config selected.</p>;
 }
