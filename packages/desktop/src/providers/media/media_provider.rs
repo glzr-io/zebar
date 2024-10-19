@@ -1,8 +1,5 @@
 // Currently windows support only
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
 use windows::Media::Control::{
   GlobalSystemMediaTransportControlsSessionManager,
   GlobalSystemMediaTransportControlsSessionPlaybackStatus,
