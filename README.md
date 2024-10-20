@@ -68,6 +68,7 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 - [komorebi](#Komorebi)
 - [memory](#Memory)
 - [network](#Network)
+- [media](#Media)
 - [weather](#Weather)
 
 ### Battery
@@ -249,6 +250,26 @@ No config options.
 | `siUnit`   | Unit of the converted bytes in according to the SI standard. KB, MB, ...    | `string`    |
 | `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
 | `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
+
+### Media
+
+#### Config
+
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+
+#### Outputs
+
+| Variable       | Description                                           | Return type | Supported OS                                                                                                                      |
+| -------------- | ----------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | The title of the media.                               | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `subTitle`     | The subtitle or additional information.               | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `trackNumber`  | The track number for albums or playlists (probably).  | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `artist`       | The name of the artist.                               | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `albumTitle`   | The title of the album.                               | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `isPlaying`    | Indicates whether the media is currently playing.     | `boolean`   | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `isSpotify`    | Indicates whether the media is from Spotify.          | `boolean`   | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 ### Keyboard
 
