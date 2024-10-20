@@ -7,7 +7,9 @@ use windows::{
   Media::Control::{
     GlobalSystemMediaTransportControlsSession,
     GlobalSystemMediaTransportControlsSessionManager,
-    GlobalSystemMediaTransportControlsSessionMediaProperties, MediaPropertiesChangedEventArgs,
+    GlobalSystemMediaTransportControlsSessionMediaProperties,
+    MediaPropertiesChangedEventArgs, PlaybackInfoChangedEventArgs,
+    SessionsChangedEventArgs,
   },
 };
 
@@ -36,26 +38,54 @@ pub struct MediaOutput {
 
 pub struct MediaProvider {
   _config: MediaProviderConfig,
+  current_session: Option<GlobalSystemMediaTransportControlsSession>,
+  session_changed_event_handler: TypedEventHandler<
+    GlobalSystemMediaTransportControlsSessionManager,
+    SessionsChangedEventArgs,
+  >,
+  media_properties_changed_event_handler: TypedEventHandler<
+    GlobalSystemMediaTransportControlsSession,
+    MediaPropertiesChangedEventArgs,
+  >,
 }
 
 impl MediaProvider {
   pub fn new(config: MediaProviderConfig) -> MediaProvider {
-    MediaProvider { _config: config }
+    MediaProvider {
+      _config: config,
+      current_session: None,
+      session_changed_event_handler: TypedEventHandler::new(
+        MediaProvider::current_session_changed,
+      ),
+      media_properties_changed_event_handler: TypedEventHandler::new(
+        MediaProvider::media_properties_changed,
+      ),
+    }
   }
 
-  fn on_current_session_changed(
-    session_manager: TypedEventHandler<
-      GlobalSystemMediaTransportControlsSession,
-      MediaPropertiesChangedEventArgs,
-    >,
+  fn media_properties_changed(
+    session: &Option<GlobalSystemMediaTransportControlsSession>,
+    _args: &Option<MediaPropertiesChangedEventArgs>,
   ) -> windows::core::Result<()> {
     windows::core::Result::Ok(())
   }
 
-  fn print_current_media_info(
-    session: &GlobalSystemMediaTransportControlsSession,
-  ) -> anyhow::Result<()> {
-    let media_properties = session.TryGetMediaPropertiesAsync()?.get()?;
+  fn current_session_changed(
+    session_manager: &Option<
+      GlobalSystemMediaTransportControlsSessionManager,
+    >,
+    _args: &Option<SessionsChangedEventArgs>,
+  ) -> windows::core::Result<()> {
+    if let Some(session_manager) = session_manager {
+      let session = session_manager.GetCurrentSession()?;
+      // self.current_session = Some(session);
+    }
+    windows::core::Result::Ok(())
+  }
+
+  fn print_current_media_info(&self) -> anyhow::Result<()> {
+    let media_properties =
+      &self.current_session?.TryGetMediaPropertiesAsync()?.get()?;
     println!("Title: {}", media_properties.Title()?);
     println!("Artist: {}", media_properties.Artist()?);
     println!("Album: {}", media_properties.AlbumTitle()?);
@@ -96,7 +126,7 @@ impl MediaProvider {
     );
 
     current_session.MediaPropertiesChanged(
-      MediaProvider::on_current_session_changed(&session_manager),
+      &self.media_properties_changed_event_handler,
     )?;
 
     // current_session.MediaPropertiesChanged(&
