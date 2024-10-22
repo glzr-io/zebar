@@ -17,6 +17,7 @@ import {
   on,
   Show,
 } from 'solid-js';
+import { WidgetConfig } from 'zebar';
 
 import { WidgetConfigTree } from './WidgetConfigTree';
 import { WidgetSettingsForm } from './WidgetSettingsForm';
@@ -37,36 +38,6 @@ export interface WidgetConfigEntry {
    */
   config: WidgetConfig;
 }
-
-export type WidgetConfig = {
-  htmlPath: string;
-  zOrder: 'normal' | 'top_most' | 'bottom_most';
-  shownInTaskbar: boolean;
-  focused: boolean;
-  resizable: boolean;
-  transparent: boolean;
-  backgroundColor: string;
-  presets: WidgetPreset[];
-};
-
-export type WidgetPreset = {
-  name: string;
-  anchor:
-    | 'top_left'
-    | 'top_center'
-    | 'top_right'
-    | 'center'
-    | 'bottom_left'
-    | 'bottom_center'
-    | 'bottom_right';
-  offsetX: string;
-  offsetY: string;
-  width: string;
-  height: string;
-  monitorSelection: {
-    type: 'all' | 'primary' | 'secondary';
-  };
-};
 
 export function WidgetSettings() {
   const [configEntries, { mutate }] = createResource(async () => {

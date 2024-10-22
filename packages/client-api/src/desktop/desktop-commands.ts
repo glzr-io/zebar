@@ -5,19 +5,31 @@ import {
 
 import { createLogger } from '../utils';
 import type { ProviderConfig } from '~/providers';
+import type { WidgetPlacement } from '~/config';
 
 const logger = createLogger('desktop-commands');
 
 export const desktopCommands = {
-  openWidgetDefault,
+  startWidget,
+  startPreset,
   listenProvider,
   unlistenProvider,
   setAlwaysOnTop,
   setSkipTaskbar,
 };
 
-function openWidgetDefault(configPath: string): Promise<void> {
-  return invoke<void>('open_widget_default', { configPath });
+function startWidget(
+  configPath: string,
+  placement: WidgetPlacement,
+): Promise<void> {
+  return invoke<void>('start_widget', { configPath, placement });
+}
+
+function startPreset(
+  configPath: string,
+  presetName: string,
+): Promise<void> {
+  return invoke<void>('start_preset', { configPath, presetName });
 }
 
 function listenProvider(args: {
