@@ -96,8 +96,11 @@ export function WidgetSettings() {
     });
   }
 
-  function openWidgetWithPreset() {
-    // TODO: Implement this.
+  async function startPreset(presetName: string) {
+    await invoke<void>('start_preset', {
+      configPath: selectedConfigPath(),
+      presetName,
+    });
   }
 
   return (
@@ -109,7 +112,7 @@ export function WidgetSettings() {
         onSelect={setSelectedConfigPath}
       />
 
-      {/* Main content area. */}
+      {/* Main content. */}
       <Show
         when={selectedConfigEntry()}
         fallback={<WidgetSettingsEmptyState />}
@@ -137,7 +140,7 @@ export function WidgetSettings() {
                 <Button
                   class="rounded-r-none self-end"
                   disabled={presetNames().length === 0}
-                  onClick={() => openWidgetWithPreset()}
+                  onClick={() => startPreset(selectedPreset())}
                 >
                   {selectedPreset()
                     ? `Open ${selectedPreset()}`
