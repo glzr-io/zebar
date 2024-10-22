@@ -7,7 +7,7 @@ use std::{
   },
 };
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use serde::Serialize;
 use tauri::{
   AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
@@ -21,10 +21,7 @@ use tracing::{error, info};
 
 use crate::{
   common::{PathExt, WindowExt},
-  config::{
-    AnchorPoint, Config, WidgetConfig, WidgetConfigEntry, WidgetPlacement,
-    ZOrder,
-  },
+  config::{AnchorPoint, Config, WidgetConfig, WidgetPlacement, ZOrder},
   monitor_state::MonitorState,
 };
 
@@ -106,34 +103,30 @@ impl WidgetFactory {
     config_path: &PathBuf,
     placement: &WidgetPlacement,
   ) -> anyhow::Result<()> {
-    todo!()
-  }
+    let widget_config = self
+      .config
+      .widget_config_by_path(config_path)
+      .await?
+      .context("No config found at path.")?;
 
-  /// Opens widget from a given config entry.
-  pub async fn start_preset(
-    &self,
-    config_path: &PathBuf,
-    preset_name: &str,
-  ) -> anyhow::Result<()> {
-    let WidgetConfigEntry {
-      config,
-      config_path,
-      config_dir: html_path,
-    } = &config_entry;
-
-    for (size, position) in self.widget_coordinates(config).await {
-      // Use running widget count as a unique label for the Tauri window.
+    for (size, position) in self.widget_coordinates(placement).await {
       let new_count =
         self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
+
+      // Use running widget count as a unique label for the Tauri window.
       let widget_id = new_count.to_string();
 
-      if !html_path.exists() {
-        bail!(
-          "HTML file not found at {} for config {}.",
-          html_path.display(),
-          config_path.display()
-        );
-      }
+      let html_path = config_path
+        .parent()
+        .map(|dir| dir.join(&widget_config.config.html_path))
+        .filter(|path| path.exists())
+        .with_context(|| {
+          format!(
+            "HTML file not found at '{}' for config '{}'.",
+            widget_config.config.html_path.display(),
+            config_path.display()
+          )
+        })?;
 
       info!(
         "Creating window for widget #{} from {}",
@@ -152,13 +145,13 @@ impl WidgetFactory {
         webview_url,
       )
       .title("Zebar")
-      .focused(config.focused)
-      .skip_taskbar(!config.shown_in_taskbar)
+      .focused(widget_config.config.focused)
+      .skip_taskbar(!widget_config.config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
-      .transparent(config.transparent)
+      .transparent(widget_config.config.transparent)
       .shadow(false)
       .decorations(false)
-      .resizable(config.resizable)
+      .resizable(widget_config.config.resizable)
       .build()?;
 
       info!("Positioning widget to {:?} {:?}", size, position);
@@ -175,7 +168,7 @@ impl WidgetFactory {
 
       let state = WidgetState {
         id: widget_id.clone(),
-        config: config.clone(),
+        config: widget_config.config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
       };
@@ -197,7 +190,7 @@ impl WidgetFactory {
       // to truly be always on top.
       #[cfg(target_os = "macos")]
       {
-        if config.z_order == ZOrder::TopMost {
+        if widget_config.config.z_order == ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
       }
@@ -212,6 +205,34 @@ impl WidgetFactory {
     }
 
     Ok(())
+  }
+
+  /// Opens widget from a given config entry.
+  pub async fn start_preset(
+    &self,
+    config_path: &PathBuf,
+    preset_name: &str,
+  ) -> anyhow::Result<()> {
+    let widget_config = self
+      .config
+      .widget_config_by_path(config_path)
+      .await?
+      .context("No config found at path.")?;
+
+    let preset = widget_config
+      .config
+      .presets
+      .iter()
+      .find(|preset| preset.name == preset_name)
+      .with_context(|| {
+        format!(
+          "No preset with name '{}' at config '{}'.",
+          preset_name,
+          config_path.display()
+        )
+      })?;
+
+    self.start_widget(config_path, &preset.placement).await
   }
 
   /// Opens presets that are configured to be launched on startup.
@@ -391,7 +412,8 @@ impl WidgetFactory {
         .await?
         .context("Widget config not found.")?;
 
-      self.start_preset(widget_config).await?;
+      // TODO: Implement restarting currently open widgets.
+      // self.start_preset(widget_config).await?;
     }
 
     Ok(())

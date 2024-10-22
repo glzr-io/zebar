@@ -76,6 +76,7 @@ async fn main() -> anyhow::Result<()> {
     })
     .invoke_handler(tauri::generate_handler![
       commands::widget_configs,
+      commands::start_widget,
       commands::start_preset,
       commands::update_widget_config,
       commands::listen_provider,
