@@ -22,29 +22,16 @@ import { WidgetConfig } from 'zebar';
 import { WidgetConfigTree } from './WidgetConfigTree';
 import { WidgetSettingsForm } from './WidgetSettingsForm';
 
-export interface WidgetConfigEntry {
-  /**
-   * Absolute path to the widget's config file.
-   */
-  configPath: string;
-
-  /**
-   * Absolute path to the widget's HTML file.
-   */
-  htmlPath: string;
-
-  /**
-   * Parsed widget config.
-   */
-  config: WidgetConfig;
-}
-
 export function WidgetSettings() {
-  const [configEntries, { mutate }] = createResource(async () => {
-    const xx = await invoke<WidgetConfigEntry[]>('widget_configs');
-    console.log('widget_configs', xx);
-    return xx;
-  });
+  const [configs, { mutate }] = createResource(
+    async () => {
+      const xx =
+        await invoke<Record<string, WidgetConfig>>('widget_configs');
+      console.log('widget_configs', xx);
+      return xx;
+    },
+    { initialValue: {} },
+  );
 
   const [selectedConfigPath, setSelectedConfigPath] = createSignal<
     string | null
@@ -54,17 +41,10 @@ export function WidgetSettings() {
     null,
   );
 
-  const selectedConfigEntry = createMemo(() => {
-    const configPath = selectedConfigPath();
-    return (configEntries() ?? []).find(
-      entry => entry.configPath === configPath,
-    );
-  });
+  const selectedConfig = createMemo(() => configs()[selectedConfigPath()]);
 
   const presetNames = createMemo(() =>
-    (selectedConfigEntry()?.config.presets ?? []).map(
-      preset => preset.name,
-    ),
+    (selectedConfig()?.presets ?? []).map(preset => preset.name),
   );
 
   // Initialize the selected preset when a config is selected.
@@ -72,8 +52,8 @@ export function WidgetSettings() {
     on(
       () => selectedConfigPath(),
       () => {
-        if (selectedConfigEntry()) {
-          setSelectedPreset(selectedConfigEntry().config.presets[0]?.name);
+        if (selectedConfig()) {
+          setSelectedPreset(selectedConfig().presets[0]?.name);
         }
       },
     ),
@@ -81,13 +61,7 @@ export function WidgetSettings() {
 
   async function onConfigChange(newConfig: WidgetConfig) {
     // Update the state with the new config values.
-    mutate(entries =>
-      entries.map(entry =>
-        entry.configPath !== selectedConfigPath()
-          ? entry
-          : { ...entry, config: newConfig },
-      ),
-    );
+    mutate(configs => ({ ...configs, [selectedConfigPath()]: newConfig }));
 
     // Send updated config values to backend.
     await invoke<void>('update_widget_config', {
@@ -107,29 +81,29 @@ export function WidgetSettings() {
     <div class="flex h-screen bg-background">
       {/* Sidebar. */}
       <WidgetConfigTree
-        configEntries={configEntries() ?? []}
-        selectedEntry={selectedConfigEntry()}
+        configs={configs()}
+        selectedConfig={selectedConfig()}
         onSelect={setSelectedConfigPath}
       />
 
       {/* Main content. */}
       <Show
-        when={selectedConfigEntry()}
+        when={selectedConfig()}
         fallback={<WidgetSettingsEmptyState />}
       >
-        {configEntry => (
+        {config => (
           <main class="flex-1 grid grid-rows-[1fr_auto] overflow-hidden">
             <div class="container p-4 overflow-y-auto">
               <h1 class="text-2xl font-bold mb-1">
-                {configEntry().configPath.split(/[/\\]/).at(-1)}
+                {selectedConfigPath().split(/[/\\]/).at(-1)}
               </h1>
 
               <p class="bg-muted text-xs font-mono rounded-sm mb-6 p-1 text-muted-foreground inline-block">
-                {configEntry().configPath}
+                {selectedConfigPath()}
               </p>
 
               <WidgetSettingsForm
-                config={configEntry().config}
+                config={config()}
                 onChange={onConfigChange}
               />
             </div>

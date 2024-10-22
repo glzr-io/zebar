@@ -8,19 +8,19 @@ import {
 } from '@glzr/components';
 import { createMemo, For } from 'solid-js';
 
-import { WidgetConfigEntry } from './WidgetSettings';
+import { WidgetConfig } from 'zebar';
 
 export interface WidgetConfigTreeProps {
-  configEntries: WidgetConfigEntry[];
-  selectedEntry: WidgetConfigEntry | null;
+  configs: Record<string, WidgetConfig>;
+  selectedConfig: WidgetConfig | null;
   onSelect: (configPath: string) => void;
 }
 
 export function WidgetConfigTree(props: WidgetConfigTreeProps) {
   const configTree = createMemo(() => {
-    const tree: Record<string, WidgetConfigEntry[]> = {};
+    const tree: Record<string, WidgetConfig[]> = {};
 
-    props.configEntries.forEach(config => {
+    props.configs.forEach(config => {
       const folder = config.configPath.split(/[/\\]/).at(-2);
       tree[folder] = [...(tree[folder] ?? []), config];
     });
@@ -45,7 +45,7 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
                   <div
                     class={cn(
                       'flex items-center space-x-2 py-1 rounded-md cursor-pointer',
-                      props.selectedEntry?.configPath ===
+                      props.selectedConfig?.configPath ===
                         config.configPath && 'bg-accent',
                     )}
                     onClick={() => props.onSelect(config.configPath)}
