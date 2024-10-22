@@ -218,10 +218,8 @@ impl Config {
       None => {
         Self::create_from_examples(app_handle, dir)?;
 
-        Ok(
-          Self::read_settings(&dir)?
-            .context("Failed to create settings config.")?,
-        )
+        Self::read_settings(&dir)?
+          .context("Failed to create settings config.")
       }
     }
   }
@@ -267,55 +265,30 @@ impl Config {
   fn read_widget_configs(
     dir: &PathBuf,
   ) -> anyhow::Result<HashMap<PathBuf, WidgetConfig>> {
-    let dir_entries = fs::read_dir(dir).with_context(|| {
-      format!("Failed to read directory: {}", dir.display())
-    })?;
+    let dir_paths = fs::read_dir(dir)
+      .with_context(|| {
+        format!("Failed to read directory: {}", dir.display())
+      })?
+      .filter_map(|entry| Some(entry.ok()?.path()));
 
-    // Scan the 2nd-level of the directory for config files.
-    let config_files = dir_entries
-      .into_iter()
-      .filter_map(|entry| {
-        let path = entry.ok()?.path();
-        if path.is_dir() {
-          Some(fs::read_dir(path).ok()?)
-        } else {
-          None
-        }
-      })
+    // Scan the 2nd-level of the config directory.
+    let subdir_paths = dir_paths
+      .filter(|path| path.is_dir())
+      .filter_map(|dir| fs::read_dir(dir).ok())
       .flatten()
-      .filter_map(|entry| {
-        let path = entry.ok()?.path();
-        if path.is_file() && has_extension(&path, ".zebar.json") {
-          Some(path)
-        } else {
-          None
-        }
-      })
+      .filter_map(|entry| Some(entry.ok()?.path()));
+
+    // Collect the found config files.
+    let config_paths = subdir_paths
+      .filter(|path| path.is_file() && has_extension(&path, ".zebar.json"))
       .collect::<Vec<PathBuf>>();
 
     let mut configs = HashMap::new();
 
     // Parse the found config files.
-    for path in config_files {
-      let parse_res =
-        read_and_parse_json::<WidgetConfig>(&path).and_then(|config| {
-          let config_path = path.to_absolute()?;
-
-          let html_path = path
-            .parent()
-            .and_then(|parent| {
-              parent.join(&config.html_path).to_absolute().ok()
-            })
-            .with_context(|| {
-              format!(
-                "HTML file not found at {} for config {}.",
-                config.html_path.display(),
-                config_path.display()
-              )
-            })?;
-
-          Ok((config, config_path))
-        });
+    for path in config_paths {
+      let parse_res = read_and_parse_json::<WidgetConfig>(&path)
+        .and_then(|config| Ok((config, path.to_absolute()?)));
 
       match parse_res {
         Ok((config, config_path)) => {
