@@ -97,13 +97,13 @@ impl WidgetFactory {
     }
   }
 
-  /// Opens widget from a given config entry.
+  /// Opens widget from a given config path.
   pub async fn start_widget(
     &self,
     config_path: &PathBuf,
     placement: &WidgetPlacement,
   ) -> anyhow::Result<()> {
-    let widget_config = self
+    let (config_path, widget_config) = self
       .config
       .widget_config_by_path(config_path)
       .await?
@@ -118,12 +118,12 @@ impl WidgetFactory {
 
       let html_path = config_path
         .parent()
-        .map(|dir| dir.join(&widget_config.config.html_path))
+        .map(|dir| dir.join(&widget_config.html_path))
         .filter(|path| path.exists())
         .with_context(|| {
           format!(
             "HTML file not found at '{}' for config '{}'.",
-            widget_config.config.html_path.display(),
+            widget_config.html_path.display(),
             config_path.display()
           )
         })?;
@@ -145,13 +145,13 @@ impl WidgetFactory {
         webview_url,
       )
       .title("Zebar")
-      .focused(widget_config.config.focused)
-      .skip_taskbar(!widget_config.config.shown_in_taskbar)
+      .focused(widget_config.focused)
+      .skip_taskbar(!widget_config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
-      .transparent(widget_config.config.transparent)
+      .transparent(widget_config.transparent)
       .shadow(false)
       .decorations(false)
-      .resizable(widget_config.config.resizable)
+      .resizable(widget_config.resizable)
       .build()?;
 
       info!("Positioning widget to {:?} {:?}", size, position);
@@ -168,7 +168,7 @@ impl WidgetFactory {
 
       let state = WidgetState {
         id: widget_id.clone(),
-        config: widget_config.config.clone(),
+        config: widget_config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
       };
@@ -190,7 +190,7 @@ impl WidgetFactory {
       // to truly be always on top.
       #[cfg(target_os = "macos")]
       {
-        if widget_config.config.z_order == ZOrder::TopMost {
+        if widget_config.z_order == ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
       }
@@ -207,20 +207,19 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Opens widget from a given config entry.
+  /// Opens widget from a given config path.
   pub async fn start_preset(
     &self,
     config_path: &PathBuf,
     preset_name: &str,
   ) -> anyhow::Result<()> {
-    let widget_config = self
+    let (_, widget_config) = self
       .config
       .widget_config_by_path(config_path)
       .await?
       .context("No config found at path.")?;
 
     let preset = widget_config
-      .config
       .presets
       .iter()
       .find(|preset| preset.name == preset_name)
@@ -237,7 +236,8 @@ impl WidgetFactory {
 
   /// Opens presets that are configured to be launched on startup.
   pub async fn startup(&self) -> anyhow::Result<()> {
-    todo!()
+    // todo!()
+    Ok(())
   }
 
   /// Converts a file path to a Tauri asset URL.

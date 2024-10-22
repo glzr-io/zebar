@@ -1,4 +1,5 @@
 use std::{
+  collections::HashMap,
   fs::{self},
   path::PathBuf,
   sync::Arc,
@@ -133,30 +134,17 @@ pub struct Config {
   pub settings: Arc<Mutex<SettingsConfig>>,
 
   /// List of widget configs.
-  pub widget_configs: Arc<Mutex<Vec<WidgetConfigEntry>>>,
+  pub widget_configs: Arc<Mutex<HashMap<PathBuf, WidgetConfig>>>,
 
   _settings_change_rx: broadcast::Receiver<SettingsConfig>,
 
   pub settings_change_tx: broadcast::Sender<SettingsConfig>,
 
-  _widget_configs_change_rx: broadcast::Receiver<Vec<WidgetConfigEntry>>,
+  _widget_configs_change_rx:
+    broadcast::Receiver<HashMap<PathBuf, WidgetConfig>>,
 
-  pub widget_configs_change_tx: broadcast::Sender<Vec<WidgetConfigEntry>>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WidgetConfigEntry {
-  /// Absolute path to the widget's config file.
-  /// TODO: Instead store the relative path and join with `config_dir`
-  /// when needed.
-  pub config_path: PathBuf,
-
-  /// Absolute path to the config directory.
-  pub config_dir: PathBuf,
-
-  /// Parsed widget config.
-  pub config: WidgetConfig,
+  pub widget_configs_change_tx:
+    broadcast::Sender<HashMap<PathBuf, WidgetConfig>>,
 }
 
 impl Config {
@@ -275,10 +263,10 @@ impl Config {
   /// Aggregates all valid widget configs at the 2nd-level of the given
   /// directory (i.e. `<CONFIG_DIR>/*/*.zebar.json`).
   ///
-  /// Returns a vector of `WidgetConfigEntry` instances.
+  /// Returns a hashmap of config paths to their `WidgetConfig` instances.
   fn read_widget_configs(
     dir: &PathBuf,
-  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
+  ) -> anyhow::Result<HashMap<PathBuf, WidgetConfig>> {
     let dir_entries = fs::read_dir(dir).with_context(|| {
       format!("Failed to read directory: {}", dir.display())
     })?;
@@ -305,7 +293,7 @@ impl Config {
       })
       .collect::<Vec<PathBuf>>();
 
-    let mut configs = Vec::new();
+    let mut configs = HashMap::new();
 
     // Parse the found config files.
     for path in config_files {
@@ -326,21 +314,14 @@ impl Config {
               )
             })?;
 
-          Ok(WidgetConfigEntry {
-            config,
-            config_path,
-            config_dir: html_path,
-          })
+          Ok((config, config_path))
         });
 
       match parse_res {
-        Ok(config) => {
-          info!(
-            "Found valid widget config at: {}",
-            config.config_path.display()
-          );
+        Ok((config, config_path)) => {
+          info!("Found valid widget config at: {}", config_path.display());
 
-          configs.push(config);
+          configs.insert(config_path, config);
         }
         Err(err) => {
           error!(
@@ -396,22 +377,22 @@ impl Config {
     Ok(())
   }
 
-  pub async fn widget_configs(&self) -> Vec<WidgetConfigEntry> {
+  pub async fn widget_configs(&self) -> HashMap<PathBuf, WidgetConfig> {
     self.widget_configs.lock().await.clone()
   }
 
   /// Returns the widget configs to open on startup.
   pub async fn startup_widget_configs(
     &self,
-  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
+  ) -> anyhow::Result<HashMap<PathBuf, WidgetConfig>> {
     let startup_configs =
       { self.settings.lock().await.startup_configs.clone() };
 
-    let mut result = Vec::new();
+    let mut result = HashMap::new();
 
     for config_path in startup_configs {
       let abs_config_path = self.join_config_dir(&config_path);
-      let config = self
+      let (_, config) = self
         .widget_config_by_path(&abs_config_path)
         .await
         .unwrap_or(None)
@@ -420,7 +401,7 @@ impl Config {
           abs_config_path.display()
         ))?;
 
-      result.push(config);
+      result.insert(abs_config_path, config);
     }
 
     Ok(result)
@@ -439,18 +420,12 @@ impl Config {
     {
       let mut widget_configs = self.widget_configs.lock().await;
 
-      let config_entry = widget_configs
-        .iter_mut()
-        .find(|entry| entry.config_path == *config_path)
-        .context(format!(
-          "Widget config not found at {}.",
-          config_path.display()
-        ))?;
+      let config_entry = widget_configs.get_mut(config_path).context(
+        format!("Widget config not found at {}.", config_path.display()),
+      )?;
 
       // Update the config in state.
-      config_entry.config = new_config.clone();
-
-      // TODO: Update HTML path.
+      *config_entry = new_config.clone();
 
       self.widget_configs_change_tx.send(widget_configs.clone())?;
     }
@@ -476,7 +451,7 @@ impl Config {
     // Check if the config is already set to be launched on startup.
     if startup_configs
       .iter()
-      .find(|config| config.config_path == *config_path)
+      .find(|(startup_path, _)| *startup_path == config_path)
       .is_some()
     {
       return Ok(());
@@ -536,16 +511,13 @@ impl Config {
   pub async fn widget_config_by_path(
     &self,
     config_path: &PathBuf,
-  ) -> anyhow::Result<Option<WidgetConfigEntry>> {
-    let formatted_config_path =
-      PathBuf::from(config_path).to_absolute()?;
+  ) -> anyhow::Result<Option<(PathBuf, WidgetConfig)>> {
+    let abs_config_path = PathBuf::from(config_path).to_absolute()?;
 
     let widget_configs = self.widget_configs.lock().await;
-    let config_entry = widget_configs
-      .iter()
-      .find(|entry| entry.config_path == formatted_config_path);
+    let config = widget_configs.get(&abs_config_path);
 
-    Ok(config_entry.cloned())
+    Ok(config.map(|config| (abs_config_path, config.clone())))
   }
 
   /// Opens the config directory in the OS-dependent file explorer.

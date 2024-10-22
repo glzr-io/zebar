@@ -1,10 +1,10 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use tauri::{State, Window};
 
 use crate::{
   common::WindowExt,
-  config::{Config, WidgetConfig, WidgetConfigEntry, WidgetPlacement},
+  config::{Config, WidgetConfig, WidgetPlacement},
   providers::{ProviderConfig, ProviderManager},
   widget_factory::WidgetFactory,
 };
@@ -12,7 +12,7 @@ use crate::{
 #[tauri::command]
 pub async fn widget_configs(
   config: State<'_, Arc<Config>>,
-) -> Result<Vec<WidgetConfigEntry>, String> {
+) -> Result<HashMap<PathBuf, WidgetConfig>, String> {
   Ok(config.widget_configs().await)
 }
 

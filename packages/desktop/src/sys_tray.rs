@@ -15,7 +15,7 @@ use tracing::{error, info};
 
 use crate::{
   common::PathExt,
-  config::{Config, WidgetConfigEntry, WidgetPreset},
+  config::{Config, WidgetConfig, WidgetPreset},
   widget_factory::{WidgetFactory, WidgetState},
 };
 
@@ -204,16 +204,10 @@ impl SysTray {
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
     let widget_states = self.widget_factory.states_by_config_path().await;
 
-    let startup_config_paths = self
-      .config
-      .startup_widget_configs()
-      .await?
-      .into_iter()
-      .map(|entry| entry.config_path)
-      .collect();
+    let startup_configs = self.config.startup_widget_configs().await?;
 
     let configs_menu = self
-      .create_configs_menu(&widget_states, &startup_config_paths)
+      .create_configs_menu(&widget_states, &startup_configs)
       .await?;
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
@@ -355,17 +349,19 @@ impl SysTray {
   async fn create_configs_menu(
     &self,
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
-    startup_config_paths: &Vec<PathBuf>,
+    startup_configs: &HashMap<PathBuf, WidgetConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
     let mut configs_menu =
       SubmenuBuilder::new(&self.app_handle, "Widget configs");
 
     // Add each widget config to the menu.
-    for widget_config in &self.config.widget_configs().await {
+    for (config_path, widget_config) in &self.config.widget_configs().await
+    {
       let config_menu = self.create_config_menu(
+        config_path,
         &widget_config,
         widget_states,
-        startup_config_paths,
+        startup_configs,
       )?;
 
       configs_menu = configs_menu.item(&config_menu);
@@ -377,18 +373,19 @@ impl SysTray {
   /// Creates and returns a submenu for the given widget config.
   fn create_config_menu(
     &self,
-    widget_config: &WidgetConfigEntry,
+    config_path: &PathBuf,
+    widget_config: &WidgetConfig,
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
-    startup_config_paths: &Vec<PathBuf>,
+    startup_configs: &HashMap<PathBuf, WidgetConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
-    let label =
-      Self::format_config_path(&self.config, &widget_config.config_path);
+    let label = Self::format_config_path(&self.config, config_path);
 
     let mut presets_menu = SubmenuBuilder::new(&self.app_handle, label);
 
     // Add each widget config to the menu.
-    for preset in &widget_config.config.presets {
+    for preset in &widget_config.presets {
       let preset_menu = self.create_preset_menu(
+        config_path,
         &widget_config,
         &preset,
         // TODO: Pass correct enabled + launch on startup states.
@@ -407,7 +404,8 @@ impl SysTray {
   /// Creates and returns a submenu for the given widget config.
   fn create_preset_menu(
     &self,
-    widget_config: &WidgetConfigEntry,
+    config_path: &PathBuf,
+    widget_config: &WidgetConfig,
     preset: &WidgetPreset,
     is_enabled: bool,
     is_launched_on_startup: bool,
@@ -417,7 +415,7 @@ impl SysTray {
       MenuEvent::ToggleWidgetPreset {
         enable: !is_enabled,
         preset: preset.name.clone(),
-        path: widget_config.config_path.clone(),
+        path: config_path.clone(),
       },
       "Enabled",
       true,
@@ -429,7 +427,7 @@ impl SysTray {
       &self.app_handle,
       MenuEvent::ToggleStartupWidgetConfig {
         enable: !is_launched_on_startup,
-        path: widget_config.config_path.clone(),
+        path: config_path.clone(),
       },
       "Launch on startup",
       true,
