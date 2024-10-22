@@ -8,10 +8,9 @@ use tauri::{
     MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder,
     TrayIconEvent,
   },
-  AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
-  Wry,
+  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Wry,
 };
-use tokio::{sync::Mutex, task};
+use tokio::task;
 use tracing::{error, info};
 
 use crate::{
@@ -216,6 +215,8 @@ impl SysTray {
       .text(MenuEvent::ReloadConfigs, "Reload configs")
       .separator();
 
+    // TODO: Set "Open settings" as the default menu item on Windows.
+
     // Add submenus for currently active widget.
     if !widget_states.is_empty() {
       for (config_path, config) in &widget_configs {
@@ -343,7 +344,16 @@ impl SysTray {
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
     startup_configs: &HashMap<PathBuf, WidgetConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
-    let label = Self::format_config_path(&self.config, config_path);
+    let open_widget_states = widget_states.get(config_path);
+    let formatted_config_path =
+      Self::format_config_path(&self.config, config_path);
+
+    let label = match open_widget_states {
+      None => formatted_config_path,
+      Some(states) => {
+        format!("({}) {}", states.len(), formatted_config_path)
+      }
+    };
 
     let mut presets_menu = SubmenuBuilder::new(&self.app_handle, label);
 
@@ -352,11 +362,8 @@ impl SysTray {
       let preset_menu = self.create_preset_menu(
         config_path,
         &preset,
-        // TODO: Pass correct enabled + launch on startup states.
-        // widget_states.contains_key(&preset.config_path),
-        // startup_config_paths.contains(&preset.config_path),
-        false,
-        false,
+        widget_states.contains_key(config_path),
+        startup_configs.contains_key(config_path),
       )?;
 
       presets_menu = presets_menu.item(&preset_menu);

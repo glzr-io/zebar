@@ -108,6 +108,8 @@ impl WidgetFactory {
   }
 
   /// Opens widget from a given config path.
+  ///
+  /// Config path must be absolute.
   pub async fn start_widget(
     &self,
     config_path: &PathBuf,
