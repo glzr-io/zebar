@@ -19,13 +19,17 @@ export interface WidgetConfigTreeProps {
 
 export function WidgetConfigTree(props: WidgetConfigTreeProps) {
   const configTree = createMemo(() => {
-    const tree: Record<string, string[]> = {};
+    const tree: Record<string, Record<string, WidgetConfig>> = {};
 
     Object.keys(props.configs)
       .sort()
       .forEach(configPath => {
         const folder = configPath.split(/[/\\]/).at(-2);
-        tree[folder] = [...(tree[folder] ?? []), configPath];
+
+        tree[folder] = {
+          ...(tree[folder] ?? {}),
+          [configPath]: props.configs[configPath],
+        };
       });
 
     return tree;
@@ -36,7 +40,7 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
       <h2 class="text-lg font-semibold mb-2">Widget configs</h2>
       <div class="space-y-1">
         <For each={Object.entries(configTree())}>
-          {([folder, configPaths]) => (
+          {([folder, configs]) => (
             <Collapsible defaultOpen>
               <CollapsibleTrigger class="flex items-center space-x-2 px-2 py-1 w-full text-left">
                 <IconChevronDown class="h-3 w-3" />
@@ -44,19 +48,21 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
               </CollapsibleTrigger>
 
               <CollapsibleContent class="pl-4">
-                {configPaths.map(configPath => (
-                  <div
-                    class={cn(
-                      'flex items-center space-x-2 py-1 rounded-md cursor-pointer',
-                      props.selectedConfigPath === configPath &&
-                        'bg-accent',
-                    )}
-                    onClick={() => props.onSelect(configPath)}
-                  >
-                    <IconFile class="h-4 w-4" />
-                    <span>{configPath.split(/[/\\]/).at(-1)}</span>
-                  </div>
-                ))}
+                <For each={Object.entries(configs)}>
+                  {([configPath]) => (
+                    <div
+                      class={cn(
+                        'flex items-center space-x-2 py-1 rounded-md cursor-pointer',
+                        props.selectedConfigPath === configPath &&
+                          'bg-accent',
+                      )}
+                      onClick={() => props.onSelect(configPath)}
+                    >
+                      <IconFile class="h-4 w-4" />
+                      <span>{configPath.split(/[/\\]/).at(-1)}</span>
+                    </div>
+                  )}
+                </For>
               </CollapsibleContent>
             </Collapsible>
           )}
