@@ -21,7 +21,10 @@ use tracing::{error, info};
 
 use crate::{
   common::{PathExt, WindowExt},
-  config::{AnchorPoint, Config, WidgetConfig, WidgetConfigEntry, ZOrder},
+  config::{
+    AnchorPoint, Config, WidgetConfig, WidgetConfigEntry, WidgetPlacement,
+    ZOrder,
+  },
   monitor_state::MonitorState,
 };
 
@@ -98,17 +101,27 @@ impl WidgetFactory {
   }
 
   /// Opens widget from a given config entry.
-  pub async fn open(
+  pub async fn start_widget(
     &self,
     config_entry: WidgetConfigEntry,
+    placement: WidgetPlacement,
+  ) -> anyhow::Result<()> {
+    todo!()
+  }
+
+  /// Opens widget from a given config entry.
+  pub async fn start_preset(
+    &self,
+    config_entry: WidgetConfigEntry,
+    preset_name: String,
   ) -> anyhow::Result<()> {
     let WidgetConfigEntry {
       config,
       config_path,
-      html_path,
+      config_dir: html_path,
     } = &config_entry;
 
-    for (size, position) in self.widget_placements(config).await {
+    for (size, position) in self.widget_coordinates(config).await {
       // Use running widget count as a unique label for the Tauri window.
       let new_count =
         self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
@@ -242,86 +255,83 @@ impl WidgetFactory {
   }
 
   /// Returns coordinates for window placement based on the given config.
-  async fn widget_placements(
+  async fn widget_coordinates(
     &self,
-    config: &WidgetConfig,
+    placement: &WidgetPlacement,
   ) -> Vec<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
-    let mut placements = vec![];
+    let mut coordinates = vec![];
 
-    for preset in config.presets.iter() {
-      let monitors = self
-        .monitor_state
-        .monitors_by_selection(&preset.monitor_selection)
-        .await;
+    let monitors = self
+      .monitor_state
+      .monitors_by_selection(&placement.monitor_selection)
+      .await;
 
-      for monitor in monitors {
-        let monitor_width = monitor.width as i32;
-        let monitor_height = monitor.height as i32;
+    for monitor in monitors {
+      let monitor_width = monitor.width as i32;
+      let monitor_height = monitor.height as i32;
 
-        // Pixel values should be scaled by the monitor's scale factor,
-        // whereas percentage values are left as-is. This is
-        // because the percentage values are already relative to
-        // the monitor's size.
-        let window_width = preset
-          .width
-          .to_px_scaled(monitor_width, monitor.scale_factor);
+      // Pixel values should be scaled by the monitor's scale factor,
+      // whereas percentage values are left as-is. This is because the
+      // percentage values are already relative to the monitor's size.
+      let window_width = placement
+        .width
+        .to_px_scaled(monitor_width, monitor.scale_factor);
 
-        let window_height = preset
-          .height
-          .to_px_scaled(monitor_height, monitor.scale_factor);
+      let window_height = placement
+        .height
+        .to_px_scaled(monitor_height, monitor.scale_factor);
 
-        let window_size = PhysicalSize::new(window_width, window_height);
+      let window_size = PhysicalSize::new(window_width, window_height);
 
-        let (anchor_x, anchor_y) = match preset.anchor {
-          AnchorPoint::TopLeft => (monitor.x, monitor.y),
-          AnchorPoint::TopCenter => (
-            monitor.x + (monitor_width / 2) - (window_size.width / 2),
-            monitor.y,
-          ),
-          AnchorPoint::TopRight => {
-            (monitor.x + monitor_width - window_size.width, monitor.y)
-          }
-          AnchorPoint::CenterLeft => (
-            monitor.x,
-            monitor.y + (monitor_height / 2) - (window_size.height / 2),
-          ),
-          AnchorPoint::Center => (
-            monitor.x + (monitor_width / 2) - (window_size.width / 2),
-            monitor.y + (monitor_height / 2) - (window_size.height / 2),
-          ),
-          AnchorPoint::CenterRight => (
-            monitor.x + monitor_width - window_size.width,
-            monitor.y + (monitor_height / 2) - (window_size.height / 2),
-          ),
-          AnchorPoint::BottomLeft => {
-            (monitor.x, monitor.y + monitor_height - window_size.height)
-          }
-          AnchorPoint::BottomCenter => (
-            monitor.x + (monitor_width / 2) - (window_size.width / 2),
-            monitor.y + monitor_height - window_size.height,
-          ),
-          AnchorPoint::BottomRight => (
-            monitor.x + monitor_width - window_size.width,
-            monitor.y + monitor_height - window_size.height,
-          ),
-        };
+      let (anchor_x, anchor_y) = match placement.anchor {
+        AnchorPoint::TopLeft => (monitor.x, monitor.y),
+        AnchorPoint::TopCenter => (
+          monitor.x + (monitor_width / 2) - (window_size.width / 2),
+          monitor.y,
+        ),
+        AnchorPoint::TopRight => {
+          (monitor.x + monitor_width - window_size.width, monitor.y)
+        }
+        AnchorPoint::CenterLeft => (
+          monitor.x,
+          monitor.y + (monitor_height / 2) - (window_size.height / 2),
+        ),
+        AnchorPoint::Center => (
+          monitor.x + (monitor_width / 2) - (window_size.width / 2),
+          monitor.y + (monitor_height / 2) - (window_size.height / 2),
+        ),
+        AnchorPoint::CenterRight => (
+          monitor.x + monitor_width - window_size.width,
+          monitor.y + (monitor_height / 2) - (window_size.height / 2),
+        ),
+        AnchorPoint::BottomLeft => {
+          (monitor.x, monitor.y + monitor_height - window_size.height)
+        }
+        AnchorPoint::BottomCenter => (
+          monitor.x + (monitor_width / 2) - (window_size.width / 2),
+          monitor.y + monitor_height - window_size.height,
+        ),
+        AnchorPoint::BottomRight => (
+          monitor.x + monitor_width - window_size.width,
+          monitor.y + monitor_height - window_size.height,
+        ),
+      };
 
-        let offset_x = preset
-          .offset_x
-          .to_px_scaled(monitor_width, monitor.scale_factor);
+      let offset_x = placement
+        .offset_x
+        .to_px_scaled(monitor_width, monitor.scale_factor);
 
-        let offset_y = preset
-          .offset_y
-          .to_px_scaled(monitor_height, monitor.scale_factor);
+      let offset_y = placement
+        .offset_y
+        .to_px_scaled(monitor_height, monitor.scale_factor);
 
-        let window_position =
-          PhysicalPosition::new(anchor_x + offset_x, anchor_y + offset_y);
+      let window_position =
+        PhysicalPosition::new(anchor_x + offset_x, anchor_y + offset_y);
 
-        placements.push((window_size, window_position));
-      }
+      coordinates.push((window_size, window_position));
     }
 
-    placements
+    coordinates
   }
 
   /// Closes a single widget by a given widget ID.
@@ -367,7 +377,7 @@ impl WidgetFactory {
         .await?
         .context("Widget config not found.")?;
 
-      self.open(widget_config).await?;
+      self.start_preset(widget_config).await?;
     }
 
     Ok(())

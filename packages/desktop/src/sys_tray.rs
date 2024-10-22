@@ -314,7 +314,7 @@ impl SysTray {
           .await?
           .context("Widget config not found.")?;
 
-        widget_factory.open(widget_config).await
+        widget_factory.start_preset(widget_config).await
       }
       false => widget_factory.stop_by_path(&config_path).await,
     }

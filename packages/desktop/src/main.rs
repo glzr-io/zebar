@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
     })
     .invoke_handler(tauri::generate_handler![
       commands::widget_configs,
-      commands::open_widget_default,
+      commands::start_preset,
       commands::update_widget_config,
       commands::listen_provider,
       commands::unlisten_provider,
@@ -117,7 +117,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     .init();
 
   let config_dir_override = match cli.command() {
-    CliCommand::OpenWidgetDefault(args) => args.config_dir,
+    CliCommand::StartPreset(args) => args.config_dir,
     CliCommand::Startup(args) => args.config_dir,
     _ => None,
   };
@@ -261,7 +261,7 @@ async fn open_widgets_by_cli_command(
   widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
   let widget_configs = match cli.command() {
-    CliCommand::OpenWidgetDefault(args) => {
+    CliCommand::StartPreset(args) => {
       let widget_config = config
         .widget_config_by_path(&config.join_config_dir(&args.config_path))
         .await?
@@ -278,7 +278,7 @@ async fn open_widgets_by_cli_command(
   };
 
   for widget_config in widget_configs {
-    if let Err(err) = widget_factory.open(widget_config).await {
+    if let Err(err) = widget_factory.start_preset(widget_config).await {
       error!("Failed to open window: {:?}", err);
     }
   }

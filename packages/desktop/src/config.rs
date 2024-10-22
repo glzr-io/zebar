@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::Context;
+use clap::{Args, ValueEnum};
 use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
@@ -69,6 +70,14 @@ pub struct WidgetPreset {
   #[serde(default = "default_preset_name")]
   pub name: String,
 
+  #[serde(flatten)]
+  pub placement: WidgetPlacement,
+}
+
+/// TODO: Maybe in-line these values in the clap struct? Tbh not sure.
+#[derive(Args, Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetPlacement {
   /// Anchor-point of the widget.
   pub anchor: AnchorPoint,
 
@@ -88,7 +97,8 @@ pub struct WidgetPreset {
   pub monitor_selection: MonitorSelection,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, ValueEnum)]
+#[clap(rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum AnchorPoint {
   TopLeft,
@@ -139,10 +149,12 @@ pub struct Config {
 #[serde(rename_all = "camelCase")]
 pub struct WidgetConfigEntry {
   /// Absolute path to the widget's config file.
+  /// TODO: Instead store the relative path and join with `config_dir`
+  /// when needed.
   pub config_path: PathBuf,
 
-  /// Absolute path to the widget's HTML file.
-  pub html_path: PathBuf,
+  /// Absolute path to the config directory.
+  pub config_dir: PathBuf,
 
   /// Parsed widget config.
   pub config: WidgetConfig,
@@ -318,7 +330,7 @@ impl Config {
           Ok(WidgetConfigEntry {
             config,
             config_path,
-            html_path,
+            config_dir: html_path,
           })
         });
 

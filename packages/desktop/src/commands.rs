@@ -4,7 +4,7 @@ use tauri::{State, Window};
 
 use crate::{
   common::WindowExt,
-  config::{Config, WidgetConfig, WidgetConfigEntry},
+  config::{Config, WidgetConfig, WidgetConfigEntry, WidgetPlacement},
   providers::{ProviderConfig, ProviderManager},
   widget_factory::WidgetFactory,
 };
@@ -17,8 +17,9 @@ pub async fn widget_configs(
 }
 
 #[tauri::command]
-pub async fn open_widget_default(
+pub async fn start_widget(
   config_path: String,
+  placement: WidgetPlacement,
   config: State<'_, Arc<Config>>,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
@@ -31,7 +32,28 @@ pub async fn open_widget_default(
     .map_err(|err| err.to_string())?;
 
   widget_factory
-    .open(widget_config)
+    .start_widget(widget_config, placement)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn start_preset(
+  config_path: String,
+  preset_name: String,
+  config: State<'_, Arc<Config>>,
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  let widget_config = config
+    .widget_config_by_path(&PathBuf::from(config_path))
+    .await
+    .and_then(|opt| {
+      opt.ok_or_else(|| anyhow::anyhow!("Widget config not found."))
+    })
+    .map_err(|err| err.to_string())?;
+
+  widget_factory
+    .start_preset(widget_config, preset_name)
     .await
     .map_err(|err| err.to_string())
 }
