@@ -114,7 +114,7 @@ impl WidgetFactory {
         self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
 
       // Use running widget count as a unique label for the Tauri window.
-      let widget_id = new_count.to_string();
+      let widget_id = format!("widget-{}", new_count);
 
       let html_path = config_path
         .parent()
