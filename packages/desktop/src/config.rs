@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::Context;
-use clap::{Args, ValueEnum};
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
@@ -74,8 +74,7 @@ pub struct WidgetPreset {
   pub placement: WidgetPlacement,
 }
 
-/// TODO: Maybe in-line these values in the clap struct? Tbh not sure.
-#[derive(Args, Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPlacement {
   /// Anchor-point of the widget.

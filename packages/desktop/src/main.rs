@@ -7,6 +7,8 @@ use std::{env, sync::Arc};
 
 use anyhow::Context;
 use clap::Parser;
+use cli::MonitorType;
+use config::{MonitorSelection, WidgetPlacement};
 use tauri::{async_runtime::block_on, Manager, RunEvent};
 use tokio::task;
 use tracing::{error, info, level_filters::LevelFilter};
@@ -117,6 +119,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     .init();
 
   let config_dir_override = match cli.command() {
+    CliCommand::StartWidget(args) => args.config_dir,
     CliCommand::StartPreset(args) => args.config_dir,
     CliCommand::Startup(args) => args.config_dir,
     _ => None,
@@ -141,7 +144,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   // If this is not the first instance of the app, this will emit within
   // the original instance and exit immediately. The CLI command is
   // guaranteed to be one of the open commands here.
-  setup_single_instance(app, config.clone(), widget_factory.clone())?;
+  setup_single_instance(app, widget_factory.clone())?;
 
   // Prevent windows from showing up in the dock on MacOS.
   #[cfg(target_os = "macos")]
@@ -161,8 +164,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.manage(manager);
 
   // Open widgets based on CLI command.
-  open_widgets_by_cli_command(cli, config.clone(), widget_factory.clone())
-    .await?;
+  open_widgets_by_cli_command(cli, widget_factory.clone()).await?;
 
   // Add application icon to system tray.
   let tray =
@@ -222,12 +224,10 @@ fn listen_events(
 /// Setup single instance Tauri plugin.
 fn setup_single_instance(
   app: &tauri::App,
-  config: Arc<Config>,
   widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
   app.handle().plugin(tauri_plugin_single_instance::init(
     move |_, args, _| {
-      let config = config.clone();
       let widget_factory = widget_factory.clone();
 
       task::spawn(async move {
@@ -235,8 +235,7 @@ fn setup_single_instance(
           Ok(cli) => {
             // No-op if no subcommand is provided.
             if cli.command() != CliCommand::Empty {
-              open_widgets_by_cli_command(cli, config, widget_factory)
-                .await
+              open_widgets_by_cli_command(cli, widget_factory).await
             } else {
               Ok(())
             }
@@ -257,30 +256,39 @@ fn setup_single_instance(
 /// Opens widgets based on CLI command.
 async fn open_widgets_by_cli_command(
   cli: Cli,
-  config: Arc<Config>,
   widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
-  let widget_configs = match cli.command() {
-    CliCommand::StartPreset(args) => {
-      let widget_config = config
-        .widget_config_by_path(&config.join_config_dir(&args.config_path))
-        .await?
-        .with_context(|| {
-          format!(
-            "Widget config not found at {}.",
-            args.config_path.display()
-          )
-        })?;
-
-      vec![widget_config]
+  let res = match cli.command() {
+    CliCommand::StartWidget(args) => {
+      widget_factory
+        .start_widget(
+          args.config_path,
+          WidgetPlacement {
+            anchor: args.anchor,
+            offset_x: args.offset_x,
+            offset_y: args.offset_y,
+            width: args.width,
+            height: args.height,
+            monitor_selection: match args.monitor_type {
+              MonitorType::All => MonitorSelection::All,
+              MonitorType::Primary => MonitorSelection::Primary,
+              MonitorType::Secondary => MonitorSelection::Secondary,
+            },
+          },
+        )
+        .await
     }
-    _ => config.startup_widget_configs().await?,
+    CliCommand::StartPreset(args) => {
+      widget_factory
+        .start_preset(args.config_path, args.preset_name)
+        .await
+    }
+    CliCommand::Startup(_) => widget_factory.startup().await,
+    _ => unreachable!(),
   };
 
-  for widget_config in widget_configs {
-    if let Err(err) = widget_factory.start_preset(widget_config).await {
-      error!("Failed to open window: {:?}", err);
-    }
+  if let Err(err) = res {
+    error!("Failed to open widgets: {:?}", err);
   }
 
   Ok(())

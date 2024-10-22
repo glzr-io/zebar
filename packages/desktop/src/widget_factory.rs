@@ -214,10 +214,15 @@ impl WidgetFactory {
     Ok(())
   }
 
+  /// Opens presets that are configured to be launched on startup.
+  pub async fn startup(&self) -> anyhow::Result<()> {
+    todo!()
+  }
+
   /// Converts a file path to a Tauri asset URL.
   ///
   /// Returns a string that can be used as a webview URL.
-  pub fn to_asset_url(file_path: &str) -> String {
+  fn to_asset_url(file_path: &str) -> String {
     if cfg!(target_os = "windows") {
       format!("http://asset.localhost/{}", file_path)
     } else {

@@ -1,8 +1,8 @@
 use std::{path::PathBuf, process};
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use crate::config::WidgetPlacement;
+use crate::{common::LengthValue, config::AnchorPoint};
 
 const VERSION: &'static str = env!("VERSION_NUMBER");
 
@@ -63,14 +63,44 @@ pub struct StartWidgetArgs {
   #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
   pub config_path: PathBuf,
 
-  #[clap(long, flatten)]
-  pub placement: WidgetPlacement,
-
   /// Absolute or relative path to the Zebar config directory.
   ///
   /// The default path is `%userprofile%/.glzr/zebar/`
   #[clap(long, value_hint = clap::ValueHint::FilePath)]
   pub config_dir: Option<PathBuf>,
+
+  /// Anchor-point of the widget.
+  #[clap(long)]
+  pub anchor: AnchorPoint,
+
+  /// Offset from the anchor-point.
+  #[clap(long)]
+  pub offset_x: LengthValue,
+
+  /// Offset from the anchor-point.
+  #[clap(long)]
+  pub offset_y: LengthValue,
+
+  /// Width of the widget in % or physical pixels.
+  #[clap(long)]
+  pub width: LengthValue,
+
+  /// Height of the widget in % or physical pixels.
+  #[clap(long)]
+  pub height: LengthValue,
+
+  /// Monitor(s) to place the widget on.
+  #[clap(long)]
+  pub monitor_type: MonitorType,
+}
+
+/// TODO: Add support for `Index` and `Name` types.
+#[derive(Clone, Debug, PartialEq, ValueEnum)]
+#[clap(rename_all = "snake_case")]
+pub enum MonitorType {
+  All,
+  Primary,
+  Secondary,
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]
