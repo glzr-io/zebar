@@ -13,17 +13,20 @@ import { WidgetConfig } from 'zebar';
 export interface WidgetConfigTreeProps {
   configs: Record<string, WidgetConfig>;
   selectedConfig: WidgetConfig | null;
+  selectedConfigPath: string | null;
   onSelect: (configPath: string) => void;
 }
 
 export function WidgetConfigTree(props: WidgetConfigTreeProps) {
   const configTree = createMemo(() => {
-    const tree: Record<string, WidgetConfig[]> = {};
+    const tree: Record<string, string[]> = {};
 
-    props.configs.forEach(config => {
-      const folder = config.configPath.split(/[/\\]/).at(-2);
-      tree[folder] = [...(tree[folder] ?? []), config];
-    });
+    Object.keys(props.configs)
+      .sort()
+      .forEach(configPath => {
+        const folder = configPath.split(/[/\\]/).at(-2);
+        tree[folder] = [...(tree[folder] ?? []), configPath];
+      });
 
     return tree;
   });
@@ -33,7 +36,7 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
       <h2 class="text-lg font-semibold mb-2">Widget configs</h2>
       <div class="space-y-1">
         <For each={Object.entries(configTree())}>
-          {([folder, configs]) => (
+          {([folder, configPaths]) => (
             <Collapsible defaultOpen>
               <CollapsibleTrigger class="flex items-center space-x-2 px-2 py-1 w-full text-left">
                 <IconChevronDown class="h-3 w-3" />
@@ -41,17 +44,17 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
               </CollapsibleTrigger>
 
               <CollapsibleContent class="pl-4">
-                {configs.map(config => (
+                {configPaths.map(configPath => (
                   <div
                     class={cn(
                       'flex items-center space-x-2 py-1 rounded-md cursor-pointer',
-                      props.selectedConfig?.configPath ===
-                        config.configPath && 'bg-accent',
+                      props.selectedConfigPath === configPath &&
+                        'bg-accent',
                     )}
-                    onClick={() => props.onSelect(config.configPath)}
+                    onClick={() => props.onSelect(configPath)}
                   >
                     <IconFile class="h-4 w-4" />
-                    <span>{config.configPath.split(/[/\\]/).at(-1)}</span>
+                    <span>{configPath.split(/[/\\]/).at(-1)}</span>
                   </div>
                 ))}
               </CollapsibleContent>

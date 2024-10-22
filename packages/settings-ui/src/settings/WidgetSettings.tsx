@@ -59,20 +59,23 @@ export function WidgetSettings() {
     ),
   );
 
-  async function onConfigChange(newConfig: WidgetConfig) {
+  async function onConfigChange(
+    configPath: string,
+    newConfig: WidgetConfig,
+  ) {
     // Update the state with the new config values.
-    mutate(configs => ({ ...configs, [selectedConfigPath()]: newConfig }));
+    mutate(configs => ({ ...configs, [configPath]: newConfig }));
 
     // Send updated config values to backend.
     await invoke<void>('update_widget_config', {
-      configPath: selectedConfigPath(),
+      configPath,
       newConfig,
     });
   }
 
-  async function startPreset(presetName: string) {
+  async function startPreset(configPath: string, presetName: string) {
     await invoke<void>('start_preset', {
-      configPath: selectedConfigPath(),
+      configPath,
       presetName,
     });
   }
@@ -83,6 +86,7 @@ export function WidgetSettings() {
       <WidgetConfigTree
         configs={configs()}
         selectedConfig={selectedConfig()}
+        selectedConfigPath={selectedConfigPath()}
         onSelect={setSelectedConfigPath}
       />
 
@@ -104,7 +108,9 @@ export function WidgetSettings() {
 
               <WidgetSettingsForm
                 config={config()}
-                onChange={onConfigChange}
+                onChange={config =>
+                  onConfigChange(selectedConfigPath(), config)
+                }
               />
             </div>
 
@@ -114,7 +120,9 @@ export function WidgetSettings() {
                 <Button
                   class="rounded-r-none self-end"
                   disabled={presetNames().length === 0}
-                  onClick={() => startPreset(selectedPreset())}
+                  onClick={() =>
+                    startPreset(selectedConfigPath(), selectedPreset())
+                  }
                 >
                   {selectedPreset()
                     ? `Open ${selectedPreset()}`
