@@ -10,8 +10,7 @@ import {
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
 import { createEffect, on } from 'solid-js';
-
-import { WidgetConfig } from './WidgetSettings';
+import { WidgetConfig } from 'zebar';
 
 export interface WidgetSettingsFormProps {
   config: WidgetConfig;
@@ -226,6 +225,30 @@ export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
                     <TextField
                       id={`offset-y-${index}`}
                       label="Offset Y"
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {/* TODO: Change to px/percent input. */}
+                <Field of={configForm} path={`presets.${index}.width`}>
+                  {inputProps => (
+                    <TextField
+                      id={`width-${index}`}
+                      label="Width"
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                {/* TODO: Change to px/percent input. */}
+                <Field of={configForm} path={`presets.${index}.height`}>
+                  {inputProps => (
+                    <TextField
+                      id={`height-${index}`}
+                      label="Height"
                       {...inputProps()}
                     />
                   )}
