@@ -17,7 +17,7 @@ use tracing::{error, info};
 use crate::{
   common::PathExt,
   config::{Config, WidgetConfig, WidgetPreset},
-  widget_factory::{WidgetFactory, WidgetState},
+  widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
 #[derive(Debug, Clone)]
@@ -264,7 +264,11 @@ impl SysTray {
           path,
           preset,
         } => match enable {
-          true => widget_factory.start_preset(&path, &preset).await,
+          true => {
+            widget_factory
+              .start_widget(&path, &WidgetOpenOptions::Preset(preset))
+              .await
+          }
           false => widget_factory.stop_by_preset(&path, &preset).await,
         },
         MenuEvent::ToggleStartupWidgetConfig { enable, path } => {

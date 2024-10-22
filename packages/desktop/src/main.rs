@@ -12,6 +12,7 @@ use tauri::{async_runtime::block_on, Manager, RunEvent};
 use tokio::task;
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
+use widget_factory::WidgetOpenOptions;
 
 use crate::{
   cli::{Cli, CliCommand, QueryArgs},
@@ -263,7 +264,7 @@ async fn open_widgets_by_cli_command(
       widget_factory
         .start_widget(
           &args.config_path,
-          &WidgetPlacement {
+          &WidgetOpenOptions::Standalone(WidgetPlacement {
             anchor: args.anchor,
             offset_x: args.offset_x,
             offset_y: args.offset_y,
@@ -274,13 +275,16 @@ async fn open_widgets_by_cli_command(
               MonitorType::Primary => MonitorSelection::Primary,
               MonitorType::Secondary => MonitorSelection::Secondary,
             },
-          },
+          }),
         )
         .await
     }
     CliCommand::StartPreset(args) => {
       widget_factory
-        .start_preset(&args.config_path, &args.preset_name)
+        .start_widget(
+          &args.config_path,
+          &WidgetOpenOptions::Preset(args.preset_name),
+        )
         .await
     }
     CliCommand::Startup(_) => widget_factory.startup().await,

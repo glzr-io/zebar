@@ -72,6 +72,16 @@ pub struct WidgetState {
 
   /// Absolute path to the widget's HTML file.
   pub html_path: PathBuf,
+
+  /// How the widget was opened.
+  pub open_options: WidgetOpenOptions,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum WidgetOpenOptions {
+  Standalone(WidgetPlacement),
+  Preset(String),
 }
 
 impl WidgetFactory {
@@ -101,13 +111,32 @@ impl WidgetFactory {
   pub async fn start_widget(
     &self,
     config_path: &PathBuf,
-    placement: &WidgetPlacement,
+    open_options: &WidgetOpenOptions,
   ) -> anyhow::Result<()> {
     let (config_path, widget_config) = self
       .config
       .widget_config_by_path(config_path)
       .await?
       .context("No config found at path.")?;
+
+    // Extract placement from widget preset (if applicable).
+    let placement = match open_options {
+      WidgetOpenOptions::Standalone(placement) => placement,
+      WidgetOpenOptions::Preset(name) => {
+        &widget_config
+          .presets
+          .iter()
+          .find(|preset| preset.name == *name)
+          .with_context(|| {
+            format!(
+              "No preset with name '{}' at config '{}'.",
+              name,
+              config_path.display()
+            )
+          })?
+          .placement
+      }
+    };
 
     for (size, position) in self.widget_coordinates(placement).await {
       let new_count =
@@ -171,6 +200,7 @@ impl WidgetFactory {
         config: widget_config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
+        open_options: open_options.clone(),
       };
 
       _ = window.eval(&format!(
@@ -205,33 +235,6 @@ impl WidgetFactory {
     }
 
     Ok(())
-  }
-
-  /// Opens widget from a given config path.
-  pub async fn start_preset(
-    &self,
-    config_path: &PathBuf,
-    preset_name: &str,
-  ) -> anyhow::Result<()> {
-    let (_, widget_config) = self
-      .config
-      .widget_config_by_path(config_path)
-      .await?
-      .context("No config found at path.")?;
-
-    let preset = widget_config
-      .presets
-      .iter()
-      .find(|preset| preset.name == preset_name)
-      .with_context(|| {
-        format!(
-          "No preset with name '{}' at config '{}'.",
-          preset_name,
-          config_path.display()
-        )
-      })?;
-
-    self.start_widget(config_path, &preset.placement).await
   }
 
   /// Opens presets that are configured to be launched on startup.

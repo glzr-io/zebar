@@ -6,7 +6,7 @@ use crate::{
   common::WindowExt,
   config::{Config, WidgetConfig, WidgetPlacement},
   providers::{ProviderConfig, ProviderManager},
-  widget_factory::WidgetFactory,
+  widget_factory::{WidgetFactory, WidgetOpenOptions},
 };
 
 #[tauri::command]
@@ -23,7 +23,10 @@ pub async fn start_widget(
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
-    .start_widget(&PathBuf::from(config_path), &placement)
+    .start_widget(
+      &PathBuf::from(config_path),
+      &WidgetOpenOptions::Standalone(placement),
+    )
     .await
     .map_err(|err| err.to_string())
 }
@@ -35,7 +38,10 @@ pub async fn start_preset(
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
-    .start_preset(&PathBuf::from(config_path), &preset_name)
+    .start_widget(
+      &PathBuf::from(config_path),
+      &WidgetOpenOptions::Preset(preset_name),
+    )
     .await
     .map_err(|err| err.to_string())
 }
