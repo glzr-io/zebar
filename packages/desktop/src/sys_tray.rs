@@ -202,37 +202,37 @@ impl SysTray {
 
   /// Creates and returns the main system tray menu.
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
+    let widget_configs = self.config.widget_configs().await;
     let widget_states = self.widget_factory.states_by_config_path().await;
-
     let startup_configs = self.config.startup_widget_configs().await?;
 
     let configs_menu = self
-      .create_configs_menu(&widget_states, &startup_configs)
+      .create_configs_menu(
+        &widget_configs,
+        &widget_states,
+        &startup_configs,
+      )
       .await?;
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
       .text(MenuEvent::OpenSettings, "Open settings")
       .item(&configs_menu)
-      .text(MenuEvent::ShowConfigFolder, "Show config folder")
       .text(MenuEvent::ReloadConfigs, "Reload configs")
       .separator();
 
     // Add submenus for currently active widget.
     if !widget_states.is_empty() {
-      for (config_path, states) in widget_states {
-        let label = format!(
-          "({}) {}",
-          states.len(),
-          Self::format_config_path(&self.config, &config_path)
-        );
+      for (config_path, config) in &widget_configs {
+        if let Some(_) = widget_states.get(config_path) {
+          let config_menu = self.create_config_menu(
+            &config_path,
+            config,
+            &widget_states,
+            &startup_configs,
+          )?;
 
-        // TODO: Add this later.
-        // tray_menu = tray_menu.item(&self.create_config_menu(
-        //   &config_path,
-        //   &label,
-        //   !states.is_empty(),
-        //   startup_config_paths.contains(&config_path),
-        // )?);
+          tray_menu = tray_menu.item(&config_menu);
+        }
       }
 
       tray_menu = tray_menu.separator();
@@ -270,17 +270,15 @@ impl SysTray {
           enable,
           path,
           preset,
-        } => {
-          Self::toggle_widget_preset(
-            enable,
-            &path,
-            &preset,
-            widget_factory,
-          )
-          .await
-        }
+        } => match enable {
+          true => widget_factory.start_preset(&path, &preset).await,
+          false => widget_factory.stop_by_preset(&path, &preset).await,
+        },
         MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
-          Self::toggle_startup_widget_config(enable, &path, config).await
+          match enable {
+            true => config.add_startup_config(&path).await,
+            false => config.remove_startup_config(&path).await,
+          }
         }
       };
 
@@ -309,6 +307,7 @@ impl SysTray {
         .build()
         .context("Failed to build the settings window.")?;
 
+        // TODO: Unset `self.settings_window` on close.
         *settings_window = Some(window);
         Ok(())
       }
@@ -318,36 +317,10 @@ impl SysTray {
     }
   }
 
-  async fn toggle_widget_preset(
-    enable: bool,
-    config_path: &PathBuf,
-    preset_name: &str,
-    widget_factory: Arc<WidgetFactory>,
-  ) -> anyhow::Result<()> {
-    match enable {
-      true => widget_factory.start_preset(config_path, preset_name).await,
-      false => {
-        widget_factory
-          .stop_by_preset(config_path, preset_name)
-          .await
-      }
-    }
-  }
-
-  async fn toggle_startup_widget_config(
-    enable: bool,
-    config_path: &PathBuf,
-    config: Arc<Config>,
-  ) -> anyhow::Result<()> {
-    match enable {
-      true => config.add_startup_config(config_path).await,
-      false => config.remove_startup_config(config_path).await,
-    }
-  }
-
   /// Creates and returns a submenu for the widget configs.
   async fn create_configs_menu(
     &self,
+    widget_configs: &HashMap<PathBuf, WidgetConfig>,
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
     startup_configs: &HashMap<PathBuf, WidgetConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
@@ -355,8 +328,7 @@ impl SysTray {
       SubmenuBuilder::new(&self.app_handle, "Widget configs");
 
     // Add each widget config to the menu.
-    for (config_path, widget_config) in &self.config.widget_configs().await
-    {
+    for (config_path, widget_config) in widget_configs {
       let config_menu = self.create_config_menu(
         config_path,
         &widget_config,
@@ -386,7 +358,6 @@ impl SysTray {
     for preset in &widget_config.presets {
       let preset_menu = self.create_preset_menu(
         config_path,
-        &widget_config,
         &preset,
         // TODO: Pass correct enabled + launch on startup states.
         // widget_states.contains_key(&preset.config_path),
@@ -405,7 +376,6 @@ impl SysTray {
   fn create_preset_menu(
     &self,
     config_path: &PathBuf,
-    widget_config: &WidgetConfig,
     preset: &WidgetPreset,
     is_enabled: bool,
     is_launched_on_startup: bool,
