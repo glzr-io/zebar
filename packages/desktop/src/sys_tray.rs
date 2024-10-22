@@ -25,8 +25,15 @@ enum MenuEvent {
   ReloadConfigs,
   OpenSettings,
   Exit,
-  ToggleWidgetConfig { enable: bool, path: PathBuf },
-  ToggleStartupWidgetConfig { enable: bool, path: PathBuf },
+  ToggleWidgetPreset {
+    enable: bool,
+    preset: String,
+    path: PathBuf,
+  },
+  ToggleStartupWidgetConfig {
+    enable: bool,
+    path: PathBuf,
+  },
 }
 
 impl ToString for MenuEvent {
@@ -36,11 +43,16 @@ impl ToString for MenuEvent {
       MenuEvent::ReloadConfigs => "reload_configs".to_string(),
       MenuEvent::OpenSettings => "open_settings".to_string(),
       MenuEvent::Exit => "exit".to_string(),
-      MenuEvent::ToggleWidgetConfig { enable, path } => {
+      MenuEvent::ToggleWidgetPreset {
+        enable,
+        preset,
+        path,
+      } => {
         format!(
-          "toggle_widget_config_{}_{}",
+          "toggle_widget_config_{}_{}_{}",
           enable,
-          path.to_unicode_string()
+          preset,
+          path.to_unicode_string(),
         )
       }
       MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
@@ -65,9 +77,10 @@ impl FromStr for MenuEvent {
       ["reload", "configs"] => Ok(Self::ReloadConfigs),
       ["open", "settings"] => Ok(Self::OpenSettings),
       ["exit"] => Ok(Self::Exit),
-      ["toggle", "widget", "config", enable @ ("true" | "false"), path @ ..] => {
-        Ok(Self::ToggleWidgetConfig {
+      ["toggle", "widget", "config", enable @ ("true" | "false"), preset, path @ ..] => {
+        Ok(Self::ToggleWidgetPreset {
           enable: *enable == "true",
+          preset: preset.to_string(),
           path: PathBuf::from(path.join("_")),
         })
       }
@@ -258,12 +271,21 @@ impl SysTray {
           app_handle.exit(0);
           Ok(())
         }
-        MenuEvent::ToggleWidgetConfig { enable, path } => {
-          Self::toggle_widget_config(enable, path, config, widget_factory)
-            .await
+        MenuEvent::ToggleWidgetPreset {
+          enable,
+          path,
+          preset,
+        } => {
+          Self::toggle_widget_preset(
+            enable,
+            &path,
+            &preset,
+            widget_factory,
+          )
+          .await
         }
         MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
-          Self::toggle_startup_widget_config(enable, path, config).await
+          Self::toggle_startup_widget_config(enable, &path, config).await
         }
       };
 
@@ -301,33 +323,30 @@ impl SysTray {
     }
   }
 
-  async fn toggle_widget_config(
+  async fn toggle_widget_preset(
     enable: bool,
-    config_path: PathBuf,
-    config: Arc<Config>,
+    config_path: &PathBuf,
+    preset_name: &str,
     widget_factory: Arc<WidgetFactory>,
   ) -> anyhow::Result<()> {
     match enable {
-      true => {
-        let widget_config = config
-          .widget_config_by_path(&config_path)
-          .await?
-          .context("Widget config not found.")?;
-
-        widget_factory.start_preset(widget_config).await
+      true => widget_factory.start_preset(config_path, preset_name).await,
+      false => {
+        widget_factory
+          .stop_by_preset(config_path, preset_name)
+          .await
       }
-      false => widget_factory.stop_by_path(&config_path).await,
     }
   }
 
   async fn toggle_startup_widget_config(
     enable: bool,
-    config_path: PathBuf,
+    config_path: &PathBuf,
     config: Arc<Config>,
   ) -> anyhow::Result<()> {
     match enable {
-      true => config.add_startup_config(&config_path).await,
-      false => config.remove_startup_config(&config_path).await,
+      true => config.add_startup_config(config_path).await,
+      false => config.remove_startup_config(config_path).await,
     }
   }
 
@@ -368,8 +387,9 @@ impl SysTray {
   ) -> anyhow::Result<Submenu<Wry>> {
     let enabled_item = CheckMenuItem::with_id(
       &self.app_handle,
-      MenuEvent::ToggleWidgetConfig {
+      MenuEvent::ToggleWidgetPreset {
         enable: !is_enabled,
+        preset: "",
         path: config_path.clone(),
       },
       "Enabled",

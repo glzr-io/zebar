@@ -5,7 +5,6 @@
 
 use std::{env, sync::Arc};
 
-use anyhow::Context;
 use clap::Parser;
 use cli::MonitorType;
 use config::{MonitorSelection, WidgetPlacement};
@@ -262,8 +261,8 @@ async fn open_widgets_by_cli_command(
     CliCommand::StartWidget(args) => {
       widget_factory
         .start_widget(
-          args.config_path,
-          WidgetPlacement {
+          &args.config_path,
+          &WidgetPlacement {
             anchor: args.anchor,
             offset_x: args.offset_x,
             offset_y: args.offset_y,
@@ -280,7 +279,7 @@ async fn open_widgets_by_cli_command(
     }
     CliCommand::StartPreset(args) => {
       widget_factory
-        .start_preset(args.config_path, args.preset_name)
+        .start_preset(&args.config_path, &args.preset_name)
         .await
     }
     CliCommand::Startup(_) => widget_factory.startup().await,

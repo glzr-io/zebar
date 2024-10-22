@@ -103,8 +103,8 @@ impl WidgetFactory {
   /// Opens widget from a given config entry.
   pub async fn start_widget(
     &self,
-    config_entry: WidgetConfigEntry,
-    placement: WidgetPlacement,
+    config_path: &PathBuf,
+    placement: &WidgetPlacement,
   ) -> anyhow::Result<()> {
     todo!()
   }
@@ -112,8 +112,8 @@ impl WidgetFactory {
   /// Opens widget from a given config entry.
   pub async fn start_preset(
     &self,
-    config_entry: WidgetConfigEntry,
-    preset_name: String,
+    config_path: &PathBuf,
+    preset_name: &str,
   ) -> anyhow::Result<()> {
     let WidgetConfigEntry {
       config,
@@ -367,6 +367,15 @@ impl WidgetFactory {
     }
 
     Ok(())
+  }
+
+  /// Closes all widgets of the given preset name.
+  pub async fn stop_by_preset(
+    &self,
+    config_path: &PathBuf,
+    preset_name: &str,
+  ) -> anyhow::Result<()> {
+    todo!()
   }
 
   /// Relaunches all currently open widgets.

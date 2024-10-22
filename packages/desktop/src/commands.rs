@@ -20,19 +20,10 @@ pub async fn widget_configs(
 pub async fn start_widget(
   config_path: String,
   placement: WidgetPlacement,
-  config: State<'_, Arc<Config>>,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
-  let widget_config = config
-    .widget_config_by_path(&PathBuf::from(config_path))
-    .await
-    .and_then(|opt| {
-      opt.ok_or_else(|| anyhow::anyhow!("Widget config not found."))
-    })
-    .map_err(|err| err.to_string())?;
-
   widget_factory
-    .start_widget(widget_config, placement)
+    .start_widget(&PathBuf::from(config_path), &placement)
     .await
     .map_err(|err| err.to_string())
 }
@@ -41,19 +32,10 @@ pub async fn start_widget(
 pub async fn start_preset(
   config_path: String,
   preset_name: String,
-  config: State<'_, Arc<Config>>,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
-  let widget_config = config
-    .widget_config_by_path(&PathBuf::from(config_path))
-    .await
-    .and_then(|opt| {
-      opt.ok_or_else(|| anyhow::anyhow!("Widget config not found."))
-    })
-    .map_err(|err| err.to_string())?;
-
   widget_factory
-    .start_preset(widget_config, preset_name)
+    .start_preset(&PathBuf::from(config_path), &preset_name)
     .await
     .map_err(|err| err.to_string())
 }
