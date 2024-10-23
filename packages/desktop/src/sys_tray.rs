@@ -15,7 +15,7 @@ use tracing::{error, info};
 
 use crate::{
   common::PathExt,
-  config::{Config, WidgetConfig, WidgetPreset},
+  config::{Config, StartupConfig, WidgetConfig, WidgetPreset},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -32,6 +32,7 @@ enum MenuEvent {
   },
   ToggleStartupWidgetConfig {
     enable: bool,
+    preset: String,
     path: PathBuf,
   },
 }
@@ -55,10 +56,15 @@ impl ToString for MenuEvent {
           path.to_unicode_string(),
         )
       }
-      MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
+      MenuEvent::ToggleStartupWidgetConfig {
+        enable,
+        preset,
+        path,
+      } => {
         format!(
-          "toggle_startup_widget_config_{}_{}",
+          "toggle_startup_widget_config_{}_{}_{}",
           enable,
+          preset,
           path.to_unicode_string()
         )
       }
@@ -84,9 +90,10 @@ impl FromStr for MenuEvent {
           path: PathBuf::from(path.join("_")),
         })
       }
-      ["toggle", "startup", "widget", "config", enable @ ("true" | "false"), path @ ..] => {
+      ["toggle", "startup", "widget", "config", enable @ ("true" | "false"), preset, path @ ..] => {
         Ok(Self::ToggleStartupWidgetConfig {
           enable: *enable == "true",
+          preset: preset.to_string(),
           path: PathBuf::from(path.join("_")),
         })
       }
@@ -198,16 +205,14 @@ impl SysTray {
   /// Creates and returns the main system tray menu.
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
     let widget_configs = self.config.widget_configs().await;
-    let widget_states = self.widget_factory.states_by_config_path().await;
-    let startup_configs = self.config.startup_widget_configs().await?;
+    let widget_states = self.widget_factory.states_by_path().await;
+    let startup_configs = self.config.startup_configs_by_path().await;
 
-    let configs_menu = self
-      .create_configs_menu(
-        &widget_configs,
-        &widget_states,
-        &startup_configs,
-      )
-      .await?;
+    let configs_menu = self.create_configs_menu(
+      &widget_configs,
+      &widget_states,
+      &startup_configs,
+    )?;
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
       .text(MenuEvent::OpenSettings, "Open settings")
@@ -272,12 +277,14 @@ impl SysTray {
           }
           false => widget_factory.stop_by_preset(&path, &preset).await,
         },
-        MenuEvent::ToggleStartupWidgetConfig { enable, path } => {
-          match enable {
-            true => config.add_startup_config(&path).await,
-            false => config.remove_startup_config(&path).await,
-          }
-        }
+        MenuEvent::ToggleStartupWidgetConfig {
+          enable,
+          preset,
+          path,
+        } => match enable {
+          true => config.add_startup_config(&path, &preset).await,
+          false => config.remove_startup_config(&path, &preset).await,
+        },
       };
 
       if let Err(err) = event_res {
@@ -312,11 +319,11 @@ impl SysTray {
   }
 
   /// Creates and returns a submenu for the widget configs.
-  async fn create_configs_menu(
+  fn create_configs_menu(
     &self,
     widget_configs: &HashMap<PathBuf, WidgetConfig>,
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
-    startup_configs: &HashMap<PathBuf, WidgetConfig>,
+    startup_configs: &HashMap<PathBuf, StartupConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
     let mut configs_menu =
       SubmenuBuilder::new(&self.app_handle, "Widget configs");
@@ -342,7 +349,7 @@ impl SysTray {
     config_path: &PathBuf,
     widget_config: &WidgetConfig,
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
-    startup_configs: &HashMap<PathBuf, WidgetConfig>,
+    startup_configs: &HashMap<PathBuf, StartupConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
     let formatted_config_path =
       Self::format_config_path(&self.config, config_path);
@@ -407,6 +414,7 @@ impl SysTray {
       &self.app_handle,
       MenuEvent::ToggleStartupWidgetConfig {
         enable: !is_launched_on_startup,
+        preset: preset.name.clone(),
         path: config_path.clone(),
       },
       "Launch on startup",

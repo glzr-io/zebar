@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::Context;
 use clap::ValueEnum;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
 use tracing::{error, info};
@@ -23,8 +23,44 @@ pub struct SettingsConfig {
   #[serde(rename = "$schema")]
   schema: Option<String>,
 
-  /// Relative paths to widget configs to launch on startup.
-  pub startup_configs: Vec<PathBuf>,
+  /// Widget configs to be launched on startup.
+  pub startup_configs: Vec<StartupConfig>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartupConfig {
+  /// Relative path to widget configs to launch on startup.
+  pub path: PathBuf,
+
+  /// Preset name within the widget config.
+  pub preset: String,
+}
+
+// Deserializer that handles `StartupConfig` objects and string format from
+// v2.3.0 and earlier.
+impl<'de> Deserialize<'de> for StartupConfig {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrObject {
+      String(String),
+      Object(StartupConfig),
+    }
+
+    let value = StringOrObject::deserialize(deserializer)?;
+
+    Ok(match value {
+      StringOrObject::String(s) => StartupConfig {
+        path: PathBuf::from(s),
+        preset: "default".to_string(),
+      },
+      StringOrObject::Object(obj) => obj,
+    })
+  }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -311,8 +347,8 @@ impl Config {
 
   /// Initializes settings and widget configs at the given path.
   ///
-  /// `settings.json` is initialized with either `starter/vanilla.json` or
-  /// `starter/with-glazewm.json` as startup config. Widget configs are
+  /// `settings.json` is initialized with either `starter/vanilla` or
+  /// `starter/with-glazewm` as startup config. Widget configs are
   /// initialized from `examples/` directory.
   fn create_from_examples(
     app_handle: &AppHandle,
@@ -331,14 +367,15 @@ impl Config {
 
     copy_dir_all(&starter_path, config_dir, false)?;
 
-    let default_startup_config = match is_app_installed("glazewm") {
-      true => "starter/with-glazewm.zebar.json",
-      false => "starter/vanilla.zebar.json",
-    };
-
     let default_settings = SettingsConfig {
       schema: Some("https://github.com/glzr-io/zebar/raw/v2.1.0/resources/settings-schema.json".into()),
-      startup_configs: vec![default_startup_config.into()],
+      startup_configs: vec![StartupConfig {
+        path: match is_app_installed("glazewm") {
+          true => "starter/with-glazewm.zebar.json".into(),
+          false => "starter/vanilla.zebar.json".into(),
+        },
+        preset: "default".into(),
+      }],
     };
 
     let settings_path = config_dir.join("settings.json");
@@ -355,29 +392,23 @@ impl Config {
   }
 
   /// Returns the widget configs to open on startup.
-  pub async fn startup_widget_configs(
+  pub async fn startup_configs(&self) -> Vec<StartupConfig> {
+    self.settings.lock().await.startup_configs.clone()
+  }
+
+  /// Returns the widget configs to open on startup.
+  pub async fn startup_configs_by_path(
     &self,
-  ) -> anyhow::Result<HashMap<PathBuf, WidgetConfig>> {
-    let startup_configs =
-      { self.settings.lock().await.startup_configs.clone() };
-
-    let mut result = HashMap::new();
-
-    for config_path in startup_configs {
-      let abs_config_path = self.join_config_dir(&config_path);
-      let (_, config) = self
-        .widget_config_by_path(&abs_config_path)
-        .await
-        .unwrap_or(None)
-        .context(format!(
-          "Failed to get widget config at {}.",
-          abs_config_path.display()
-        ))?;
-
-      result.insert(abs_config_path, config);
-    }
-
-    Ok(result)
+  ) -> HashMap<PathBuf, StartupConfig> {
+    self
+      .startup_configs()
+      .await
+      .into_iter()
+      .map(|config| {
+        let abs_path = self.join_config_dir(&config.path);
+        (abs_path, config)
+      })
+      .collect()
   }
 
   /// Updates the widget config at the given path.
@@ -418,27 +449,21 @@ impl Config {
   pub async fn add_startup_config(
     &self,
     config_path: &PathBuf,
+    preset_name: &str,
   ) -> anyhow::Result<()> {
-    let startup_configs = self.startup_widget_configs().await?;
+    let mut new_settings = { self.settings.lock().await.clone() };
 
-    // Check if the config is already set to be launched on startup.
-    if startup_configs
-      .iter()
-      .find(|(startup_path, _)| *startup_path == config_path)
-      .is_some()
-    {
+    let startup_config = StartupConfig {
+      path: self.strip_config_dir(config_path)?,
+      preset: preset_name.to_string(),
+    };
+
+    if new_settings.startup_configs.contains(&startup_config) {
       return Ok(());
     }
 
-    // Add the path to startup configs.
-    let mut new_settings = { self.settings.lock().await.clone() };
-    new_settings
-      .startup_configs
-      .push(self.strip_config_dir(config_path)?);
-
-    self.write_settings(new_settings).await?;
-
-    Ok(())
+    new_settings.startup_configs.push(startup_config);
+    self.write_settings(new_settings).await
   }
 
   /// Removes the given config from being launched on startup.
@@ -447,17 +472,16 @@ impl Config {
   pub async fn remove_startup_config(
     &self,
     config_path: &PathBuf,
+    preset_name: &str,
   ) -> anyhow::Result<()> {
     let rel_path = self.strip_config_dir(config_path)?;
-
     let mut new_settings = { self.settings.lock().await.clone() };
-    new_settings
-      .startup_configs
-      .retain(|path| path != &rel_path);
 
-    self.write_settings(new_settings).await?;
+    new_settings.startup_configs.retain(|config| {
+      config.path != rel_path || config.preset != preset_name
+    });
 
-    Ok(())
+    self.write_settings(new_settings).await
   }
 
   /// Joins the given path with the config directory path.

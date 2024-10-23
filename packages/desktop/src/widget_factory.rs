@@ -261,7 +261,17 @@ impl WidgetFactory {
 
   /// Opens presets that are configured to be launched on startup.
   pub async fn startup(&self) -> anyhow::Result<()> {
-    // todo!()
+    let startup_configs = self.config.startup_configs().await;
+
+    for startup_config in startup_configs {
+      self
+        .start_widget(
+          &startup_config.path,
+          &WidgetOpenOptions::Preset(startup_config.preset),
+        )
+        .await?;
+    }
+
     Ok(())
   }
 
@@ -402,7 +412,7 @@ impl WidgetFactory {
     &self,
     config_path: &PathBuf,
   ) -> anyhow::Result<()> {
-    let widget_states = self.states_by_config_path().await;
+    let widget_states = self.states_by_path().await;
 
     let found_widget_states = widget_states
       .get(config_path)
@@ -421,7 +431,7 @@ impl WidgetFactory {
     config_path: &PathBuf,
     preset_name: &str,
   ) -> anyhow::Result<()> {
-    let widget_states = self.states_by_config_path().await;
+    let widget_states = self.states_by_path().await;
 
     let found_widget_states = widget_states
       .get(config_path)
@@ -465,7 +475,7 @@ impl WidgetFactory {
   }
 
   /// Returns widget states grouped by their config paths.
-  pub async fn states_by_config_path(
+  pub async fn states_by_path(
     &self,
   ) -> HashMap<PathBuf, Vec<WidgetState>> {
     self.widget_states.lock().await.values().fold(
