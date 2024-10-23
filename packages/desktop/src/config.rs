@@ -75,7 +75,7 @@ pub struct WidgetPreset {
   pub placement: WidgetPlacement,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPlacement {
   /// Anchor-point of the widget.
@@ -112,7 +112,7 @@ pub enum AnchorPoint {
   BottomRight,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "type", content = "match", rename_all = "snake_case")]
 pub enum MonitorSelection {
   All,

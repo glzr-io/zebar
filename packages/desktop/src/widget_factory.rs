@@ -77,7 +77,7 @@ pub struct WidgetState {
   pub open_options: WidgetOpenOptions,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WidgetOpenOptions {
   Standalone(WidgetPlacement),

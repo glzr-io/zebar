@@ -344,11 +344,10 @@ impl SysTray {
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
     startup_configs: &HashMap<PathBuf, WidgetConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
-    let open_widget_states = widget_states.get(config_path);
     let formatted_config_path =
       Self::format_config_path(&self.config, config_path);
 
-    let label = match open_widget_states {
+    let label = match widget_states.get(config_path) {
       None => formatted_config_path,
       Some(states) => {
         format!("({}) {}", states.len(), formatted_config_path)
@@ -362,7 +361,18 @@ impl SysTray {
       let preset_menu = self.create_preset_menu(
         config_path,
         &preset,
-        widget_states.contains_key(config_path),
+        widget_states
+          .get(config_path)
+          .map(|states| {
+            states
+              .iter()
+              .filter(|state| {
+                state.open_options
+                  == WidgetOpenOptions::Preset(preset.name.clone())
+              })
+              .count()
+          })
+          .unwrap_or(0),
         startup_configs.contains_key(config_path),
       )?;
 
@@ -377,19 +387,19 @@ impl SysTray {
     &self,
     config_path: &PathBuf,
     preset: &WidgetPreset,
-    is_enabled: bool,
+    preset_count: usize,
     is_launched_on_startup: bool,
   ) -> anyhow::Result<Submenu<Wry>> {
     let enabled_item = CheckMenuItem::with_id(
       &self.app_handle,
       MenuEvent::ToggleWidgetPreset {
-        enable: !is_enabled,
+        enable: preset_count == 0,
         preset: preset.name.clone(),
         path: config_path.clone(),
       },
       "Enabled",
       true,
-      is_enabled,
+      preset_count > 0,
       None::<&str>,
     )?;
 
@@ -405,7 +415,12 @@ impl SysTray {
       None::<&str>,
     )?;
 
-    let config_menu = SubmenuBuilder::new(&self.app_handle, &preset.name)
+    let label = match preset_count {
+      0 => &preset.name,
+      _ => &format!("({}) {}", preset_count, preset.name),
+    };
+
+    let config_menu = SubmenuBuilder::new(&self.app_handle, label)
       .item(&enabled_item)
       .item(&startup_item);
 
