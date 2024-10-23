@@ -7,17 +7,16 @@ import {
   IconFile,
 } from '@glzr/components';
 import { createMemo, For } from 'solid-js';
-
 import { WidgetConfig } from 'zebar';
 
-export interface WidgetConfigTreeProps {
+export interface WidgetConfigSidebarProps {
   configs: Record<string, WidgetConfig>;
   selectedConfig: WidgetConfig | null;
   selectedConfigPath: string | null;
   onSelect: (configPath: string) => void;
 }
 
-export function WidgetConfigTree(props: WidgetConfigTreeProps) {
+export function WidgetConfigSidebar(props: WidgetConfigSidebarProps) {
   const configTree = createMemo(() => {
     const tree: Record<string, Record<string, WidgetConfig>> = {};
 

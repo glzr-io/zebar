@@ -16,12 +16,12 @@ import { createForm, Field } from 'smorf';
 import { createEffect, on } from 'solid-js';
 import { WidgetConfig } from 'zebar';
 
-export interface WidgetSettingsFormProps {
+export interface WidgetConfigFormProps {
   config: WidgetConfig;
   onChange: (config: WidgetConfig) => void;
 }
 
-export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
+export function WidgetConfigForm(props: WidgetConfigFormProps) {
   const configForm = createForm<WidgetConfig>(props.config);
 
   // Update the form when the incoming config changes.

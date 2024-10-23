@@ -2,12 +2,13 @@
 import './index.css';
 import { Route, Router } from '@solidjs/router';
 import { render } from 'solid-js/web';
-import { WidgetSettings } from './settings/WidgetSettings';
+
+import { WidgetConfigs } from './configs/WidgetConfigs';
 
 render(
   () => (
     <Router>
-      <Route path="/" component={WidgetSettings} />
+      <Route path="/" component={WidgetConfigs} />
     </Router>
   ),
   document.getElementById('root')!,

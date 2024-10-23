@@ -19,17 +19,12 @@ import {
 } from 'solid-js';
 import { WidgetConfig } from 'zebar';
 
-import { WidgetConfigTree } from './WidgetConfigTree';
-import { WidgetSettingsForm } from './WidgetSettingsForm';
+import { WidgetConfigSidebar } from './WidgetConfigSidebar';
+import { WidgetConfigForm } from './WidgetConfigForm';
 
-export function WidgetSettings() {
+export function WidgetConfigs() {
   const [configs, { mutate }] = createResource(
-    async () => {
-      const xx =
-        await invoke<Record<string, WidgetConfig>>('widget_configs');
-      console.log('widget_configs', xx);
-      return xx;
-    },
+    async () => invoke<Record<string, WidgetConfig>>('widget_configs'),
     { initialValue: {} },
   );
 
@@ -83,7 +78,7 @@ export function WidgetSettings() {
   return (
     <div class="flex h-screen bg-background">
       {/* Sidebar. */}
-      <WidgetConfigTree
+      <WidgetConfigSidebar
         configs={configs()}
         selectedConfig={selectedConfig()}
         selectedConfigPath={selectedConfigPath()}
@@ -106,7 +101,7 @@ export function WidgetSettings() {
                 {selectedConfigPath()}
               </p>
 
-              <WidgetSettingsForm
+              <WidgetConfigForm
                 config={config()}
                 onChange={config =>
                   onConfigChange(selectedConfigPath(), config)
