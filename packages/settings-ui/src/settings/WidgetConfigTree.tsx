@@ -43,7 +43,7 @@ export function WidgetConfigTree(props: WidgetConfigTreeProps) {
           {([folder, configs]) => (
             <Collapsible defaultOpen>
               <CollapsibleTrigger class="flex items-center space-x-2 px-2 py-1 w-full text-left">
-                <IconChevronDown class="h-3 w-3" />
+                <IconChevronDown class="size-3" />
                 <span>{folder}</span>
               </CollapsibleTrigger>
 

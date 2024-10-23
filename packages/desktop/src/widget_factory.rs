@@ -398,7 +398,7 @@ impl WidgetFactory {
   }
 
   /// Closes all widgets with the given config path.
-  pub async fn stop_by_path(
+  pub async fn _stop_by_path(
     &self,
     config_path: &PathBuf,
   ) -> anyhow::Result<()> {
@@ -443,8 +443,12 @@ impl WidgetFactory {
 
   /// Relaunches all currently open widgets.
   pub async fn relaunch_all(&self) -> anyhow::Result<()> {
-    let widget_states = { self.widget_states.lock().await.clone() };
-    *self.widget_states.lock().await = HashMap::new();
+    let widget_states = {
+      let mut widget_states = self.widget_states.lock().await;
+      let clone = widget_states.clone();
+      widget_states.clear();
+      clone
+    };
 
     for widget_state in widget_states.values() {
       let _ = self.stop_by_id(&widget_state.id);

@@ -7,6 +7,10 @@ import {
   TextField,
   SelectField,
   SwitchField,
+  IconTrash,
+  TooltipContent,
+  Tooltip,
+  TooltipTrigger,
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
 import { createEffect, on } from 'solid-js';
@@ -55,6 +59,12 @@ export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
         },
       },
     ]);
+  }
+
+  function deletePreset(targetIndex: number) {
+    configForm.setValue('presets', presets =>
+      presets.filter((_, index) => index !== targetIndex),
+    );
   }
 
   return (
@@ -115,7 +125,7 @@ export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
             {inputProps => (
               <SwitchField
                 id="focused"
-                label="Focused"
+                label="Focused on launch"
                 {...inputProps()}
               />
             )}
@@ -151,15 +161,33 @@ export function WidgetSettingsForm(props: WidgetSettingsFormProps) {
         <CardContent class="space-y-4">
           {configForm.value.presets.map((_, index) => (
             <div class="border p-4 rounded-md space-y-2">
-              <Field of={configForm} path={`presets.${index}.name`}>
-                {inputProps => (
-                  <TextField
-                    id={`name-${index}`}
-                    label="Preset name"
-                    {...inputProps()}
+              <div class="flex justify-between">
+                <Field of={configForm} path={`presets.${index}.name`}>
+                  {inputProps => (
+                    <TextField
+                      id={`name-${index}`}
+                      label="Preset name"
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                <Tooltip openDelay={0} closeDelay={0}>
+                  <TooltipTrigger
+                    as={(props: any) => (
+                      <Button
+                        {...props}
+                        variant="secondary"
+                        size="icon"
+                        onClick={() => deletePreset(index)}
+                      >
+                        <IconTrash class="size-4" />
+                      </Button>
+                    )}
                   />
-                )}
-              </Field>
+                  <TooltipContent>Delete preset</TooltipContent>
+                </Tooltip>
+              </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Field of={configForm} path={`presets.${index}.anchor`}>
