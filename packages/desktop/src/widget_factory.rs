@@ -121,6 +121,26 @@ impl WidgetFactory {
       .await?
       .context("No config found at path.")?;
 
+    // No-op if preset is already open.
+    if let WidgetOpenOptions::Preset(_) = open_options {
+      let is_preset_open = {
+        self
+          .widget_states
+          .lock()
+          .await
+          .values()
+          .find(|state| {
+            state.config_path == config_path
+              && state.open_options == *open_options
+          })
+          .is_some()
+      };
+
+      if is_preset_open {
+        return Ok(());
+      }
+    }
+
     // Extract placement from widget preset (if applicable).
     let placement = match open_options {
       WidgetOpenOptions::Standalone(placement) => placement,
@@ -423,21 +443,21 @@ impl WidgetFactory {
 
   /// Relaunches all currently open widgets.
   pub async fn relaunch_all(&self) -> anyhow::Result<()> {
-    let widget_states = self.states_by_config_path().await;
+    let widget_states = { self.widget_states.lock().await.clone() };
+    *self.widget_states.lock().await = HashMap::new();
 
-    for (config_path, state) in widget_states {
-      let _ = self.stop_by_path(&config_path).await;
+    for widget_state in widget_states.values() {
+      let _ = self.stop_by_id(&widget_state.id);
 
-      // TODO: Implement restarting currently open widgets.
-      // self.start_widget(&config_path, state).await?;
+      self
+        .start_widget(
+          &widget_state.config_path,
+          &widget_state.open_options,
+        )
+        .await?;
     }
 
     Ok(())
-  }
-
-  /// Returns widget state by a given widget ID.
-  pub async fn state_by_id(&self, widget_id: &str) -> Option<WidgetState> {
-    self.widget_states.lock().await.get(widget_id).cloned()
   }
 
   /// Returns widget states grouped by their config paths.
