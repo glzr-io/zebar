@@ -401,24 +401,35 @@ impl WidgetFactory {
     config_path: &PathBuf,
     preset_name: &str,
   ) -> anyhow::Result<()> {
-    todo!()
+    let widget_states = self.states_by_config_path().await;
+
+    let found_widget_states = widget_states
+      .get(config_path)
+      .context("No widgets found with the given config path.")?
+      .iter()
+      .filter(|state| {
+        matches!(
+          &state.open_options,
+          WidgetOpenOptions::Preset(name) if name == preset_name
+        )
+      });
+
+    for widget_state in found_widget_states {
+      self.stop_by_id(&widget_state.id)?;
+    }
+
+    Ok(())
   }
 
   /// Relaunches all currently open widgets.
   pub async fn relaunch_all(&self) -> anyhow::Result<()> {
     let widget_states = self.states_by_config_path().await;
 
-    for (config_path, _) in widget_states {
+    for (config_path, state) in widget_states {
       let _ = self.stop_by_path(&config_path).await;
 
-      let widget_config = self
-        .config
-        .widget_config_by_path(&config_path)
-        .await?
-        .context("Widget config not found.")?;
-
       // TODO: Implement restarting currently open widgets.
-      // self.start_preset(widget_config).await?;
+      // self.start_widget(&config_path, state).await?;
     }
 
     Ok(())
