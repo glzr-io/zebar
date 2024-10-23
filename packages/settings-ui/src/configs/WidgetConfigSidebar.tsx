@@ -4,6 +4,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
   IconChevronDown,
+  IconDiamonds,
   IconFile,
 } from '@glzr/components';
 import { createMemo, For } from 'solid-js';
@@ -41,24 +42,29 @@ export function WidgetConfigSidebar(props: WidgetConfigSidebarProps) {
         <For each={Object.entries(configTree())}>
           {([folder, configs]) => (
             <Collapsible defaultOpen>
-              <CollapsibleTrigger class="flex items-center space-x-2 px-2 py-1 w-full text-left">
+              <CollapsibleTrigger class="flex items-center space-x-2 py-1 w-full text-left">
                 <IconChevronDown class="size-3" />
-                <span>{folder}</span>
+                <span class="truncate">{folder}</span>
               </CollapsibleTrigger>
 
-              <CollapsibleContent class="pl-4">
+              <CollapsibleContent>
                 <For each={Object.entries(configs)}>
                   {([configPath]) => (
                     <div
                       class={cn(
-                        'flex items-center space-x-2 py-1 rounded-md cursor-pointer',
+                        'flex items-center pl-3 py-1 space-x-2 rounded-sm cursor-pointer',
                         props.selectedConfigPath === configPath &&
                           'bg-accent',
                       )}
                       onClick={() => props.onSelect(configPath)}
                     >
-                      <IconFile class="h-4 w-4" />
-                      <span>{configPath.split(/[/\\]/).at(-1)}</span>
+                      <IconDiamonds class="size-3 text-sky-600" />
+                      <span class="truncate">
+                        {configPath
+                          .split(/[/\\]/)
+                          .at(-1)
+                          .replace('.zebar.json', '')}
+                      </span>
                     </div>
                   )}
                 </For>
