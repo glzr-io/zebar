@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body {
+  overflow: hidden;
+}
+
 .tabler-icon {
   stroke-width: 1;
 }
