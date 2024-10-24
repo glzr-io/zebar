@@ -87,18 +87,22 @@ impl MediaProvider {
     let session_manager = MediaManager::RequestAsync()?.get()?;
     println!("Session manager obtained.");
 
-    let mut current_session = session_manager.GetCurrentSession()?;
-    Self::add_session_listeners(&current_session);
+    {
+      let mut current_session = session_manager.GetCurrentSession()?;
+      Self::add_session_listeners(&current_session);
+      *self.current_session.try_lock()? = Some(current_session);
+    }
 
+    let current_session = self.current_session.clone();
     let session_changed_handler = TypedEventHandler::new(
-      |session_manager: &Option<MediaManager>, _| {
-        let current_session =
+      move |session_manager: &Option<MediaManager>, _| {
+        {
+        let new_session =
           MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
-
-        Self::add_session_listeners(&current_session);
-
-        // self.current_session = Arccurrent_session;
-        MediaProvider::print_current_media_info(&current_session);
+          Self::add_session_listeners(&new_session);
+          MediaProvider::print_current_media_info(&new_session);
+          *current_session.try_lock().unwrap() = Some(new_session);
+        }
 
         windows::core::Result::Ok(())
       },
