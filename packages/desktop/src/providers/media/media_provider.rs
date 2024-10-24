@@ -83,34 +83,37 @@ impl MediaProvider {
   // with this to go next song/prev song   Set PlaybackInfoHandler
   // (fires on tick basically) <- interact with this to scrub
   // forward/backwards
-  fn create_session_manager(&mut self) -> anyhow::Result<()> {
+  fn create_session_manager(&self) -> anyhow::Result<()> {
     let session_manager = MediaManager::RequestAsync()?.get()?;
     println!("Session manager obtained.");
 
     let mut current_session = session_manager.GetCurrentSession()?;
+    Self::add_session_listeners(&current_session);
 
     let session_changed_handler = TypedEventHandler::new(
       |session_manager: &Option<MediaManager>, _| {
-        // let current_session = session_manager.GetCurrentSession();
         let current_session =
-          MediaManager::RequestAsync()?.get()?.GetCurrentSession();
+          MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
 
-          // self.current_session = current_session;
-        MediaProvider::print_current_media_info(&current_session.unwrap());
+        Self::add_session_listeners(&current_session);
+
+        // self.current_session = Arccurrent_session;
+        MediaProvider::print_current_media_info(&current_session);
 
         windows::core::Result::Ok(())
       },
     );
 
-    // let media_properties_changed_handler = TypedEventHandler::new(move
-    // |session: &Option<MediaManager>, _args:
-    // MediaPropertiesChangedEventArgs| {   // self.current_session =
-    // session_manager.GetCurrentSession();   current_session =
-    // session_manager.GetCurrentSession();
+    session_manager.CurrentSessionChanged(&session_changed_handler)?;
 
-    //   windows::core::Result::Ok(())
-    // });
+    loop {
+      std::thread::sleep(time::Duration::from_secs(1));
+    }
 
+    Ok(())
+  }
+
+  fn add_session_listeners(session: &MediaSession) -> anyhow::Result<()> {
     let media_properties_changed_handler =
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
         println!("Media properties changed event triggered.");
@@ -121,8 +124,30 @@ impl MediaProvider {
         windows::core::Result::Ok(())
       });
 
-    current_session
-      .MediaPropertiesChanged(&media_properties_changed_handler)?;
+    let playback_info_changed_handler =
+      TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
+        println!("Playback info changed event triggered.");
+        let session = session
+          .as_ref()
+          .expect("No session available on playback info change.");
+        MediaProvider::print_current_media_info(session);
+        windows::core::Result::Ok(())
+      });
+
+      let timeline_properties_changed_handler = TypedEventHandler::new(
+        move |session: &Option<MediaSession>, _| {
+          println!("Timeline properties changed event triggered.");
+          let session = session
+            .as_ref()
+            .expect("No session available on timeline properties change.");
+          MediaProvider::print_current_media_info(session);
+          windows::core::Result::Ok(())
+        },
+      );
+
+    session.TimelinePropertiesChanged(&timeline_properties_changed_handler)?;
+    session.PlaybackInfoChanged(&playback_info_changed_handler)?;
+    session.MediaPropertiesChanged(&media_properties_changed_handler)?;
 
     Ok(())
   }

@@ -177,9 +177,6 @@ impl ProviderRef {
         Box::new(MediaProvider::new(config))
       }
       ProviderConfig::Memory(config) => {
-        Box::new(MediaProvider::new(super::media::MediaProviderConfig {
-          refresh_interval: 0,
-        }));
         Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
       }
       ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
