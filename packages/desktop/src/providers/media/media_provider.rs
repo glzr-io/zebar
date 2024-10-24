@@ -16,10 +16,11 @@ use windows::{
     GlobalSystemMediaTransportControlsSessionPlaybackInfo as PlaybackInfo,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
     GlobalSystemMediaTransportControlsSessionTimelineProperties as TimelineProperties,
-    SessionsChangedEventArgs,
+    MediaPropertiesChangedEventArgs, PlaybackInfoChangedEventArgs,
+    CurrentSessionsChangedEventArgs,
   },
 };
-use windows::Media::Control::{MediaPropertiesChangedEventArgs, PlaybackInfoChangedEventArgs};
+use windows::Media::Control::CurrentSessionChangedEventArgs;
 use crate::{
   impl_interval_provider,
   providers::{Provider, ProviderOutput, ProviderResult},
@@ -43,20 +44,13 @@ pub struct MediaOutput {
 
 pub struct MediaProvider {
   _config: MediaProviderConfig,
-  current_session:
-    Arc<Mutex<Option<MediaSession>>>,
-  session_changed_event_handler: TypedEventHandler<
-    MediaManager,
-    SessionsChangedEventArgs,
-  >,
-  media_properties_event_handler: TypedEventHandler<
-    MediaSession,
-    MediaPropertiesChangedEventArgs,
-  >,
-  playback_info_event_handler: TypedEventHandler<
-    MediaSession,
-    PlaybackInfoChangedEventArgs,
-  >,
+  current_session: Arc<Mutex<Option<MediaSession>>>,
+  session_changed_event_handler:
+    TypedEventHandler<MediaManager, CurrentSessionChangedEventArgs>,
+  media_properties_event_handler:
+    TypedEventHandler<MediaSession, MediaPropertiesChangedEventArgs>,
+  playback_info_event_handler:
+    TypedEventHandler<MediaSession, PlaybackInfoChangedEventArgs>,
 }
 
 impl MediaProvider {
@@ -91,10 +85,8 @@ impl MediaProvider {
   }
 
   fn current_session_changed(
-    session_manager: &Option<
-      MediaManager,
-    >,
-    _args: &Option<SessionsChangedEventArgs>,
+    session_manager: &Option<MediaManager>,
+    _args: &Option<CurrentSessionChangedEventArgs>,
   ) -> windows::core::Result<()> {
     if let Some(session_manager) = session_manager {
       let session = session_manager.GetCurrentSession()?;
@@ -120,11 +112,10 @@ impl MediaProvider {
 
   fn create_session_manager(&self) -> anyhow::Result<()> {
     // SESSION MANAGER -------
-    let session_manager =
-      MediaManager::RequestAsync()
-        .context("Failed to aquire media session manager.")?
-        .get()
-        .context("Failed to aquire media session manager.")?;
+    let session_manager = MediaManager::RequestAsync()
+      .context("Failed to aquire media session manager.")?
+      .get()
+      .context("Failed to aquire media session manager.")?;
     println!("Session manager obtained.");
 
     let current_session = session_manager
@@ -133,6 +124,9 @@ impl MediaProvider {
     println!("Initial current session obtained.");
 
     self.print_current_media_info()?;
+
+    session_manager
+      .CurrentSessionChanged(&self.session_changed_event_handler)?;
 
     current_session
       .MediaPropertiesChanged(&self.media_properties_event_handler)?;
