@@ -474,6 +474,11 @@ impl WidgetFactory {
     Ok(())
   }
 
+  /// Returns widget states by their widget ID's.
+  pub async fn states(&self) -> HashMap<String, WidgetState> {
+    self.widget_states.lock().await.clone()
+  }
+
   /// Returns widget states grouped by their config paths.
   pub async fn states_by_path(
     &self,

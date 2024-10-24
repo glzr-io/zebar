@@ -28,6 +28,13 @@ export function WidgetConfigs() {
     { initialValue: {} },
   );
 
+  const [widgetStates] = createResource(
+    async () => invoke<Record<string, WidgetConfig>>('widget_states'),
+    { initialValue: {} },
+  );
+
+  createEffect(() => console.log('widgetStates', widgetStates));
+
   const [selectedConfigPath, setSelectedConfigPath] = createSignal<
     string | null
   >(null);
@@ -41,6 +48,9 @@ export function WidgetConfigs() {
   const presetNames = createMemo(() =>
     (selectedConfig()?.presets ?? []).map(preset => preset.name),
   );
+
+  // TODO: Get whether the selected preset is currently active.
+  const isSelectedPresetOpen = createMemo(() => false);
 
   // Initialize the selected preset when a config is selected.
   createEffect(
@@ -68,7 +78,8 @@ export function WidgetConfigs() {
     });
   }
 
-  async function startPreset(configPath: string, presetName: string) {
+  // TODO: Stop preset if `isSelectedPresetOpen` is `true`.
+  async function togglePreset(configPath: string, presetName: string) {
     await invoke<void>('start_preset', {
       configPath,
       presetName,
@@ -116,12 +127,14 @@ export function WidgetConfigs() {
                   class="rounded-r-none self-end"
                   disabled={presetNames().length === 0}
                   onClick={() =>
-                    startPreset(selectedConfigPath(), selectedPreset())
+                    togglePreset(selectedConfigPath(), selectedPreset())
                   }
                 >
-                  {selectedPreset()
-                    ? `Open ${selectedPreset()}`
-                    : 'No presets'}
+                  <Show when={selectedPreset()} fallback="No presets">
+                    {isSelectedPresetOpen()
+                      ? `Open ${selectedPreset()}`
+                      : `Close ${selectedPreset()}`}
+                  </Show>
                 </Button>
 
                 <DropdownMenu>

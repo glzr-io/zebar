@@ -6,7 +6,7 @@ use crate::{
   common::WindowExt,
   config::{Config, WidgetConfig, WidgetPlacement},
   providers::{ProviderConfig, ProviderManager},
-  widget_factory::{WidgetFactory, WidgetOpenOptions},
+  widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
 #[tauri::command]
@@ -14,6 +14,13 @@ pub async fn widget_configs(
   config: State<'_, Arc<Config>>,
 ) -> Result<HashMap<PathBuf, WidgetConfig>, String> {
   Ok(config.widget_configs().await)
+}
+
+#[tauri::command]
+pub async fn widget_states(
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> Result<HashMap<String, WidgetState>, String> {
+  Ok(widget_factory.states().await)
 }
 
 #[tauri::command]
