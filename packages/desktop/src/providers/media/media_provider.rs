@@ -10,10 +10,12 @@ use tokio::{
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
   Media::Control::{
-    GlobalSystemMediaTransportControlsSession,
-    GlobalSystemMediaTransportControlsSessionManager,
-    GlobalSystemMediaTransportControlsSessionMediaProperties,
-    MediaPropertiesChangedEventArgs, PlaybackInfoChangedEventArgs,
+    GlobalSystemMediaTransportControlsSession as MediaSession,
+    GlobalSystemMediaTransportControlsSessionManager as MediaManager,
+    GlobalSystemMediaTransportControlsSessionMediaProperties as MediaProperties,
+    GlobalSystemMediaTransportControlsSessionPlaybackInfo as PlaybackInfo,
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
+    GlobalSystemMediaTransportControlsSessionTimelineProperties as TimelineProperties,
     SessionsChangedEventArgs,
   },
 };
@@ -42,27 +44,22 @@ pub struct MediaOutput {
 pub struct MediaProvider {
   _config: MediaProviderConfig,
   current_session:
-    Arc<Mutex<Option<GlobalSystemMediaTransportControlsSession>>>,
+    Arc<Mutex<Option<MediaSession>>>,
   session_changed_event_handler: TypedEventHandler<
-    GlobalSystemMediaTransportControlsSessionManager,
+    MediaManager,
     SessionsChangedEventArgs,
   >,
   media_properties_event_handler: TypedEventHandler<
-    GlobalSystemMediaTransportControlsSession,
+    MediaSession,
     MediaPropertiesChangedEventArgs,
   >,
   playback_info_event_handler: TypedEventHandler<
-    GlobalSystemMediaTransportControlsSession,
+    MediaSession,
     PlaybackInfoChangedEventArgs,
   >,
 }
 
 impl MediaProvider {
-  // lazy_static! {
-  //   static ref CURRENT_SESSION: Arc<Mutex<Option<GlobalSystemMediaTransportControlsSession>>> =
-  //     Arc::new(Mutex::new(None));
-  // }
-  
   pub fn new(config: MediaProviderConfig) -> MediaProvider {
     MediaProvider {
       _config: config,
@@ -80,14 +77,14 @@ impl MediaProvider {
   }
 
   fn playback_info_changed(
-    session: &Option<GlobalSystemMediaTransportControlsSession>,
+    session: &Option<MediaSession>,
     _args: &Option<PlaybackInfoChangedEventArgs>,
   ) -> windows::core::Result<()> {
     windows::core::Result::Ok(())
   }
 
   fn media_properties_changed(
-    session: &Option<GlobalSystemMediaTransportControlsSession>,
+    session: &Option<MediaSession>,
     _args: &Option<MediaPropertiesChangedEventArgs>,
   ) -> windows::core::Result<()> {
     windows::core::Result::Ok(())
