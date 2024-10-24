@@ -12,9 +12,9 @@ use tracing::{info, warn};
 
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
-  ip::IpProvider, media::MediaProvider, memory::MemoryProvider, network::NetworkProvider,
-  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
-  SharedProviderState,
+  ip::IpProvider, media::MediaProvider, memory::MemoryProvider,
+  network::NetworkProvider, weather::WeatherProvider, Provider,
+  ProviderConfig, ProviderOutput, SharedProviderState,
 };
 #[cfg(windows)]
 use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
@@ -177,7 +177,9 @@ impl ProviderRef {
         Box::new(MediaProvider::new(config))
       }
       ProviderConfig::Memory(config) => {
-        Box::new(MediaProvider::new(super::media::MediaProviderConfig { refresh_interval: 0 }));
+        Box::new(MediaProvider::new(super::media::MediaProviderConfig {
+          refresh_interval: 0,
+        }));
         Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
       }
       ProviderConfig::Network(config) => Box::new(NetworkProvider::new(

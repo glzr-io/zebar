@@ -6,6 +6,7 @@ export * from './host/host-provider-types';
 export * from './ip/ip-provider-types';
 export * from './keyboard/keyboard-provider-types';
 export * from './komorebi/komorebi-provider-types';
+export * from './media/media-provider-types';
 export * from './memory/memory-provider-types';
 export * from './network/network-provider-types';
 export * from './weather/weather-provider-types';
