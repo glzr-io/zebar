@@ -121,8 +121,6 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     .init();
 
   let config_dir_override = match cli.command() {
-    CliCommand::StartWidget(args) => args.config_dir,
-    CliCommand::StartPreset(args) => args.config_dir,
     CliCommand::Startup(args) => args.config_dir,
     _ => None,
   };
@@ -288,7 +286,9 @@ async fn open_widgets_by_cli_command(
         )
         .await
     }
-    CliCommand::Startup(_) => widget_factory.startup().await,
+    CliCommand::Startup(_) | CliCommand::Empty => {
+      widget_factory.startup().await
+    }
     _ => unreachable!(),
   };
 

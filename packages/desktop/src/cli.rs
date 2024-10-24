@@ -24,7 +24,7 @@ pub enum CliCommand {
   /// Opens a widget by its config path and chosen placement.
   ///
   /// Config path is relative within the Zebar config directory (e.g.
-  /// `zebar open-widget-default ./material/config.yaml`).
+  /// `zebar start-widget --path starter/vanilla`).
   ///
   /// Starts Zebar if it is not already running.
   StartWidget(StartWidgetArgs),
@@ -32,7 +32,7 @@ pub enum CliCommand {
   /// Opens a widget by its config path and a preset name.
   ///
   /// Config path is relative within the Zebar config directory (e.g.
-  /// `zebar open-widget-default ./material/config.yaml`).
+  /// `zebar start-preset --path start/vanilla --preset default`).
   ///
   /// Starts Zebar if it is not already running.
   StartPreset(StartPresetArgs),
@@ -62,12 +62,6 @@ pub struct StartWidgetArgs {
   /// directory.
   #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
   pub config_path: PathBuf,
-
-  /// Absolute or relative path to the Zebar config directory.
-  ///
-  /// The default path is `%userprofile%/.glzr/zebar/`
-  #[clap(long, value_hint = clap::ValueHint::FilePath)]
-  pub config_dir: Option<PathBuf>,
 
   /// Anchor-point of the widget.
   #[clap(long)]
@@ -113,12 +107,6 @@ pub struct StartPresetArgs {
   /// Name of the preset within the target widget config.
   #[clap(long = "preset")]
   pub preset_name: String,
-
-  /// Absolute or relative path to the Zebar config directory.
-  ///
-  /// The default path is `%userprofile%/.glzr/zebar/`
-  #[clap(long, value_hint = clap::ValueHint::FilePath)]
-  pub config_dir: Option<PathBuf>,
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]
