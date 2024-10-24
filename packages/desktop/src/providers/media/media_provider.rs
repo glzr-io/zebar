@@ -17,7 +17,7 @@ use windows::{
     SessionsChangedEventArgs,
   },
 };
-use lazy_static::lazy_static;
+use windows::Media::Control::{MediaPropertiesChangedEventArgs, PlaybackInfoChangedEventArgs};
 use crate::{
   impl_interval_provider,
   providers::{Provider, ProviderOutput, ProviderResult},
@@ -95,7 +95,7 @@ impl MediaProvider {
 
   fn current_session_changed(
     session_manager: &Option<
-      GlobalSystemMediaTransportControlsSessionManager,
+      MediaManager,
     >,
     _args: &Option<SessionsChangedEventArgs>,
   ) -> windows::core::Result<()> {
@@ -124,7 +124,7 @@ impl MediaProvider {
   fn create_session_manager(&self) -> anyhow::Result<()> {
     // SESSION MANAGER -------
     let session_manager =
-      GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+      MediaManager::RequestAsync()
         .context("Failed to aquire media session manager.")?
         .get()
         .context("Failed to aquire media session manager.")?;
