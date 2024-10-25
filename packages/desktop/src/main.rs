@@ -208,9 +208,9 @@ fn listen_events(
           info!("Monitors changed.");
           widget_factory.relaunch_all().await
         },
-        Ok(_) = widget_configs_change_rx.recv() => {
+        Ok(changed_configs) = widget_configs_change_rx.recv() => {
           info!("Widget configs changed.");
-          widget_factory.relaunch_all().await
+          widget_factory.relaunch(&changed_configs).await
         },
       };
 

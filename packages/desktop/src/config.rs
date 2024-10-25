@@ -445,9 +445,12 @@ impl Config {
 
       // Update the config in state.
       *config_entry = new_config.clone();
-
-      self.widget_configs_change_tx.send(widget_configs.clone())?;
     }
+
+    // Emit the changed config.
+    self
+      .widget_configs_change_tx
+      .send(HashMap::from([(config_path.clone(), new_config.clone())]))?;
 
     // Write the updated config to file.
     fs::write(

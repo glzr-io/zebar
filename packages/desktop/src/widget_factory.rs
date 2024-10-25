@@ -455,14 +455,26 @@ impl WidgetFactory {
 
   /// Relaunches all currently open widgets.
   pub async fn relaunch_all(&self) -> anyhow::Result<()> {
-    let widget_states = {
-      let mut widget_states = self.widget_states.lock().await;
-      let clone = widget_states.clone();
-      widget_states.clear();
-      clone
-    };
+    let widget_states = { self.widget_states.lock().await.clone() };
 
-    for widget_state in widget_states.values() {
+    self.relaunch(widget_states).await
+  }
+
+  /// Relaunches given widgets.
+  pub async fn relaunch(
+    &self,
+    changed_configs: HashMap<PathBuf, WidgetConfig>,
+  ) -> anyhow::Result<()> {
+    {
+      let mut widget_states = self.widget_states.lock().await;
+
+      // Optimistically clear running widget states.
+      for widget_id in changed_configs.keys() {
+        widget_states.remove(widget_id);
+      }
+    }
+
+    for widget_state in changed_configs.values() {
       let _ = self.stop_by_id(&widget_state.id);
 
       self
