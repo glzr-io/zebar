@@ -59,6 +59,7 @@ export function WidgetConfigs() {
       () => {
         if (selectedConfig()) {
           setSelectedPreset(selectedConfig().presets[0]?.name);
+          document.querySelector('#form-container').scrollTo(0, 0);
         }
       },
     ),
@@ -103,7 +104,7 @@ export function WidgetConfigs() {
       >
         {config => (
           <main class="flex-1 grid grid-rows-[1fr_auto] overflow-hidden">
-            <div class="container p-4 overflow-y-auto">
+            <div id="form-container" class="container p-4 overflow-y-auto">
               <h1 class="text-2xl font-bold mb-1">
                 {selectedConfigPath().split(/[/\\]/).at(-1)}
               </h1>
