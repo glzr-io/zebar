@@ -326,26 +326,37 @@ impl Config {
 
     // Parse the found config files.
     for path in config_paths {
-      let parse_res = read_and_parse_json::<WidgetConfig>(&path)
-        .and_then(|config| Ok((config, path.to_absolute()?)));
-
-      match parse_res {
-        Ok((config, config_path)) => {
+      match Self::parse_widget_config(&path) {
+        Ok((config_path, config)) => {
           info!("Found valid widget config at: {}", config_path.display());
-
           configs.insert(config_path, config);
         }
         Err(err) => {
-          error!(
-            "Failed to parse config at {}: {:?}",
-            path.display(),
-            err
-          );
+          error!("{:?}", err);
         }
       }
     }
 
     Ok(configs)
+  }
+
+  fn parse_widget_config(
+    config_path: &PathBuf,
+  ) -> anyhow::Result<(PathBuf, WidgetConfig)> {
+    let abs_path = config_path.to_absolute().with_context(|| {
+      format!("Invalid widget config path '{}'.", config_path.display())
+    })?;
+
+    let config =
+      read_and_parse_json::<WidgetConfig>(&abs_path).map_err(|err| {
+        anyhow::anyhow!(
+          "Failed to parse widget config at '{}': {:?}",
+          abs_path.display(),
+          err
+        )
+      })?;
+
+    Ok((abs_path, config))
   }
 
   /// Initializes settings and widget configs at the given path.
@@ -402,21 +413,22 @@ impl Config {
   /// Returns the widget configs to open on startup.
   pub async fn startup_configs_by_path(
     &self,
-  ) -> HashMap<PathBuf, StartupConfig> {
+  ) -> anyhow::Result<HashMap<PathBuf, StartupConfig>> {
     self
       .startup_configs()
       .await
       .into_iter()
       .map(|config| {
-        let abs_path = self.join_config_dir(&config.path);
-        (abs_path, config)
+        self
+          .to_absolute_path(&config.path)
+          .map(|abs_path| (abs_path, config))
       })
       .collect()
   }
 
   /// Updates the widget config at the given path.
   ///
-  /// Config path must be absolute.
+  /// Config path can be either absolute or relative.
   pub async fn update_widget_config(
     &self,
     config_path: &PathBuf,
@@ -448,7 +460,7 @@ impl Config {
 
   /// Adds the given config to be launched on startup.
   ///
-  /// Config path must be absolute.
+  /// Config path can be either absolute or relative.
   pub async fn add_startup_config(
     &self,
     config_path: &PathBuf,
@@ -457,7 +469,7 @@ impl Config {
     let mut new_settings = { self.settings.lock().await.clone() };
 
     let startup_config = StartupConfig {
-      path: self.strip_config_dir(config_path)?,
+      path: self.to_relative_path(config_path),
       preset: preset_name.to_string(),
     };
 
@@ -471,14 +483,14 @@ impl Config {
 
   /// Removes the given config from being launched on startup.
   ///
-  /// Config path must be absolute.
+  /// Config path can be either absolute or relative.
   pub async fn remove_startup_config(
     &self,
     config_path: &PathBuf,
     preset_name: &str,
   ) -> anyhow::Result<()> {
-    let rel_path = self.strip_config_dir(config_path)?;
     let mut new_settings = { self.settings.lock().await.clone() };
+    let rel_path = self.to_relative_path(config_path);
 
     new_settings.startup_configs.retain(|config| {
       config.path != rel_path || config.preset != preset_name
@@ -490,34 +502,40 @@ impl Config {
   /// Joins the given path with the config directory path.
   ///
   /// Returns an absolute path.
-  pub fn join_config_dir(&self, config_path: &PathBuf) -> PathBuf {
-    self.config_dir.join(config_path)
+  pub fn to_absolute_path(
+    &self,
+    config_path: &PathBuf,
+  ) -> anyhow::Result<PathBuf> {
+    match config_path.is_absolute() {
+      false => self.config_dir.join(config_path).to_absolute(),
+      // Ensure path is canonicalized even if already absolute.
+      true => config_path.to_absolute(),
+    }
   }
 
   /// Strips the config directory path from the given path.
   ///
   /// Returns a relative path.
-  pub fn strip_config_dir(
-    &self,
-    config_path: &PathBuf,
-  ) -> anyhow::Result<PathBuf> {
+  pub fn to_relative_path(&self, config_path: &PathBuf) -> PathBuf {
     config_path
       .strip_prefix(&self.config_dir)
-      .context("Failed to strip config directory path.")
-      .map(Into::into)
+      .unwrap_or(&config_path)
+      .into()
   }
 
-  /// Returns the widget config at the given absolute path.
+  /// Returns the widget config at the given path.
+  ///
+  /// Config path can be either absolute or relative.
   pub async fn widget_config_by_path(
     &self,
     config_path: &PathBuf,
-  ) -> anyhow::Result<Option<(PathBuf, WidgetConfig)>> {
-    let abs_config_path = PathBuf::from(config_path).to_absolute()?;
+  ) -> Option<(PathBuf, WidgetConfig)> {
+    let abs_path = self.to_absolute_path(config_path).ok()?;
 
     let widget_configs = self.widget_configs.lock().await;
-    let config = widget_configs.get(&abs_config_path);
+    let config = widget_configs.get(&abs_path)?;
 
-    Ok(config.map(|config| (abs_config_path, config.clone())))
+    Some((abs_path, config.clone()))
   }
 
   /// Opens the config directory in the OS-dependent file explorer.

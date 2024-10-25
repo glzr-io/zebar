@@ -206,7 +206,7 @@ impl SysTray {
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
     let widget_configs = self.config.widget_configs().await;
     let widget_states = self.widget_factory.states_by_path().await;
-    let startup_configs = self.config.startup_configs_by_path().await;
+    let startup_configs = self.config.startup_configs_by_path().await?;
 
     let configs_menu = self.create_configs_menu(
       &widget_configs,
@@ -440,10 +440,7 @@ impl SysTray {
     config: &Arc<Config>,
     config_path: &PathBuf,
   ) -> String {
-    let path = config
-      .strip_config_dir(config_path)
-      .unwrap_or(config_path.clone())
-      .to_unicode_string();
+    let path = config.to_relative_path(config_path).to_unicode_string();
 
     path.strip_suffix(".zebar.json").unwrap_or(&path).into()
   }

@@ -118,8 +118,10 @@ impl WidgetFactory {
     let (config_path, widget_config) = self
       .config
       .widget_config_by_path(config_path)
-      .await?
-      .context("No config found at path.")?;
+      .await
+      .with_context(|| {
+        format!("No config found at path '{}'.", config_path.display())
+      })?;
 
     // No-op if preset is already open.
     if let WidgetOpenOptions::Preset(_) = open_options {
