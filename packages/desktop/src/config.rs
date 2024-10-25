@@ -48,7 +48,7 @@ impl<'de> Deserialize<'de> for StartupConfig {
     #[serde(untagged)]
     enum StringOrObject {
       String(String),
-      Object(StartupConfig),
+      Object { path: PathBuf, preset: String },
     }
 
     let value = StringOrObject::deserialize(deserializer)?;
@@ -58,7 +58,9 @@ impl<'de> Deserialize<'de> for StartupConfig {
         path: PathBuf::from(s),
         preset: "default".to_string(),
       },
-      StringOrObject::Object(obj) => obj,
+      StringOrObject::Object { path, preset } => {
+        StartupConfig { path, preset }
+      }
     })
   }
 }
