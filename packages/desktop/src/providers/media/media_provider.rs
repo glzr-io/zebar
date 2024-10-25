@@ -43,9 +43,17 @@ pub struct MediaOutput {
   //   pub is_playing: bool,
 }
 
+#[derive(Clone, Debug)]
+struct EventTokens {
+  playback_info_changed_token: EventRegistrationToken,
+  media_properties_changed_token: EventRegistrationToken,
+  timeline_properties_changed_token: EventRegistrationToken,
+}
+
 pub struct MediaProvider {
   _config: MediaProviderConfig,
   current_session: Arc<Mutex<Option<MediaSession>>>,
+  event_tokens: Option<EventTokens>,
 }
 
 impl MediaProvider {
@@ -53,6 +61,7 @@ impl MediaProvider {
     MediaProvider {
       _config: config,
       current_session: Arc::new(Mutex::new(None)),
+      event_tokens: None,
     }
   }
 
@@ -78,17 +87,12 @@ impl MediaProvider {
     })
   }
 
-  // OnSessionChanged -> (fires when switching focus from netflix to spot//
-  //   Set MediaPropertiesHandler (fires when song changes) <- interact
-  // with this to go next song/prev song   Set PlaybackInfoHandler
-  // (fires on tick basically) <- interact with this to scrub
-  // forward/backwards
-  fn create_session_manager(&self) -> anyhow::Result<()> {
+  fn create_session_manager(&mut self) -> anyhow::Result<()> {
     let session_manager = MediaManager::RequestAsync()?.get()?;
     println!("Session manager obtained.");
-
     {
       let mut current_session = session_manager.GetCurrentSession()?;
+      self.remove_session_listeners();
       Self::add_session_listeners(&current_session);
       *self.current_session.try_lock()? = Some(current_session);
     }
@@ -97,8 +101,9 @@ impl MediaProvider {
     let session_changed_handler = TypedEventHandler::new(
       move |session_manager: &Option<MediaManager>, _| {
         {
-        let new_session =
-          MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
+          let new_session =
+            MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
+          self.remove_session_listeners();
           Self::add_session_listeners(&new_session);
           MediaProvider::print_current_media_info(&new_session);
           *current_session.try_lock().unwrap() = Some(new_session);
@@ -117,7 +122,22 @@ impl MediaProvider {
     Ok(())
   }
 
-  fn add_session_listeners(session: &MediaSession) -> anyhow::Result<()> {
+  fn remove_session_listeners(&mut self) -> anyhow::Result<()> {
+    let session = self.current_session.try_lock()?;
+    if let Some(session) = session.as_ref() {
+      if let Some(event_tokens) = &self.event_tokens {
+        session.RemoveMediaPropertiesChanged(event_tokens.media_properties_changed_token)?;
+        session.RemovePlaybackInfoChanged(event_tokens.playback_info_changed_token)?;
+        session.RemoveTimelinePropertiesChanged(event_tokens.timeline_properties_changed_token)?;
+      }
+    }
+    self.event_tokens = None;
+    Ok(())
+  }
+
+  fn add_session_listeners(
+    session: &MediaSession,
+  ) -> anyhow::Result<EventTokens> {
     let media_properties_changed_handler =
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
         println!("Media properties changed event triggered.");
@@ -138,22 +158,30 @@ impl MediaProvider {
         windows::core::Result::Ok(())
       });
 
-      let timeline_properties_changed_handler = TypedEventHandler::new(
-        move |session: &Option<MediaSession>, _| {
-          println!("Timeline properties changed event triggered.");
-          let session = session
-            .as_ref()
-            .expect("No session available on timeline properties change.");
-          MediaProvider::print_current_media_info(session);
-          windows::core::Result::Ok(())
-        },
-      );
+    let timeline_properties_changed_handler =
+      TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
+        println!("Timeline properties changed event triggered.");
+        let session = session
+          .as_ref()
+          .expect("No session available on timeline properties change.");
+        MediaProvider::print_current_media_info(session);
+        windows::core::Result::Ok(())
+      });
 
-    session.TimelinePropertiesChanged(&timeline_properties_changed_handler)?;
-    session.PlaybackInfoChanged(&playback_info_changed_handler)?;
-    session.MediaPropertiesChanged(&media_properties_changed_handler)?;
+    let timeline_token = session
+      .TimelinePropertiesChanged(&timeline_properties_changed_handler)?;
+    let playback_token =
+      session.PlaybackInfoChanged(&playback_info_changed_handler)?;
+    let media_token =
+      session.MediaPropertiesChanged(&media_properties_changed_handler)?;
 
-    Ok(())
+    Ok({
+      EventTokens {
+        playback_info_changed_token: playback_token,
+        media_properties_changed_token: media_token,
+        timeline_properties_changed_token: timeline_token,
+      }
+    })
   }
 }
 
