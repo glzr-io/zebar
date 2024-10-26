@@ -210,7 +210,7 @@ fn listen_events(
         },
         Ok(changed_configs) = widget_configs_change_rx.recv() => {
           info!("Widget configs changed.");
-          widget_factory.relaunch(&changed_configs).await
+          widget_factory.relaunch_by_paths(&changed_configs.keys().cloned().collect()).await
         },
       };
 
