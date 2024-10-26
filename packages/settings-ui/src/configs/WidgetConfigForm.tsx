@@ -7,11 +7,11 @@ import {
   TextField,
   SelectField,
   SwitchField,
-  IconTrash,
   TooltipContent,
   Tooltip,
   TooltipTrigger,
 } from '@glzr/components';
+import { IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { createEffect, on } from 'solid-js';
 import { WidgetConfig } from 'zebar';

@@ -3,10 +3,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  IconChevronDown,
-  IconDiamonds,
-  IconFile,
 } from '@glzr/components';
+import { IconChevronDown, IconDiamonds } from '@tabler/icons-solidjs';
 import { createMemo, For } from 'solid-js';
 import { WidgetConfig } from 'zebar';
 
