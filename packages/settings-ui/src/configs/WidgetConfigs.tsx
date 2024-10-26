@@ -113,12 +113,18 @@ export function WidgetConfigs() {
     });
   }
 
-  // TODO: Stop preset if `isSelectedPresetOpen` is `true`.
   async function togglePreset(configPath: string, presetName: string) {
-    await invoke<void>('start_preset', {
-      configPath,
-      presetName,
-    });
+    if (selectedPresetStates().length > 0) {
+      await invoke<void>('stop_preset', {
+        configPath,
+        presetName,
+      });
+    } else {
+      await invoke<void>('start_preset', {
+        configPath,
+        presetName,
+      });
+    }
   }
 
   return (
@@ -158,8 +164,9 @@ export function WidgetConfigs() {
             {/* Action bar. */}
             <div class="flex items-center justify-end border-t p-4">
               <div class="flex items-center">
-                <span class="text-sm font-normal text-muted-foreground">
-                  {selectedPresetStates().length} open
+                <span class="text-sm font-normal text-muted-foreground mr-2">
+                  {selectedConfigStates().length} open (
+                  {selectedPresetStates().length} for preset)
                 </span>
 
                 <Button

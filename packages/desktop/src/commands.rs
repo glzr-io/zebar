@@ -54,6 +54,18 @@ pub async fn start_preset(
 }
 
 #[tauri::command]
+pub async fn stop_preset(
+  config_path: String,
+  preset_name: String,
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  widget_factory
+    .stop_by_preset(&PathBuf::from(config_path), &preset_name)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 pub async fn update_widget_config(
   config_path: String,
   new_config: WidgetConfig,
