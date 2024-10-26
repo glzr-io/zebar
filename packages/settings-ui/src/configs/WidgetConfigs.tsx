@@ -18,7 +18,7 @@ import {
   on,
   Show,
 } from 'solid-js';
-import { WidgetConfig } from 'zebar';
+import { Widget, WidgetConfig } from 'zebar';
 
 import { WidgetConfigSidebar } from './WidgetConfigSidebar';
 import { WidgetConfigForm } from './WidgetConfigForm';
@@ -30,7 +30,7 @@ export function WidgetConfigs() {
   );
 
   const [widgetStates, { mutate: mutateWidgetStates }] = createResource(
-    async () => invoke<Record<string, WidgetConfig>>('widget_states'),
+    async () => invoke<Record<string, Widget>>('widget_states'),
     { initialValue: {} },
   );
 
@@ -50,8 +50,21 @@ export function WidgetConfigs() {
     (selectedConfig()?.presets ?? []).map(preset => preset.name),
   );
 
-  // TODO: Get whether the selected preset is currently active.
-  const isSelectedPresetOpen = createMemo(() => false);
+  const selectedConfigStates = createMemo(() => {
+    const configPath = selectedConfigPath();
+    return Object.values(widgetStates()).filter(
+      state => state.configPath === configPath,
+    );
+  });
+
+  // Whether the selected preset is currently active.
+  const selectedPresetStates = createMemo(() => {
+    const preset = selectedPreset();
+    return selectedConfigStates().filter(
+      // @ts-ignore - TODO
+      state => state.openOptions?.preset === preset,
+    );
+  });
 
   // Listen for changes to widget states.
   listen('widget-opened', (event: Event<any>) => {
@@ -65,7 +78,7 @@ export function WidgetConfigs() {
   listen('widget-closed', (event: Event<any>) => {
     mutateWidgetStates(states => {
       const newStates = { ...states };
-      delete newStates[event.payload.id];
+      delete newStates[event.payload];
       return newStates;
     });
   });
@@ -145,6 +158,10 @@ export function WidgetConfigs() {
             {/* Action bar. */}
             <div class="flex items-center justify-end border-t p-4">
               <div class="flex items-center">
+                <span class="text-sm font-normal text-muted-foreground">
+                  {selectedPresetStates().length} open
+                </span>
+
                 <Button
                   class="rounded-r-none self-end"
                   disabled={presetNames().length === 0}
@@ -153,7 +170,7 @@ export function WidgetConfigs() {
                   }
                 >
                   <Show when={selectedPreset()} fallback="No presets">
-                    {isSelectedPresetOpen()
+                    {selectedPresetStates().length === 0
                       ? `Open ${selectedPreset()}`
                       : `Close ${selectedPreset()}`}
                   </Show>
