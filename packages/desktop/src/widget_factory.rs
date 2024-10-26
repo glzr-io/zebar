@@ -461,23 +461,28 @@ impl WidgetFactory {
     self.relaunch_by_ids(&widget_ids).await
   }
 
-  /// Relaunches all currently open widgets.
+  /// Relaunches widgets with the given widget ID's.
   pub async fn relaunch_by_ids(
     &self,
     widget_ids: &Vec<String>,
   ) -> anyhow::Result<()> {
-    // let widget_states = { self.widget_states.lock().await.clone() };
-
-    {
+    let changed_states = {
       let mut widget_states = self.widget_states.lock().await;
 
       // Optimistically clear running widget states.
-      for widget_id in &widget_ids {
-        widget_states.remove(widget_id);
-      }
-    }
+      widget_ids
+        .iter()
+        .filter_map(|id| widget_states.remove(id))
+        .collect::<Vec<_>>()
+    };
 
-    for widget_state in config_paths.values() {
+    for widget_state in changed_states {
+      info!(
+        "Relaunching widget #{} from {}",
+        widget_state.id,
+        widget_state.config_path.display()
+      );
+
       let _ = self.stop_by_id(&widget_state.id);
 
       self
@@ -487,22 +492,27 @@ impl WidgetFactory {
         )
         .await?;
     }
+
+    Ok(())
   }
 
-  /// Relaunches given widgets.
+  /// Relaunches widgets with the given config paths.
   pub async fn relaunch_by_paths(
     &self,
     config_paths: &Vec<PathBuf>,
   ) -> anyhow::Result<()> {
-    let mut widget_states = self.widget_states.lock().await;
+    let widget_ids = {
+      self
+        .widget_states
+        .lock()
+        .await
+        .iter()
+        .filter(|(_, state)| config_paths.contains(&state.config_path))
+        .map(|(id, _)| id.clone())
+        .collect::<Vec<_>>()
+    };
 
-    let changed_widget_states = widget_states
-      .values()
-      .filter(|state| config_paths.contains_key(&state.config_path))
-      .cloned()
-      .collect::<Vec<_>>();
-
-    Ok(())
+    self.relaunch_by_ids(&widget_ids).await
   }
 
   /// Returns widget states by their widget ID's.
