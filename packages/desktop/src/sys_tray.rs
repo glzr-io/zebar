@@ -132,7 +132,10 @@ impl SysTray {
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {
     let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
 
-    let tray_icon = TrayIconBuilder::with_id("tray")
+    // Linting: `mut` needed for Windows where `tray_icon` is modified with
+    // additional click handler.
+    #[allow(unused_mut)]
+    let mut tray_icon = TrayIconBuilder::with_id("tray")
       .icon(self.icon_image()?)
       .menu(&self.create_tray_menu().await?)
       .tooltip(tooltip)
@@ -155,7 +158,7 @@ impl SysTray {
     // Show the settings window on left click (Windows-only).
     #[cfg(windows)]
     {
-      let tray_icon =
+      tray_icon =
         tray_icon.menu_on_left_click(false).on_tray_icon_event({
           let app_handle = self.app_handle.clone();
           let config = self.config.clone();
