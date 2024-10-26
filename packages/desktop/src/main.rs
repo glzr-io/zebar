@@ -8,7 +8,9 @@ use std::{env, sync::Arc};
 use clap::Parser;
 use cli::MonitorType;
 use config::{MonitorSelection, WidgetPlacement};
-use tauri::{async_runtime::block_on, Manager, RunEvent};
+use tauri::{
+  async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
+};
 use tokio::task;
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
@@ -171,17 +173,19 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     SysTray::new(app.handle(), config.clone(), widget_factory.clone())
       .await?;
 
-  listen_events(config, monitor_state, widget_factory, tray);
+  listen_events(app.handle(), config, monitor_state, widget_factory, tray);
 
   Ok(())
 }
 
 fn listen_events(
+  app_handle: &AppHandle,
   config: Arc<Config>,
   monitor_state: Arc<MonitorState>,
   widget_factory: Arc<WidgetFactory>,
   tray: Arc<SysTray>,
 ) {
+  let app_handle = app_handle.clone();
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
   let mut widget_close_rx = widget_factory.close_tx.subscribe();
   let mut settings_change_rx = config.settings_change_tx.subscribe();
@@ -192,13 +196,17 @@ fn listen_events(
   task::spawn(async move {
     loop {
       let res = tokio::select! {
-        Ok(_) = widget_open_rx.recv() => {
+        Ok(widget_state) = widget_open_rx.recv() => {
           info!("Widget opened.");
-          tray.refresh().await
+          tray.refresh().await;
+          app_handle.emit("widget-opened", widget_state);
+          Ok(())
         },
-        Ok(_) = widget_close_rx.recv() => {
+        Ok(widget_id) = widget_close_rx.recv() => {
           info!("Widget closed.");
-          tray.refresh().await
+          tray.refresh().await;
+          app_handle.emit("widget-closed", widget_id);
+          Ok(())
         },
         Ok(_) = settings_change_rx.recv() => {
           info!("Settings changed.");

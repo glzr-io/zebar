@@ -30,9 +30,9 @@ pub struct WidgetFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
 
-  _close_rx: broadcast::Receiver<WidgetState>,
+  _close_rx: broadcast::Receiver<String>,
 
-  pub close_tx: broadcast::Sender<WidgetState>,
+  pub close_tx: broadcast::Sender<String>,
 
   /// Reference to `Config`.
   config: Arc<Config>,
@@ -306,11 +306,12 @@ impl WidgetFactory {
         task::spawn(async move {
           let mut widget_states = widget_states.lock().await;
 
-          // Remove the widget state and broadcast the close event.
-          if let Some(state) = widget_states.remove(&widget_id) {
-            if let Err(err) = close_tx.send(state) {
-              error!("Failed to send window close event: {:?}", err);
-            }
+          // Remove the widget state.
+          let _ = widget_states.remove(&widget_id);
+
+          // Broadcast the close event.
+          if let Err(err) = close_tx.send(widget_id) {
+            error!("Failed to send window close event: {:?}", err);
           }
         });
       }
