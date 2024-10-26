@@ -45,7 +45,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
   );
 
   function addNewPreset() {
-    configForm.setValue('presets', presets => [
+    configForm.setFieldValue('presets', presets => [
       ...presets,
       {
         name: presets.length ? `default${presets.length + 1}` : 'default',
@@ -62,7 +62,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
   }
 
   function deletePreset(targetIndex: number) {
-    configForm.setValue('presets', presets =>
+    configForm.setFieldValue('presets', presets =>
       presets.filter((_, index) => index !== targetIndex),
     );
   }

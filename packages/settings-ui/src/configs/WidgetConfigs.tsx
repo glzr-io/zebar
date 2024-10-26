@@ -50,6 +50,7 @@ export function WidgetConfigs() {
     (selectedConfig()?.presets ?? []).map(preset => preset.name),
   );
 
+  // Widget states for the selected config.
   const selectedConfigStates = createMemo(() => {
     const configPath = selectedConfigPath();
     return Object.values(widgetStates()).filter(
@@ -57,7 +58,7 @@ export function WidgetConfigs() {
     );
   });
 
-  // Whether the selected preset is currently active.
+  // Widget states for the selected preset.
   const selectedPresetStates = createMemo(() => {
     const preset = selectedPreset();
     return selectedConfigStates().filter(
@@ -66,7 +67,7 @@ export function WidgetConfigs() {
     );
   });
 
-  // Listen for changes to widget states.
+  // Update widget states on open.
   listen('widget-opened', (event: Event<any>) => {
     mutateWidgetStates(states => ({
       ...states,
@@ -74,7 +75,7 @@ export function WidgetConfigs() {
     }));
   });
 
-  // Listen for changes to widget states.
+  // Update widget states on close.
   listen('widget-closed', (event: Event<any>) => {
     mutateWidgetStates(states => {
       const newStates = { ...states };
@@ -83,14 +84,41 @@ export function WidgetConfigs() {
     });
   });
 
+  // Select the first config alphabetically on initial load.
+  createEffect(
+    on(
+      () => configs(),
+      () => {
+        if (!selectedConfigPath()) {
+          setSelectedConfigPath(Object.keys(configs()).sort()[0] ?? null);
+        }
+      },
+    ),
+  );
+
   // Initialize the selected preset when a config is selected.
   createEffect(
     on(
       () => selectedConfigPath(),
       () => {
         if (selectedConfig()) {
-          setSelectedPreset(selectedConfig().presets[0]?.name);
+          setSelectedPreset(selectedConfig().presets[0]?.name ?? null);
           document.querySelector('#form-container').scrollTo(0, 0);
+        }
+      },
+    ),
+  );
+
+  // Ensure selected preset is valid when presets change.
+  createEffect(
+    on(
+      () => presetNames(),
+      () => {
+        if (
+          !selectedPreset() ||
+          !presetNames().includes(selectedPreset())
+        ) {
+          setSelectedPreset(presetNames()[0] ?? null);
         }
       },
     ),
@@ -185,7 +213,10 @@ export function WidgetConfigs() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger>
-                    <Button class="rounded-l-none border-l-0 px-2">
+                    <Button
+                      class="rounded-l-none border-l-0 px-2"
+                      disabled={presetNames().length === 0}
+                    >
                       <IconChevronDown class="size-3" />
                     </Button>
                   </DropdownMenuTrigger>
