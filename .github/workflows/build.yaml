@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           CONF_PATH="packages/desktop/tauri.conf.json"
-          cat "$CONF_PATH" | '.version="${{ inputs.version-number || '0.0.0' }}"' > "$CONF_PATH.tmp" && \
+          cat "$CONF_PATH" | jq '.version="${{ inputs.version-number || '0.0.0' }}"' > "$CONF_PATH.tmp" && \
           mv "$CONF_PATH.tmp" "$CONF_PATH"
 
       - name: Tauri build
