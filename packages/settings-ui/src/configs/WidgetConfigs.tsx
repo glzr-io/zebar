@@ -8,6 +8,7 @@ import {
   IconChevronDown,
 } from '@glzr/components';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type Event } from '@tauri-apps/api/event';
 import {
   createEffect,
   createMemo,
@@ -23,17 +24,17 @@ import { WidgetConfigSidebar } from './WidgetConfigSidebar';
 import { WidgetConfigForm } from './WidgetConfigForm';
 
 export function WidgetConfigs() {
-  const [configs, { mutate }] = createResource(
+  const [configs, { mutate: mutateWidgetConfigs }] = createResource(
     async () => invoke<Record<string, WidgetConfig>>('widget_configs'),
     { initialValue: {} },
   );
 
-  const [widgetStates] = createResource(
+  const [widgetStates, { mutate: mutateWidgetStates }] = createResource(
     async () => invoke<Record<string, WidgetConfig>>('widget_states'),
     { initialValue: {} },
   );
 
-  createEffect(() => console.log('widgetStates', widgetStates));
+  createEffect(() => console.log('widgetStates', widgetStates()));
 
   const [selectedConfigPath, setSelectedConfigPath] = createSignal<
     string | null
@@ -51,6 +52,23 @@ export function WidgetConfigs() {
 
   // TODO: Get whether the selected preset is currently active.
   const isSelectedPresetOpen = createMemo(() => false);
+
+  // Listen for changes to widget states.
+  listen('widget-opened', (event: Event<any>) => {
+    mutateWidgetStates(states => ({
+      ...states,
+      [event.payload.id]: event.payload,
+    }));
+  });
+
+  // Listen for changes to widget states.
+  listen('widget-closed', (event: Event<any>) => {
+    mutateWidgetStates(states => {
+      const newStates = { ...states };
+      delete newStates[event.payload.id];
+      return newStates;
+    });
+  });
 
   // Initialize the selected preset when a config is selected.
   createEffect(
@@ -70,7 +88,10 @@ export function WidgetConfigs() {
     newConfig: WidgetConfig,
   ) {
     // Update the state with the new config values.
-    mutate(configs => ({ ...configs, [configPath]: newConfig }));
+    mutateWidgetConfigs(configs => ({
+      ...configs,
+      [configPath]: newConfig,
+    }));
 
     // Send updated config values to backend.
     await invoke<void>('update_widget_config', {
