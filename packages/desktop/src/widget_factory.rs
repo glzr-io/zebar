@@ -238,7 +238,7 @@ impl WidgetFactory {
       let _ = window
         .as_ref()
         .window()
-        .set_tool_window(!config.shown_in_taskbar);
+        .set_tool_window(!widget_config.shown_in_taskbar);
 
       // On MacOS, we need to set the window as above the menu bar for it
       // to truly be always on top.
