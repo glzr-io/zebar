@@ -86,6 +86,7 @@ jobs:
           AZ_CLIENT_SECRET: ${{ secrets.AZ_CLIENT_SECRET }}
           AZ_TENANT_ID: ${{ secrets.AZ_TENANT_ID }}
           RFC3161_TIMESTAMP_URL: ${{ vars.RFC3161_TIMESTAMP_URL }}
+          VERSION_NUMBER: ${{ inputs.version-number || '0.0.0' }}
         with:
           projectPath: packages/desktop
           args: --target ${{ matrix.tauri-target }}
