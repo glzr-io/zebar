@@ -94,14 +94,14 @@ impl MediaProvider {
   }
 
   async fn create_session_manager(
-    &mut self,
+    &self,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let session_manager = MediaManager::RequestAsync()?.get()?;
     println!("Session manager obtained.");
-    let mut current_session = session_manager.GetCurrentSession()?;
-    *self.current_session.lock().await = Some(current_session);
+    *self.current_session.lock().await =
+      session_manager.GetCurrentSession().ok();
 
     // TODO - better way of handling error?
     match Self::add_session_listeners(
@@ -232,7 +232,6 @@ impl MediaProvider {
           .expect("No session available on timeline properties change.");
         Self::print_current_media_info(session, emit_result_tx.clone());
         windows::core::Result::Ok(())
-      
       })
     };
 
@@ -255,7 +254,7 @@ impl MediaProvider {
 
 #[async_trait]
 impl Provider for MediaProvider {
-  async fn run(&mut self, emit_result_tx: Sender<ProviderResult>) {
+  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
     if let Err(err) =
       self.create_session_manager(emit_result_tx.clone()).await
     {
