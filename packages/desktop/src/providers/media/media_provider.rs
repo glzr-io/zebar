@@ -106,7 +106,7 @@ impl MediaProvider {
     // TODO - better way of handling error?
     match Self::add_session_listeners(
       &self.current_session.lock().await.as_ref().unwrap(),
-      emit_result_tx.clone()
+      emit_result_tx.clone(),
     ) {
       Ok(tokens) => {
         *self.event_tokens.lock().await = Some(tokens);
@@ -143,7 +143,10 @@ impl MediaProvider {
           let new_session =
             MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
 
-          match Self::add_session_listeners(&new_session, emit_result_tx.clone()) {
+          match Self::add_session_listeners(
+            &new_session,
+            emit_result_tx.clone(),
+          ) {
             Ok(tokens) => {
               let mut event_tokens =
                 rt.block_on(async { event_tokens.lock().await });
@@ -197,40 +200,41 @@ impl MediaProvider {
     session: &MediaSession,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<EventTokens> {
-    // the borrow checker won
-    // surely theres a better way to do this...  
-    let emit_result_tx2 = emit_result_tx.clone();
-    let emit_result_tx3 = emit_result_tx.clone();
-    let emit_result_tx4 = emit_result_tx.clone();
-    let media_properties_changed_handler =
+    let media_properties_changed_handler = {
+      let emit_result_tx = emit_result_tx.clone();
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
         println!("Media properties changed event triggered.");
         let session = session
           .as_ref()
           .expect("No session available on media properties change.");
-        Self::print_current_media_info(session, emit_result_tx2.clone());
+        Self::print_current_media_info(session, emit_result_tx.clone());
         windows::core::Result::Ok(())
-      });
+      })
+    };
 
-    let playback_info_changed_handler =
+    let playback_info_changed_handler = {
+      let emit_result_tx = emit_result_tx.clone();
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
         println!("Playback info changed event triggered.");
         let session = session
           .as_ref()
           .expect("No session available on playback info change.");
-        Self::print_current_media_info(session, emit_result_tx3.clone());
+        Self::print_current_media_info(session, emit_result_tx.clone());
         windows::core::Result::Ok(())
-      });
-
-    let timeline_properties_changed_handler =
+      })
+    };
+    let timeline_properties_changed_handler = {
+      let emit_result_tx = emit_result_tx.clone();
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
         println!("Timeline properties changed event triggered.");
         let session = session
           .as_ref()
           .expect("No session available on timeline properties change.");
-        Self::print_current_media_info(session, emit_result_tx4.clone());
+        Self::print_current_media_info(session, emit_result_tx.clone());
         windows::core::Result::Ok(())
-      });
+      
+      })
+    };
 
     let timeline_token = session
       .TimelinePropertiesChanged(&timeline_properties_changed_handler)?;
@@ -252,7 +256,9 @@ impl MediaProvider {
 #[async_trait]
 impl Provider for MediaProvider {
   async fn run(&mut self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) = self.create_session_manager(emit_result_tx.clone()).await {
+    if let Err(err) =
+      self.create_session_manager(emit_result_tx.clone()).await
+    {
       emit_result_tx.send(Err(err).into()).await;
     }
   }
