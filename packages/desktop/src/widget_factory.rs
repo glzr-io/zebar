@@ -8,6 +8,7 @@ use std::{
 };
 
 use anyhow::Context;
+use csscolorparser::Color;
 use serde::Serialize;
 use tauri::{
   AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
@@ -18,7 +19,7 @@ use tokio::{
   task,
 };
 use tracing::{error, info};
-use csscolorparser::Color;
+
 use crate::{
   common::{PathExt, WindowExt},
   config::{
@@ -259,63 +260,19 @@ impl WidgetFactory {
         widget_states.insert(state.id.clone(), state.clone());
       }
 
-      if let Some(window_effect) = &widget_config.background_effect {
-        if *window_effect != BackgroundEffect::None {
-          let color = if let Some(color_str) = &widget_config.background_effect_color {
+      #[cfg(target_os = "windows")]
+      {
+        if let Some(window_effect) = &widget_config.background_effect {
+          if *window_effect != BackgroundEffect::None {
+            let color = if let Some(color_str) =
+              &widget_config.background_effect_color
+            {
               let color = csscolorparser::parse(color_str)?.to_rgba8();
               Some((color[3], color[0], color[1], color[2]))
-          } else {
-             Some((18, 18, 18, 125))
-          };
-          #[cfg(target_os = "macos")]
-          {
-            use window_vibrancy::{
-              apply_vibrancy, NSVisualEffectMaterial,
+            } else {
+              Some((18, 18, 18, 125))
             };
-            if let BackgroundEffect::Vibrancy(material_str) = window_effect
-            {
-              let material = match material_str.as_str() {
-                "appearance-based" => {
-                  NSVisualEffectMaterial::AppearanceBased
-                }
-                "light" => NSVisualEffectMaterial::Light,
-                "dark" => NSVisualEffectMaterial::Dark,
-                "titlebar" => NSVisualEffectMaterial::Titlebar,
-                "selection" => NSVisualEffectMaterial::Selection,
-                "menu" => NSVisualEffectMaterial::Menu,
-                "popover" => NSVisualEffectMaterial::Popover,
-                "sidebar" => NSVisualEffectMaterial::Sidebar,
-                "header-view" => NSVisualEffectMaterial::HeaderView,
-                "sheet" => NSVisualEffectMaterial::Sheet,
-                "window-background" => {
-                  NSVisualEffectMaterial::WindowBackground
-                }
-                "hud-window" => NSVisualEffectMaterial::HudWindow,
-                "full-screen-ui" => NSVisualEffectMaterial::FullScreenUi,
-                "tool-tip" => NSVisualEffectMaterial::ToolTip,
-                "content-background" => {
-                  NSVisualEffectMaterial::ContentBackground
-                }
-                "under-window-background" => {
-                  NSVisualEffectMaterial::UnderWindowBackground
-                }
-                "under-page-background" => {
-                  NSVisualEffectMaterial::UnderPageBackground
-                }
-                _ => {
-                  error!("Unknown vibrancy material: {}", material_str);
-                  NSVisualEffectMaterial::AppearanceBased
-                }
-              };
 
-              if let Err(e) = apply_vibrancy(&window, material, None, None)
-              {
-                error!("Failed to apply vibrancy: {:?}", e);
-              }
-            }
-          }
-          #[cfg(target_os = "windows")]
-          {
             use window_vibrancy::{apply_acrylic, apply_blur, apply_mica};
             match window_effect {
               BackgroundEffect::Blur => {
@@ -329,7 +286,9 @@ impl WidgetFactory {
                 }
               }
               BackgroundEffect::Mica => {
-                let mica_dark = widget_config.background_effect_mica_dark.unwrap_or(false);
+                let mica_dark = widget_config
+                  .background_effect_mica_dark
+                  .unwrap_or(false);
                 if let Err(e) = apply_mica(&window, Some(mica_dark)) {
                   error!("Failed to apply mica: {:?}", e);
                 }
