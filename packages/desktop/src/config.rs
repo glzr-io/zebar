@@ -90,6 +90,15 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
+  /// Whether the window frame should have an effect
+  pub background_effect: Option<BackgroundEffect>,
+
+  // Background effect color (Windows 10 v1903+, no effect on Windows 7 or Windows 11)
+  pub background_effect_color: Option<String>,
+
+  // Background Dark on Mica (Windows only)
+  pub background_effect_mica_dark: Option<bool>,
+
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -159,6 +168,17 @@ pub enum MonitorSelection {
   Secondary,
   Index(usize),
   Name(String),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, ValueEnum)]
+#[clap(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum BackgroundEffect {
+  None,
+  Blur, // For Windows
+  Acrylic, // For Windows
+  Mica, // For Windows
+  Vibrancy // For macOS; the string represents the material
 }
 
 #[derive(Debug)]

@@ -18,10 +18,13 @@ use tokio::{
   task,
 };
 use tracing::{error, info};
-
+use csscolorparser::Color;
 use crate::{
   common::{PathExt, WindowExt},
-  config::{AnchorPoint, Config, WidgetConfig, WidgetPlacement, ZOrder},
+  config::{
+    AnchorPoint, BackgroundEffect, Config, WidgetConfig, WidgetPlacement,
+    ZOrder,
+  },
   monitor_state::MonitorState,
 };
 
@@ -191,6 +194,8 @@ impl WidgetFactory {
         Self::to_asset_url(&html_path.to_unicode_string()).into(),
       );
 
+      let window_effect = &widget_config.background_effect;
+
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
@@ -252,6 +257,87 @@ impl WidgetFactory {
       {
         let mut widget_states = self.widget_states.lock().await;
         widget_states.insert(state.id.clone(), state.clone());
+      }
+
+      if let Some(window_effect) = &widget_config.background_effect {
+        if *window_effect != BackgroundEffect::None {
+          let color = if let Some(color_str) = &widget_config.background_effect_color {
+              let color = csscolorparser::parse(color_str)?.to_rgba8();
+              Some((color[3], color[0], color[1], color[2]))
+          } else {
+             Some((18, 18, 18, 125))
+          };
+          #[cfg(target_os = "macos")]
+          {
+            use window_vibrancy::{
+              apply_vibrancy, NSVisualEffectMaterial,
+            };
+            if let BackgroundEffect::Vibrancy(material_str) = window_effect
+            {
+              let material = match material_str.as_str() {
+                "appearance-based" => {
+                  NSVisualEffectMaterial::AppearanceBased
+                }
+                "light" => NSVisualEffectMaterial::Light,
+                "dark" => NSVisualEffectMaterial::Dark,
+                "titlebar" => NSVisualEffectMaterial::Titlebar,
+                "selection" => NSVisualEffectMaterial::Selection,
+                "menu" => NSVisualEffectMaterial::Menu,
+                "popover" => NSVisualEffectMaterial::Popover,
+                "sidebar" => NSVisualEffectMaterial::Sidebar,
+                "header-view" => NSVisualEffectMaterial::HeaderView,
+                "sheet" => NSVisualEffectMaterial::Sheet,
+                "window-background" => {
+                  NSVisualEffectMaterial::WindowBackground
+                }
+                "hud-window" => NSVisualEffectMaterial::HudWindow,
+                "full-screen-ui" => NSVisualEffectMaterial::FullScreenUi,
+                "tool-tip" => NSVisualEffectMaterial::ToolTip,
+                "content-background" => {
+                  NSVisualEffectMaterial::ContentBackground
+                }
+                "under-window-background" => {
+                  NSVisualEffectMaterial::UnderWindowBackground
+                }
+                "under-page-background" => {
+                  NSVisualEffectMaterial::UnderPageBackground
+                }
+                _ => {
+                  error!("Unknown vibrancy material: {}", material_str);
+                  NSVisualEffectMaterial::AppearanceBased
+                }
+              };
+
+              if let Err(e) = apply_vibrancy(&window, material, None, None)
+              {
+                error!("Failed to apply vibrancy: {:?}", e);
+              }
+            }
+          }
+          #[cfg(target_os = "windows")]
+          {
+            use window_vibrancy::{apply_acrylic, apply_blur, apply_mica};
+            match window_effect {
+              BackgroundEffect::Blur => {
+                if let Err(e) = apply_blur(&window, color) {
+                  error!("Failed to apply blur: {:?}", e);
+                }
+              }
+              BackgroundEffect::Acrylic => {
+                if let Err(e) = apply_acrylic(&window, color) {
+                  error!("Failed to apply acrylic: {:?}", e);
+                }
+              }
+              BackgroundEffect::Mica => {
+                let mica_dark = widget_config.background_effect_mica_dark.unwrap_or(false);
+                if let Err(e) = apply_mica(&window, Some(mica_dark)) {
+                  error!("Failed to apply mica: {:?}", e);
+                }
+              }
+              _ => {}
+            }
+          }
+        }
       }
 
       self.register_window_events(&window, widget_id);
