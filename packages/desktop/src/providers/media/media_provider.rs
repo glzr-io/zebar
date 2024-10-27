@@ -53,7 +53,7 @@ struct EventTokens {
 pub struct MediaProvider {
   _config: MediaProviderConfig,
   current_session: Arc<Mutex<Option<MediaSession>>>,
-  event_tokens: Option<EventTokens>,
+  event_tokens: Arc<Mutex<Option<EventTokens>>>,
 }
 
 impl MediaProvider {
@@ -61,7 +61,7 @@ impl MediaProvider {
     MediaProvider {
       _config: config,
       current_session: Arc::new(Mutex::new(None)),
-      event_tokens: None,
+      event_tokens: Arc::new(Mutex::new(None)),
     }
   }
 
@@ -87,26 +87,68 @@ impl MediaProvider {
     })
   }
 
-  fn create_session_manager(&mut self) -> anyhow::Result<()> {
+  async fn create_session_manager(&mut self) -> anyhow::Result<()> {
+    let rt = tokio::runtime::Runtime::new().unwrap();
     let session_manager = MediaManager::RequestAsync()?.get()?;
     println!("Session manager obtained.");
-    {
-      let mut current_session = session_manager.GetCurrentSession()?;
-      self.remove_session_listeners();
-      Self::add_session_listeners(&current_session);
-      *self.current_session.try_lock()? = Some(current_session);
+    let mut current_session = session_manager.GetCurrentSession()?;
+    *self.current_session.lock().await = Some(current_session);
+
+    // TODO - better way of handling error?
+    match Self::add_session_listeners(
+      &self.current_session.lock().await.as_ref().unwrap(),
+    ) {
+      Ok(tokens) => {
+        *self.event_tokens.lock().await = Some(tokens);
+      }
+      Err(err) => {
+        eprintln!("Error adding media session listeners: {:?}", err);
+      }
     }
 
     let current_session = self.current_session.clone();
+    let event_tokens = self.event_tokens.clone();
     let session_changed_handler = TypedEventHandler::new(
       move |session_manager: &Option<MediaManager>, _| {
         {
+          // Remove listeners from the previous session.
+          let current_session = current_session.clone();
+          let event_tokens = event_tokens.clone();
+          rt.block_on(async {
+            let current_session = current_session.lock().await;
+            let event_tokens = event_tokens.lock().await;
+            if let Some(session) = &*current_session {
+              if let Err(err) = Self::remove_session_listeners(
+                session.clone(),
+                event_tokens.clone(),
+              ) {
+                eprintln!(
+                  "Error removing media session listeners: {:?}",
+                  err
+                );
+              }
+            }
+          });
+
           let new_session =
             MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
-          self.remove_session_listeners();
-          Self::add_session_listeners(&new_session);
-          MediaProvider::print_current_media_info(&new_session);
-          *current_session.try_lock().unwrap() = Some(new_session);
+
+          match Self::add_session_listeners(&new_session) {
+            Ok(tokens) => {
+              let mut event_tokens =
+                rt.block_on(async { event_tokens.lock().await });
+              *event_tokens = Some(tokens);
+            }
+            Err(err) => {
+              eprintln!("Error adding media session listeners: {:?}", err);
+            }
+          }
+
+          Self::print_current_media_info(&new_session);
+          rt.block_on(async {
+            let mut current_session = current_session.lock().await;
+            *current_session = Some(new_session);
+          });
         }
 
         windows::core::Result::Ok(())
@@ -118,20 +160,23 @@ impl MediaProvider {
     loop {
       std::thread::sleep(time::Duration::from_secs(1));
     }
-
-    Ok(())
   }
 
-  fn remove_session_listeners(&mut self) -> anyhow::Result<()> {
-    let session = self.current_session.try_lock()?;
-    if let Some(session) = session.as_ref() {
-      if let Some(event_tokens) = &self.event_tokens {
-        session.RemoveMediaPropertiesChanged(event_tokens.media_properties_changed_token)?;
-        session.RemovePlaybackInfoChanged(event_tokens.playback_info_changed_token)?;
-        session.RemoveTimelinePropertiesChanged(event_tokens.timeline_properties_changed_token)?;
-      }
-    }
-    self.event_tokens = None;
+  // TODO - is it better to have arc<mutex> as the params?
+  fn remove_session_listeners(
+    session: MediaSession,
+    mut event_tokens: Option<EventTokens>,
+  ) -> anyhow::Result<()> {
+    let token = event_tokens.expect("No event tokens available.");
+    session.RemoveMediaPropertiesChanged(
+      token.media_properties_changed_token,
+    )?;
+    session
+      .RemovePlaybackInfoChanged(token.playback_info_changed_token)?;
+    session.RemoveTimelinePropertiesChanged(
+      token.timeline_properties_changed_token,
+    )?;
+    event_tokens = None;
     Ok(())
   }
 
@@ -144,7 +189,7 @@ impl MediaProvider {
         let session = session
           .as_ref()
           .expect("No session available on media properties change.");
-        MediaProvider::print_current_media_info(session);
+        Self::print_current_media_info(session);
         windows::core::Result::Ok(())
       });
 
@@ -154,7 +199,7 @@ impl MediaProvider {
         let session = session
           .as_ref()
           .expect("No session available on playback info change.");
-        MediaProvider::print_current_media_info(session);
+        Self::print_current_media_info(session);
         windows::core::Result::Ok(())
       });
 
@@ -164,7 +209,7 @@ impl MediaProvider {
         let session = session
           .as_ref()
           .expect("No session available on timeline properties change.");
-        MediaProvider::print_current_media_info(session);
+        Self::print_current_media_info(session);
         windows::core::Result::Ok(())
       });
 
@@ -187,8 +232,8 @@ impl MediaProvider {
 
 #[async_trait]
 impl Provider for MediaProvider {
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) = self.create_session_manager() {
+  async fn run(&mut self, emit_result_tx: Sender<ProviderResult>) {
+    if let Err(err) = self.create_session_manager().await {
       emit_result_tx.send(Err(err).into()).await;
     }
   }
