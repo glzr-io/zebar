@@ -268,7 +268,7 @@ impl WidgetFactory {
               &widget_config.background_effect_color
             {
               let color = csscolorparser::parse(color_str)?.to_rgba8();
-              Some((color[3], color[0], color[1], color[2]))
+              Some((color[1], color[2], color[3], color[4]))
             } else {
               Some((18, 18, 18, 125))
             };
