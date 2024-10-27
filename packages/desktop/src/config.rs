@@ -1,11 +1,13 @@
 use std::{
+  collections::HashMap,
   fs::{self},
   path::PathBuf,
   sync::Arc,
 };
 
 use anyhow::Context;
-use serde::{Deserialize, Serialize};
+use clap::ValueEnum;
+use serde::{Deserialize, Deserializer, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
 use tracing::{error, info};
@@ -21,8 +23,46 @@ pub struct SettingsConfig {
   #[serde(rename = "$schema")]
   schema: Option<String>,
 
-  /// Relative paths to widget configs to launch on startup.
-  pub startup_configs: Vec<PathBuf>,
+  /// Widget configs to be launched on startup.
+  pub startup_configs: Vec<StartupConfig>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartupConfig {
+  /// Relative path to widget configs to launch on startup.
+  pub path: PathBuf,
+
+  /// Preset name within the widget config.
+  pub preset: String,
+}
+
+// Deserializer that handles `StartupConfig` objects and string format from
+// v2.3.0 and earlier.
+impl<'de> Deserialize<'de> for StartupConfig {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrObject {
+      String(String),
+      Object { path: PathBuf, preset: String },
+    }
+
+    let value = StringOrObject::deserialize(deserializer)?;
+
+    Ok(match value {
+      StringOrObject::String(s) => StartupConfig {
+        path: PathBuf::from(s),
+        preset: "default".to_string(),
+      },
+      StringOrObject::Object { path, preset } => {
+        StartupConfig { path, preset }
+      }
+    })
+  }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -50,11 +90,13 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
-  /// Where to place the widget.
-  pub default_placements: Vec<WidgetPlacement>,
+  /// Where to place the widget. Add alias for `defaultPlacements` for
+  /// compatibility with v2.3.0 and earlier.
+  #[serde(alias = "defaultPlacements")]
+  pub presets: Vec<WidgetPreset>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ZOrder {
   BottomMost,
@@ -63,6 +105,16 @@ pub enum ZOrder {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetPreset {
+  #[serde(default = "default_preset_name")]
+  pub name: String,
+
+  #[serde(flatten)]
+  pub placement: WidgetPlacement,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPlacement {
   /// Anchor-point of the widget.
@@ -84,7 +136,8 @@ pub struct WidgetPlacement {
   pub monitor_selection: MonitorSelection,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, ValueEnum)]
+#[clap(rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum AnchorPoint {
   TopLeft,
@@ -98,7 +151,7 @@ pub enum AnchorPoint {
   BottomRight,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "type", content = "match", rename_all = "snake_case")]
 pub enum MonitorSelection {
   All,
@@ -120,27 +173,17 @@ pub struct Config {
   pub settings: Arc<Mutex<SettingsConfig>>,
 
   /// List of widget configs.
-  pub widget_configs: Arc<Mutex<Vec<WidgetConfigEntry>>>,
+  pub widget_configs: Arc<Mutex<HashMap<PathBuf, WidgetConfig>>>,
 
   _settings_change_rx: broadcast::Receiver<SettingsConfig>,
 
   pub settings_change_tx: broadcast::Sender<SettingsConfig>,
 
-  _widget_configs_change_rx: broadcast::Receiver<Vec<WidgetConfigEntry>>,
+  _widget_configs_change_rx:
+    broadcast::Receiver<HashMap<PathBuf, WidgetConfig>>,
 
-  pub widget_configs_change_tx: broadcast::Sender<Vec<WidgetConfigEntry>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct WidgetConfigEntry {
-  /// Absolute path to the widget's config file.
-  pub config_path: PathBuf,
-
-  /// Absolute path to the widget's HTML file.
-  pub html_path: PathBuf,
-
-  /// Parsed widget config.
-  pub config: WidgetConfig,
+  pub widget_configs_change_tx:
+    broadcast::Sender<HashMap<PathBuf, WidgetConfig>>,
 }
 
 impl Config {
@@ -214,10 +257,8 @@ impl Config {
       None => {
         Self::create_from_examples(app_handle, dir)?;
 
-        Ok(
-          Self::read_settings(&dir)?
-            .context("Failed to create settings config.")?,
-        )
+        Self::read_settings(&dir)?
+          .context("Failed to create settings config.")
       }
     }
   }
@@ -245,7 +286,7 @@ impl Config {
 
     fs::write(
       &settings_path,
-      serde_json::to_string_pretty(&new_settings)?,
+      serde_json::to_string_pretty(&new_settings)? + "\n",
     )?;
 
     let mut settings = self.settings.lock().await;
@@ -259,79 +300,39 @@ impl Config {
   /// Aggregates all valid widget configs at the 2nd-level of the given
   /// directory (i.e. `<CONFIG_DIR>/*/*.zebar.json`).
   ///
-  /// Returns a vector of `WidgetConfigEntry` instances.
+  /// Returns a hashmap of config paths to their `WidgetConfig` instances.
   fn read_widget_configs(
     dir: &PathBuf,
-  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
-    let dir_entries = fs::read_dir(dir).with_context(|| {
-      format!("Failed to read directory: {}", dir.display())
-    })?;
+  ) -> anyhow::Result<HashMap<PathBuf, WidgetConfig>> {
+    let dir_paths = fs::read_dir(dir)
+      .with_context(|| {
+        format!("Failed to read directory: {}", dir.display())
+      })?
+      .filter_map(|entry| Some(entry.ok()?.path()));
 
-    // Scan the 2nd-level of the directory for config files.
-    let config_files = dir_entries
-      .into_iter()
-      .filter_map(|entry| {
-        let path = entry.ok()?.path();
-        if path.is_dir() {
-          Some(fs::read_dir(path).ok()?)
-        } else {
-          None
-        }
-      })
+    // Scan the 2nd-level of the config directory.
+    let subdir_paths = dir_paths
+      .filter(|path| path.is_dir())
+      .filter_map(|dir| fs::read_dir(dir).ok())
       .flatten()
-      .filter_map(|entry| {
-        let path = entry.ok()?.path();
-        if path.is_file() && has_extension(&path, ".zebar.json") {
-          Some(path)
-        } else {
-          None
-        }
-      })
+      .filter_map(|entry| Some(entry.ok()?.path()));
+
+    // Collect the found config files.
+    let config_paths = subdir_paths
+      .filter(|path| path.is_file() && has_extension(&path, ".zebar.json"))
       .collect::<Vec<PathBuf>>();
 
-    let mut configs = Vec::new();
+    let mut configs = HashMap::new();
 
     // Parse the found config files.
-    for path in config_files {
-      let parse_res =
-        read_and_parse_json::<WidgetConfig>(&path).and_then(|config| {
-          let config_path = path.to_absolute()?;
-
-          let html_path = path
-            .parent()
-            .and_then(|parent| {
-              parent.join(&config.html_path).to_absolute().ok()
-            })
-            .with_context(|| {
-              format!(
-                "HTML file not found at {} for config {}.",
-                config.html_path.display(),
-                config_path.display()
-              )
-            })?;
-
-          Ok(WidgetConfigEntry {
-            config,
-            config_path,
-            html_path,
-          })
-        });
-
-      match parse_res {
-        Ok(config) => {
-          info!(
-            "Found valid widget config at: {}",
-            config.config_path.display()
-          );
-
-          configs.push(config);
+    for path in config_paths {
+      match Self::parse_widget_config(&path) {
+        Ok((config_path, config)) => {
+          info!("Found valid widget config at: {}", config_path.display());
+          configs.insert(config_path, config);
         }
         Err(err) => {
-          error!(
-            "Failed to parse config at {}: {:?}",
-            path.display(),
-            err
-          );
+          error!("{:?}", err);
         }
       }
     }
@@ -339,10 +340,29 @@ impl Config {
     Ok(configs)
   }
 
+  fn parse_widget_config(
+    config_path: &PathBuf,
+  ) -> anyhow::Result<(PathBuf, WidgetConfig)> {
+    let abs_path = config_path.to_absolute().with_context(|| {
+      format!("Invalid widget config path '{}'.", config_path.display())
+    })?;
+
+    let config =
+      read_and_parse_json::<WidgetConfig>(&abs_path).map_err(|err| {
+        anyhow::anyhow!(
+          "Failed to parse widget config at '{}': {:?}",
+          abs_path.display(),
+          err
+        )
+      })?;
+
+    Ok((abs_path, config))
+  }
+
   /// Initializes settings and widget configs at the given path.
   ///
-  /// `settings.json` is initialized with either `starter/vanilla.json` or
-  /// `starter/with-glazewm.json` as startup config. Widget configs are
+  /// `settings.json` is initialized with either `starter/vanilla` or
+  /// `starter/with-glazewm` as startup config. Widget configs are
   /// initialized from `examples/` directory.
   fn create_from_examples(
     app_handle: &AppHandle,
@@ -361,137 +381,164 @@ impl Config {
 
     copy_dir_all(&starter_path, config_dir, false)?;
 
-    let default_startup_config = match is_app_installed("glazewm") {
-      true => "starter/with-glazewm.zebar.json",
-      false => "starter/vanilla.zebar.json",
-    };
-
     let default_settings = SettingsConfig {
-      schema: Some("https://github.com/glzr-io/zebar/raw/v2.1.0/resources/settings-schema.json".into()),
-      startup_configs: vec![default_startup_config.into()],
+      schema: Some("https://github.com/glzr-io/zebar/raw/v2.4.0/resources/settings-schema.json".into()),
+      startup_configs: vec![StartupConfig {
+        path: match is_app_installed("glazewm") {
+          true => "starter/with-glazewm.zebar.json".into(),
+          false => "starter/vanilla.zebar.json".into(),
+        },
+        preset: "default".into(),
+      }],
     };
 
     let settings_path = config_dir.join("settings.json");
     fs::write(
       &settings_path,
-      serde_json::to_string_pretty(&default_settings)?,
+      serde_json::to_string_pretty(&default_settings)? + "\n",
     )?;
 
     Ok(())
   }
 
-  pub async fn widget_configs(&self) -> Vec<WidgetConfigEntry> {
+  pub async fn widget_configs(&self) -> HashMap<PathBuf, WidgetConfig> {
     self.widget_configs.lock().await.clone()
   }
 
   /// Returns the widget configs to open on startup.
-  pub async fn startup_widget_configs(
+  pub async fn startup_configs(&self) -> Vec<StartupConfig> {
+    self.settings.lock().await.startup_configs.clone()
+  }
+
+  /// Returns the widget configs to open on startup.
+  pub async fn startup_configs_by_path(
     &self,
-  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
-    let startup_configs =
-      { self.settings.lock().await.startup_configs.clone() };
+  ) -> anyhow::Result<HashMap<PathBuf, StartupConfig>> {
+    self
+      .startup_configs()
+      .await
+      .into_iter()
+      .map(|config| {
+        self
+          .to_absolute_path(&config.path)
+          .map(|abs_path| (abs_path, config))
+      })
+      .collect()
+  }
 
-    let mut result = Vec::new();
+  /// Updates the widget config at the given path.
+  ///
+  /// Config path can be either absolute or relative.
+  pub async fn update_widget_config(
+    &self,
+    config_path: &PathBuf,
+    new_config: WidgetConfig,
+  ) -> anyhow::Result<()> {
+    info!("Updating widget config at {}.", config_path.display());
 
-    for config_path in startup_configs {
-      let abs_config_path = self.join_config_dir(&config_path);
-      let config = self
-        .widget_config_by_path(&abs_config_path)
-        .await
-        .unwrap_or(None)
-        .context(format!(
-          "Failed to get widget config at {}.",
-          abs_config_path.display()
-        ))?;
+    {
+      let mut widget_configs = self.widget_configs.lock().await;
 
-      result.push(config);
+      let config_entry = widget_configs.get_mut(config_path).context(
+        format!("Widget config not found at {}.", config_path.display()),
+      )?;
+
+      // Update the config in state.
+      *config_entry = new_config.clone();
     }
 
-    Ok(result)
+    // Emit the changed config.
+    self
+      .widget_configs_change_tx
+      .send(HashMap::from([(config_path.clone(), new_config.clone())]))?;
+
+    // Write the updated config to file.
+    fs::write(
+      &config_path,
+      serde_json::to_string_pretty(&new_config)? + "\n",
+    )?;
+
+    Ok(())
   }
 
   /// Adds the given config to be launched on startup.
   ///
-  /// Config path must be absolute.
+  /// Config path can be either absolute or relative.
   pub async fn add_startup_config(
     &self,
     config_path: &PathBuf,
+    preset_name: &str,
   ) -> anyhow::Result<()> {
-    let startup_configs = self.startup_widget_configs().await?;
+    let mut new_settings = { self.settings.lock().await.clone() };
 
-    // Check if the config is already set to be launched on startup.
-    if startup_configs
-      .iter()
-      .find(|config| config.config_path == *config_path)
-      .is_some()
-    {
+    let startup_config = StartupConfig {
+      path: self.to_relative_path(config_path),
+      preset: preset_name.to_string(),
+    };
+
+    if new_settings.startup_configs.contains(&startup_config) {
       return Ok(());
     }
 
-    // Add the path to startup configs.
-    let mut new_settings = { self.settings.lock().await.clone() };
-    new_settings
-      .startup_configs
-      .push(self.strip_config_dir(config_path)?);
-
-    self.write_settings(new_settings).await?;
-
-    Ok(())
+    new_settings.startup_configs.push(startup_config);
+    self.write_settings(new_settings).await
   }
 
   /// Removes the given config from being launched on startup.
   ///
-  /// Config path must be absolute.
+  /// Config path can be either absolute or relative.
   pub async fn remove_startup_config(
     &self,
     config_path: &PathBuf,
+    preset_name: &str,
   ) -> anyhow::Result<()> {
-    let rel_path = self.strip_config_dir(config_path)?;
-
     let mut new_settings = { self.settings.lock().await.clone() };
-    new_settings
-      .startup_configs
-      .retain(|path| path != &rel_path);
+    let rel_path = self.to_relative_path(config_path);
 
-    self.write_settings(new_settings).await?;
+    new_settings.startup_configs.retain(|config| {
+      config.path != rel_path || config.preset != preset_name
+    });
 
-    Ok(())
+    self.write_settings(new_settings).await
   }
 
   /// Joins the given path with the config directory path.
   ///
   /// Returns an absolute path.
-  pub fn join_config_dir(&self, config_path: &PathBuf) -> PathBuf {
-    self.config_dir.join(config_path)
+  pub fn to_absolute_path(
+    &self,
+    config_path: &PathBuf,
+  ) -> anyhow::Result<PathBuf> {
+    match config_path.is_absolute() {
+      false => self.config_dir.join(config_path).to_absolute(),
+      // Ensure path is canonicalized even if already absolute.
+      true => config_path.to_absolute(),
+    }
   }
 
   /// Strips the config directory path from the given path.
   ///
   /// Returns a relative path.
-  pub fn strip_config_dir(
-    &self,
-    config_path: &PathBuf,
-  ) -> anyhow::Result<PathBuf> {
+  pub fn to_relative_path(&self, config_path: &PathBuf) -> PathBuf {
     config_path
       .strip_prefix(&self.config_dir)
-      .context("Failed to strip config directory path.")
-      .map(Into::into)
+      .unwrap_or(&config_path)
+      .into()
   }
 
-  /// Returns the widget config at the given absolute path.
+  /// Returns the widget config at the given path.
+  ///
+  /// Config path can be either absolute or relative.
   pub async fn widget_config_by_path(
     &self,
     config_path: &PathBuf,
-  ) -> anyhow::Result<Option<WidgetConfigEntry>> {
-    let formatted_config_path =
-      PathBuf::from(config_path).to_absolute()?;
+  ) -> Option<(PathBuf, WidgetConfig)> {
+    let abs_path = self.to_absolute_path(config_path).ok()?;
 
     let widget_configs = self.widget_configs.lock().await;
-    let config_entry = widget_configs
-      .iter()
-      .find(|entry| entry.config_path == formatted_config_path);
+    let config = widget_configs.get(&abs_path)?;
 
-    Ok(config_entry.cloned())
+    Some((abs_path, config.clone()))
   }
 
   /// Opens the config directory in the OS-dependent file explorer.
@@ -543,4 +590,10 @@ fn is_app_installed(app_name: &str) -> bool {
       .map(|output| output.status.success())
       .unwrap_or(false)
   }
+}
+
+/// Helper function for setting the default value for a
+/// `WidgetPreset::name` field.
+fn default_preset_name() -> String {
+  "default".into()
 }

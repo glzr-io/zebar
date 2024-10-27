@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use anyhow::{bail, Context};
 use regex::Regex;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LengthValue {
   pub amount: f32,
   pub unit: LengthUnit,
@@ -20,7 +20,9 @@ pub enum LengthUnit {
 impl LengthValue {
   pub fn to_px(&self, total_px: i32) -> i32 {
     match self.unit {
-      LengthUnit::Percentage => (self.amount * total_px as f32) as i32,
+      LengthUnit::Percentage => {
+        (self.amount / 100. * total_px as f32) as i32
+      }
       LengthUnit::Pixel => self.amount as i32,
     }
   }
@@ -65,35 +67,32 @@ impl FromStr for LengthValue {
     let amount = captures
       .get(1)
       .and_then(|amount_str| f32::from_str(amount_str.into()).ok())
-      // Store percentage units as a fraction of 1.
-      .map(|amount| match unit {
-        LengthUnit::Pixel => amount,
-        LengthUnit::Percentage => amount / 100.0,
-      })
       .context(err_msg.to_string())?;
 
     Ok(LengthValue { amount, unit })
   }
 }
 
-/// Deserialize a `LengthValue` from either a string or a struct.
+impl Serialize for LengthValue {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: Serializer,
+  {
+    let s = match self.unit {
+      LengthUnit::Percentage => format!("{}%", self.amount),
+      LengthUnit::Pixel => format!("{}px", self.amount),
+    };
+
+    serializer.serialize_str(&s)
+  }
+}
+
 impl<'de> Deserialize<'de> for LengthValue {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
   where
     D: Deserializer<'de>,
   {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum LengthValueDe {
-      Struct { amount: f32, unit: LengthUnit },
-      String(String),
-    }
-
-    match LengthValueDe::deserialize(deserializer)? {
-      LengthValueDe::Struct { amount, unit } => Ok(Self { amount, unit }),
-      LengthValueDe::String(str) => {
-        Self::from_str(&str).map_err(serde::de::Error::custom)
-      }
-    }
+    let s = String::deserialize(deserializer)?;
+    LengthValue::from_str(&s).map_err(serde::de::Error::custom)
   }
 }

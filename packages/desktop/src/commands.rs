@@ -1,30 +1,78 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use tauri::{State, Window};
 
 use crate::{
   common::WindowExt,
-  config::Config,
+  config::{Config, WidgetConfig, WidgetPlacement},
   providers::{ProviderConfig, ProviderManager},
-  widget_factory::WidgetFactory,
+  widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
 #[tauri::command]
-pub async fn open_widget_default(
-  config_path: String,
+pub async fn widget_configs(
   config: State<'_, Arc<Config>>,
+) -> Result<HashMap<PathBuf, WidgetConfig>, String> {
+  Ok(config.widget_configs().await)
+}
+
+#[tauri::command]
+pub async fn widget_states(
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> Result<HashMap<String, WidgetState>, String> {
+  Ok(widget_factory.states().await)
+}
+
+#[tauri::command]
+pub async fn start_widget(
+  config_path: String,
+  placement: WidgetPlacement,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
-  let widget_config = config
-    .widget_config_by_path(&PathBuf::from(config_path))
-    .await
-    .and_then(|opt| {
-      opt.ok_or_else(|| anyhow::anyhow!("Widget config not found."))
-    })
-    .map_err(|err| err.to_string())?;
-
   widget_factory
-    .open(widget_config)
+    .start_widget(
+      &PathBuf::from(config_path),
+      &WidgetOpenOptions::Standalone(placement),
+    )
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn start_preset(
+  config_path: String,
+  preset_name: String,
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  widget_factory
+    .start_widget(
+      &PathBuf::from(config_path),
+      &WidgetOpenOptions::Preset(preset_name),
+    )
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn stop_preset(
+  config_path: String,
+  preset_name: String,
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  widget_factory
+    .stop_by_preset(&PathBuf::from(config_path), &preset_name)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn update_widget_config(
+  config_path: String,
+  new_config: WidgetConfig,
+  config: State<'_, Arc<Config>>,
+) -> Result<(), String> {
+  config
+    .update_widget_config(&PathBuf::from(config_path), new_config)
     .await
     .map_err(|err| err.to_string())
 }

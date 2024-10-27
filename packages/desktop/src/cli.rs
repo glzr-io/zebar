@@ -1,6 +1,8 @@
 use std::{path::PathBuf, process};
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+
+use crate::{common::LengthValue, config::AnchorPoint};
 
 const VERSION: &'static str = env!("VERSION_NUMBER");
 
@@ -19,13 +21,21 @@ impl Cli {
 
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum CliCommand {
-  /// Opens a widget by its config path. Uses its default placements.
+  /// Opens a widget by its config path and chosen placement.
   ///
   /// Config path is relative within the Zebar config directory (e.g.
-  /// `zebar open-widget-default ./material/config.yaml`).
+  /// `zebar start-widget --path starter/vanilla`).
   ///
   /// Starts Zebar if it is not already running.
-  OpenWidgetDefault(OpenWidgetDefaultArgs),
+  StartWidget(StartWidgetArgs),
+
+  /// Opens a widget by its config path and a preset name.
+  ///
+  /// Config path is relative within the Zebar config directory (e.g.
+  /// `zebar start-preset --path start/vanilla --preset default`).
+  ///
+  /// Starts Zebar if it is not already running.
+  StartPreset(StartPresetArgs),
 
   /// Opens all widgets that are set to launch on startup.
   ///
@@ -47,16 +57,56 @@ pub enum CliCommand {
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]
-pub struct OpenWidgetDefaultArgs {
+pub struct StartWidgetArgs {
   /// Relative file path to widget config within the Zebar config
   /// directory.
+  #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
   pub config_path: PathBuf,
 
-  /// Absolute or relative path to the Zebar config directory.
-  ///
-  /// The default path is `%userprofile%/.glzr/zebar/`
-  #[clap(long, value_hint = clap::ValueHint::FilePath)]
-  pub config_dir: Option<PathBuf>,
+  /// Anchor-point of the widget.
+  #[clap(long)]
+  pub anchor: AnchorPoint,
+
+  /// Offset from the anchor-point.
+  #[clap(long)]
+  pub offset_x: LengthValue,
+
+  /// Offset from the anchor-point.
+  #[clap(long)]
+  pub offset_y: LengthValue,
+
+  /// Width of the widget in % or physical pixels.
+  #[clap(long)]
+  pub width: LengthValue,
+
+  /// Height of the widget in % or physical pixels.
+  #[clap(long)]
+  pub height: LengthValue,
+
+  /// Monitor(s) to place the widget on.
+  #[clap(long)]
+  pub monitor_type: MonitorType,
+}
+
+/// TODO: Add support for `Index` and `Name` types.
+#[derive(Clone, Debug, PartialEq, ValueEnum)]
+#[clap(rename_all = "snake_case")]
+pub enum MonitorType {
+  All,
+  Primary,
+  Secondary,
+}
+
+#[derive(Args, Clone, Debug, PartialEq)]
+pub struct StartPresetArgs {
+  /// Relative file path to widget config within the Zebar config
+  /// directory.
+  #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
+  pub config_path: PathBuf,
+
+  /// Name of the preset within the target widget config.
+  #[clap(long = "preset")]
+  pub preset_name: String,
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]

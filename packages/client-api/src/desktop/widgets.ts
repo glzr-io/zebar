@@ -1,6 +1,7 @@
 import { join } from '@tauri-apps/api/path';
 
 import { desktopCommands } from './desktop-commands';
+import type { WidgetPlacement } from '~/config';
 
 export interface Widget {
   /**
@@ -44,11 +45,14 @@ export function currentWidget(): Widget {
 }
 
 /**
- * Opens a widget by its config path. Uses its default placements.
+ * Opens a widget by its config path and chosen placement.
  *
  * Config path is relative within the Zebar config directory.
  */
-export async function openWidgetDefault(configPath: string) {
+export async function startWidget(
+  configPath: string,
+  placement: WidgetPlacement,
+) {
   // Ensure the config path ends with '.zebar.json'.
   const filePath = configPath.endsWith('.zebar.json')
     ? configPath
@@ -60,5 +64,25 @@ export async function openWidgetDefault(configPath: string) {
     filePath,
   );
 
-  return desktopCommands.openWidgetDefault(absolutePath);
+  return desktopCommands.startWidget(absolutePath, placement);
+}
+
+/**
+ * Opens a widget by its config path and a preset name.
+ *
+ * Config path is relative within the Zebar config directory.
+ */
+export async function startPreset(configPath: string, presetName: string) {
+  // Ensure the config path ends with '.zebar.json'.
+  const filePath = configPath.endsWith('.zebar.json')
+    ? configPath
+    : `${configPath}.zebar.json`;
+
+  const absolutePath = await join(
+    getWidgetState().configPath,
+    '../',
+    filePath,
+  );
+
+  return desktopCommands.startPreset(absolutePath, presetName);
 }

@@ -22,12 +22,15 @@
     "transparent": {
       "type": "boolean"
     },
-    "defaultPlacements": {
+    "presets": {
       "type": "array",
       "items": [
         {
           "type": "object",
           "properties": {
+            "name": {
+              "type": "string"
+            },
             "anchor": {
               "type": "string",
               "enum": [
@@ -113,6 +116,7 @@
             }
           },
           "required": [
+            "name",
             "anchor",
             "offsetX",
             "offsetY",
@@ -131,6 +135,6 @@
     "focused",
     "resizable",
     "transparent",
-    "defaultPlacements"
+    "presets"
   ]
 }

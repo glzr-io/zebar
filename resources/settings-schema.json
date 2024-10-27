@@ -6,7 +6,16 @@
     "startupConfigs": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "preset": {
+            "type": "string"
+          }
+        },
+        "required": ["path", "preset"]
       }
     }
   },

@@ -67,14 +67,14 @@ jobs:
           dotnet tool install --global AzureSignTool --version 5.0.0
 
       - run: pnpm i
+      - run: pnpm run --filter zebar --filter @zebar/settings-ui build
 
       - name: Set version number
         shell: bash
         run: |
-          TMP_PATH=$(mktemp)
-          CONF_PATH=packages/desktop/tauri.conf.json
-          jq '.version="${{ inputs.version-number || '0.0.0' }}"' "$CONF_PATH" > "$TMP_PATH"
-          mv "$TMP_PATH" "$CONF_PATH"
+          CONF_PATH="packages/desktop/tauri.conf.json"
+          cat "$CONF_PATH" | jq '.version="${{ inputs.version-number || '0.0.0' }}"' > "$CONF_PATH.tmp" && \
+          mv "$CONF_PATH.tmp" "$CONF_PATH"
 
       - name: Tauri build
         uses: tauri-apps/tauri-action@v0

@@ -25,9 +25,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.0.0-rc.5",
-    "@tauri-apps/plugin-dialog": "2.0.0-rc.1",
-    "@tauri-apps/plugin-shell": "2.0.0-rc.1",
+    "@tauri-apps/api": "2.0.2",
+    "@tauri-apps/plugin-dialog": "2.0.0",
+    "@tauri-apps/plugin-shell": "2.0.0",
     "glazewm": "1.6.0",
     "luxon": "3.4.4",
     "zod": "3.22.4"
