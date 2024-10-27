@@ -2,7 +2,8 @@ use serde::Serialize;
 
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, host::HostOutput, ip::IpOutput,
-  memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
+  media::MediaOutput, memory::MemoryOutput, network::NetworkOutput,
+  weather::WeatherOutput,
 };
 #[cfg(windows)]
 use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
@@ -16,6 +17,7 @@ pub enum ProviderOutput {
   Ip(IpOutput),
   #[cfg(windows)]
   Komorebi(KomorebiOutput),
+  Media(MediaOutput),
   Memory(MemoryOutput),
   Network(NetworkOutput),
   Weather(WeatherOutput),
