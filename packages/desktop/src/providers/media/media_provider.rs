@@ -1,12 +1,11 @@
-use std::sync::Arc;
+use std::{
+  sync::{mpsc::Sender, Arc, Mutex},
+  time,
+};
 
 use anyhow::Context;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::{
-  sync::{mpsc::Sender, Mutex},
-  time,
-};
 use tracing::info;
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
@@ -74,9 +73,7 @@ impl MediaProvider {
       info!("Artist: {}", media_output.artist);
       info!("Album: {}", media_output.album);
       info!("Album Artist: {}", media_output.album_artist);
-      emit_result_tx
-        .send(Ok(ProviderOutput::Media(media_output)).into())
-        .await;
+      emit_result_tx.send(Ok(ProviderOutput::Media(media_output)).into());
     }
 
     // TODO: Emit to frontend client via channel.
@@ -97,19 +94,18 @@ impl MediaProvider {
     &self,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
-    let rt = tokio::runtime::Runtime::new().unwrap();
     let session_manager = MediaManager::RequestAsync()?.get()?;
     println!("Session manager obtained.");
-    *self.current_session.lock().await =
+    *self.current_session.lock().unwrap() =
       session_manager.GetCurrentSession().ok();
 
     // TODO - better way of handling error?
     match Self::add_session_listeners(
-      &self.current_session.lock().await.as_ref().unwrap(),
+      &self.current_session.lock().unwrap().as_ref().unwrap(),
       emit_result_tx.clone(),
     ) {
       Ok(tokens) => {
-        *self.event_tokens.lock().await = Some(tokens);
+        *self.event_tokens.lock().unwrap() = Some(tokens);
       }
       Err(err) => {
         eprintln!("Error adding media session listeners: {:?}", err);
@@ -122,23 +118,15 @@ impl MediaProvider {
       move |session_manager: &Option<MediaManager>, _| {
         {
           // Remove listeners from the previous session.
-          let current_session = current_session.clone();
-          let event_tokens = event_tokens.clone();
-          rt.block_on(async {
-            let current_session = current_session.lock().await;
-            let event_tokens = event_tokens.lock().await;
-            if let Some(session) = &*current_session {
-              if let Err(err) = Self::remove_session_listeners(
-                session.clone(),
-                event_tokens.clone(),
-              ) {
-                eprintln!(
-                  "Error removing media session listeners: {:?}",
-                  err
-                );
-              }
-            }
-          });
+          // Remove listeners from the previous session.
+          let mut current_session = current_session.lock().unwrap();
+          let mut event_tokens = event_tokens.lock().unwrap();
+          if let Err(err) = Self::remove_session_listeners(
+            &current_session.as_ref().unwrap(),
+            event_tokens.as_ref(),
+          ) {
+            eprintln!("Error removing media session listeners: {:?}", err);
+          }
 
           let new_session =
             MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
@@ -148,8 +136,6 @@ impl MediaProvider {
             emit_result_tx.clone(),
           ) {
             Ok(tokens) => {
-              let mut event_tokens =
-                rt.block_on(async { event_tokens.lock().await });
               *event_tokens = Some(tokens);
             }
             Err(err) => {
@@ -161,10 +147,7 @@ impl MediaProvider {
             &new_session,
             emit_result_tx.clone(),
           );
-          rt.block_on(async {
-            let mut current_session = current_session.lock().await;
-            *current_session = Some(new_session);
-          });
+          *current_session = Some(new_session);
         }
 
         windows::core::Result::Ok(())
@@ -180,10 +163,10 @@ impl MediaProvider {
 
   // TODO - is it better to have arc<mutex> as the params?
   fn remove_session_listeners(
-    session: MediaSession,
-    mut event_tokens: Option<EventTokens>,
+    session: &MediaSession,
+    mut event_tokens: Option<&EventTokens>,
   ) -> anyhow::Result<()> {
-    let token = event_tokens.expect("No event tokens available.");
+    let token = event_tokens.unwrap();
     session.RemoveMediaPropertiesChanged(
       token.media_properties_changed_token,
     )?;
@@ -258,7 +241,7 @@ impl Provider for MediaProvider {
     if let Err(err) =
       self.create_session_manager(emit_result_tx.clone()).await
     {
-      emit_result_tx.send(Err(err).into()).await;
+      emit_result_tx.send(Err(err).into());
     }
   }
 }
