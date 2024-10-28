@@ -223,8 +223,6 @@ impl SysTray {
       .text(MenuEvent::ReloadConfigs, "Reload configs")
       .separator();
 
-    // TODO: Set "Open settings" as the default menu item on Windows.
-
     // Add submenus for currently active widget.
     if !widget_states.is_empty() {
       for (config_path, config) in &widget_configs {
@@ -243,9 +241,26 @@ impl SysTray {
       tray_menu = tray_menu.separator();
     }
 
-    tray_menu = tray_menu.text(MenuEvent::Exit, "Exit");
+    let tray_menu = tray_menu.text(MenuEvent::Exit, "Exit").build()?;
 
-    Ok(tray_menu.build()?)
+    // Set "Open settings" as the default menu item on Windows.
+    #[cfg(windows)]
+    {
+      use tauri::menu::ContextMenu;
+      use windows::Win32::UI::WindowsAndMessaging::{
+        SetMenuDefaultItem, HMENU,
+      };
+
+      let _ = unsafe {
+        SetMenuDefaultItem(
+          HMENU(tray_menu.hpopupmenu()? as _),
+          0 as u32,
+          true.into(),
+        )
+      };
+    }
+
+    Ok(tray_menu)
   }
 
   /// Callback for system tray menu events.
