@@ -1,11 +1,12 @@
 use std::{
-  sync::{mpsc::Sender, Arc, Mutex},
+  sync::{Arc, Mutex},
   time,
 };
 
 use anyhow::Context;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::Sender;
 use tracing::info;
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
@@ -64,7 +65,7 @@ impl MediaProvider {
     }
   }
 
-  async fn print_current_media_info(
+  fn print_current_media_info(
     session: &MediaSession,
     emit_result_tx: Sender<ProviderResult>,
   ) {
@@ -90,7 +91,7 @@ impl MediaProvider {
     })
   }
 
-  async fn create_session_manager(
+  fn create_session_manager(
     &self,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
@@ -239,7 +240,7 @@ impl MediaProvider {
 impl Provider for MediaProvider {
   async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
     if let Err(err) =
-      self.create_session_manager(emit_result_tx.clone()).await
+      self.create_session_manager(emit_result_tx.clone())
     {
       emit_result_tx.send(Err(err).into());
     }
