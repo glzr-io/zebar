@@ -2432,8 +2432,7 @@ dependencies = [
  "hotwatch",
  "komorebi-core",
  "lazy_static",
- "ic",
- "
+ "miow"
  "nanoid",
  "net2",
  "os_info",
@@ -6691,7 +6690,6 @@ dependencies = [
  "clap",
  "cocoa 0.25.0",
  "komorebi-client",
- "lazy_static",
  "netdev",
  "regex",
  "reqwest 0.11.27",
