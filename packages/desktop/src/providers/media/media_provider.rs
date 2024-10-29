@@ -70,18 +70,18 @@ impl MediaProvider {
   fn emit_media_info(
     session: &MediaSession,
     emit_result_tx: Sender<ProviderResult>,
-    recorded_media_output: &mut Option<MediaOutput>,
+    media_output: &mut MediaOutput,
   ) {
     println!("Emitting media info.");
     if let Ok(new_media_output) = Self::media_output(session) {
-      let should_emit = match recorded_media_output {
-        Some(ref recorded) => *recorded != new_media_output,
-        None => true,
-      };
-      if should_emit {
-        *recorded_media_output = Some(new_media_output.clone());
+      info!("Title: {}", media_output.title);
+      info!("Artist: {}", media_output.artist);
+      info!("Album: {}", media_output.album);
+      info!("Album Artist: {}", media_output.album_artist);
+      if new_media_output != *media_output {
+        *media_output = new_media_output;
         emit_result_tx
-          .try_send(Ok(ProviderOutput::Media(new_media_output)).into())
+          .try_send(Ok(ProviderOutput::Media(media_output.clone())).into())
           .expect("Media output provider failed to send.");
       }
     }
@@ -189,7 +189,7 @@ impl MediaProvider {
         Self::emit_media_info(
           session,
           emit_result_tx.clone(),
-          &mut *media_output,
+          media_output.as_mut().unwrap(),
         );
         windows::core::Result::Ok(())
       })
@@ -207,7 +207,7 @@ impl MediaProvider {
         Self::emit_media_info(
           session,
           emit_result_tx.clone(),
-          &mut *media_output,
+          &mut media_output.as_mut().unwrap(),
         );
         windows::core::Result::Ok(())
       })
@@ -224,7 +224,7 @@ impl MediaProvider {
         Self::emit_media_info(
           session,
           emit_result_tx.clone(),
-          &mut *media_output,
+          &mut media_output.as_mut().unwrap(),
         );
         windows::core::Result::Ok(())
       })
