@@ -113,17 +113,11 @@ impl MediaProvider {
     *self.current_session.lock().unwrap() =
       session_manager.GetCurrentSession().ok();
 
-    match Self::add_session_listeners(
+    let tokens = Self::add_session_listeners(
       &self.current_session.lock().unwrap().as_ref().unwrap(),
       emit_result_tx.clone(),
-    ) {
-      Ok(tokens) => {
-        *self.event_tokens.lock().unwrap() = Some(tokens);
-      }
-      Err(err) => {
-        eprintln!("Error adding media session listeners: {:?}", err);
-      }
-    }
+    );
+    *self.event_tokens.lock().unwrap() = tokens.ok();
 
     // Clean up & rebind listeners when session changes.
     let current_session = self.current_session.clone();
@@ -145,17 +139,11 @@ impl MediaProvider {
           let new_session =
             MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
 
-          match Self::add_session_listeners(
+          let tokens = Self::add_session_listeners(
             &new_session,
             emit_result_tx.clone(),
-          ) {
-            Ok(tokens) => {
-              *event_tokens = Some(tokens);
-            }
-            Err(err) => {
-              eprintln!("Error adding media session listeners: {:?}", err);
-            }
-          }
+          );
+          *event_tokens = tokens.ok();
 
           Self::emit_media_info(&new_session, emit_result_tx.clone());
           *current_session = Some(new_session);
