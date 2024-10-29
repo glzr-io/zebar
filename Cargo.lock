@@ -2432,7 +2432,7 @@ dependencies = [
  "hotwatch",
  "komorebi-core",
  "lazy_static",
- "miow"
+ "miow",
  "nanoid",
  "net2",
  "os_info",
