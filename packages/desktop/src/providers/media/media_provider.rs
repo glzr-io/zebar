@@ -3,29 +3,26 @@ use std::{
   time,
 };
 
-use anyhow::Context;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
-use tracing::info;
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
   Media::Control::{
-    CurrentSessionChangedEventArgs,
     GlobalSystemMediaTransportControlsSession as MediaSession,
     GlobalSystemMediaTransportControlsSessionManager as MediaManager,
-    GlobalSystemMediaTransportControlsSessionMediaProperties as MediaProperties,
-    GlobalSystemMediaTransportControlsSessionPlaybackInfo as PlaybackInfo,
-    GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
-    GlobalSystemMediaTransportControlsSessionTimelineProperties as TimelineProperties,
-    MediaPropertiesChangedEventArgs, PlaybackInfoChangedEventArgs,
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus as MediaPlaybackStatus,
+    // GlobalSystemMediaTransportControlsSessionMediaProperties as
+    // MediaProperties,
+    // GlobalSystemMediaTransportControlsSessionPlaybackInfo as
+    // PlaybackInfo,
+    // GlobalSystemMediaTransportControlsSessionTimelineProperties as
+    // TimelineProperties, MediaPropertiesChangedEventArgs,
+    // PlaybackInfoChangedEventArgs,
   },
 };
 
-use crate::{
-  impl_interval_provider,
-  providers::{Provider, ProviderOutput, ProviderResult},
-};
+use crate::providers::{Provider, ProviderOutput, ProviderResult};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -38,9 +35,11 @@ pub struct MediaOutput {
   pub artist: String,
   pub album: String,
   pub album_artist: String,
-  //   pub duration: u64,
-  //   pub position: u64,
-  //   pub is_playing: bool,
+  pub track_number: u32,
+  pub start_time: u64,
+  pub end_time: u64,
+  pub position: u64,
+  pub is_playing: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -65,29 +64,42 @@ impl MediaProvider {
     }
   }
 
-  fn print_current_media_info(
+  fn emit_media_info(
     session: &MediaSession,
     emit_result_tx: Sender<ProviderResult>,
   ) {
     if let Ok(media_output) = Self::media_output(session) {
-      info!("Title: {}", media_output.title);
-      info!("Artist: {}", media_output.artist);
-      info!("Album: {}", media_output.album);
-      info!("Album Artist: {}", media_output.album_artist);
-      emit_result_tx.send(Ok(ProviderOutput::Media(media_output)).into());
+      println!("media_output: {:?}", media_output);
+      emit_result_tx
+        .try_send(Ok(ProviderOutput::Media(media_output)).into())
+        .expect("Errror emitting media info.");
     }
-
-    // TODO: Emit to frontend client via channel.
   }
 
   fn media_output(session: &MediaSession) -> anyhow::Result<MediaOutput> {
     let media_properties = session.TryGetMediaPropertiesAsync()?.get()?;
-
+    let timeline_properties = session.GetTimelineProperties()?;
+    let playback_info = session.GetPlaybackInfo()?;
+    let is_playing = matches!(
+      playback_info.PlaybackStatus(),
+      Ok(MediaPlaybackStatus::Playing)
+    );
+    let start_time =
+      timeline_properties.StartTime()?.Duration as u64 / 10_000_000;
+    let end_time =
+      timeline_properties.EndTime()?.Duration as u64 / 10_000_000;
+    let position =
+      timeline_properties.Position()?.Duration as u64 / 10_000_000;
     Ok(MediaOutput {
       title: media_properties.Title()?.to_string(),
       artist: media_properties.Artist()?.to_string(),
       album: media_properties.AlbumTitle()?.to_string(),
       album_artist: media_properties.AlbumArtist()?.to_string(),
+      track_number: media_properties.TrackNumber()? as u32,
+      start_time,
+      end_time,
+      position,
+      is_playing,
     })
   }
 
@@ -95,30 +107,24 @@ impl MediaProvider {
     &self,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
+    // Find the current GSMTC session & add listeners.
     let session_manager = MediaManager::RequestAsync()?.get()?;
-    println!("Session manager obtained.");
+    println!("Media Session manager obtained.");
     *self.current_session.lock().unwrap() =
       session_manager.GetCurrentSession().ok();
 
-    // TODO - better way of handling error?
-    match Self::add_session_listeners(
+    let tokens = Self::add_session_listeners(
       &self.current_session.lock().unwrap().as_ref().unwrap(),
       emit_result_tx.clone(),
-    ) {
-      Ok(tokens) => {
-        *self.event_tokens.lock().unwrap() = Some(tokens);
-      }
-      Err(err) => {
-        eprintln!("Error adding media session listeners: {:?}", err);
-      }
-    }
+    );
+    *self.event_tokens.lock().unwrap() = tokens.ok();
 
+    // Clean up & rebind listeners when session changes.
     let current_session = self.current_session.clone();
     let event_tokens = self.event_tokens.clone();
     let session_changed_handler = TypedEventHandler::new(
       move |session_manager: &Option<MediaManager>, _| {
         {
-          // Remove listeners from the previous session.
           // Remove listeners from the previous session.
           let mut current_session = current_session.lock().unwrap();
           let mut event_tokens = event_tokens.lock().unwrap();
@@ -129,32 +135,23 @@ impl MediaProvider {
             eprintln!("Error removing media session listeners: {:?}", err);
           }
 
+          // Set up new session.
           let new_session =
             MediaManager::RequestAsync()?.get()?.GetCurrentSession()?;
 
-          match Self::add_session_listeners(
-            &new_session,
-            emit_result_tx.clone(),
-          ) {
-            Ok(tokens) => {
-              *event_tokens = Some(tokens);
-            }
-            Err(err) => {
-              eprintln!("Error adding media session listeners: {:?}", err);
-            }
-          }
-
-          Self::print_current_media_info(
-            &new_session,
+          let tokens = Self::add_session_listeners(
+            &current_session.as_ref().unwrap(),
             emit_result_tx.clone(),
           );
+          *event_tokens = tokens.ok();
+
+          Self::emit_media_info(&new_session, emit_result_tx.clone());
           *current_session = Some(new_session);
         }
 
         windows::core::Result::Ok(())
       },
     );
-
     session_manager.CurrentSessionChanged(&session_changed_handler)?;
 
     loop {
@@ -162,10 +159,9 @@ impl MediaProvider {
     }
   }
 
-  // TODO - is it better to have arc<mutex> as the params?
   fn remove_session_listeners(
     session: &MediaSession,
-    mut event_tokens: Option<&EventTokens>,
+    event_tokens: Option<&EventTokens>,
   ) -> anyhow::Result<()> {
     let token = event_tokens.unwrap();
     session.RemoveMediaPropertiesChanged(
@@ -176,7 +172,6 @@ impl MediaProvider {
     session.RemoveTimelinePropertiesChanged(
       token.timeline_properties_changed_token,
     )?;
-    event_tokens = None;
     Ok(())
   }
 
@@ -191,7 +186,7 @@ impl MediaProvider {
         let session = session
           .as_ref()
           .expect("No session available on media properties change.");
-        Self::print_current_media_info(session, emit_result_tx.clone());
+        Self::emit_media_info(session, emit_result_tx.clone());
         windows::core::Result::Ok(())
       })
     };
@@ -203,7 +198,7 @@ impl MediaProvider {
         let session = session
           .as_ref()
           .expect("No session available on playback info change.");
-        Self::print_current_media_info(session, emit_result_tx.clone());
+        Self::emit_media_info(session, emit_result_tx.clone());
         windows::core::Result::Ok(())
       })
     };
@@ -214,7 +209,7 @@ impl MediaProvider {
         let session = session
           .as_ref()
           .expect("No session available on timeline properties change.");
-        Self::print_current_media_info(session, emit_result_tx.clone());
+        Self::emit_media_info(session, emit_result_tx.clone());
         windows::core::Result::Ok(())
       })
     };
@@ -239,10 +234,11 @@ impl MediaProvider {
 #[async_trait]
 impl Provider for MediaProvider {
   async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) =
-      self.create_session_manager(emit_result_tx.clone())
-    {
-      emit_result_tx.send(Err(err).into());
+    if let Err(err) = self.create_session_manager(emit_result_tx.clone()) {
+      emit_result_tx
+        .send(Err(err).into())
+        .await
+        .expect("Erroring emitting media provider err.");
     }
   }
 }
