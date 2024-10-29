@@ -173,6 +173,7 @@ impl ProviderRef {
       ProviderConfig::Komorebi(config) => {
         Box::new(KomorebiProvider::new(config))
       }
+      #[cfg(windows)]
       ProviderConfig::Media(config) => {
         Box::new(MediaProvider::new(config))
       }
