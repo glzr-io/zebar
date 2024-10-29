@@ -2431,7 +2431,7 @@ dependencies = [
  "hex_color",
  "hotwatch",
  "komorebi-core",
- "miow",
+ "lazy_st
  "nanoid",
  "net2",
  "os_info",
