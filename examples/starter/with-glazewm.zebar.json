@@ -6,6 +6,7 @@
   "focused": false,
   "resizable": false,
   "transparent": false,
+  "cacheAssets": true,
   "presets": [
     {
       "name": "default",

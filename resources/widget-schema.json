@@ -22,6 +22,9 @@
     "transparent": {
       "type": "boolean"
     },
+    "cacheAssets": {
+      "type": "boolean"
+    },
     "presets": {
       "type": "array",
       "items": [

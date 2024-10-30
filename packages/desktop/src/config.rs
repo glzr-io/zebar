@@ -90,6 +90,9 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
+  #[serde(default = "default_bool::<true>")]
+  pub cache_assets: bool,
+
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -207,6 +210,9 @@ pub struct Config {
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
+  /// Where the service worker lives.
+  pub service_worker_path: Option<PathBuf>,
+
   /// Global settings.
   pub settings: Arc<Mutex<SettingsConfig>>,
 
@@ -247,9 +253,15 @@ impl Config {
     let (widget_configs_change_tx, _widget_configs_change_rx) =
       broadcast::channel(16);
 
+    let service_worker_path = app_handle
+      .path()
+      .resolve("resources/__zebar-sw.js", BaseDirectory::Resource)
+      .ok();
+
     Ok(Self {
       app_handle: app_handle.clone(),
       config_dir: config_dir.to_absolute()?,
+      service_worker_path,
       settings: Arc::new(Mutex::new(settings)),
       widget_configs: Arc::new(Mutex::new(widget_configs)),
       _settings_change_rx,
@@ -653,4 +665,8 @@ const fn default_bool<const V: bool>() -> bool {
 /// `WidgetPreset::name` field.
 fn default_preset_name() -> String {
   "default".into()
+}
+
+const fn default_bool<const V: bool>() -> bool {
+  V
 }

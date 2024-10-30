@@ -38,6 +38,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 netdev = "0.24"
 regex = "1"
+webview2-com = "0.33.0"
+rocket = { version = "0.5.1", features = ["json"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
