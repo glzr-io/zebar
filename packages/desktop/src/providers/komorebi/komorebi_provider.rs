@@ -40,7 +40,7 @@ impl KomorebiProvider {
     KomorebiProvider { _config: config }
   }
 
-  async fn create_socket(
+  fn create_socket(
     &self,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
@@ -68,7 +68,7 @@ impl KomorebiProvider {
             .is_err()
             {
               debug!("Attempting to reconnect to Komorebi.");
-              time::sleep(Duration::from_secs(15)).await;
+              std::thread::sleep(Duration::from_secs(15));
             }
           }
 
@@ -78,19 +78,17 @@ impl KomorebiProvider {
               &String::from_utf8(buffer).unwrap(),
             )
           {
-            emit_result_tx
-              .send(
-                Ok(ProviderOutput::Komorebi(Self::transform_response(
-                  notification.state,
-                )))
-                .into(),
-              )
-              .await;
+            emit_result_tx.try_send(
+              Ok(ProviderOutput::Komorebi(Self::transform_response(
+                notification.state,
+              )))
+              .into(),
+            )
           }
         }
         Err(_) => {
           emit_result_tx
-            .send(
+            .try_send(
               Err(anyhow::anyhow!("Failed to read Komorebi stream."))
                 .into(),
             )
@@ -185,9 +183,13 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) = self.create_socket(emit_result_tx.clone()).await {
-      emit_result_tx.send(Err(err).into()).await;
+  fn threading_type(&self) -> ThreadingType {
+    ThreadingType::Sync
+  }
+
+  fn run_sync(&self, emit_result_tx: Sender<ProviderResult>) {
+    if let Err(err) = self.create_socket(emit_result_tx.clone()) {
+      emit_result_tx.try_send(Err(err).into());
     }
   }
 }

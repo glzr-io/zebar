@@ -19,7 +19,7 @@ use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
   network::NetworkProvider, weather::WeatherProvider, Provider,
-  ProviderConfig, ProviderOutput, SharedProviderState,
+  ProviderConfig, ProviderOutput, SharedProviderState, ThreadingType,
 };
 
 /// Reference to an active provider.
@@ -132,29 +132,36 @@ impl ProviderRef {
   ) -> anyhow::Result<()> {
     let provider = Self::create_provider(config, shared_state)?;
 
-    task::spawn(async move {
-      // TODO: Add arc `should_stop` to be passed to `run`.
+    let _ = match provider.threading_type() {
+      ThreadingType::Async => {
+        task::spawn(async move {
+          // TODO: Add arc `should_stop` to be passed to `run`.
 
-      let run = provider.run(emit_result_tx);
-      tokio::pin!(run);
+          let run = provider.run_async(emit_result_tx);
+          tokio::pin!(run);
 
-      // Ref: https://tokio.rs/tokio/tutorial/select#resuming-an-async-operation
-      loop {
-        tokio::select! {
-          // Default match arm which continuously runs the provider.
-          _ = run => break,
+          // Ref: https://tokio.rs/tokio/tutorial/select#resuming-an-async-operation
+          loop {
+            tokio::select! {
+              // Default match arm which continuously runs the provider.
+              _ = run => break,
 
-          // On stop, perform any necessary clean up and exit the loop.
-          Some(_) = stop_rx.recv() => {
-            info!("Stopping provider: {}", config_hash);
-            _ = provider.on_stop().await;
-            break;
-          },
-        }
+              // On stop, perform any necessary clean up and exit the loop.
+              Some(_) = stop_rx.recv() => {
+                info!("Stopping provider: {}", config_hash);
+                _ = provider.on_stop().await;
+                break;
+              },
+            }
+          }
+
+          info!("Provider stopped: {}", config_hash);
+        })
       }
-
-      info!("Provider stopped: {}", config_hash);
-    });
+      ThreadingType::Sync => task::spawn_blocking(move || {
+        let run = provider.run_sync(emit_result_tx);
+      }),
+    };
 
     Ok(())
   }

@@ -5,13 +5,30 @@ use super::ProviderResult;
 
 #[async_trait]
 pub trait Provider: Send + Sync {
+  fn threading_type(&self) -> ThreadingType;
+
   /// Callback for when the provider is started.
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>);
+  async fn run_async(&self, _emit_result_tx: Sender<ProviderResult>) {
+    // TODO: Change to not implemented exception.
+    todo!()
+  }
+
+  /// Callback for when the provider is started.
+  fn run_sync(&self, _emit_result_tx: Sender<ProviderResult>) {
+    // TODO: Change to not implemented exception.
+    todo!()
+  }
 
   /// Callback for when the provider is stopped.
   async fn on_stop(&self) {
     // No-op by default.
   }
+}
+
+/// Determines whether `run_sync` or `run_async` is called.`
+pub enum ThreadingType {
+  Sync,
+  Async,
 }
 
 /// Implements the `Provider` trait for the given struct.
@@ -23,7 +40,11 @@ macro_rules! impl_interval_provider {
   ($type:ty, $allow_identical_emits:expr) => {
     #[async_trait::async_trait]
     impl crate::providers::Provider for $type {
-      async fn run(
+      fn threading_type(&self) -> crate::providers::ThreadingType {
+        crate::providers::ThreadingType::Sync
+      }
+
+      async fn run_async(
         &self,
         emit_result_tx: tokio::sync::mpsc::Sender<
           crate::providers::ProviderResult,
