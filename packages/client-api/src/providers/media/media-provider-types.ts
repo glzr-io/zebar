@@ -2,20 +2,18 @@ import type { Provider } from '../create-base-provider';
 
 export interface MediaProviderConfig {
   type: 'media';
-  /**
-   * How often this provider refreshes in milliseconds.
-   */
-  refreshInterval?: number;
 }
 
 export interface MediaOutput {
   title: string;
-  subTitle: string;
-  trackNumber: number;
   artist: string;
-  albumTitle: string;
+  album: string;
+  album_artist: string;
+  track_number: number;
+  start_time: number;
+  end_time: number;
+  duration: number;
   isPlaying: boolean;
-  isSpotify: boolean;
 }
 
 export type MediaProvider = Provider<MediaProviderConfig, MediaOutput>;
