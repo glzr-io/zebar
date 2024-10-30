@@ -130,7 +130,7 @@ impl SysTray {
   }
 
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {
-    let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
+    let tooltip = format!("Zebar v{}", env!("CARGO_PKG_VERSION"));
 
     // Linting: `mut` needed for Windows where `tray_icon` is modified with
     // additional click handler.
