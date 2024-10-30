@@ -8,11 +8,11 @@ export interface MediaOutput {
   title: string;
   artist: string;
   album: string;
-  album_artist: string;
-  track_number: number;
-  start_time: number;
-  end_time: number;
-  duration: number;
+  albumArtist: string;
+  trackNumber: number;
+  startTime: number;
+  endTime: number;
+  position: number;
   isPlaying: boolean;
 }
 
