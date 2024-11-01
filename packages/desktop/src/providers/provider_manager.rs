@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use sysinfo::{Networks, System};
+use sysinfo::{Disks, Networks, System};
 use tauri::AppHandle;
 use tokio::sync::Mutex;
 use tracing::warn;
@@ -12,6 +12,7 @@ use super::{ProviderConfig, ProviderRef};
 pub struct SharedProviderState {
   pub sysinfo: Arc<Mutex<System>>,
   pub netinfo: Arc<Mutex<Networks>>,
+  pub diskinfo: Arc<Mutex<Disks>>,
 }
 
 /// Manages the creation and cleanup of providers.
@@ -29,6 +30,7 @@ impl ProviderManager {
       shared_state: SharedProviderState {
         sysinfo: Arc::new(Mutex::new(System::new_all())),
         netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
+        diskinfo: Arc::new(Mutex::new(Disks::new_with_refreshed_list())),
       },
     }
   }

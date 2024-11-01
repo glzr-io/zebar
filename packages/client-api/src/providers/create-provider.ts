@@ -50,6 +50,8 @@ import type {
   WeatherProviderConfig,
   WeatherProvider,
 } from './weather/weather-provider-types';
+import { createDiskProvider } from './disk/create-disk-provider';
+import type { DiskProvider, DiskProviderConfig } from './disk/disk-provider-types';
 
 export interface ProviderConfigMap {
   battery: BatteryProviderConfig;
@@ -63,6 +65,7 @@ export interface ProviderConfigMap {
   network: NetworkProviderConfig;
   weather: WeatherProviderConfig;
   keyboard: KeyboardProviderConfig;
+  disk: DiskProviderConfig;
 }
 
 export interface ProviderMap {
@@ -77,6 +80,7 @@ export interface ProviderMap {
   network: NetworkProvider;
   weather: WeatherProvider;
   keyboard: KeyboardProvider;
+  disk: DiskProvider;
 }
 
 export type ProviderType = keyof ProviderConfigMap;
@@ -122,6 +126,8 @@ export function createProvider<T extends ProviderConfig>(
       return createWeatherProvider(config) as any;
     case 'keyboard':
       return createKeyboardProvider(config) as any;
+    case 'disk':
+      return createDiskProvider(config) as any;
     default:
       throw new Error('Not a supported provider type.');
   }

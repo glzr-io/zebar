@@ -1,5 +1,6 @@
 mod battery;
 mod cpu;
+mod disk;
 mod host;
 mod ip;
 #[cfg(windows)]
