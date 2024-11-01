@@ -343,6 +343,13 @@ impl WidgetFactory {
             let () = msg_send![webview.inner() as *mut Object, setCustomUserAgent: agent];
           };
 
+          #[cfg(target_os = "linux")]
+          {
+            use webkit2gtk::{WebViewExt, SettingsExt};
+            let webview = webview.inner();
+            let settings = webview.settings().unwrap();
+            settings.set_user_agent(Some(&user_agent));
+          }
           // TODO: Linux
         })
         .unwrap();
