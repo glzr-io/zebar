@@ -1,22 +1,15 @@
-use std::{
-  ffi::c_void,
-  fs::File,
-  io::Write,
-  mem::zeroed,
-  path::PathBuf,
-  sync::{Arc, Mutex},
-};
+use std::{ffi::c_void, mem::zeroed, path::PathBuf};
 
-use anyhow::{Ok, Result};
+use anyhow::Ok;
 use async_trait::async_trait;
 use image::{ImageBuffer, Rgba};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 use windows::Win32::{
-  Foundation::{HMODULE, HWND, LPARAM, LRESULT, WPARAM},
+  Foundation::{HMODULE, HWND, LPARAM, WPARAM},
   Graphics::Gdi::{
     DeleteObject, GetDC, GetDIBits, GetObjectW, BITMAP, BITMAPINFO,
-    BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP, RGBQUAD,
+    BITMAPINFOHEADER, DIB_RGB_COLORS,
   },
   UI::{
     Accessibility::{SetWinEventHook, HWINEVENTHOOK},
@@ -74,7 +67,10 @@ impl Provider for FocusedWindowProvider {
     if let Err(err) =
       self.create_focused_window_hook(emit_result_tx.clone())
     {
-      emit_result_tx.send(Err(err).into()).await;
+      emit_result_tx
+        .send(Err(err).into())
+        .await
+        .expect("Error with focused window provider");
     }
   }
 }
@@ -105,7 +101,7 @@ impl FocusedWindowProvider {
       while GetMessageW(&mut msg, HWND(std::ptr::null_mut()), 0, 0)
         .as_bool()
       {
-        TranslateMessage(&msg);
+        let _ = TranslateMessage(&msg);
         DispatchMessageW(&msg);
       }
       Ok(())
@@ -194,7 +190,7 @@ impl FocusedWindowProvider {
             bmiHeader: BITMAPINFOHEADER {
               biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
               biWidth: width,
-              biHeight: height,
+              biHeight: -height, // Negative for top-down DIB
               biPlanes: 1,
               biBitCount: 32,
               biCompression: 0, // Use BI_RGB for no compression
@@ -239,18 +235,18 @@ impl FocusedWindowProvider {
             {
               println!("Failed to save image: {:?}", e);
             }
-            DeleteObject(hbitmap); // Clean up bitmap
-            return Some(PathBuf::from(path)); // Return the path of the
-                                              // saved
-                                              // icon
+            // Clean up bitmap
+            let _ = DeleteObject(hbitmap);
+            // Return the path of the saved icon
+            return Some(PathBuf::from(path)); //
           }
-          DeleteObject(hbitmap); // Clean up bitmap if DIB bits retrieval
-                                 // fails
+          // Clean up bitmap if DIB bits retrieval fails
+          let _ = DeleteObject(hbitmap);
         } else {
           println!("GetObjectW failed: {}", result); // Log failure
         }
       }
-      DestroyIcon(hicon); // Free the icon resources
+      let _ = DestroyIcon(hicon); // Free the icon resources
       None
     }
   }
