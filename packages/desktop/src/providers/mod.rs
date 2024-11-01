@@ -1,5 +1,6 @@
 mod battery;
 mod cpu;
+mod focused_window;
 mod host;
 mod ip;
 #[cfg(windows)]

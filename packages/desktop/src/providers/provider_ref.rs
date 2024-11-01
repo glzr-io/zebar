@@ -11,7 +11,8 @@ use tokio::{
 use tracing::{info, warn};
 
 use super::{
-  battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
+  battery::BatteryProvider, cpu::CpuProvider,
+  focused_window::{FocusedWindowProvider, FocusedWindowProviderConfig}, host::HostProvider,
   ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
   weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
   SharedProviderState,
@@ -165,7 +166,11 @@ impl ProviderRef {
         Box::new(BatteryProvider::new(config))
       }
       ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
+        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()));
+        Box::new(FocusedWindowProvider::new(FocusedWindowProviderConfig {}))
+      }
+      ProviderConfig::FocusedWindow(config) => {
+        Box::new(FocusedWindowProvider::new(config))
       }
       ProviderConfig::Host(config) => Box::new(HostProvider::new(config)),
       ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),

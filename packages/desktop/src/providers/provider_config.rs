@@ -2,9 +2,9 @@ use serde::Deserialize;
 
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
-  host::HostProviderConfig, ip::IpProviderConfig,
-  memory::MemoryProviderConfig, network::NetworkProviderConfig,
-  weather::WeatherProviderConfig,
+  focused_window::FocusedWindowProviderConfig, host::HostProviderConfig,
+  ip::IpProviderConfig, memory::MemoryProviderConfig,
+  network::NetworkProviderConfig, weather::WeatherProviderConfig,
 };
 #[cfg(windows)]
 use super::{
@@ -16,6 +16,7 @@ use super::{
 pub enum ProviderConfig {
   Battery(BatteryProviderConfig),
   Cpu(CpuProviderConfig),
+  FocusedWindow(FocusedWindowProviderConfig),
   Host(HostProviderConfig),
   Ip(IpProviderConfig),
   #[cfg(windows)]
