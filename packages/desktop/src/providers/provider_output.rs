@@ -17,6 +17,7 @@ pub enum ProviderOutput {
   Ip(IpOutput),
   #[cfg(windows)]
   Komorebi(KomorebiOutput),
+  #[cfg(windows)]
   Media(MediaOutput),
   Memory(MemoryOutput),
   Network(NetworkOutput),
