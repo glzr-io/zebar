@@ -669,15 +669,4 @@ impl WidgetFactory {
       },
     )
   }
-
-  /// Returns all widget ids.
-  pub async fn widget_ids(&self) -> Vec<String> {
-    self
-      .widget_states
-      .lock()
-      .await
-      .values()
-      .map(|s| s.id.clone())
-      .collect()
-  }
 }

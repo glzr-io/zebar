@@ -102,10 +102,9 @@ async fn main() -> anyhow::Result<()> {
         task::block_in_place(|| {
           block_on(async move {
             let widget_factory = app.state::<Arc<WidgetFactory>>();
-            let widget_ids = widget_factory.widget_ids().await;
 
-            for id in widget_ids {
-              if let Some(window) = app.get_webview_window(&id) {
+            for id in widget_factory.states().await.keys() {
+              if let Some(window) = app.get_webview_window(id) {
                 if let Ok(hwnd) = window.hwnd() {
                   common::remove_app_bar(hwnd);
                 }
