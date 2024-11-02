@@ -19,9 +19,11 @@ use tokio::{
 };
 use tracing::{error, info};
 
+#[cfg(target_os = "windows")]
+use crate::config::WidgetEdge;
 use crate::{
   common::{PathExt, WindowExt},
-  config::{AnchorPoint, Config, WidgetConfig, WidgetPlacement, ZOrder},
+  config::{AnchorPoint, Config, WidgetConfig, WidgetPlacement},
   monitor_state::MonitorState,
 };
 
@@ -82,6 +84,20 @@ pub struct WidgetState {
 pub enum WidgetOpenOptions {
   Standalone(WidgetPlacement),
   Preset(String),
+}
+
+/// `HWND` doesn't implement `Send`, but it's just a window handle so it
+/// should be safe to send across threads
+struct SendHWND(windows::Win32::Foundation::HWND);
+unsafe impl Send for SendHWND {}
+
+struct Placement {
+  size: PhysicalSize<i32>,
+  position: PhysicalPosition<i32>,
+  monitor_size: PhysicalSize<i32>,
+  scale_factor: f32,
+  anchor: AnchorPoint,
+  offset: PhysicalPosition<i32>,
 }
 
 impl WidgetFactory {
@@ -162,7 +178,16 @@ impl WidgetFactory {
       }
     };
 
-    for (size, position) in self.widget_coordinates(placement).await {
+    for placement in self.widget_coordinates(placement).await {
+      let Placement {
+        size,
+        position,
+        monitor_size,
+        scale_factor,
+        anchor,
+        offset,
+      } = placement;
+
       let new_count =
         self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
 
@@ -232,13 +257,105 @@ impl WidgetFactory {
         serde_json::to_string(&state)?
       ));
 
-      // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable, so
-      // we also set the window as a tool window.
       #[cfg(target_os = "windows")]
-      let _ = window
-        .as_ref()
-        .window()
-        .set_tool_window(!widget_config.shown_in_taskbar);
+      {
+        let window = window.as_ref().window();
+
+        // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
+        // so we also set the window as a tool window.
+        let _ = window.set_tool_window(!widget_config.shown_in_taskbar);
+
+        // Reserve space for the app bar if enabled.
+        if widget_config.reserve_space.enabled {
+          let edge = if let Some(edge) = widget_config.reserve_space.edge {
+            edge
+          } else {
+            // default to whichever edge the widget appears to be on
+            let widget_horizontal = size.width > size.height;
+
+            match (anchor, widget_horizontal) {
+              (AnchorPoint::Center, true) => WidgetEdge::Top,
+              (AnchorPoint::Center, false) => WidgetEdge::Left,
+              (AnchorPoint::TopCenter, _) => WidgetEdge::Top,
+              (AnchorPoint::CenterLeft, _) => WidgetEdge::Left,
+              (AnchorPoint::CenterRight, _) => WidgetEdge::Right,
+              (AnchorPoint::BottomCenter, _) => WidgetEdge::Bottom,
+              (AnchorPoint::TopLeft, true) => WidgetEdge::Top,
+              (AnchorPoint::TopLeft, false) => WidgetEdge::Left,
+              (AnchorPoint::TopRight, true) => WidgetEdge::Top,
+              (AnchorPoint::TopRight, false) => WidgetEdge::Right,
+              (AnchorPoint::BottomLeft, true) => WidgetEdge::Bottom,
+              (AnchorPoint::BottomLeft, false) => WidgetEdge::Left,
+              (AnchorPoint::BottomRight, true) => WidgetEdge::Bottom,
+              (AnchorPoint::BottomRight, false) => WidgetEdge::Right,
+            }
+          };
+
+          // total height of monitor perpendicular to the edge
+          let total_height = if edge.is_horizontal() {
+            monitor_size.height
+          } else {
+            monitor_size.width
+          };
+
+          let thickness = if let Some(thickness) =
+            &widget_config.reserve_space.thickness
+          {
+            thickness.to_px_scaled(total_height, scale_factor)
+          } else {
+            // default to whichever dimension of widget is smaller
+            // if this is not desired the user should specify a thickness
+            // anyway
+            if size.width > size.height {
+              size.height
+            } else {
+              size.width
+            }
+          };
+
+          let offset =
+            if let Some(offset) = &widget_config.reserve_space.offset {
+              offset.to_px_scaled(total_height, scale_factor)
+            } else {
+              // default to widget position offset
+              match edge {
+                WidgetEdge::Top => offset.y,
+                WidgetEdge::Bottom => -offset.y,
+                WidgetEdge::Left => offset.x,
+                WidgetEdge::Right => -offset.x,
+              }
+            };
+
+          let reserve_size = if edge.is_horizontal() {
+            PhysicalSize::new(monitor_size.width, thickness)
+          } else {
+            PhysicalSize::new(thickness, monitor_size.height)
+          };
+
+          let reserve_position = match edge {
+            WidgetEdge::Top => PhysicalPosition::new(0, offset),
+            WidgetEdge::Bottom => PhysicalPosition::new(
+              0,
+              monitor_size.height - thickness - offset,
+            ),
+            WidgetEdge::Left => PhysicalPosition::new(offset, 0),
+            WidgetEdge::Right => PhysicalPosition::new(
+              monitor_size.width - thickness - offset,
+              0,
+            ),
+          };
+
+          tracing::info!(
+            "Reserving app bar space on {:?}: {:?} {:?}",
+            edge,
+            reserve_size,
+            reserve_position
+          );
+
+          let _ =
+            window.allocate_app_bar(reserve_size, reserve_position, edge);
+        }
+      }
 
       // On MacOS, we need to set the window as above the menu bar for it
       // to truly be always on top.
@@ -297,11 +414,20 @@ impl WidgetFactory {
     let widget_states = self.widget_states.clone();
     let close_tx = self.close_tx.clone();
 
+    #[cfg(target_os = "windows")]
+    let hwnd = window.hwnd().map(SendHWND).ok();
+
     window.on_window_event(move |event| {
       if let WindowEvent::Destroyed = event {
         let widget_states = widget_states.clone();
         let close_tx = close_tx.clone();
         let widget_id = widget_id.clone();
+
+        // deallocate app bar if hwnd is valid
+        #[cfg(target_os = "windows")]
+        if let Some(hwnd) = &hwnd {
+          crate::common::remove_app_bar(hwnd.0);
+        }
 
         task::spawn(async move {
           let mut widget_states = widget_states.lock().await;
@@ -322,7 +448,7 @@ impl WidgetFactory {
   async fn widget_coordinates(
     &self,
     placement: &WidgetPlacement,
-  ) -> Vec<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
+  ) -> Vec<Placement> {
     let mut coordinates = vec![];
 
     let monitors = self
@@ -392,7 +518,14 @@ impl WidgetFactory {
       let window_position =
         PhysicalPosition::new(anchor_x + offset_x, anchor_y + offset_y);
 
-      coordinates.push((window_size, window_position));
+      coordinates.push(Placement {
+        size: window_size,
+        position: window_position,
+        monitor_size: PhysicalSize::new(monitor_width, monitor_height),
+        scale_factor: monitor.scale_factor,
+        anchor: placement.anchor,
+        offset: PhysicalPosition::new(offset_x, offset_y),
+      });
     }
 
     coordinates
@@ -536,5 +669,16 @@ impl WidgetFactory {
         acc
       },
     )
+  }
+
+  /// Returns all widget ids.
+  pub async fn widget_ids(&self) -> Vec<String> {
+    self
+      .widget_states
+      .lock()
+      .await
+      .values()
+      .map(|s| s.id.clone())
+      .collect()
   }
 }

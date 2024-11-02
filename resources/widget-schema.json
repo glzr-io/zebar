@@ -126,6 +126,20 @@
           ]
         }
       ]
+    },
+    "reserveSpace": {
+      "enabled": {
+        "type": "boolean",
+        "default": false
+      },
+      "edge": {
+        "type": "string",
+        "enum": ["top", "right", "bottom", "left"],
+        "default": "top"
+      },
+      "thickness": {
+        "type": "string"
+      }
     }
   },
   "required": [
