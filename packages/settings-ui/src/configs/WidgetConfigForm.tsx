@@ -282,6 +282,60 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                   )}
                 </Field>
               </div>
+
+              <h2 class="text-md font-semibold pt-4">Reserve space</h2>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <Field of={configForm} path={`presets.${index}.reserveSpace.enabled`}>
+                  {inputProps => (
+                    <SwitchField
+                      id={`reserve-space-${index}`}
+                      label="Enabled"
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                <Field of={configForm} path={`presets.${index}.reserveSpace.edge`}>
+                  {inputProps => (
+                    <SelectField
+                      id={`reserve-space-edge-${index}`}
+                      label="Edge"
+                      options={
+                        [
+                          { value: 'top', label: 'Top' },
+                          { value: 'bottom', label: 'Bottom' },
+                          { value: 'left', label: 'Left' },
+                          { value: 'right', label: 'Right' },
+                        ] as const
+                      }
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                {/* TODO: Change to px/percent input. */}
+                <Field of={configForm} path={`presets.${index}.reserveSpace.thickness`}>
+                  {inputProps => (
+                    <TextField
+                      id={`reserve-space-thickness-${index}`}
+                      label="Thickness"
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                {/* TODO: Change to px/percent input. */}
+                <Field of={configForm} path={`presets.${index}.reserveSpace.offset`}>
+                  {inputProps => (
+                    <TextField
+                      id={`reserve-space-offset-${index}`}
+                      label="Offset"
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+              </div>
             </div>
           ))}
 

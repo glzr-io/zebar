@@ -94,10 +94,6 @@ pub struct WidgetConfig {
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
   pub presets: Vec<WidgetPreset>,
-
-  /// How to reserve space for the widget.
-  #[serde(default)]
-  pub reserve_space: ReserveSpaceConfig,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -138,9 +134,15 @@ pub struct WidgetPlacement {
 
   /// Monitor(s) to place the widget on.
   pub monitor_selection: MonitorSelection,
+
+  /// How to reserve space for the widget.
+  #[serde(default)]
+  pub reserve_space: ReserveSpaceConfig,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, ValueEnum)]
+#[derive(
+  Clone, Copy, Debug, Deserialize, PartialEq, Serialize, ValueEnum,
+)]
 #[clap(rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum AnchorPoint {
@@ -169,7 +171,7 @@ fn no() -> bool {
   false
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ReserveSpaceConfig {
   /// Whether to reserve space for the widget.
@@ -186,14 +188,16 @@ pub struct ReserveSpaceConfig {
   pub offset: Option<LengthValue>,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, Default)]
+#[derive(
+  Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Default,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum WidgetEdge {
-  Left,
   #[default]
   Top,
-  Right,
   Bottom,
+  Left,
+  Right,
 }
 
 impl WidgetEdge {

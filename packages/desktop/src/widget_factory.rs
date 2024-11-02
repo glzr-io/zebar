@@ -91,7 +91,7 @@ pub enum WidgetOpenOptions {
 struct SendHWND(windows::Win32::Foundation::HWND);
 unsafe impl Send for SendHWND {}
 
-struct Placement {
+struct Coordinates {
   size: PhysicalSize<i32>,
   position: PhysicalPosition<i32>,
   monitor_size: PhysicalSize<i32>,
@@ -178,15 +178,15 @@ impl WidgetFactory {
       }
     };
 
-    for placement in self.widget_coordinates(placement).await {
-      let Placement {
+    for coordinates in self.widget_coordinates(placement).await {
+      let Coordinates {
         size,
         position,
         monitor_size,
         scale_factor,
         anchor,
         offset,
-      } = placement;
+      } = coordinates;
 
       let new_count =
         self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
@@ -266,8 +266,8 @@ impl WidgetFactory {
         let _ = window.set_tool_window(!widget_config.shown_in_taskbar);
 
         // Reserve space for the app bar if enabled.
-        if widget_config.reserve_space.enabled {
-          let edge = if let Some(edge) = widget_config.reserve_space.edge {
+        if placement.reserve_space.enabled {
+          let edge = if let Some(edge) = placement.reserve_space.edge {
             edge
           } else {
             // default to whichever edge the widget appears to be on
@@ -298,23 +298,22 @@ impl WidgetFactory {
             monitor_size.width
           };
 
-          let thickness = if let Some(thickness) =
-            &widget_config.reserve_space.thickness
-          {
-            thickness.to_px_scaled(total_height, scale_factor)
-          } else {
-            // default to whichever dimension of widget is smaller
-            // if this is not desired the user should specify a thickness
-            // anyway
-            if size.width > size.height {
-              size.height
+          let thickness =
+            if let Some(thickness) = &placement.reserve_space.thickness {
+              thickness.to_px_scaled(total_height, scale_factor)
             } else {
-              size.width
-            }
-          };
+              // default to whichever dimension of widget is smaller
+              // if this is not desired the user should specify a thickness
+              // anyway
+              if size.width > size.height {
+                size.height
+              } else {
+                size.width
+              }
+            };
 
           let offset =
-            if let Some(offset) = &widget_config.reserve_space.offset {
+            if let Some(offset) = &placement.reserve_space.offset {
               offset.to_px_scaled(total_height, scale_factor)
             } else {
               // default to widget position offset
@@ -448,7 +447,7 @@ impl WidgetFactory {
   async fn widget_coordinates(
     &self,
     placement: &WidgetPlacement,
-  ) -> Vec<Placement> {
+  ) -> Vec<Coordinates> {
     let mut coordinates = vec![];
 
     let monitors = self
@@ -518,7 +517,7 @@ impl WidgetFactory {
       let window_position =
         PhysicalPosition::new(anchor_x + offset_x, anchor_y + offset_y);
 
-      coordinates.push(Placement {
+      coordinates.push(Coordinates {
         size: window_size,
         position: window_position,
         monitor_size: PhysicalSize::new(monitor_width, monitor_height),

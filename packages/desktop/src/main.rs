@@ -300,6 +300,7 @@ async fn open_widgets_by_cli_command(
               MonitorType::Primary => MonitorSelection::Primary,
               MonitorType::Secondary => MonitorSelection::Secondary,
             },
+            reserve_space: Default::default(),
           }),
         )
         .await
