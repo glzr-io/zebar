@@ -11,10 +11,10 @@ use tokio::{
 use tracing::{info, warn};
 
 use super::{
-  battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
-  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
-  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
-  SharedProviderState,
+  battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
+  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
+  network::NetworkProvider, weather::WeatherProvider, Provider,
+  ProviderConfig, ProviderOutput, SharedProviderState,
 };
 #[cfg(windows)]
 use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
@@ -175,6 +175,9 @@ impl ProviderRef {
       }
       ProviderConfig::Memory(config) => {
         Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
+      }
+      ProviderConfig::Disk(config) => {
+        Box::new(DiskProvider::new(config, shared_state.diskinfo.clone()))
       }
       ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
         config,
