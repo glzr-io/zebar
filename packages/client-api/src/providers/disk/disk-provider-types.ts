@@ -15,12 +15,20 @@ export interface Disk {
   name: string;
   fileSystem: string;
   mountPoint: string;
-  totalSpace: number;
-  availableSpace: number;
+  totalSpace: DiskSizeMeasure;
+  availableSpace: DiskSizeMeasure;
   isRemovable: boolean;
   diskType: string;
 }
 
 export interface DiskOutput {
   disks: Disk[];
+}
+
+export interface DiskSizeMeasure {
+  bytes: number;
+  siValue: number;
+  siUnit: string;
+  iecValue: number;
+  iecUnit: string;
 }
