@@ -51,7 +51,10 @@ import type {
   WeatherProvider,
 } from './weather/weather-provider-types';
 import { createDiskProvider } from './disk/create-disk-provider';
-import type { DiskProvider, DiskProviderConfig } from './disk/disk-provider-types';
+import type {
+  DiskProvider,
+  DiskProviderConfig,
+} from './disk/disk-provider-types';
 
 export interface ProviderConfigMap {
   battery: BatteryProviderConfig;
