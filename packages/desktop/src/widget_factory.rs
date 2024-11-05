@@ -23,8 +23,7 @@ use window_vibrancy::apply_vibrancy;
 use crate::{
   common::{parse_rgba, PathExt, WindowExt},
   config::{
-    AnchorPoint, Config, MacOsBackgroundEffect, WidgetConfig,
-    WidgetPlacement, WindowsBackgroundEffect,
+    AnchorPoint, Config, MacOsBackgroundEffect, VibrancyMaterial, WidgetConfig, WidgetPlacement, WindowsBackgroundEffect, ZOrder
   },
   monitor_state::MonitorState,
 };
@@ -273,10 +272,14 @@ impl WidgetFactory {
                   WindowsBackgroundEffect::Blur { .. } => {
                     apply_blur(&window, Some(color))
                   }
-                  _ => apply_acrylic(&window, Some(color)),
+                  _ => {
+                    println!("Applied acrylic");
+                    apply_acrylic(&window, Some(color))
+                  }
                 }
               }
               WindowsBackgroundEffect::Mica { prefer_dark } => {
+                println!("Applied mica");
                 apply_mica(&window, Some(*prefer_dark))
               }
             };
@@ -290,13 +293,53 @@ impl WidgetFactory {
 
       #[cfg(target_os = "macos")]
       {
-        use window_vibrancy::apply_vibrancy;
+        use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
         if let Some(window_effect) = &widget_config.background_effect {
           if let Some(effect) = &window_effect.mac_os {
             let result = match effect {
               MacOsBackgroundEffect::Vibrancy { material } => {
-                apply_vibrancy(&window, *material, None, None);
+                let ns_material = match material {
+                  VibrancyMaterial::Titlebar => {
+                    NSVisualEffectMaterial::Titlebar
+                  }
+                  VibrancyMaterial::Selection => {
+                    NSVisualEffectMaterial::Selection
+                  }
+                  VibrancyMaterial::Menu => NSVisualEffectMaterial::Menu,
+                  VibrancyMaterial::Popover => {
+                    NSVisualEffectMaterial::Popover
+                  }
+                  VibrancyMaterial::Sidebar => {
+                    NSVisualEffectMaterial::Sidebar
+                  }
+                  VibrancyMaterial::HeaderView => {
+                    NSVisualEffectMaterial::HeaderView
+                  }
+                  VibrancyMaterial::Sheet => NSVisualEffectMaterial::Sheet,
+                  VibrancyMaterial::WindowBackground => {
+                    NSVisualEffectMaterial::WindowBackground
+                  }
+                  VibrancyMaterial::HudWindow => {
+                    NSVisualEffectMaterial::HudWindow
+                  }
+                  VibrancyMaterial::FullScreenUI => {
+                    NSVisualEffectMaterial::FullScreenUI
+                  }
+                  VibrancyMaterial::Tooltip => {
+                    NSVisualEffectMaterial::Tooltip
+                  }
+                  VibrancyMaterial::ContentBackground => {
+                    NSVisualEffectMaterial::ContentBackground
+                  }
+                  VibrancyMaterial::UnderWindowBackground => {
+                    NSVisualEffectMaterial::UnderWindowBackground
+                  }
+                  VibrancyMaterial::UnderPageBackground => {
+                    NSVisualEffectMaterial::UnderPageBackground
+                  }
+                };
+                apply_vibrancy(&window, ns_material, None, None)
               }
             };
 
