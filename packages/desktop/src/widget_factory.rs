@@ -8,7 +8,6 @@ use std::{
 };
 
 use anyhow::Context;
-use csscolorparser::Color;
 use serde::Serialize;
 use tauri::{
   AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
@@ -19,12 +18,13 @@ use tokio::{
   task,
 };
 use tracing::{error, info};
+use window_vibrancy::apply_vibrancy;
 
 use crate::{
-  common::{PathExt, WindowExt},
+  common::{parse_rgba, PathExt, WindowExt},
   config::{
-    AnchorPoint, BackgroundEffect, Config, WidgetConfig, WidgetPlacement,
-    ZOrder,
+    AnchorPoint, Config, MacOsBackgroundEffect, WidgetConfig,
+    WidgetPlacement, WindowsBackgroundEffect,
   },
   monitor_state::MonitorState,
 };
@@ -195,8 +195,6 @@ impl WidgetFactory {
         Self::to_asset_url(&html_path.to_unicode_string()).into(),
       );
 
-      let window_effect = &widget_config.background_effect;
-
       // Note that window label needs to be globally unique.
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
@@ -262,38 +260,48 @@ impl WidgetFactory {
 
       #[cfg(target_os = "windows")]
       {
+        use window_vibrancy::{apply_acrylic, apply_blur, apply_mica};
+
         if let Some(window_effect) = &widget_config.background_effect {
-          if *window_effect != BackgroundEffect::None {
-            let color = if let Some(color_str) =
-              &widget_config.background_effect_color
-            {
-              let color = csscolorparser::parse(color_str)?.to_rgba8();
-              Some((color[1], color[2], color[3], color[4]))
-            } else {
-              Some((18, 18, 18, 125))
+          if let Some(effect) = &window_effect.windows {
+            let result = match effect {
+              WindowsBackgroundEffect::Blur { color }
+              | WindowsBackgroundEffect::Acrylic { color } => {
+                let color =
+                  parse_rgba(color).unwrap_or((255, 255, 255, 200));
+                match effect {
+                  WindowsBackgroundEffect::Blur { .. } => {
+                    apply_blur(&window, Some(color))
+                  }
+                  _ => apply_acrylic(&window, Some(color)),
+                }
+              }
+              WindowsBackgroundEffect::Mica { prefer_dark } => {
+                apply_mica(&window, Some(*prefer_dark))
+              }
             };
 
-            use window_vibrancy::{apply_acrylic, apply_blur, apply_mica};
-            match window_effect {
-              BackgroundEffect::Blur => {
-                if let Err(e) = apply_blur(&window, color) {
-                  error!("Failed to apply blur: {:?}", e);
-                }
+            if let Err(e) = result {
+              error!("Failed to apply effect: {:?}", e);
+            }
+          }
+        }
+      }
+
+      #[cfg(target_os = "macos")]
+      {
+        use window_vibrancy::apply_vibrancy;
+
+        if let Some(window_effect) = &widget_config.background_effect {
+          if let Some(effect) = &window_effect.mac_os {
+            let result = match effect {
+              MacOsBackgroundEffect::Vibrancy { material } => {
+                apply_vibrancy(&window, *material, None, None);
               }
-              BackgroundEffect::Acrylic => {
-                if let Err(e) = apply_acrylic(&window, color) {
-                  error!("Failed to apply acrylic: {:?}", e);
-                }
-              }
-              BackgroundEffect::Mica => {
-                let mica_dark = widget_config
-                  .background_effect_mica_dark
-                  .unwrap_or(false);
-                if let Err(e) = apply_mica(&window, Some(mica_dark)) {
-                  error!("Failed to apply mica: {:?}", e);
-                }
-              }
-              _ => {}
+            };
+
+            if let Err(e) = result {
+              error!("Failed to apply macos effect: {:?}", e);
             }
           }
         }

@@ -93,12 +93,6 @@ pub struct WidgetConfig {
   /// Whether the window frame should have an effect
   pub background_effect: Option<BackgroundEffect>,
 
-  // Background effect color (Windows 10 v1903+, no effect on Windows 7 or Windows 11)
-  pub background_effect_color: Option<String>,
-
-  // Background Dark on Mica (Windows only)
-  pub background_effect_mica_dark: Option<bool>,
-
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -170,15 +164,44 @@ pub enum MonitorSelection {
   Name(String),
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, ValueEnum)]
-#[clap(rename_all = "snake_case")]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum BackgroundEffect {
-  None,
-  Blur, // For Windows
-  Acrylic, // For Windows
-  Mica, // For Windows
-  Vibrancy // For macOS; the string represents the material
+pub struct BackgroundEffect {
+  pub windows: Option<WindowsBackgroundEffect>,
+  pub mac_os: Option<MacOsBackgroundEffect>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowsBackgroundEffect {
+  Blur { color: String },
+  Acrylic { color: String },
+  Mica { prefer_dark: bool },
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum MacOsBackgroundEffect {
+  Vibrancy { material: VibrancyMaterial },
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[repr(u64)]
+pub enum VibrancyMaterial {
+  Titlebar = 3,
+  Selection = 4,
+  Menu = 5,
+  Popover = 6,
+  Sidebar = 7,
+  HeaderView = 10,
+  Sheet = 11,
+  WindowBackground = 12,
+  HudWindow = 13,
+  FullScreenUI = 15,
+  Tooltip = 17,
+  ContentBackground = 18,
+  UnderWindowBackground = 21,
+  UnderPageBackground = 22,
 }
 
 #[derive(Debug)]
