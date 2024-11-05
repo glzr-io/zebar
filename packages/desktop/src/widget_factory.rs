@@ -23,7 +23,8 @@ use window_vibrancy::apply_vibrancy;
 use crate::{
   common::{parse_rgba, PathExt, WindowExt},
   config::{
-    AnchorPoint, Config, MacOsBackgroundEffect, VibrancyMaterial, WidgetConfig, WidgetPlacement, WindowsBackgroundEffect, ZOrder
+    AnchorPoint, Config, MacOsBackgroundEffect, VibrancyMaterial,
+    WidgetConfig, WidgetPlacement, WindowsBackgroundEffect, ZOrder,
   },
   monitor_state::MonitorState,
 };
