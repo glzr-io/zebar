@@ -273,14 +273,10 @@ impl WidgetFactory {
                   WindowsBackgroundEffect::Blur { .. } => {
                     apply_blur(&window, Some(color))
                   }
-                  _ => {
-                    println!("Applied acrylic");
-                    apply_acrylic(&window, Some(color))
-                  }
+                  _ => apply_acrylic(&window, Some(color)),
                 }
               }
               WindowsBackgroundEffect::Mica { prefer_dark } => {
-                println!("Applied mica");
                 apply_mica(&window, Some(*prefer_dark))
               }
             };
