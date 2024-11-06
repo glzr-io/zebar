@@ -186,22 +186,22 @@ pub enum MacOsBackgroundEffect {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[repr(u64)]
+#[serde(rename_all = "snake_case")]
 pub enum VibrancyMaterial {
-  Titlebar = 3,
-  Selection = 4,
-  Menu = 5,
-  Popover = 6,
-  Sidebar = 7,
-  HeaderView = 10,
-  Sheet = 11,
-  WindowBackground = 12,
-  HudWindow = 13,
-  FullScreenUI = 15,
-  Tooltip = 17,
-  ContentBackground = 18,
-  UnderWindowBackground = 21,
-  UnderPageBackground = 22,
+  Titlebar,
+  Selection,
+  Menu,
+  Popover,
+  Sidebar,
+  HeaderView,
+  Sheet,
+  WindowBackground,
+  HudWindow,
+  FullScreenUI,
+  Tooltip,
+  ContentBackground,
+  UnderWindowBackground,
+  UnderPageBackground,
 }
 
 #[derive(Debug)]

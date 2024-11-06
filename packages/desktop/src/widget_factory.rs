@@ -294,54 +294,68 @@ impl WidgetFactory {
 
         if let Some(window_effect) = &widget_config.background_effect {
           if let Some(effect) = &window_effect.mac_os {
-            let result = match effect {
-              MacOsBackgroundEffect::Vibrancy { material } => {
-                let ns_material = match material {
-                  VibrancyMaterial::Titlebar => {
-                    NSVisualEffectMaterial::Titlebar
-                  }
-                  VibrancyMaterial::Selection => {
-                    NSVisualEffectMaterial::Selection
-                  }
-                  VibrancyMaterial::Menu => NSVisualEffectMaterial::Menu,
-                  VibrancyMaterial::Popover => {
-                    NSVisualEffectMaterial::Popover
-                  }
-                  VibrancyMaterial::Sidebar => {
-                    NSVisualEffectMaterial::Sidebar
-                  }
-                  VibrancyMaterial::HeaderView => {
-                    NSVisualEffectMaterial::HeaderView
-                  }
-                  VibrancyMaterial::Sheet => NSVisualEffectMaterial::Sheet,
-                  VibrancyMaterial::WindowBackground => {
-                    NSVisualEffectMaterial::WindowBackground
-                  }
-                  VibrancyMaterial::HudWindow => {
-                    NSVisualEffectMaterial::HudWindow
-                  }
-                  VibrancyMaterial::FullScreenUI => {
-                    NSVisualEffectMaterial::FullScreenUI
-                  }
-                  VibrancyMaterial::Tooltip => {
-                    NSVisualEffectMaterial::Tooltip
-                  }
-                  VibrancyMaterial::ContentBackground => {
-                    NSVisualEffectMaterial::ContentBackground
-                  }
-                  VibrancyMaterial::UnderWindowBackground => {
-                    NSVisualEffectMaterial::UnderWindowBackground
-                  }
-                  VibrancyMaterial::UnderPageBackground => {
-                    NSVisualEffectMaterial::UnderPageBackground
-                  }
-                };
-                apply_vibrancy(&window, ns_material, None, None)
-              }
-            };
+            let window = window.clone();
+            let effect = effect.clone();
 
-            if let Err(e) = result {
-              error!("Failed to apply macos effect: {:?}", e);
+            let result =
+              self.app_handle.run_on_main_thread(move || match effect {
+                MacOsBackgroundEffect::Vibrancy { material } => {
+                  let ns_material = match material {
+                    VibrancyMaterial::Titlebar => {
+                      NSVisualEffectMaterial::Titlebar
+                    }
+                    VibrancyMaterial::Selection => {
+                      NSVisualEffectMaterial::Selection
+                    }
+                    VibrancyMaterial::Menu => NSVisualEffectMaterial::Menu,
+                    VibrancyMaterial::Popover => {
+                      NSVisualEffectMaterial::Popover
+                    }
+                    VibrancyMaterial::Sidebar => {
+                      NSVisualEffectMaterial::Sidebar
+                    }
+                    VibrancyMaterial::HeaderView => {
+                      NSVisualEffectMaterial::HeaderView
+                    }
+                    VibrancyMaterial::Sheet => {
+                      NSVisualEffectMaterial::Sheet
+                    }
+                    VibrancyMaterial::WindowBackground => {
+                      NSVisualEffectMaterial::WindowBackground
+                    }
+                    VibrancyMaterial::HudWindow => {
+                      NSVisualEffectMaterial::HudWindow
+                    }
+                    VibrancyMaterial::FullScreenUI => {
+                      NSVisualEffectMaterial::FullScreenUI
+                    }
+                    VibrancyMaterial::Tooltip => {
+                      NSVisualEffectMaterial::Tooltip
+                    }
+                    VibrancyMaterial::ContentBackground => {
+                      NSVisualEffectMaterial::ContentBackground
+                    }
+                    VibrancyMaterial::UnderWindowBackground => {
+                      NSVisualEffectMaterial::UnderWindowBackground
+                    }
+                    VibrancyMaterial::UnderPageBackground => {
+                      NSVisualEffectMaterial::UnderPageBackground
+                    }
+                  };
+
+                  if let Err(err) =
+                    apply_vibrancy(&window, ns_material, None, None)
+                  {
+                    error!("Failed to apply vibrancy effect: {:?}", err);
+                  }
+                }
+              });
+
+            if let Err(err) = result {
+              error!(
+                "Unable to change background effect on main thread: {:?}",
+                err
+              );
             }
           }
         }
