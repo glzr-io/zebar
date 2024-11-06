@@ -18,10 +18,14 @@ use tokio::{
   task,
 };
 use tracing::{error, info};
+use window_vibrancy::apply_vibrancy;
 
 use crate::{
-  common::{PathExt, WindowExt},
-  config::{AnchorPoint, Config, WidgetConfig, WidgetPlacement, ZOrder},
+  common::{parse_rgba, PathExt, WindowExt},
+  config::{
+    AnchorPoint, Config, MacOsBackgroundEffect, VibrancyMaterial,
+    WidgetConfig, WidgetPlacement, WindowsBackgroundEffect, ZOrder,
+  },
   monitor_state::MonitorState,
 };
 
@@ -252,6 +256,109 @@ impl WidgetFactory {
       {
         let mut widget_states = self.widget_states.lock().await;
         widget_states.insert(state.id.clone(), state.clone());
+      }
+
+      #[cfg(target_os = "windows")]
+      {
+        use window_vibrancy::{apply_acrylic, apply_blur, apply_mica};
+
+        if let Some(window_effect) = &widget_config.background_effect {
+          if let Some(effect) = &window_effect.windows {
+            let result = match effect {
+              WindowsBackgroundEffect::Blur { color }
+              | WindowsBackgroundEffect::Acrylic { color } => {
+                let color =
+                  parse_rgba(color).unwrap_or((255, 255, 255, 200));
+                match effect {
+                  WindowsBackgroundEffect::Blur { .. } => {
+                    apply_blur(&window, Some(color))
+                  }
+                  _ => apply_acrylic(&window, Some(color)),
+                }
+              }
+              WindowsBackgroundEffect::Mica { prefer_dark } => {
+                apply_mica(&window, Some(*prefer_dark))
+              }
+            };
+
+            if let Err(e) = result {
+              error!("Failed to apply effect: {:?}", e);
+            }
+          }
+        }
+      }
+
+      #[cfg(target_os = "macos")]
+      {
+        use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
+        if let Some(window_effect) = &widget_config.background_effect {
+          if let Some(effect) = &window_effect.mac_os {
+            let window = window.clone();
+            let effect = effect.clone();
+
+            let result =
+              self.app_handle.run_on_main_thread(move || match effect {
+                MacOsBackgroundEffect::Vibrancy { material } => {
+                  let ns_material = match material {
+                    VibrancyMaterial::Titlebar => {
+                      NSVisualEffectMaterial::Titlebar
+                    }
+                    VibrancyMaterial::Selection => {
+                      NSVisualEffectMaterial::Selection
+                    }
+                    VibrancyMaterial::Menu => NSVisualEffectMaterial::Menu,
+                    VibrancyMaterial::Popover => {
+                      NSVisualEffectMaterial::Popover
+                    }
+                    VibrancyMaterial::Sidebar => {
+                      NSVisualEffectMaterial::Sidebar
+                    }
+                    VibrancyMaterial::HeaderView => {
+                      NSVisualEffectMaterial::HeaderView
+                    }
+                    VibrancyMaterial::Sheet => {
+                      NSVisualEffectMaterial::Sheet
+                    }
+                    VibrancyMaterial::WindowBackground => {
+                      NSVisualEffectMaterial::WindowBackground
+                    }
+                    VibrancyMaterial::HudWindow => {
+                      NSVisualEffectMaterial::HudWindow
+                    }
+                    VibrancyMaterial::FullScreenUI => {
+                      NSVisualEffectMaterial::FullScreenUI
+                    }
+                    VibrancyMaterial::Tooltip => {
+                      NSVisualEffectMaterial::Tooltip
+                    }
+                    VibrancyMaterial::ContentBackground => {
+                      NSVisualEffectMaterial::ContentBackground
+                    }
+                    VibrancyMaterial::UnderWindowBackground => {
+                      NSVisualEffectMaterial::UnderWindowBackground
+                    }
+                    VibrancyMaterial::UnderPageBackground => {
+                      NSVisualEffectMaterial::UnderPageBackground
+                    }
+                  };
+
+                  if let Err(err) =
+                    apply_vibrancy(&window, ns_material, None, None)
+                  {
+                    error!("Failed to apply vibrancy effect: {:?}", err);
+                  }
+                }
+              });
+
+            if let Err(err) = result {
+              error!(
+                "Unable to change background effect on main thread: {:?}",
+                err
+              );
+            }
+          }
+        }
       }
 
       self.register_window_events(&window, widget_id);

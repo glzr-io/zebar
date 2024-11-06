@@ -90,6 +90,9 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
+  /// Whether the window frame should have an effect
+  pub background_effect: Option<BackgroundEffect>,
+
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -159,6 +162,46 @@ pub enum MonitorSelection {
   Secondary,
   Index(usize),
   Name(String),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub struct BackgroundEffect {
+  pub windows: Option<WindowsBackgroundEffect>,
+  pub mac_os: Option<MacOsBackgroundEffect>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowsBackgroundEffect {
+  Blur { color: String },
+  Acrylic { color: String },
+  Mica { prefer_dark: bool },
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum MacOsBackgroundEffect {
+  Vibrancy { material: VibrancyMaterial },
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum VibrancyMaterial {
+  Titlebar,
+  Selection,
+  Menu,
+  Popover,
+  Sidebar,
+  HeaderView,
+  Sheet,
+  WindowBackground,
+  HudWindow,
+  FullScreenUI,
+  Tooltip,
+  ContentBackground,
+  UnderWindowBackground,
+  UnderPageBackground,
 }
 
 #[derive(Debug)]
