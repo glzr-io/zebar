@@ -4,11 +4,16 @@ use cocoa::{
   appkit::{NSMainMenuWindowLevel, NSWindow},
   base::id,
 };
+#[cfg(target_os = "windows")]
+use tauri::{PhysicalPosition, PhysicalSize};
 use tauri::{Runtime, Window};
 #[cfg(target_os = "windows")]
 use windows::Win32::UI::WindowsAndMessaging::{
   SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
 };
+
+#[cfg(target_os = "windows")]
+use crate::config::WidgetEdge;
 
 pub trait WindowExt {
   #[cfg(target_os = "macos")]
@@ -16,6 +21,17 @@ pub trait WindowExt {
 
   #[cfg(target_os = "windows")]
   fn set_tool_window(&self, enable: bool) -> anyhow::Result<()>;
+
+  #[cfg(target_os = "windows")]
+  fn allocate_app_bar(
+    &self,
+    size: PhysicalSize<i32>,
+    position: PhysicalPosition<i32>,
+    edge: WidgetEdge,
+  ) -> anyhow::Result<()>;
+
+  #[cfg(target_os = "windows")]
+  fn deallocate_app_bar(&self) -> anyhow::Result<()>;
 }
 
 impl<R: Runtime> WindowExt for Window<R> {
@@ -57,6 +73,37 @@ impl<R: Runtime> WindowExt for Window<R> {
         ),
       }
     };
+
+    Ok(())
+  }
+
+  #[cfg(target_os = "windows")]
+  fn allocate_app_bar(
+    &self,
+    size: PhysicalSize<i32>,
+    position: PhysicalPosition<i32>,
+    edge: WidgetEdge,
+  ) -> anyhow::Result<()> {
+    use super::app_bar;
+
+    let handle = self.hwnd().context("Failed to get window handle.")?;
+
+    let left = position.x;
+    let top = position.y;
+    let right = position.x + size.width;
+    let bottom = position.y + size.height;
+
+    app_bar::create_app_bar(handle, left, top, right, bottom, edge);
+
+    Ok(())
+  }
+
+  #[cfg(target_os = "windows")]
+  fn deallocate_app_bar(&self) -> anyhow::Result<()> {
+    use super::app_bar;
+
+    let handle = self.hwnd().context("Failed to get window handle.")?;
+    app_bar::remove_app_bar(handle.0 as _);
 
     Ok(())
   }

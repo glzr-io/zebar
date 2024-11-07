@@ -91,11 +91,27 @@ async fn main() -> anyhow::Result<()> {
     ])
     .build(tauri::generate_context!())?;
 
-  app.run(|_, event| {
+  app.run(|app, event| {
     if let RunEvent::ExitRequested { code, api, .. } = &event {
       if code.is_none() {
         // Keep the message loop running even if all windows are closed.
         api.prevent_exit();
+      } else {
+        // Deallocate app bar space on windows
+        #[cfg(target_os = "windows")]
+        task::block_in_place(|| {
+          block_on(async move {
+            let widget_factory = app.state::<Arc<WidgetFactory>>();
+
+            for id in widget_factory.states().await.keys() {
+              if let Some(window) = app.get_webview_window(id) {
+                if let Ok(hwnd) = window.hwnd() {
+                  common::remove_app_bar(hwnd.0 as _);
+                }
+              }
+            }
+          })
+        });
       }
     }
   });
@@ -283,6 +299,7 @@ async fn open_widgets_by_cli_command(
               MonitorType::Primary => MonitorSelection::Primary,
               MonitorType::Secondary => MonitorSelection::Secondary,
             },
+            reserve_space: Default::default(),
           }),
         )
         .await

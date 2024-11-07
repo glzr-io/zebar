@@ -1,4 +1,5 @@
 import type { MonitorSelection } from './monitor-selection';
+import type { ReserveSpaceConfig } from './reserve-space-config';
 
 export type WidgetPlacement = {
   anchor:
@@ -14,4 +15,5 @@ export type WidgetPlacement = {
   width: string;
   height: string;
   monitorSelection: MonitorSelection;
+  reserveSpace: ReserveSpaceConfig;
 };
