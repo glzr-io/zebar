@@ -8,7 +8,7 @@ import type {
 } from './focused-window-provider-types';
 
 const focusedWindowProviderConfigSchema = z.object({
-    type: z.literal('focused-window'),
+    type: z.literal('focusedWindow'),
 });
 
 export function createFocusedWindowProvider(

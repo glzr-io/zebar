@@ -6,6 +6,7 @@ import * as zebar from 'zebar';
 
 const providers = zebar.createProviderGroup({
   cpu: { type: 'cpu' },
+  focusedWindow: { type: 'focusedWindow' },
   battery: { type: 'battery' },
   memory: { type: 'memory' },
   weather: { type: 'weather' },
@@ -21,6 +22,7 @@ function App() {
   return (
     <div class="app">
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
+      <div class="chip">Focused window: {output.focusedWindow?.title}</div>
       <div class="chip">
         Battery charge: {output.battery?.chargePercent}
       </div>

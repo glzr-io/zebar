@@ -166,8 +166,7 @@ impl ProviderRef {
         Box::new(BatteryProvider::new(config))
       }
       ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()));
-        Box::new(FocusedWindowProvider::new(FocusedWindowProviderConfig {}))
+        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
       }
       ProviderConfig::FocusedWindow(config) => {
         Box::new(FocusedWindowProvider::new(config))

@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::zeroed, path::PathBuf, sync::OnceLock};
+use std::{ffi::c_void, mem::zeroed, sync::OnceLock};
 
 use anyhow::Ok;
 use async_trait::async_trait;
@@ -58,7 +58,7 @@ unsafe extern "system" fn win_event_proc(
     println!("Focused window title: {}", title);
     let icon = FocusedWindowProvider::get_foreground_window_icon(_hwnd);
     let emit_results_tx = PROVIDER_TX.get().clone().unwrap();
-    let output = FocusedWindowOutput { title, icon };
+    let output = FocusedWindowOutput { title, icon: None };
     if let Err(err) = emit_results_tx
       .try_send(Ok(ProviderOutput::FocusedWindow(output)).into())
     {
@@ -89,6 +89,7 @@ impl FocusedWindowProvider {
     FocusedWindowProvider { _config: config }
   }
 
+  // TODO: free hook
   fn create_focused_window_hook(&self) -> anyhow::Result<()> {
     unsafe {
       let hook = SetWinEventHook(
@@ -232,7 +233,10 @@ impl FocusedWindowProvider {
               pixels[i * 4 + 3] = a; // Set alpha
             }
 
-            let mut output_buf = Vec::new();
+            // b64 requires 4/3 of the initial data to encode
+            // +2 to account for partial bytes
+            let required_size = (pixels.len() + 2) / 3 * 4;
+            let mut output_buf = vec![0u8; required_size]; 
             let b64_image = general_purpose::STANDARD
               .encode_slice(&pixels, &mut output_buf)
               .expect("Error encoding focused window icon to base64");

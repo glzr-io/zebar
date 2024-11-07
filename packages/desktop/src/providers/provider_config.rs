@@ -12,7 +12,7 @@ use super::{
 };
 
 #[derive(Deserialize, Debug)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum ProviderConfig {
   Battery(BatteryProviderConfig),
   Cpu(CpuProviderConfig),

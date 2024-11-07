@@ -1,7 +1,7 @@
 import type { Provider } from '../create-base-provider';
 
 export interface FocusedWindowProviderConfig {
-    type: 'focused-window';
+    type: 'focusedWindow';
 }
 
 export interface FocusedWindowOutput {
