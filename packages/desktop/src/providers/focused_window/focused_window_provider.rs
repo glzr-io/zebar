@@ -1,10 +1,10 @@
-use std::{ffi::c_void, mem::zeroed, path::PathBuf};
+use std::{ffi::c_void, mem::zeroed, path::PathBuf, sync::OnceLock};
 
 use anyhow::Ok;
 use async_trait::async_trait;
-use image::{ImageBuffer, Rgba};
+use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{self, Sender};
 use windows::Win32::{
   Foundation::{HMODULE, HWND, LPARAM, WPARAM},
   Graphics::Gdi::{
@@ -23,7 +23,10 @@ use windows::Win32::{
   },
 };
 
-use crate::providers::{Provider, ProviderResult};
+use crate::providers::{Provider, ProviderOutput, ProviderResult};
+
+static PROVIDER_TX: OnceLock<mpsc::Sender<ProviderResult>> =
+  OnceLock::new();
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -33,7 +36,7 @@ pub struct FocusedWindowProviderConfig {}
 #[serde(rename_all = "camelCase")]
 pub struct FocusedWindowOutput {
   pub title: String,
-  pub icon_path: Option<PathBuf>,
+  pub icon: Option<usize>,
 }
 
 pub struct FocusedWindowProvider {
@@ -53,10 +56,13 @@ unsafe extern "system" fn win_event_proc(
   if let Some(title) = FocusedWindowProvider::get_foreground_window_title()
   {
     println!("Focused window title: {}", title);
-    if let Some(icon) =
-      FocusedWindowProvider::get_foreground_window_icon(_hwnd)
+    let icon = FocusedWindowProvider::get_foreground_window_icon(_hwnd);
+    let emit_results_tx = PROVIDER_TX.get().clone().unwrap();
+    let output = FocusedWindowOutput { title, icon };
+    if let Err(err) = emit_results_tx
+      .try_send(Ok(ProviderOutput::FocusedWindow(output)).into())
     {
-      println!("Focused window icon: {:?}", icon);
+      println!("Error sending result: {:?}", err);
     }
   }
 }
@@ -64,9 +70,10 @@ unsafe extern "system" fn win_event_proc(
 #[async_trait]
 impl Provider for FocusedWindowProvider {
   async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) =
-      self.create_focused_window_hook(emit_result_tx.clone())
-    {
+    PROVIDER_TX
+      .set(emit_result_tx.clone())
+      .expect("Error setting provider tx in focused window provider");
+    if let Err(err) = self.create_focused_window_hook() {
       emit_result_tx
         .send(Err(err).into())
         .await
@@ -82,10 +89,7 @@ impl FocusedWindowProvider {
     FocusedWindowProvider { _config: config }
   }
 
-  fn create_focused_window_hook(
-    &self,
-    emit_result_tx: Sender<ProviderResult>,
-  ) -> anyhow::Result<()> {
+  fn create_focused_window_hook(&self) -> anyhow::Result<()> {
     unsafe {
       let hook = SetWinEventHook(
         EVENT_SYSTEM_FOREGROUND,
@@ -127,7 +131,7 @@ impl FocusedWindowProvider {
     }
   }
 
-  fn get_foreground_window_icon(hwnd: HWND) -> Option<PathBuf> {
+  fn get_foreground_window_icon(hwnd: HWND) -> Option<usize> {
     unsafe {
       // Attempt to get the large icon first
       let hicon = SendMessageW(
@@ -228,17 +232,16 @@ impl FocusedWindowProvider {
               pixels[i * 4 + 3] = a; // Set alpha
             }
 
-            // Save the image to a file
-            let path = "icon.png";
-            if let Err(e) =
-              Self::save_png(&pixels, width as u32, height as u32, path)
-            {
-              println!("Failed to save image: {:?}", e);
-            }
+            let mut output_buf = Vec::new();
+            let b64_image = general_purpose::STANDARD
+              .encode_slice(&pixels, &mut output_buf)
+              .expect("Error encoding focused window icon to base64");
+
             // Clean up bitmap
             let _ = DeleteObject(hbitmap);
+
             // Return the path of the saved icon
-            return Some(PathBuf::from(path)); //
+            return Some(b64_image);
           }
           // Clean up bitmap if DIB bits retrieval fails
           let _ = DeleteObject(hbitmap);
@@ -249,18 +252,5 @@ impl FocusedWindowProvider {
       let _ = DestroyIcon(hicon); // Free the icon resources
       None
     }
-  }
-
-  fn save_png(
-    pixels: &[u8],
-    width: u32,
-    height: u32,
-    path: &str,
-  ) -> std::io::Result<()> {
-    let buffer: ImageBuffer<Rgba<u8>, _> =
-      ImageBuffer::from_raw(width, height, pixels).unwrap();
-    buffer.save(path).map_err(|e| {
-      std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
-    })
   }
 }

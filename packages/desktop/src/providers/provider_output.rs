@@ -1,7 +1,8 @@
 use serde::Serialize;
 
 use super::{
-  battery::BatteryOutput, cpu::CpuOutput, host::HostOutput, ip::IpOutput,
+  battery::BatteryOutput, cpu::CpuOutput,
+  focused_window::FocusedWindowOutput, host::HostOutput, ip::IpOutput,
   memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
 };
 #[cfg(windows)]
@@ -12,6 +13,7 @@ use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
 pub enum ProviderOutput {
   Battery(BatteryOutput),
   Cpu(CpuOutput),
+  FocusedWindow(FocusedWindowOutput),
   Host(HostOutput),
   Ip(IpOutput),
   #[cfg(windows)]
