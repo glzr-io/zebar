@@ -86,11 +86,6 @@ pub enum WidgetOpenOptions {
   Preset(String),
 }
 
-/// `HWND` doesn't implement `Send`, but it's just a window handle so it
-/// should be safe to send across threads
-struct SendHWND(windows::Win32::Foundation::HWND);
-unsafe impl Send for SendHWND {}
-
 struct Coordinates {
   size: PhysicalSize<i32>,
   position: PhysicalPosition<i32>,
@@ -360,7 +355,7 @@ impl WidgetFactory {
       // to truly be always on top.
       #[cfg(target_os = "macos")]
       {
-        if widget_config.z_order == ZOrder::TopMost {
+        if widget_config.z_order == crate::config::ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
       }
@@ -370,7 +365,7 @@ impl WidgetFactory {
         widget_states.insert(state.id.clone(), state.clone());
       }
 
-      self.register_window_events(&window, widget_id);
+      self.register_window_events(&window, widget_id)?;
       self.open_tx.send(state)?;
     }
 
@@ -409,12 +404,13 @@ impl WidgetFactory {
     &self,
     window: &tauri::WebviewWindow,
     widget_id: String,
-  ) {
+  ) -> anyhow::Result<()> {
     let widget_states = self.widget_states.clone();
     let close_tx = self.close_tx.clone();
 
     #[cfg(target_os = "windows")]
-    let hwnd = window.hwnd().map(SendHWND).ok();
+    let window_handle =
+      window.hwnd().context("Failed to get window handle.")?.0 as _;
 
     window.on_window_event(move |event| {
       if let WindowEvent::Destroyed = event {
@@ -422,11 +418,9 @@ impl WidgetFactory {
         let close_tx = close_tx.clone();
         let widget_id = widget_id.clone();
 
-        // deallocate app bar if hwnd is valid
+        // Ensure appbar space is deallocated on close.
         #[cfg(target_os = "windows")]
-        if let Some(hwnd) = &hwnd {
-          crate::common::remove_app_bar(hwnd.0);
-        }
+        crate::common::remove_app_bar(window_handle);
 
         task::spawn(async move {
           let mut widget_states = widget_states.lock().await;
@@ -441,6 +435,8 @@ impl WidgetFactory {
         });
       }
     });
+
+    Ok(())
   }
 
   /// Returns coordinates for window placement based on the given config.

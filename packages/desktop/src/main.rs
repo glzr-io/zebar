@@ -106,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
             for id in widget_factory.states().await.keys() {
               if let Some(window) = app.get_webview_window(id) {
                 if let Ok(hwnd) = window.hwnd() {
-                  common::remove_app_bar(hwnd);
+                  common::remove_app_bar(hwnd.0 as _);
                 }
               }
             }

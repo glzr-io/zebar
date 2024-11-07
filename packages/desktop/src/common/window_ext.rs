@@ -77,7 +77,6 @@ impl<R: Runtime> WindowExt for Window<R> {
     Ok(())
   }
 
-
   #[cfg(target_os = "windows")]
   fn allocate_app_bar(
     &self,
@@ -104,8 +103,7 @@ impl<R: Runtime> WindowExt for Window<R> {
     use super::app_bar;
 
     let handle = self.hwnd().context("Failed to get window handle.")?;
-
-    app_bar::remove_app_bar(handle);
+    app_bar::remove_app_bar(handle.0 as _);
 
     Ok(())
   }

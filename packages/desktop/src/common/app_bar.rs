@@ -60,16 +60,11 @@ pub fn create_app_bar(
   unsafe { SHAppBarMessage(ABM_SETPOS, &mut data) };
 }
 
-pub fn remove_app_bar(hwnd: HWND) {
-  if hwnd.is_invalid() {
-    tracing::trace!("Invalid hwnd passed to remove_app_bar");
-    return;
-  }
-
-  tracing::trace!("Removing app bar for {:?}", hwnd);
+pub fn remove_app_bar(handle: isize) {
+  tracing::trace!("Removing app bar for {:?}", handle);
 
   let mut abd = APPBARDATA {
-    hWnd: hwnd,
+    hWnd: HWND(handle as _),
     ..Default::default()
   };
 
