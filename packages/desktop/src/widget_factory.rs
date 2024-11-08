@@ -365,15 +365,19 @@ impl WidgetFactory {
     };
 
     let reserve_position = match edge {
-      WidgetEdge::Top => PhysicalPosition::new(0, coords.offset.y),
+      WidgetEdge::Top => {
+        PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
+      }
       WidgetEdge::Bottom => PhysicalPosition::new(
-        0,
-        coords.monitor.height as i32 - thickness - coords.offset.y,
+        coords.monitor.x,
+        coords.monitor.y + coords.monitor.height as i32 - thickness,
       ),
-      WidgetEdge::Left => PhysicalPosition::new(coords.offset.y, 0),
+      WidgetEdge::Left => {
+        PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
+      }
       WidgetEdge::Right => PhysicalPosition::new(
-        coords.monitor.width as i32 - thickness - coords.offset.x,
-        0,
+        coords.monitor.x + coords.monitor.width as i32 - thickness,
+        coords.monitor.y,
       ),
     };
 
