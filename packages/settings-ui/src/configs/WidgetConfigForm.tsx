@@ -61,7 +61,6 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
           enabled: false,
           edge: null,
           thickness: null,
-          offset: null,
         },
       },
     ]);
@@ -335,20 +334,6 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                     <TextField
                       id={`reserve-space-thickness-${index}`}
                       label="Thickness"
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
-
-                {/* TODO: Change to px/percent input. */}
-                <Field
-                  of={configForm}
-                  path={`presets.${index}.reserveSpace.offset`}
-                >
-                  {inputProps => (
-                    <TextField
-                      id={`reserve-space-offset-${index}`}
-                      label="Offset"
                       {...inputProps()}
                     />
                   )}
