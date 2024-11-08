@@ -92,36 +92,48 @@ struct WidgetCoordinates {
   size: PhysicalSize<i32>,
   position: PhysicalPosition<i32>,
   monitor: Monitor,
-  anchor: AnchorPoint,
   offset: PhysicalPosition<i32>,
 }
 
 impl WidgetCoordinates {
   /// Gets which monitor edge (top, bottom, left, right) the widget is
   /// closest to.
+  ///
+  /// This is determined by dividing the monitor into four triangular
+  /// quadrants (forming an "X") and checking which quadrant contains the
+  /// widget's center point.
   fn closest_edge(&self) -> WidgetEdge {
-    // Get widget center point.
-    let center_x = self.offset.x + (self.size.width / 2);
-    let center_y = self.offset.y + (self.size.height / 2);
+    let widget_center = PhysicalPosition::new(
+      self.position.x + (self.size.width / 2),
+      self.position.y + (self.size.height / 2),
+    );
 
-    // Get distance to each edge.
-    let dist_top = center_y;
-    let dist_bottom = self.monitor.height as i32 - center_y;
-    let dist_left = center_x;
-    let dist_right = self.monitor.width as i32 - center_x;
+    let monitor_center = PhysicalPosition::new(
+      self.monitor.x + (self.monitor.width as i32 / 2),
+      self.monitor.y + (self.monitor.height as i32 / 2),
+    );
 
-    match [
-      (dist_top, WidgetEdge::Top),
-      (dist_bottom, WidgetEdge::Bottom),
-      (dist_left, WidgetEdge::Left),
-      (dist_right, WidgetEdge::Right),
-    ]
-    .iter()
-    .min_by_key(|(dist, _)| *dist)
-    {
-      Some((_, edge)) => *edge,
-      // Fallback to `WidgetEdge::Top`, shouldn't happen.
-      None => WidgetEdge::Top,
+    // Get relative position from monitor center.
+    let delta_x = widget_center.x - monitor_center.x;
+    let delta_y = widget_center.y - monitor_center.y;
+
+    match delta_x.abs() > delta_y.abs() {
+      // Widget is in left or right triangle.
+      true => {
+        if delta_x > 0 {
+          WidgetEdge::Right
+        } else {
+          WidgetEdge::Left
+        }
+      }
+      // Widget is in top or bottom triangle.
+      false => {
+        if delta_y > 0 {
+          WidgetEdge::Bottom
+        } else {
+          WidgetEdge::Top
+        }
+      }
     }
   }
 }
@@ -524,7 +536,6 @@ impl WidgetFactory {
         size: window_size,
         position: window_position,
         monitor: monitor.clone(),
-        anchor: placement.anchor,
         offset: PhysicalPosition::new(offset_x, offset_y),
       });
     }
