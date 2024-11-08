@@ -96,6 +96,36 @@ struct WidgetCoordinates {
   offset: PhysicalPosition<i32>,
 }
 
+impl WidgetCoordinates {
+  /// Gets which monitor edge (top, bottom, left, right) the widget is
+  /// closest to.
+  fn closest_edge(&self) -> WidgetEdge {
+    // Get widget center point.
+    let center_x = self.offset.x + (self.size.width / 2);
+    let center_y = self.offset.y + (self.size.height / 2);
+
+    // Get distance to each edge.
+    let dist_top = center_y;
+    let dist_bottom = self.monitor.height as i32 - center_y;
+    let dist_left = center_x;
+    let dist_right = self.monitor.width as i32 - center_x;
+
+    match [
+      (dist_top, WidgetEdge::Top),
+      (dist_bottom, WidgetEdge::Bottom),
+      (dist_left, WidgetEdge::Left),
+      (dist_right, WidgetEdge::Right),
+    ]
+    .iter()
+    .min_by_key(|(dist, _)| *dist)
+    {
+      Some((_, edge)) => *edge,
+      // Fallback to `WidgetEdge::Top`, shouldn't happen.
+      None => WidgetEdge::Top,
+    }
+  }
+}
+
 impl WidgetFactory {
   /// Creates a new `WidgetFactory` instance.
   pub fn new(
@@ -292,46 +322,29 @@ impl WidgetFactory {
     reserve_space: &ReserveSpaceConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<()> {
-    let edge = reserve_space.edge.unwrap_or_else(|| {
-      // Default to whichever edge the widget appears to be on.
-      let widget_horizontal = coords.size.width > coords.size.height;
+    // Default to whichever edge the widget appears to be on.
+    let edge = reserve_space.edge.unwrap_or_else(|| coords.closest_edge());
 
-      match (coords.anchor, widget_horizontal) {
-        (AnchorPoint::Center, true) => WidgetEdge::Top,
-        (AnchorPoint::Center, false) => WidgetEdge::Left,
-        (AnchorPoint::TopCenter, _) => WidgetEdge::Top,
-        (AnchorPoint::CenterLeft, _) => WidgetEdge::Left,
-        (AnchorPoint::CenterRight, _) => WidgetEdge::Right,
-        (AnchorPoint::BottomCenter, _) => WidgetEdge::Bottom,
-        (AnchorPoint::TopLeft, true) => WidgetEdge::Top,
-        (AnchorPoint::TopLeft, false) => WidgetEdge::Left,
-        (AnchorPoint::TopRight, true) => WidgetEdge::Top,
-        (AnchorPoint::TopRight, false) => WidgetEdge::Right,
-        (AnchorPoint::BottomLeft, true) => WidgetEdge::Bottom,
-        (AnchorPoint::BottomLeft, false) => WidgetEdge::Left,
-        (AnchorPoint::BottomRight, true) => WidgetEdge::Bottom,
-        (AnchorPoint::BottomRight, false) => WidgetEdge::Right,
-      }
-    });
+    let thickness = reserve_space
+      .thickness
+      .as_ref()
+      .map(|thickness| {
+        // Length of monitor perpendicular to the edge.
+        let monitor_length = if edge.is_horizontal() {
+          coords.monitor.height
+        } else {
+          coords.monitor.width
+        };
 
-    // Length of monitor perpendicular to the edge.
-    let monitor_length = if edge.is_horizontal() {
-      coords.monitor.height
-    } else {
-      coords.monitor.width
-    };
-
-    let thickness = if let Some(thickness) = &reserve_space.thickness {
-      thickness
-        .to_px_scaled(monitor_length as i32, coords.monitor.scale_factor)
-    } else {
-      match edge {
+        thickness
+          .to_px_scaled(monitor_length as i32, coords.monitor.scale_factor)
+      })
+      .unwrap_or_else(|| match edge {
         WidgetEdge::Top => coords.offset.y + coords.size.height,
         WidgetEdge::Bottom => -coords.offset.y + coords.size.height,
         WidgetEdge::Left => coords.offset.x + coords.size.width,
         WidgetEdge::Right => -coords.offset.x + coords.size.width,
-      }
-    };
+      });
 
     let reserve_size = if edge.is_horizontal() {
       PhysicalSize::new(coords.monitor.width as i32, thickness)
