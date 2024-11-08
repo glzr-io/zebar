@@ -28,7 +28,7 @@ pub trait WindowExt {
     size: PhysicalSize<i32>,
     position: PhysicalPosition<i32>,
     edge: WidgetEdge,
-  ) -> anyhow::Result<()>;
+  ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)>;
 
   #[cfg(target_os = "windows")]
   fn deallocate_app_bar(&self) -> anyhow::Result<()>;
@@ -83,21 +83,11 @@ impl<R: Runtime> WindowExt for Window<R> {
     size: PhysicalSize<i32>,
     position: PhysicalPosition<i32>,
     edge: WidgetEdge,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     use super::app_bar;
 
     let handle = self.hwnd().context("Failed to get window handle.")?;
-
-    app_bar::create_app_bar(
-      handle,
-      position.x,
-      position.y,
-      position.x + size.width,
-      position.y + size.height,
-      edge,
-    );
-
-    Ok(())
+    app_bar::create_app_bar(handle.0 as _, size, position, edge)
   }
 
   #[cfg(target_os = "windows")]

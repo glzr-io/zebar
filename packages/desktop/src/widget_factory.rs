@@ -266,15 +266,26 @@ impl WidgetFactory {
         coordinates.size, coordinates.position
       );
 
-      let _ = window.set_size(coordinates.size);
-      let _ = window.set_position(coordinates.position);
+      let mut size = coordinates.size;
+      let mut position = coordinates.position;
+
+      if placement.reserve_space.enabled {
+        (size, position) = self.reserve_space(
+          &window,
+          &placement.reserve_space,
+          &coordinates,
+        )?;
+      }
+
+      let _ = window.set_size(size);
+      let _ = window.set_position(position);
 
       // On Windows, we need to set the position twice to account for
       // different monitor scale factors.
       #[cfg(target_os = "windows")]
       {
-        let _ = window.set_size(coordinates.size);
-        let _ = window.set_position(coordinates.position);
+        let _ = window.set_size(size);
+        let _ = window.set_position(position);
       }
 
       let state = WidgetState {
@@ -297,14 +308,6 @@ impl WidgetFactory {
         .as_ref()
         .window()
         .set_tool_window(!widget_config.shown_in_taskbar);
-
-      if placement.reserve_space.enabled {
-        self.reserve_space(
-          &window,
-          &placement.reserve_space,
-          &coordinates,
-        )?;
-      }
 
       // On MacOS, we need to set the window as above the menu bar for it
       // to truly be always on top.
@@ -333,7 +336,7 @@ impl WidgetFactory {
     window: &tauri::WebviewWindow,
     reserve_space: &ReserveSpaceConfig,
     coords: &WidgetCoordinates,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     // Default to whichever edge the widget appears to be on.
     let edge = reserve_space.edge.unwrap_or_else(|| coords.closest_edge());
 
@@ -365,16 +368,13 @@ impl WidgetFactory {
     };
 
     let reserve_position = match edge {
-      WidgetEdge::Top => {
+      WidgetEdge::Top | WidgetEdge::Left => {
         PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
       }
       WidgetEdge::Bottom => PhysicalPosition::new(
         coords.monitor.x,
         coords.monitor.y + coords.monitor.height as i32 - thickness,
       ),
-      WidgetEdge::Left => {
-        PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
-      }
       WidgetEdge::Right => PhysicalPosition::new(
         coords.monitor.x + coords.monitor.width as i32 - thickness,
         coords.monitor.y,

@@ -1,31 +1,25 @@
+use tauri::{PhysicalPosition, PhysicalSize};
 use windows::Win32::{
   Foundation::{HWND, RECT},
   UI::Shell::{
     SHAppBarMessage, ABE_BOTTOM, ABE_LEFT, ABE_RIGHT, ABE_TOP, ABM_NEW,
-    ABM_REMOVE, ABM_SETPOS, APPBARDATA,
+    ABM_QUERYPOS, ABM_REMOVE, ABM_SETPOS, APPBARDATA,
   },
 };
 
 use crate::config::WidgetEdge;
 
 pub fn create_app_bar(
-  hwnd: HWND,
-  left: i32,
-  top: i32,
-  right: i32,
-  bottom: i32,
+  window_handle: isize,
+  size: PhysicalSize<i32>,
+  position: PhysicalPosition<i32>,
   edge: WidgetEdge,
-) {
-  if hwnd.is_invalid() {
-    tracing::trace!("Invalid hwnd passed to create_app_bar");
-    return;
-  }
-
+) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
   let rect = RECT {
-    left,
-    top,
-    right,
-    bottom,
+    left: position.x,
+    top: position.y,
+    right: position.x + size.width,
+    bottom: position.y + size.height,
   };
 
   let edge = match edge {
@@ -37,24 +31,35 @@ pub fn create_app_bar(
 
   tracing::trace!(
     "Registering app bar for {:?} with edge: {:?} and rect: {:?}",
-    hwnd,
+    window_handle,
     edge,
     rect
   );
 
   let mut data = APPBARDATA {
     cbSize: std::mem::size_of::<APPBARDATA>() as u32,
-    hWnd: hwnd,
+    hWnd: HWND(window_handle as _),
     uCallbackMessage: 0,
     uEdge: edge,
-    rc: rect,
+    rc: rect.clone(),
     ..Default::default()
   };
+  tracing::info!("before SHAppBarMessage: {:?}", data.rc);
 
-  unsafe { SHAppBarMessage(ABM_NEW, &mut data) };
+  let res = unsafe { SHAppBarMessage(ABM_NEW, &mut data) };
+  tracing::info!("SHAppBarMessage(ABM_NEW) returned: {:?}", res);
+  let res = unsafe { SHAppBarMessage(ABM_QUERYPOS, &mut data) };
+  tracing::info!("SHAppBarMessage(ABM_QUERYPOS) returned: {:?}", res);
+
+  let position = PhysicalPosition::new(
+    position.x + (data.rc.left - rect.left),
+    position.y + (data.rc.top - rect.top),
+  );
 
   // Set position for it to actually reserve the size and position.
-  unsafe { SHAppBarMessage(ABM_SETPOS, &mut data) };
+  let res = unsafe { SHAppBarMessage(ABM_SETPOS, &mut data) };
+  tracing::info!("SHAppBarMessage(ABM_SETPOS) returned: {:?}", res);
+  tracing::info!("after SHAppBarMessage: {:?}", data.rc);
 }
 
 pub fn remove_app_bar(handle: isize) {
