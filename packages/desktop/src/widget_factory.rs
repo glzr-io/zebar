@@ -258,7 +258,11 @@ impl WidgetFactory {
         .set_tool_window(!widget_config.shown_in_taskbar);
 
       if placement.reserve_space.enabled {
-        self.reserve_space(&window, &coordinates)?;
+        self.reserve_space(
+          &window,
+          &placement.reserve_space,
+          &coordinates,
+        )?;
       }
 
       // On MacOS, we need to set the window as above the menu bar for it
@@ -287,14 +291,13 @@ impl WidgetFactory {
     &self,
     window: &tauri::WebviewWindow,
     reserve_space: &ReserveSpaceConfig,
-    coordinates: &WidgetCoordinates,
+    coords: &WidgetCoordinates,
   ) -> anyhow::Result<()> {
     let edge = reserve_space.edge.unwrap_or_else(|| {
       // Default to whichever edge the widget appears to be on.
-      let widget_horizontal =
-        coordinates.size.width > coordinates.size.height;
+      let widget_horizontal = coords.size.width > coords.size.height;
 
-      match (coordinates.anchor, widget_horizontal) {
+      match (coords.anchor, widget_horizontal) {
         (AnchorPoint::Center, true) => WidgetEdge::Top,
         (AnchorPoint::Center, false) => WidgetEdge::Left,
         (AnchorPoint::TopCenter, _) => WidgetEdge::Top,
@@ -322,24 +325,11 @@ impl WidgetFactory {
     let thickness = if let Some(thickness) = &reserve_space.thickness {
       thickness.to_px_scaled(total_height, scale_factor)
     } else {
-      // Default to whichever dimension of widget is smaller. If this is
-      // not desired, the user should specify a thickness anyway.
-      if size.width > size.height {
-        size.height
-      } else {
-        size.width
-      }
-    };
-
-    let offset = if let Some(offset) = &reserve_space.offset {
-      offset.to_px_scaled(total_height, scale_factor)
-    } else {
-      // default to widget position offset
       match edge {
-        WidgetEdge::Top => offset.y,
-        WidgetEdge::Bottom => -offset.y,
-        WidgetEdge::Left => offset.x,
-        WidgetEdge::Right => -offset.x,
+        WidgetEdge::Top => coords.offset.y + coords.size.height,
+        WidgetEdge::Bottom => -coords.offset.y + coords.size.height,
+        WidgetEdge::Left => coords.offset.x + coords.size.width,
+        WidgetEdge::Right => -coords.offset.x + coords.size.width,
       }
     };
 

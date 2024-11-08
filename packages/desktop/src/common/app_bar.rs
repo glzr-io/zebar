@@ -48,7 +48,7 @@ pub fn create_app_bar(
   let mut data = APPBARDATA {
     cbSize: std::mem::size_of::<APPBARDATA>() as u32,
     hWnd: hwnd,
-    uCallbackMessage: WM_USER + 0x01,
+    uCallbackMessage: 0,
     uEdge: edge,
     rc: rect,
     ..Default::default()
@@ -56,12 +56,12 @@ pub fn create_app_bar(
 
   unsafe { SHAppBarMessage(ABM_NEW, &mut data) };
 
-  // have to call setpos after new for it to actually work
+  // Set position for it to actually reserve the size and position.
   unsafe { SHAppBarMessage(ABM_SETPOS, &mut data) };
 }
 
 pub fn remove_app_bar(handle: isize) {
-  tracing::trace!("Removing app bar for {:?}", handle);
+  tracing::trace!("Removing app bar for {:?}.", handle);
 
   let mut abd = APPBARDATA {
     hWnd: HWND(handle as _),

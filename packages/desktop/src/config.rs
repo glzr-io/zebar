@@ -167,15 +167,11 @@ pub enum MonitorSelection {
   Name(String),
 }
 
-fn no() -> bool {
-  false
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ReserveSpaceConfig {
   /// Whether to reserve space for the widget.
-  #[serde(default = "no")]
+  #[serde(default = "default_bool::<false>")]
   pub enabled: bool,
 
   /// Edge to reserve space on.
@@ -183,9 +179,6 @@ pub struct ReserveSpaceConfig {
 
   /// Thickness of the reserved space.
   pub thickness: Option<LengthValue>,
-
-  /// Offset from the edge.
-  pub offset: Option<LengthValue>,
 }
 
 #[derive(
@@ -635,6 +628,11 @@ fn is_app_installed(app_name: &str) -> bool {
       .map(|output| output.status.success())
       .unwrap_or(false)
   }
+}
+
+/// Helper function for setting a default value for a boolean field.
+const fn default_bool<const V: bool>() -> bool {
+  V
 }
 
 /// Helper function for setting the default value for a
