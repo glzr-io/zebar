@@ -181,12 +181,9 @@ pub struct ReserveSpaceConfig {
   pub thickness: Option<LengthValue>,
 }
 
-#[derive(
-  Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Default,
-)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum WidgetEdge {
-  #[default]
   Top,
   Bottom,
   Left,

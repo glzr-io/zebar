@@ -88,12 +88,14 @@ impl<R: Runtime> WindowExt for Window<R> {
 
     let handle = self.hwnd().context("Failed to get window handle.")?;
 
-    let left = position.x;
-    let top = position.y;
-    let right = position.x + size.width;
-    let bottom = position.y + size.height;
-
-    app_bar::create_app_bar(handle, left, top, right, bottom, edge);
+    app_bar::create_app_bar(
+      handle,
+      position.x,
+      position.y,
+      position.x + size.width,
+      position.y + size.height,
+      edge,
+    );
 
     Ok(())
   }

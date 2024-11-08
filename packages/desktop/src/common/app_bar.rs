@@ -1,11 +1,8 @@
 use windows::Win32::{
   Foundation::{HWND, RECT},
-  UI::{
-    Shell::{
-      SHAppBarMessage, ABE_BOTTOM, ABE_LEFT, ABE_RIGHT, ABE_TOP, ABM_NEW,
-      ABM_REMOVE, ABM_SETPOS, APPBARDATA,
-    },
-    WindowsAndMessaging::WM_USER,
+  UI::Shell::{
+    SHAppBarMessage, ABE_BOTTOM, ABE_LEFT, ABE_RIGHT, ABE_TOP, ABM_NEW,
+    ABM_REMOVE, ABM_SETPOS, APPBARDATA,
   },
 };
 

@@ -26,7 +26,7 @@ use crate::{
   config::{
     AnchorPoint, Config, ReserveSpaceConfig, WidgetConfig, WidgetPlacement,
   },
-  monitor_state::MonitorState,
+  monitor_state::{Monitor, MonitorState},
 };
 
 /// Manages the creation of Zebar widgets.
@@ -91,8 +91,7 @@ pub enum WidgetOpenOptions {
 struct WidgetCoordinates {
   size: PhysicalSize<i32>,
   position: PhysicalPosition<i32>,
-  monitor_size: PhysicalSize<i32>,
-  scale_factor: f32,
+  monitor: Monitor,
   anchor: AnchorPoint,
   offset: PhysicalPosition<i32>,
 }
@@ -280,7 +279,7 @@ impl WidgetFactory {
       }
 
       self.register_window_events(&window, widget_id)?;
-      self.open_tx.send(state);
+      self.open_tx.send(state)?;
     }
 
     Ok(())
@@ -315,15 +314,16 @@ impl WidgetFactory {
       }
     });
 
-    // Total height of monitor perpendicular to the edge.
-    let total_height = if edge.is_horizontal() {
-      monitor_size.height
+    // Length of monitor perpendicular to the edge.
+    let monitor_length = if edge.is_horizontal() {
+      coords.monitor.height
     } else {
-      monitor_size.width
+      coords.monitor.width
     };
 
     let thickness = if let Some(thickness) = &reserve_space.thickness {
-      thickness.to_px_scaled(total_height, scale_factor)
+      thickness
+        .to_px_scaled(monitor_length as i32, coords.monitor.scale_factor)
     } else {
       match edge {
         WidgetEdge::Top => coords.offset.y + coords.size.height,
@@ -334,20 +334,22 @@ impl WidgetFactory {
     };
 
     let reserve_size = if edge.is_horizontal() {
-      PhysicalSize::new(monitor_size.width, thickness)
+      PhysicalSize::new(coords.monitor.width as i32, thickness)
     } else {
-      PhysicalSize::new(thickness, monitor_size.height)
+      PhysicalSize::new(thickness, coords.monitor.height as i32)
     };
 
     let reserve_position = match edge {
-      WidgetEdge::Top => PhysicalPosition::new(0, offset),
-      WidgetEdge::Bottom => {
-        PhysicalPosition::new(0, monitor_size.height - thickness - offset)
-      }
-      WidgetEdge::Left => PhysicalPosition::new(offset, 0),
-      WidgetEdge::Right => {
-        PhysicalPosition::new(monitor_size.width - thickness - offset, 0)
-      }
+      WidgetEdge::Top => PhysicalPosition::new(0, coords.offset.y),
+      WidgetEdge::Bottom => PhysicalPosition::new(
+        0,
+        coords.monitor.height as i32 - thickness - coords.offset.y,
+      ),
+      WidgetEdge::Left => PhysicalPosition::new(coords.offset.y, 0),
+      WidgetEdge::Right => PhysicalPosition::new(
+        coords.monitor.width as i32 - thickness - coords.offset.x,
+        0,
+      ),
     };
 
     tracing::info!(
@@ -508,8 +510,7 @@ impl WidgetFactory {
       coordinates.push(WidgetCoordinates {
         size: window_size,
         position: window_position,
-        monitor_size: PhysicalSize::new(monitor_width, monitor_height),
-        scale_factor: monitor.scale_factor,
+        monitor: monitor.clone(),
         anchor: placement.anchor,
         offset: PhysicalPosition::new(offset_x, offset_y),
       });
