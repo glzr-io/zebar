@@ -1,3 +1,8 @@
+import { createAudioProvider } from './audio/create-audio-provider';
+import type {
+  AudioProviderConfig,
+  AudioProvider,
+} from './audio/audio-provider-types';
 import { createBatteryProvider } from './battery/create-battery-provider';
 import type {
   BatteryProviderConfig,
@@ -57,6 +62,7 @@ import type {
 } from './disk/disk-provider-types';
 
 export interface ProviderConfigMap {
+  audio: AudioProviderConfig;
   battery: BatteryProviderConfig;
   cpu: CpuProviderConfig;
   date: DateProviderConfig;
@@ -72,6 +78,7 @@ export interface ProviderConfigMap {
 }
 
 export interface ProviderMap {
+  audio: AudioProvider;
   battery: BatteryProvider;
   cpu: CpuProvider;
   date: DateProvider;
@@ -107,6 +114,8 @@ export function createProvider<T extends ProviderConfig>(
   config: T,
 ): ProviderMap[T['type']] {
   switch (config.type) {
+    case 'audio':
+      return createAudioProvider(config) as any;
     case 'battery':
       return createBatteryProvider(config) as any;
     case 'cpu':

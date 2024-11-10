@@ -41,6 +41,9 @@ regex = "1"
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
 windows = { version = "0.58", features = [
   "Win32_Globalization",
+  "Win32_Media",
+  "Win32_Media_Audio",
+  "Win32_Media_Audio_Endpoints",
   "Win32_System_Console",
   "Win32_System_SystemServices",
   "Win32_UI_WindowsAndMessaging",
