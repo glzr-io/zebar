@@ -20,6 +20,11 @@ use tokio::{
 };
 use tracing::{error, info};
 
+#[cfg(target_os = "windows")]
+use crate::{
+  common::windows::{remove_app_bar, WindowExtWindows},
+  config::DockEdge,
+};
 use crate::{
   common::PathExt,
   config::{
@@ -27,8 +32,6 @@ use crate::{
   },
   monitor_state::{Monitor, MonitorState},
 };
-#[cfg(target_os = "windows")]
-use crate::{common::WindowExtWindows, config::DockEdge};
 
 /// Manages the creation of Zebar widgets.
 pub struct WidgetFactory {
@@ -68,6 +71,11 @@ pub struct WidgetState {
   ///
   /// Used as the Tauri window label.
   pub id: String,
+
+  /// Handle to the underlying Tauri window.
+  ///
+  /// This is only available on Windows.
+  pub window_handle: Option<isize>,
 
   /// User-defined config for the widget.
   pub config: WidgetConfig,
@@ -285,8 +293,22 @@ impl WidgetFactory {
         let _ = window.set_position(position);
       }
 
+      let window_handle = {
+        #[cfg(target_os = "windows")]
+        {
+          let handle =
+            window.hwnd().context("Failed to get window handle.")?;
+
+          Some(handle.0 as isize)
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        None
+      };
+
       let state = WidgetState {
         id: widget_id.clone(),
+        window_handle,
         config: widget_config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
@@ -434,25 +456,27 @@ impl WidgetFactory {
     let widget_states = self.widget_states.clone();
     let close_tx = self.close_tx.clone();
 
-    #[cfg(target_os = "windows")]
-    let window_handle =
-      window.hwnd().context("Failed to get window handle.")?.0 as _;
-
     window.on_window_event(move |event| {
       if let WindowEvent::Destroyed = event {
         let widget_states = widget_states.clone();
         let close_tx = close_tx.clone();
         let widget_id = widget_id.clone();
 
-        // Ensure appbar space is deallocated on close.
-        #[cfg(target_os = "windows")]
-        crate::common::remove_app_bar(window_handle);
-
         task::spawn(async move {
           let mut widget_states = widget_states.lock().await;
 
           // Remove the widget state.
-          let _ = widget_states.remove(&widget_id);
+          let state = widget_states.remove(&widget_id);
+
+          // Ensure appbar space is deallocated on close.
+          #[cfg(target_os = "windows")]
+          {
+            if let Some(window_handle) =
+              state.and_then(|state| state.window_handle)
+            {
+              let _ = crate::common::remove_app_bar(window_handle);
+            }
+          }
 
           // Broadcast the close event.
           if let Err(err) = close_tx.send(widget_id) {
@@ -626,10 +650,17 @@ impl WidgetFactory {
       widget_ids
         .iter()
         .filter_map(|id| widget_states.remove(id))
+        .inspect(|widget_state| {
+          // Need to clean up any appbars prior to restarting.
+          #[cfg(target_os = "windows")]
+          {
+            let _ = remove_app_bar(widget_state.window_handle.unwrap());
+          }
+        })
         .collect::<Vec<_>>()
     };
 
-    for widget_state in changed_states {
+    for widget_state in &changed_states {
       info!(
         "Relaunching widget #{} from {}",
         widget_state.id,

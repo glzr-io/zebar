@@ -3,9 +3,9 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tauri::{State, Window};
 
 #[cfg(target_os = "macos")]
-use crate::common::WindowExtMacOs;
+use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
-use crate::common::WindowExtWindows;
+use crate::common::windows::WindowExtWindows;
 use crate::{
   config::{Config, WidgetConfig, WidgetPlacement},
   providers::{ProviderConfig, ProviderManager},

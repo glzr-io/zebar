@@ -16,6 +16,8 @@ use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 use widget_factory::WidgetOpenOptions;
 
+#[cfg(target_os = "windows")]
+use crate::common::windows::WindowExtWindows;
 use crate::{
   cli::{Cli, CliCommand, QueryArgs},
   config::Config,
@@ -105,8 +107,9 @@ async fn main() -> anyhow::Result<()> {
 
             for id in widget_factory.states().await.keys() {
               if let Some(window) = app.get_webview_window(id) {
-                if let Ok(hwnd) = window.hwnd() {
-                  common::remove_app_bar(hwnd.0 as _);
+                #[cfg(target_os = "windows")]
+                {
+                  let _ = window.as_ref().window().deallocate_app_bar();
                 }
               }
             }

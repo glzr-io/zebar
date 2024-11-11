@@ -75,10 +75,12 @@ pub fn create_app_bar(
 }
 
 pub fn remove_app_bar(handle: isize) -> anyhow::Result<()> {
-  tracing::trace!("Removing app bar for {:?}.", handle);
+  tracing::info!("Removing app bar for {:?}.", handle);
 
   let mut abd = APPBARDATA {
+    cbSize: std::mem::size_of::<APPBARDATA>() as u32,
     hWnd: HWND(handle as _),
+    uCallbackMessage: 0,
     ..Default::default()
   };
 
