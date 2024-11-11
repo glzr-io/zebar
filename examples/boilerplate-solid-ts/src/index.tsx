@@ -5,6 +5,7 @@ import { createStore } from 'solid-js/store';
 import * as zebar from 'zebar';
 
 const providers = zebar.createProviderGroup({
+  audio: { type: 'audio' },
   cpu: { type: 'cpu' },
   battery: { type: 'battery' },
   memory: { type: 'memory' },
@@ -20,6 +21,7 @@ function App() {
 
   return (
     <div class="app">
+      <div class="chip">Audio volume: {output.audio?.volume}</div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">
         Battery charge: {output.battery?.chargePercent}

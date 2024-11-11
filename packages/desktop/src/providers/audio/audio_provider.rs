@@ -1,133 +1,149 @@
-use windows::{
-  core::*,
-  Win32::{
-    Media::Audio::{
-      eConsole, eRender, IMMDevice, IMMDeviceEnumerator,
-      IMMNotificationClient, MMDeviceEnumerator,
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::Sender;
+use windows::Win32::{
+  Media::Audio::{
+    eMultimedia, eRender,
+    Endpoints::{
+      IAudioEndpointVolume, IAudioEndpointVolumeCallback,
+      IAudioEndpointVolumeCallback_Impl,
     },
-    System::Com::{
-      CoCreateInstance, CoInitializeEx, CoUninitialize,
-      StructuredStorage::PropVariantClear, CLSCTX_ALL,
-      COINIT_MULTITHREADED,
-    },
+    IAudioSessionControl, IAudioSessionNotification,
+    IAudioSessionNotification_Impl, IMMDeviceEnumerator,
+    MMDeviceEnumerator,
+  },
+  System::Com::{
+    CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
   },
 };
 
-fn main() -> Result<()> {
-  // Initialize COM for the current thread
-  unsafe { CoInitializeEx(std::ptr::null_mut(), COINIT_MULTITHREADED)? };
+use crate::providers::{Provider, ProviderOutput, ProviderResult};
 
-  // Create the device enumerator
-  let device_enumerator: IMMDeviceEnumerator =
-    unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioProviderConfig {}
 
-  // Register the notification callback
-  let callback = AudioDeviceNotificationCallback::new();
-  let callback_interface: IMMNotificationClient = callback.into();
-
-  unsafe {
-    device_enumerator
-      .RegisterEndpointNotificationCallback(&callback_interface)?
-  };
-
-  println!("Listening for audio device changes... Press Ctrl+C to exit.");
-
-  // Keep the application running to listen for events
-  loop {
-    std::thread::sleep(std::time::Duration::from_secs(1));
-  }
-
-  // Normally, we would also unregister the callback and uninitialize COM
-  // here, but this loop will run indefinitely, so those steps are
-  // omitted.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioOutput {
+  pub device: String,
+  pub volume: u8,
 }
 
-struct AudioDeviceNotificationCallback;
+pub struct AudioProvider {
+  _config: AudioProviderConfig,
+}
 
-impl AudioDeviceNotificationCallback {
-  fn new() -> Self {
-    Self {}
+impl AudioProvider {
+  pub fn new(config: AudioProviderConfig) -> Self {
+    Self { _config: config }
   }
 
-  fn print_default_device_name(&self) -> Result<()> {
-    // Create a new instance of IMMDeviceEnumerator to get the default
-    // audio device
-    let device_enumerator: IMMDeviceEnumerator =
-      unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
-    let default_device = unsafe {
-      device_enumerator.GetDefaultAudioEndpoint(eRender, eConsole)?
-    };
-
-    // Retrieve the friendly name from the device's property store
-    let property_store = unsafe {
-      default_device
-        .OpenPropertyStore(windows::Win32::System::Com::STGM_READ)?
-    };
-    let mut prop_value = PROPVARIANT::default();
+  fn create_audio_manager(
+    &self,
+    emit_result_tx: Sender<ProviderResult>,
+  ) -> anyhow::Result<()> {
     unsafe {
-      property_store
-        .GetValue(&PKEY_Device_FriendlyName, &mut prop_value)?
-    };
+      // Initialize COM library
+      let _ =
+        CoInitializeEx(Some(std::ptr::null_mut()), COINIT_MULTITHREADED);
 
-    // Convert the PROPVARIANT to a Rust string and print it
-    if let Some(friendly_name_ptr) =
-      unsafe { prop_value.Anonymous.Anonymous.pwszVal.0.as_ref() }
-    {
-      let friendly_name =
-        unsafe { widestring::U16CStr::from_ptr_str(friendly_name_ptr) }
-          .to_string_lossy();
-      println!(
-        "Current default audio device changed to: {}",
-        friendly_name
-      );
+      // Get the audio endpoint volume interface
+      let enumerator: IMMDeviceEnumerator =
+        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+      let default_device =
+        enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia)?;
+      let endpoint_volume: IAudioEndpointVolume =
+        default_device.Activate(CLSCTX_ALL, None)?;
+
+      let device_id = default_device.GetId()?.to_string()?;
+      println!("Default audio render device: {}", device_id.clone());
+
+      // Register the volume change callback
+      let device_volume_callback =
+        IAudioEndpointVolumeCallback::from(MediaDeviceEventHandler {});
+
+      endpoint_volume
+        .RegisterControlChangeNotify(&device_volume_callback)?;
     }
 
-    // Clear the PROPVARIANT to prevent memory leaks
-    unsafe { PropVariantClear(&mut prop_value)? };
+    loop {
+      // tx randomized data to test
+      let output = AudioOutput {
+        device: "default".to_string(),
+        volume: 50,
+      };
+      emit_result_tx.try_send(Ok(ProviderOutput::Audio(output)).into())?;
+      std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+  }
+}
 
+#[async_trait]
+impl Provider for AudioProvider {
+  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
+    if let Err(err) = self.create_audio_manager(emit_result_tx.clone()) {
+      emit_result_tx
+        .send(Err(err).into())
+        .await
+        .expect("Erroring emitting media provider err.");
+    }
+  }
+}
+
+#[windows::core::implement(
+  IAudioEndpointVolumeCallback,
+  IAudioSessionNotification
+)]
+struct MediaDeviceEventHandler {}
+
+impl IAudioEndpointVolumeCallback_Impl for MediaDeviceEventHandler_Impl {
+  fn OnNotify(
+    &self,
+    data: *mut windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA,
+  ) -> windows_core::Result<()> {
+    println!("Volume notification");
+    if let Some(data) = unsafe { data.as_ref() } {
+      println!("Volume notification: {}", data.fMasterVolume,);
+    }
     Ok(())
   }
 }
 
-impl IMMNotificationClient_Impl for AudioDeviceNotificationCallback {
-  fn OnDefaultDeviceChanged(
+impl IAudioSessionNotification_Impl for MediaDeviceEventHandler_Impl {
+  fn OnSessionCreated(
     &self,
-    _flow: windows::Win32::Media::Audio::EDataFlow,
-    _role: windows::Win32::Media::Audio::ERole,
-    _pwstr_device_id: &windows::core::PCWSTR,
-  ) -> windows::Win32::Foundation::HRESULT {
-    self
-      .print_default_device_name()
-      .unwrap_or_else(|e| eprintln!("Error: {:?}", e));
-    windows::Win32::Foundation::S_OK
-  }
-
-  // Implement other methods to complete the interface, but leave them
-  // empty if they’re not needed
-  fn OnDeviceStateChanged(
-    &self,
-    _: &windows::core::PCWSTR,
-    _: u32,
-  ) -> windows::Win32::Foundation::HRESULT {
-    windows::Win32::Foundation::S_OK
-  }
-  fn OnDeviceAdded(
-    &self,
-    _: &windows::core::PCWSTR,
-  ) -> windows::Win32::Foundation::HRESULT {
-    windows::Win32::Foundation::S_OK
-  }
-  fn OnDeviceRemoved(
-    &self,
-    _: &windows::core::PCWSTR,
-  ) -> windows::Win32::Foundation::HRESULT {
-    windows::Win32::Foundation::S_OK
-  }
-  fn OnPropertyValueChanged(
-    &self,
-    _: &windows::core::PCWSTR,
-    _: &windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY,
-  ) -> windows::Win32::Foundation::HRESULT {
-    windows::Win32::Foundation::S_OK
+    _new_session: Option<&IAudioSessionControl>,
+  ) -> windows::core::Result<()> {
+    println!("SESSION CREATED!");
+    let name = unsafe {
+      _new_session
+        .unwrap()
+        .GetDisplayName()
+        .unwrap()
+        .to_string()
+        .unwrap()
+    };
+    println!("New session created: {}", name);
+    Ok(())
   }
 }
+
+// this works for current device changes
+// but typedeventhandlers cant be used for volume updates
+// -----------------------------------------------------------
+// let handler = TypedEventHandler::<IInspectable,
+// DefaultAudioRenderDeviceChangedEventArgs>::new(     move |_:
+// &Option<IInspectable>, args:
+// &Option<DefaultAudioRenderDeviceChangedEventArgs>| {         println!("
+// Default audio render device changed");         let device_id =
+// args.as_ref().unwrap().Id().unwrap();         let device_info =
+// DeviceInformation::CreateFromIdAsync(&device_id)             .unwrap()
+//             .get()
+//             .unwrap();
+//         let device_name = device_info.Name().unwrap();
+//         println!("New default audio render device: {}", device_name);
+//         Ok(())
+//     },
+// );
+// MediaDevice::DefaultAudioRenderDeviceChanged(&handler)?;

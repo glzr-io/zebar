@@ -11,10 +11,11 @@ use tokio::{
 use tracing::{info, warn};
 
 use super::{
-  battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
-  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
-  network::NetworkProvider, weather::WeatherProvider, Provider,
-  ProviderConfig, ProviderOutput, SharedProviderState,
+  audio::AudioProvider, battery::BatteryProvider, cpu::CpuProvider,
+  disk::DiskProvider, host::HostProvider, ip::IpProvider,
+  memory::MemoryProvider, network::NetworkProvider,
+  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
+  SharedProviderState,
 };
 #[cfg(windows)]
 use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
@@ -161,6 +162,10 @@ impl ProviderRef {
     shared_state: SharedProviderState,
   ) -> anyhow::Result<Box<dyn Provider>> {
     let provider: Box<dyn Provider> = match config {
+      #[cfg(windows)]
+      ProviderConfig::Audio(config) => {
+        Box::new(AudioProvider::new(config))
+      }
       ProviderConfig::Battery(config) => {
         Box::new(BatteryProvider::new(config))
       }
