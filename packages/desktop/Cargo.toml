@@ -52,6 +52,10 @@ windows = { version = "0.58", features = [
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18.1"
+gtk-layer-shell = "0.8.1"
+
 [features]
 # This feature is used for production builds or when `devPath` points to the
 # filesystem. Do not remove!
