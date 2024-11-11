@@ -13,7 +13,8 @@ use tokio::sync::{broadcast, Mutex};
 use tracing::{error, info};
 
 use crate::common::{
-  copy_dir_all, has_extension, read_and_parse_json, LengthValue, PathExt,
+  copy_dir_all, has_extension, read_and_parse_json, LengthUnit,
+  LengthValue, PathExt,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -180,7 +181,8 @@ pub struct DockToEdgeConfig {
 
   /// Margin to reserve after the widget window. Can be positive or
   /// negative.
-  pub window_margin: Option<LengthValue>,
+  #[serde(default)]
+  pub window_margin: LengthValue,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]

@@ -1,5 +1,6 @@
 use std::{
   collections::HashMap,
+  i32,
   path::PathBuf,
   sync::{
     atomic::{AtomicU32, Ordering},
@@ -347,26 +348,21 @@ impl WidgetFactory {
       DockEdge::Right => -coords.offset.x,
     };
 
-    // Length to use as a % for window margin.
+    // Length of the window perpendicular to the monitor edge.
     let window_length = if edge.is_horizontal() {
       coords.size.height
     } else {
       coords.size.width
     };
 
-    // Margin to reserve *after* the window.
+    // Margin to reserve *after* the window. Can be negative, but should
+    // not be smaller than the size of the window.
     let window_margin = dock_to_edge
       .window_margin
-      .as_ref()
-      .map(|window_margin| {
-        // Prevent the window margin from being bigger than the window.
-        window_margin
-          .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
-          .min(-coords.size.height)
-      })
-      .unwrap_or(0);
+      .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
+      .clamp(-coords.size.height, i32::MAX);
 
-    let reserved_length = offset + window_margin + window_length;
+    let reserved_length = offset + window_length + window_margin;
 
     let reserve_size = if edge.is_horizontal() {
       PhysicalSize::new(coords.monitor.width as i32, reserved_length)
