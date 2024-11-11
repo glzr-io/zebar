@@ -19,15 +19,15 @@ use tokio::{
 };
 use tracing::{error, info};
 
-#[cfg(target_os = "windows")]
-use crate::config::WidgetEdge;
 use crate::{
-  common::{PathExt, WindowExt},
+  common::PathExt,
   config::{
     AnchorPoint, Config, ReserveSpaceConfig, WidgetConfig, WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
 };
+#[cfg(target_os = "windows")]
+use crate::{common::WindowExtWindows, config::WidgetEdge};
 
 /// Manages the creation of Zebar widgets.
 pub struct WidgetFactory {
@@ -261,11 +261,6 @@ impl WidgetFactory {
       .resizable(widget_config.resizable)
       .build()?;
 
-      info!(
-        "Positioning widget to {:?} {:?}",
-        coordinates.size, coordinates.position
-      );
-
       let mut size = coordinates.size;
       let mut position = coordinates.position;
 
@@ -277,6 +272,7 @@ impl WidgetFactory {
         )?;
       }
 
+      info!("Positioning widget to {:?} {:?}", size, position);
       let _ = window.set_size(size);
       let _ = window.set_position(position);
 

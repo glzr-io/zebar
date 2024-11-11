@@ -1,15 +1,17 @@
-#[cfg(target_os = "windows")]
-mod app_bar;
 mod format_bytes;
 mod fs_util;
 mod length_value;
+#[cfg(target_os = "macos")]
+mod macos;
 mod path_ext;
-mod window_ext;
-
 #[cfg(target_os = "windows")]
-pub use app_bar::remove_app_bar;
+mod windows;
+
 pub use format_bytes::*;
 pub use fs_util::*;
 pub use length_value::*;
+#[cfg(target_os = "macos")]
+pub use macos::*;
 pub use path_ext::*;
-pub use window_ext::*;
+#[cfg(target_os = "windows")]
+pub use windows::*;
