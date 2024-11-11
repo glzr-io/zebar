@@ -265,7 +265,7 @@ impl WidgetFactory {
       let mut position = coordinates.position;
 
       if placement.dock_to_edge.enabled {
-        (size, position) = self.reserve_space(
+        (size, position) = self.dock_to_edge(
           &window,
           &placement.dock_to_edge,
           &coordinates,
@@ -326,41 +326,52 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Reserve space for the app bar if enabled.
-  fn reserve_space(
+  /// Dock the widget window to a given edge. This might result in the
+  /// window being resized or repositioned (e.g. if a window is already
+  /// docked to the given edge).
+  ///
+  /// Returns the new window size and position.
+  fn dock_to_edge(
     &self,
     window: &tauri::WebviewWindow,
     dock_to_edge: &DockToEdgeConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
-    // Default to whichever edge the widget appears to be on.
     let edge = dock_to_edge.edge.unwrap_or_else(|| coords.closest_edge());
 
-    let thickness = dock_to_edge
-      .margin_after_window
-      .as_ref()
-      .map(|thickness| {
-        // Length of monitor perpendicular to the edge.
-        let monitor_length = if edge.is_horizontal() {
-          coords.monitor.height
-        } else {
-          coords.monitor.width
-        };
+    // Offset from the monitor edge to the window.
+    let offset = match edge {
+      DockEdge::Top => coords.offset.y,
+      DockEdge::Bottom => -coords.offset.y,
+      DockEdge::Left => coords.offset.x,
+      DockEdge::Right => -coords.offset.x,
+    };
 
-        thickness
-          .to_px_scaled(monitor_length as i32, coords.monitor.scale_factor)
+    // Length to use as a % for window margin.
+    let window_length = if edge.is_horizontal() {
+      coords.size.height
+    } else {
+      coords.size.width
+    };
+
+    // Margin to reserve *after* the window.
+    let window_margin = dock_to_edge
+      .window_margin
+      .as_ref()
+      .map(|window_margin| {
+        // Prevent the window margin from being bigger than the window.
+        window_margin
+          .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
+          .min(-coords.size.height)
       })
-      .unwrap_or_else(|| match edge {
-        DockEdge::Top => coords.offset.y + coords.size.height,
-        DockEdge::Bottom => -coords.offset.y + coords.size.height,
-        DockEdge::Left => coords.offset.x + coords.size.width,
-        DockEdge::Right => -coords.offset.x + coords.size.width,
-      });
+      .unwrap_or(0);
+
+    let reserved_length = offset + window_margin + window_length;
 
     let reserve_size = if edge.is_horizontal() {
-      PhysicalSize::new(coords.monitor.width as i32, thickness)
+      PhysicalSize::new(coords.monitor.width as i32, reserved_length)
     } else {
-      PhysicalSize::new(thickness, coords.monitor.height as i32)
+      PhysicalSize::new(reserved_length, coords.monitor.height as i32)
     };
 
     let reserve_position = match edge {
@@ -369,16 +380,16 @@ impl WidgetFactory {
       }
       DockEdge::Bottom => PhysicalPosition::new(
         coords.monitor.x,
-        coords.monitor.y + coords.monitor.height as i32 - thickness,
+        coords.monitor.y + coords.monitor.height as i32 - reserved_length,
       ),
       DockEdge::Right => PhysicalPosition::new(
-        coords.monitor.x + coords.monitor.width as i32 - thickness,
+        coords.monitor.x + coords.monitor.width as i32 - reserved_length,
         coords.monitor.y,
       ),
     };
 
     tracing::info!(
-      "Reserving app bar space on {:?}: {:?} {:?}",
+      "Docking widget to edge '{:?}' with size {:?} and position {:?}.",
       edge,
       reserve_size,
       reserve_position

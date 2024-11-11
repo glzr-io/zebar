@@ -170,7 +170,8 @@ pub enum MonitorSelection {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DockToEdgeConfig {
-  /// Whether to reserve space for the widget.
+  /// Whether to dock the widget to the monitor edge and reserve screen
+  /// space for it.
   #[serde(default = "default_bool::<false>")]
   pub enabled: bool,
 
@@ -179,7 +180,7 @@ pub struct DockToEdgeConfig {
 
   /// Margin to reserve after the widget window. Can be positive or
   /// negative.
-  pub margin_after_window: Option<LengthValue>,
+  pub window_margin: Option<LengthValue>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
