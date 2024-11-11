@@ -51,15 +51,27 @@ pub fn create_app_bar(
   let res = unsafe { SHAppBarMessage(ABM_QUERYPOS, &mut data) };
   tracing::info!("SHAppBarMessage(ABM_QUERYPOS) returned: {:?}", res);
 
-  let position = PhysicalPosition::new(
-    position.x + (data.rc.left - rect.left),
-    position.y + (data.rc.top - rect.top),
+  // Calculate the adjusted position directly from data.rc.
+  let adjusted_position = PhysicalPosition::new(
+    position.x + (data.rc.left - rect.left) + (data.rc.right - rect.right),
+    position.y + (data.rc.top - rect.top) + (data.rc.bottom - rect.bottom),
   );
+
+  // Update the rect with the adjusted position while keeping the original
+  // size.
+  data.rc = RECT {
+    left: adjusted_position.x,
+    top: adjusted_position.y,
+    right: adjusted_position.x + size.width,
+    bottom: adjusted_position.y + size.height,
+  };
 
   // Set position for it to actually reserve the size and position.
   let res = unsafe { SHAppBarMessage(ABM_SETPOS, &mut data) };
   tracing::info!("SHAppBarMessage(ABM_SETPOS) returned: {:?}", res);
   tracing::info!("after SHAppBarMessage: {:?}", data.rc);
+
+  Ok((size, adjusted_position))
 }
 
 pub fn remove_app_bar(handle: isize) {
