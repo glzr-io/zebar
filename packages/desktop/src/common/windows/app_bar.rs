@@ -1,3 +1,4 @@
+use anyhow::bail;
 use tauri::{PhysicalPosition, PhysicalSize};
 use windows::Win32::{
   Foundation::{HWND, RECT},
@@ -74,6 +75,9 @@ pub fn create_app_bar(
   Ok((size, adjusted_position))
 }
 
+/// Deallocate the app bar for given window handle.
+///
+/// Note that this does not error if handle is invalid.
 pub fn remove_app_bar(handle: isize) -> anyhow::Result<()> {
   tracing::info!("Removing app bar for {:?}.", handle);
 
@@ -84,7 +88,8 @@ pub fn remove_app_bar(handle: isize) -> anyhow::Result<()> {
     ..Default::default()
   };
 
-  unsafe { SHAppBarMessage(ABM_REMOVE, &mut abd) };
-
-  Ok(())
+  match unsafe { SHAppBarMessage(ABM_REMOVE, &mut abd) } {
+    0 => bail!("Failed to remove app bar."),
+    _ => Ok(()),
+  }
 }

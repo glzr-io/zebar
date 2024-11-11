@@ -474,7 +474,7 @@ impl WidgetFactory {
             if let Some(window_handle) =
               state.and_then(|state| state.window_handle)
             {
-              let _ = crate::common::remove_app_bar(window_handle);
+              let _ = remove_app_bar(window_handle);
             }
           }
 
@@ -654,7 +654,9 @@ impl WidgetFactory {
           // Need to clean up any appbars prior to restarting.
           #[cfg(target_os = "windows")]
           {
-            let _ = remove_app_bar(widget_state.window_handle.unwrap());
+            if let Some(window_handle) = widget_state.window_handle {
+              let _ = remove_app_bar(window_handle);
+            }
           }
         })
         .collect::<Vec<_>>()

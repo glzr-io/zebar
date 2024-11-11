@@ -99,22 +99,13 @@ async fn main() -> anyhow::Result<()> {
         // Keep the message loop running even if all windows are closed.
         api.prevent_exit();
       } else {
-        // Deallocate app bar space on windows
+        // Deallocate any appbars on Windows.
         #[cfg(target_os = "windows")]
-        task::block_in_place(|| {
-          block_on(async move {
-            let widget_factory = app.state::<Arc<WidgetFactory>>();
-
-            for id in widget_factory.states().await.keys() {
-              if let Some(window) = app.get_webview_window(id) {
-                #[cfg(target_os = "windows")]
-                {
-                  let _ = window.as_ref().window().deallocate_app_bar();
-                }
-              }
-            }
-          })
-        });
+        {
+          for (_, window) in app.webview_windows() {
+            let _ = window.as_ref().window().deallocate_app_bar();
+          }
+        }
       }
     }
   });
