@@ -137,7 +137,7 @@ pub struct WidgetPlacement {
 
   /// How to reserve space for the widget.
   #[serde(default)]
-  pub reserve_space: ReserveSpaceConfig,
+  pub dock_to_edge: DockToEdgeConfig,
 }
 
 #[derive(
@@ -169,28 +169,29 @@ pub enum MonitorSelection {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct ReserveSpaceConfig {
+pub struct DockToEdgeConfig {
   /// Whether to reserve space for the widget.
   #[serde(default = "default_bool::<false>")]
   pub enabled: bool,
 
-  /// Edge to reserve space on.
-  pub edge: Option<WidgetEdge>,
+  /// Edge to dock the widget to.
+  pub edge: Option<DockEdge>,
 
-  /// Thickness of the reserved space.
-  pub thickness: Option<LengthValue>,
+  /// Margin to reserve after the widget window. Can be positive or
+  /// negative.
+  pub margin_after_window: Option<LengthValue>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum WidgetEdge {
+pub enum DockEdge {
   Top,
   Bottom,
   Left,
   Right,
 }
 
-impl WidgetEdge {
+impl DockEdge {
   pub fn is_horizontal(&self) -> bool {
     matches!(self, Self::Top | Self::Bottom)
   }

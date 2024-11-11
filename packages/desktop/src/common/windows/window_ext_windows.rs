@@ -5,7 +5,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::app_bar;
-use crate::config::WidgetEdge;
+use crate::config::DockEdge;
 
 pub trait WindowExtWindows {
   fn set_tool_window(&self, enable: bool) -> anyhow::Result<()>;
@@ -14,7 +14,7 @@ pub trait WindowExtWindows {
     &self,
     size: PhysicalSize<i32>,
     position: PhysicalPosition<i32>,
-    edge: WidgetEdge,
+    edge: DockEdge,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)>;
 
   fn deallocate_app_bar(&self) -> anyhow::Result<()>;
@@ -50,7 +50,7 @@ impl<R: Runtime> WindowExtWindows for Window<R> {
     &self,
     size: PhysicalSize<i32>,
     position: PhysicalPosition<i32>,
-    edge: WidgetEdge,
+    edge: DockEdge,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     let handle = self.hwnd().context("Failed to get window handle.")?;
     app_bar::create_app_bar(handle.0 as _, size, position, edge)
@@ -58,8 +58,6 @@ impl<R: Runtime> WindowExtWindows for Window<R> {
 
   fn deallocate_app_bar(&self) -> anyhow::Result<()> {
     let handle = self.hwnd().context("Failed to get window handle.")?;
-    app_bar::remove_app_bar(handle.0 as _);
-
-    Ok(())
+    app_bar::remove_app_bar(handle.0 as _)
   }
 }

@@ -22,12 +22,12 @@ use tracing::{error, info};
 use crate::{
   common::PathExt,
   config::{
-    AnchorPoint, Config, ReserveSpaceConfig, WidgetConfig, WidgetPlacement,
+    AnchorPoint, Config, DockToEdgeConfig, WidgetConfig, WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
 };
 #[cfg(target_os = "windows")]
-use crate::{common::WindowExtWindows, config::WidgetEdge};
+use crate::{common::WindowExtWindows, config::DockEdge};
 
 /// Manages the creation of Zebar widgets.
 pub struct WidgetFactory {
@@ -102,7 +102,7 @@ impl WidgetCoordinates {
   /// This is determined by dividing the monitor into four triangular
   /// quadrants (forming an "X") and checking which quadrant contains the
   /// widget's center point.
-  fn closest_edge(&self) -> WidgetEdge {
+  fn closest_edge(&self) -> DockEdge {
     let widget_center = PhysicalPosition::new(
       self.position.x + (self.size.width / 2),
       self.position.y + (self.size.height / 2),
@@ -121,17 +121,17 @@ impl WidgetCoordinates {
       // Widget is in left or right triangle.
       true => {
         if delta_x > 0 {
-          WidgetEdge::Right
+          DockEdge::Right
         } else {
-          WidgetEdge::Left
+          DockEdge::Left
         }
       }
       // Widget is in top or bottom triangle.
       false => {
         if delta_y > 0 {
-          WidgetEdge::Bottom
+          DockEdge::Bottom
         } else {
-          WidgetEdge::Top
+          DockEdge::Top
         }
       }
     }
@@ -264,10 +264,10 @@ impl WidgetFactory {
       let mut size = coordinates.size;
       let mut position = coordinates.position;
 
-      if placement.reserve_space.enabled {
+      if placement.dock_to_edge.enabled {
         (size, position) = self.reserve_space(
           &window,
-          &placement.reserve_space,
+          &placement.dock_to_edge,
           &coordinates,
         )?;
       }
@@ -330,14 +330,14 @@ impl WidgetFactory {
   fn reserve_space(
     &self,
     window: &tauri::WebviewWindow,
-    reserve_space: &ReserveSpaceConfig,
+    dock_to_edge: &DockToEdgeConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     // Default to whichever edge the widget appears to be on.
-    let edge = reserve_space.edge.unwrap_or_else(|| coords.closest_edge());
+    let edge = dock_to_edge.edge.unwrap_or_else(|| coords.closest_edge());
 
-    let thickness = reserve_space
-      .thickness
+    let thickness = dock_to_edge
+      .margin_after_window
       .as_ref()
       .map(|thickness| {
         // Length of monitor perpendicular to the edge.
@@ -351,10 +351,10 @@ impl WidgetFactory {
           .to_px_scaled(monitor_length as i32, coords.monitor.scale_factor)
       })
       .unwrap_or_else(|| match edge {
-        WidgetEdge::Top => coords.offset.y + coords.size.height,
-        WidgetEdge::Bottom => -coords.offset.y + coords.size.height,
-        WidgetEdge::Left => coords.offset.x + coords.size.width,
-        WidgetEdge::Right => -coords.offset.x + coords.size.width,
+        DockEdge::Top => coords.offset.y + coords.size.height,
+        DockEdge::Bottom => -coords.offset.y + coords.size.height,
+        DockEdge::Left => coords.offset.x + coords.size.width,
+        DockEdge::Right => -coords.offset.x + coords.size.width,
       });
 
     let reserve_size = if edge.is_horizontal() {
@@ -364,14 +364,14 @@ impl WidgetFactory {
     };
 
     let reserve_position = match edge {
-      WidgetEdge::Top | WidgetEdge::Left => {
+      DockEdge::Top | DockEdge::Left => {
         PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
       }
-      WidgetEdge::Bottom => PhysicalPosition::new(
+      DockEdge::Bottom => PhysicalPosition::new(
         coords.monitor.x,
         coords.monitor.y + coords.monitor.height as i32 - thickness,
       ),
-      WidgetEdge::Right => PhysicalPosition::new(
+      DockEdge::Right => PhysicalPosition::new(
         coords.monitor.x + coords.monitor.width as i32 - thickness,
         coords.monitor.y,
       ),

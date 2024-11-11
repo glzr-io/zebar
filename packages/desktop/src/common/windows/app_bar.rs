@@ -7,13 +7,13 @@ use windows::Win32::{
   },
 };
 
-use crate::config::WidgetEdge;
+use crate::config::DockEdge;
 
 pub fn create_app_bar(
   window_handle: isize,
   size: PhysicalSize<i32>,
   position: PhysicalPosition<i32>,
-  edge: WidgetEdge,
+  edge: DockEdge,
 ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
   let rect = RECT {
     left: position.x,
@@ -23,10 +23,10 @@ pub fn create_app_bar(
   };
 
   let edge = match edge {
-    WidgetEdge::Left => ABE_LEFT,
-    WidgetEdge::Top => ABE_TOP,
-    WidgetEdge::Right => ABE_RIGHT,
-    WidgetEdge::Bottom => ABE_BOTTOM,
+    DockEdge::Left => ABE_LEFT,
+    DockEdge::Top => ABE_TOP,
+    DockEdge::Right => ABE_RIGHT,
+    DockEdge::Bottom => ABE_BOTTOM,
   };
 
   tracing::trace!(
@@ -74,7 +74,7 @@ pub fn create_app_bar(
   Ok((size, adjusted_position))
 }
 
-pub fn remove_app_bar(handle: isize) {
+pub fn remove_app_bar(handle: isize) -> anyhow::Result<()> {
   tracing::trace!("Removing app bar for {:?}.", handle);
 
   let mut abd = APPBARDATA {
@@ -83,4 +83,6 @@ pub fn remove_app_bar(handle: isize) {
   };
 
   unsafe { SHAppBarMessage(ABM_REMOVE, &mut abd) };
+
+  Ok(())
 }
