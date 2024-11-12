@@ -137,7 +137,7 @@ pub struct WidgetPlacement {
 
   /// How to reserve space for the widget.
   #[serde(default)]
-  pub dock_to_edge: DockToEdgeConfig,
+  pub dock_to_edge: DockConfig,
 }
 
 #[derive(
@@ -169,7 +169,7 @@ pub enum MonitorSelection {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct DockToEdgeConfig {
+pub struct DockConfig {
   /// Whether to dock the widget to the monitor edge and reserve screen
   /// space for it.
   #[serde(default = "default_bool::<false>")]

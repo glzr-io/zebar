@@ -28,7 +28,7 @@ use crate::{
 use crate::{
   common::PathExt,
   config::{
-    AnchorPoint, Config, DockToEdgeConfig, WidgetConfig, WidgetPlacement,
+    AnchorPoint, Config, DockConfig, WidgetConfig, WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
 };
@@ -358,7 +358,7 @@ impl WidgetFactory {
   fn dock_to_edge(
     &self,
     window: &tauri::WebviewWindow,
-    dock_to_edge: &DockToEdgeConfig,
+    dock_config: &DockConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     // Disallow docking with a centered anchor point. Doesn't make sense.
@@ -366,7 +366,7 @@ impl WidgetFactory {
       return Ok((coords.size, coords.position));
     }
 
-    let edge = dock_to_edge.edge.unwrap_or_else(|| coords.closest_edge());
+    let edge = dock_config.edge.unwrap_or_else(|| coords.closest_edge());
 
     // Offset from the monitor edge to the window.
     let offset = match edge {
@@ -385,7 +385,7 @@ impl WidgetFactory {
 
     // Margin to reserve *after* the window. Can be negative, but should
     // not be smaller than the size of the window.
-    let window_margin = dock_to_edge
+    let window_margin = dock_config
       .window_margin
       .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
       .clamp(-coords.size.height, i32::MAX);
