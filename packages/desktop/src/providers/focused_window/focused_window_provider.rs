@@ -4,7 +4,10 @@ use anyhow::Ok;
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::{self, Sender};
+use tokio::{
+  sync::mpsc::{self, Sender},
+  task,
+};
 use windows::Win32::{
   Foundation::{HMODULE, HWND, LPARAM, WPARAM},
   Graphics::Gdi::{
@@ -60,7 +63,7 @@ unsafe extern "system" fn win_event_proc(
     let emit_results_tx = PROVIDER_TX.get().clone().unwrap();
     let output = FocusedWindowOutput { title, icon: None };
     if let Err(err) = emit_results_tx
-      .try_send(Ok(ProviderOutput::FocusedWindow(output)).into())
+      .blocking_send(Ok(ProviderOutput::FocusedWindow(output)).into())
     {
       println!("Error sending result: {:?}", err);
     }
@@ -73,12 +76,14 @@ impl Provider for FocusedWindowProvider {
     PROVIDER_TX
       .set(emit_result_tx.clone())
       .expect("Error setting provider tx in focused window provider");
-    if let Err(err) = self.create_focused_window_hook() {
-      emit_result_tx
-        .send(Err(err).into())
-        .await
-        .expect("Error with focused window provider");
-    }
+
+    task::spawn_blocking(move || {
+      if let Err(err) = Self::create_focused_window_hook() {
+        emit_result_tx
+          .blocking_send(Err(err).into())
+          .expect("Error with focused window provider");
+      }
+    });
   }
 }
 
@@ -90,7 +95,7 @@ impl FocusedWindowProvider {
   }
 
   // TODO: free hook
-  fn create_focused_window_hook(&self) -> anyhow::Result<()> {
+  fn create_focused_window_hook() -> anyhow::Result<()> {
     unsafe {
       let hook = SetWinEventHook(
         EVENT_SYSTEM_FOREGROUND,
@@ -236,7 +241,7 @@ impl FocusedWindowProvider {
             // b64 requires 4/3 of the initial data to encode
             // +2 to account for partial bytes
             let required_size = (pixels.len() + 2) / 3 * 4;
-            let mut output_buf = vec![0u8; required_size]; 
+            let mut output_buf = vec![0u8; required_size];
             let b64_image = general_purpose::STANDARD
               .encode_slice(&pixels, &mut output_buf)
               .expect("Error encoding focused window icon to base64");
