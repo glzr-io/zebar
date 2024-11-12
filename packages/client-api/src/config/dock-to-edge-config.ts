@@ -1,5 +1,5 @@
-export type ReserveSpaceConfig = {
+export type DockToEdgeConfig = {
   enabled: boolean;
   edge: 'top' | 'bottom' | 'left' | 'right' | null;
-  thickness: string | null;
+  windowMargin: string;
 };

@@ -57,10 +57,10 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
         monitorSelection: {
           type: 'all',
         },
-        reserveSpace: {
+        dockToEdge: {
           enabled: false,
           edge: null,
-          thickness: null,
+          windowMargin: '0px',
         },
       },
     ]);
@@ -293,11 +293,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Field
                   of={configForm}
-                  path={`presets.${index}.reserveSpace.enabled`}
+                  path={`presets.${index}.dockToEdge.enabled`}
                 >
                   {inputProps => (
                     <SwitchField
-                      id={`reserve-space-${index}`}
+                      id={`dock-enabled-${index}`}
                       label="Enabled"
                       {...inputProps()}
                     />
@@ -306,11 +306,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
 
                 <Field
                   of={configForm}
-                  path={`presets.${index}.reserveSpace.edge`}
+                  path={`presets.${index}.dockToEdge.edge`}
                 >
                   {inputProps => (
                     <SelectField
-                      id={`reserve-space-edge-${index}`}
+                      id={`dock-edge-${index}`}
                       label="Edge"
                       options={
                         [
@@ -328,12 +328,12 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 {/* TODO: Change to px/percent input. */}
                 <Field
                   of={configForm}
-                  path={`presets.${index}.reserveSpace.thickness`}
+                  path={`presets.${index}.dockToEdge.windowMargin`}
                 >
                   {inputProps => (
                     <TextField
-                      id={`reserve-space-thickness-${index}`}
-                      label="Thickness"
+                      id={`dock-margin-${index}`}
+                      label="Margin after window"
                       {...inputProps()}
                     />
                   )}
