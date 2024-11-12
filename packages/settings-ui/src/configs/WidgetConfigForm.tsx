@@ -13,7 +13,7 @@ import {
 } from '@glzr/components';
 import { IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
-import { createEffect, on } from 'solid-js';
+import { createEffect, on, Show } from 'solid-js';
 import { WidgetConfig } from 'zebar';
 
 export interface WidgetConfigFormProps {
@@ -70,6 +70,25 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
     configForm.setFieldValue('presets', presets =>
       presets.filter((_, index) => index !== targetIndex),
     );
+  }
+
+  function anchorToEdges(anchor: string) {
+    switch (anchor) {
+      case 'top_left':
+        return ['top', 'left'];
+      case 'top_center':
+        return ['top'];
+      case 'top_right':
+        return ['top', 'right'];
+      case 'center':
+        return [];
+      case 'bottom_left':
+        return ['bottom', 'left'];
+      case 'bottom_center':
+        return ['bottom'];
+      case 'bottom_right':
+        return ['bottom', 'right'];
+    }
   }
 
   return (
@@ -303,42 +322,68 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 )}
               </Field>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <Field
-                  of={configForm}
-                  path={`presets.${index}.dockToEdge.edge`}
-                >
-                  {inputProps => (
-                    <SelectField
-                      id={`dock-edge-${index}`}
-                      label="Edge"
-                      options={
-                        [
-                          { value: 'top', label: 'Top' },
-                          { value: 'bottom', label: 'Bottom' },
-                          { value: 'left', label: 'Left' },
-                          { value: 'right', label: 'Right' },
-                        ] as const
-                      }
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
+              {configForm.value.presets[index].dockToEdge.enabled && (
+                <>
+                  <Field
+                    of={configForm}
+                    path={`presets.${index}.dockToEdge.edge`}
+                  >
+                    {inputProps => (
+                      <>
+                        <SwitchField
+                          id={`dock-edge-switch-${index}`}
+                          label="Dock to nearest detected edge"
+                          onBlur={() => inputProps().onBlur()}
+                          onChange={enabled =>
+                            inputProps().onChange(
+                              enabled
+                                ? null
+                                : (anchorToEdges(
+                                    configForm.value.presets[index].anchor,
+                                  )[0] as any),
+                            )
+                          }
+                          value={inputProps().value === null}
+                        />
 
-                {/* TODO: Change to px/percent input. */}
-                <Field
-                  of={configForm}
-                  path={`presets.${index}.dockToEdge.windowMargin`}
-                >
-                  {inputProps => (
-                    <TextField
-                      id={`dock-margin-${index}`}
-                      label="Margin after window"
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
-              </div>
+                        <Show when={inputProps().value}>
+                          <SelectField
+                            id={`dock-edge-dropdown-${index}`}
+                            label="Edge"
+                            options={(
+                              [
+                                { value: 'top', label: 'Top' },
+                                { value: 'bottom', label: 'Bottom' },
+                                { value: 'left', label: 'Left' },
+                                { value: 'right', label: 'Right' },
+                              ] as const
+                            ).filter(opt =>
+                              anchorToEdges(
+                                configForm.value.presets[index].anchor,
+                              ).includes(opt.value),
+                            )}
+                            {...inputProps()}
+                          />
+                        </Show>
+                      </>
+                    )}
+                  </Field>
+
+                  {/* TODO: Change to px/percent input. */}
+                  <Field
+                    of={configForm}
+                    path={`presets.${index}.dockToEdge.windowMargin`}
+                  >
+                    {inputProps => (
+                      <TextField
+                        id={`dock-margin-${index}`}
+                        label="Margin after window"
+                        {...inputProps()}
+                      />
+                    )}
+                  </Field>
+                </>
+              )}
             </div>
           ))}
 
