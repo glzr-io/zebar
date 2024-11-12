@@ -45,6 +45,11 @@ export interface GlazeWmOutput {
   allMonitors: Monitor[];
 
   /**
+   * All windows.
+   */
+  allWindows: Window[];
+
+  /**
    * Monitor that currently has focus.
    */
   focusedMonitor: Monitor;
