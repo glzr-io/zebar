@@ -274,12 +274,15 @@ impl WidgetFactory {
       let mut size = coordinates.size;
       let mut position = coordinates.position;
 
-      if placement.dock_to_edge.enabled {
-        (size, position) = self.dock_to_edge(
-          &window,
-          &placement.dock_to_edge,
-          &coordinates,
-        )?;
+      #[cfg(target_os = "windows")]
+      {
+        if placement.dock_to_edge.enabled {
+          (size, position) = self.dock_to_edge(
+            &window,
+            &placement.dock_to_edge,
+            &coordinates,
+          )?;
+        }
       }
 
       info!("Positioning widget to {:?} {:?}", size, position);

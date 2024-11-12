@@ -1,5 +1,6 @@
 use anyhow::bail;
 use tauri::{PhysicalPosition, PhysicalSize};
+use tracing::info;
 use windows::Win32::{
   Foundation::{HWND, RECT},
   UI::Shell::{
@@ -30,13 +31,6 @@ pub fn create_app_bar(
     DockEdge::Bottom => ABE_BOTTOM,
   };
 
-  tracing::trace!(
-    "Registering app bar for {:?} with edge: {:?} and rect: {:?}",
-    window_handle,
-    edge,
-    rect
-  );
-
   let mut data = APPBARDATA {
     cbSize: std::mem::size_of::<APPBARDATA>() as u32,
     hWnd: HWND(window_handle as _),
@@ -45,12 +39,14 @@ pub fn create_app_bar(
     rc: rect.clone(),
     ..Default::default()
   };
-  tracing::info!("before SHAppBarMessage: {:?}", data.rc);
 
-  let res = unsafe { SHAppBarMessage(ABM_NEW, &mut data) };
-  tracing::info!("SHAppBarMessage(ABM_NEW) returned: {:?}", res);
-  let res = unsafe { SHAppBarMessage(ABM_QUERYPOS, &mut data) };
-  tracing::info!("SHAppBarMessage(ABM_QUERYPOS) returned: {:?}", res);
+  if unsafe { SHAppBarMessage(ABM_NEW, &mut data) } == 0 {
+    bail!("Failed to register new app bar.");
+  }
+
+  if unsafe { SHAppBarMessage(ABM_QUERYPOS, &mut data) } == 0 {
+    bail!("Failed to query for app bar position.");
+  }
 
   // Calculate the adjusted position directly from data.rc.
   let adjusted_position = PhysicalPosition::new(
@@ -68,9 +64,11 @@ pub fn create_app_bar(
   };
 
   // Set position for it to actually reserve the size and position.
-  let res = unsafe { SHAppBarMessage(ABM_SETPOS, &mut data) };
-  tracing::info!("SHAppBarMessage(ABM_SETPOS) returned: {:?}", res);
-  tracing::info!("after SHAppBarMessage: {:?}", data.rc);
+  if unsafe { SHAppBarMessage(ABM_SETPOS, &mut data) } == 0 {
+    bail!("Failed to set app bar position.");
+  }
+
+  info!("Successfully registered appbar with rect: {:?}", data.rc);
 
   Ok((size, adjusted_position))
 }
@@ -79,7 +77,7 @@ pub fn create_app_bar(
 ///
 /// Note that this does not error if handle is invalid.
 pub fn remove_app_bar(handle: isize) -> anyhow::Result<()> {
-  tracing::info!("Removing app bar for {:?}.", handle);
+  info!("Removing app bar for {:?}.", handle);
 
   let mut abd = APPBARDATA {
     cbSize: std::mem::size_of::<APPBARDATA>() as u32,
