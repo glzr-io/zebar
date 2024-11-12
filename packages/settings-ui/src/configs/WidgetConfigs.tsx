@@ -183,6 +183,7 @@ export function WidgetConfigs() {
 
               <WidgetConfigForm
                 config={config()}
+                configPath={selectedConfigPath()}
                 onChange={config =>
                   onConfigChange(selectedConfigPath(), config)
                 }

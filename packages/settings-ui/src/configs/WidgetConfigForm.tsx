@@ -18,17 +18,23 @@ import { WidgetConfig } from 'zebar';
 
 export interface WidgetConfigFormProps {
   config: WidgetConfig;
+  configPath: string;
   onChange: (config: WidgetConfig) => void;
 }
 
 export function WidgetConfigForm(props: WidgetConfigFormProps) {
   const configForm = createForm<WidgetConfig>(props.config);
 
-  // Update the form when the incoming config changes.
+  // Update the form when the config is different.
   createEffect(
     on(
-      () => props.config,
-      config => configForm.setValue(config),
+      () => props.configPath,
+      () => {
+        configForm.unsetDirty();
+        configForm.unsetTouched();
+        configForm.setValue(props.config);
+      },
+      { defer: true },
     ),
   );
 
