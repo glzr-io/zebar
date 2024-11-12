@@ -404,6 +404,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                         <TextField
                           id={`dock-margin-${index}`}
                           label="Margin after window"
+                          description="Margin to reserve after the widget window. Can be positive or negative."
                           {...inputProps()}
                         />
                       )}
