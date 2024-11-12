@@ -1,6 +1,8 @@
+use std::sync::OnceLock;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{self, Sender};
 use windows::Win32::{
   Media::Audio::{
     eMultimedia, eRender,
@@ -19,6 +21,11 @@ use windows::Win32::{
 
 use crate::providers::{Provider, ProviderOutput, ProviderResult};
 
+static PROVIDER_TX: OnceLock<mpsc::Sender<ProviderResult>> =
+  OnceLock::new();
+
+static AUDIO_STATUS: OnceLock<AudioOutput> = OnceLock::new();
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioProviderConfig {}
@@ -27,7 +34,7 @@ pub struct AudioProviderConfig {}
 #[serde(rename_all = "camelCase")]
 pub struct AudioOutput {
   pub device: String,
-  pub volume: u8,
+  pub volume: f32,
 }
 
 pub struct AudioProvider {
@@ -39,14 +46,30 @@ impl AudioProvider {
     Self { _config: config }
   }
 
+  fn emit_volume() {
+    let tx = PROVIDER_TX.get().expect("Error getting provider tx");
+    let output = AUDIO_STATUS.get().expect("Error getting audio status");
+    tx.try_send(Ok(ProviderOutput::Audio(output.clone())).into())
+      .expect("Error sending audio status");
+  }
+
   fn create_audio_manager(
     &self,
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
+    PROVIDER_TX
+      .set(emit_result_tx.clone())
+      .expect("Error setting provider tx in focused window provider");
+
+    // TODO is this the best way to initialize this
+    let _ = AUDIO_STATUS.set(AudioOutput {
+      device: "n/a".to_string(),
+      volume: 0.0,
+    });
+
     unsafe {
       // Initialize COM library
-      let _ =
-        CoInitializeEx(Some(std::ptr::null_mut()), COINIT_MULTITHREADED);
+      let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
 
       // Get the audio endpoint volume interface
       let enumerator: IMMDeviceEnumerator =
@@ -56,25 +79,15 @@ impl AudioProvider {
       let endpoint_volume: IAudioEndpointVolume =
         default_device.Activate(CLSCTX_ALL, None)?;
 
-      let device_id = default_device.GetId()?.to_string()?;
-      println!("Default audio render device: {}", device_id.clone());
-
       // Register the volume change callback
       let device_volume_callback =
         IAudioEndpointVolumeCallback::from(MediaDeviceEventHandler {});
-
       endpoint_volume
         .RegisterControlChangeNotify(&device_volume_callback)?;
-    }
 
-    loop {
-      // tx randomized data to test
-      let output = AudioOutput {
-        device: "default".to_string(),
-        volume: 50,
-      };
-      emit_result_tx.try_send(Ok(ProviderOutput::Audio(output)).into())?;
-      std::thread::sleep(std::time::Duration::from_secs(1));
+      loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+      }
     }
   }
 }
@@ -104,7 +117,15 @@ impl IAudioEndpointVolumeCallback_Impl for MediaDeviceEventHandler_Impl {
   ) -> windows_core::Result<()> {
     println!("Volume notification");
     if let Some(data) = unsafe { data.as_ref() } {
-      println!("Volume notification: {}", data.fMasterVolume,);
+      // TODO: surely theres a better way to do this without the clone
+      AUDIO_STATUS
+        .set(AudioOutput {
+          device: AUDIO_STATUS.get().expect("msg").device.clone(),
+          volume: data.fMasterVolume,
+        })
+        .expect("Error setting audio status");
+      println!("Volume update: {}", data.fMasterVolume,);
+      AudioProvider::emit_volume();
     }
     Ok(())
   }
@@ -115,7 +136,6 @@ impl IAudioSessionNotification_Impl for MediaDeviceEventHandler_Impl {
     &self,
     _new_session: Option<&IAudioSessionControl>,
   ) -> windows::core::Result<()> {
-    println!("SESSION CREATED!");
     let name = unsafe {
       _new_session
         .unwrap()
@@ -124,26 +144,14 @@ impl IAudioSessionNotification_Impl for MediaDeviceEventHandler_Impl {
         .to_string()
         .unwrap()
     };
+    AUDIO_STATUS
+      .set(AudioOutput {
+        device: name.clone(),
+        volume: AUDIO_STATUS.get().expect("msg").volume,
+      })
+      .expect("Error setting audio status");
     println!("New session created: {}", name);
+    AudioProvider::emit_volume();
     Ok(())
   }
 }
-
-// this works for current device changes
-// but typedeventhandlers cant be used for volume updates
-// -----------------------------------------------------------
-// let handler = TypedEventHandler::<IInspectable,
-// DefaultAudioRenderDeviceChangedEventArgs>::new(     move |_:
-// &Option<IInspectable>, args:
-// &Option<DefaultAudioRenderDeviceChangedEventArgs>| {         println!("
-// Default audio render device changed");         let device_id =
-// args.as_ref().unwrap().Id().unwrap();         let device_info =
-// DeviceInformation::CreateFromIdAsync(&device_id)             .unwrap()
-//             .get()
-//             .unwrap();
-//         let device_name = device_info.Name().unwrap();
-//         println!("New default audio render device: {}", device_name);
-//         Ok(())
-//     },
-// );
-// MediaDevice::DefaultAudioRenderDeviceChanged(&handler)?;
