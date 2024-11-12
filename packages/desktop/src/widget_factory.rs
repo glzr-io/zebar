@@ -390,7 +390,16 @@ impl WidgetFactory {
       .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
       .clamp(-coords.size.height, i32::MAX);
 
-    let reserved_length = offset + window_length + window_margin;
+    let monitor_length = if edge.is_horizontal() {
+      coords.monitor.height
+    } else {
+      coords.monitor.width
+    };
+
+    // Prevent the reserved amount from exceeding 50% of the monitor size.
+    // This maximum is arbitrary but should be sufficient for most cases.
+    let reserved_length = (offset + window_length + window_margin)
+      .clamp(0, monitor_length as i32 / 2);
 
     let reserve_size = if edge.is_horizontal() {
       PhysicalSize::new(coords.monitor.width as i32, reserved_length)
