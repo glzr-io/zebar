@@ -288,22 +288,22 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 </Field>
               </div>
 
-              <h2 class="text-md font-semibold pt-4">Reserve space</h2>
+              <Field
+                of={configForm}
+                path={`presets.${index}.dockToEdge.enabled`}
+              >
+                {inputProps => (
+                  <SwitchField
+                    id={`dock-enabled-${index}`}
+                    class="flex flex-wrap items-center gap-x-4 [&>:last-child]:w-full"
+                    label="Dock to edge (Windows-only)"
+                    description="Whether to dock the widget to the monitor edge and reserve screen space for it."
+                    {...inputProps()}
+                  />
+                )}
+              </Field>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <Field
-                  of={configForm}
-                  path={`presets.${index}.dockToEdge.enabled`}
-                >
-                  {inputProps => (
-                    <SwitchField
-                      id={`dock-enabled-${index}`}
-                      label="Enabled"
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
-
                 <Field
                   of={configForm}
                   path={`presets.${index}.dockToEdge.edge`}
