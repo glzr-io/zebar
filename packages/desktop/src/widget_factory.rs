@@ -100,8 +100,9 @@ pub enum WidgetOpenOptions {
 struct WidgetCoordinates {
   size: PhysicalSize<i32>,
   position: PhysicalPosition<i32>,
-  monitor: Monitor,
   offset: PhysicalPosition<i32>,
+  anchor: AnchorPoint,
+  monitor: Monitor,
 }
 
 impl WidgetCoordinates {
@@ -360,6 +361,11 @@ impl WidgetFactory {
     dock_to_edge: &DockToEdgeConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
+    // Disallow docking with a centered anchor point. Doesn't make sense.
+    if coords.anchor == AnchorPoint::Center {
+      return Ok((coords.size, coords.position));
+    }
+
     let edge = dock_to_edge.edge.unwrap_or_else(|| coords.closest_edge());
 
     // Offset from the monitor edge to the window.
@@ -566,8 +572,9 @@ impl WidgetFactory {
       coordinates.push(WidgetCoordinates {
         size: window_size,
         position: window_position,
-        monitor: monitor.clone(),
         offset: PhysicalPosition::new(offset_x, offset_y),
+        monitor: monitor.clone(),
+        anchor: placement.anchor,
       });
     }
 

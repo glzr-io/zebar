@@ -11,7 +11,7 @@ import {
   Tooltip,
   TooltipTrigger,
 } from '@glzr/components';
-import { IconTrash } from '@tabler/icons-solidjs';
+import { IconAlertTriangle, IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { createEffect, on, Show } from 'solid-js';
 import { WidgetConfig } from 'zebar';
@@ -307,83 +307,109 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 </Field>
               </div>
 
-              <Field
-                of={configForm}
-                path={`presets.${index}.dockToEdge.enabled`}
-              >
-                {inputProps => (
-                  <SwitchField
-                    id={`dock-enabled-${index}`}
-                    class="flex flex-wrap items-center gap-x-4 [&>:last-child]:w-full"
-                    label="Dock to edge (Windows-only)"
-                    description="Whether to dock the widget to the monitor edge and reserve screen space for it."
-                    {...inputProps()}
-                  />
-                )}
-              </Field>
+              <div class="flex justify-between">
+                <Field
+                  of={configForm}
+                  path={`presets.${index}.dockToEdge.enabled`}
+                >
+                  {inputProps => (
+                    <SwitchField
+                      id={`dock-enabled-${index}`}
+                      class="flex flex-wrap items-center gap-x-4 [&>:last-child]:w-full"
+                      label="Dock to edge (Windows-only)"
+                      description="Whether to dock the widget to the monitor edge and reserve screen space for it."
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
 
-              {configForm.value.presets[index].dockToEdge.enabled && (
-                <>
-                  <Field
-                    of={configForm}
-                    path={`presets.${index}.dockToEdge.edge`}
-                  >
-                    {inputProps => (
-                      <>
-                        <SwitchField
-                          id={`dock-edge-switch-${index}`}
-                          label="Dock to nearest detected edge"
-                          onBlur={() => inputProps().onBlur()}
-                          onChange={enabled =>
-                            inputProps().onChange(
-                              enabled
-                                ? null
-                                : (anchorToEdges(
-                                    configForm.value.presets[index].anchor,
-                                  )[0] as any),
-                            )
-                          }
-                          value={inputProps().value === null}
+                <Show
+                  when={
+                    configForm.value.presets[index].dockToEdge.enabled &&
+                    configForm.value.presets[index].anchor === 'center'
+                  }
+                >
+                  <Tooltip openDelay={0} closeDelay={0}>
+                    <TooltipTrigger
+                      as={(props: any) => (
+                        <IconAlertTriangle
+                          class="size-5 shrink-0"
+                          {...props}
                         />
+                      )}
+                    />
+                    <TooltipContent>
+                      Dock to edge has no effect with a centered anchor
+                      point.
+                    </TooltipContent>
+                  </Tooltip>
+                </Show>
+              </div>
 
-                        <Show when={inputProps().value}>
-                          <SelectField
-                            id={`dock-edge-dropdown-${index}`}
-                            label="Edge"
-                            options={(
-                              [
-                                { value: 'top', label: 'Top' },
-                                { value: 'bottom', label: 'Bottom' },
-                                { value: 'left', label: 'Left' },
-                                { value: 'right', label: 'Right' },
-                              ] as const
-                            ).filter(opt =>
-                              anchorToEdges(
-                                configForm.value.presets[index].anchor,
-                              ).includes(opt.value),
-                            )}
-                            {...inputProps()}
+              {configForm.value.presets[index].dockToEdge.enabled &&
+                configForm.value.presets[index].anchor !== 'center' && (
+                  <>
+                    <Field
+                      of={configForm}
+                      path={`presets.${index}.dockToEdge.edge`}
+                    >
+                      {inputProps => (
+                        <>
+                          <SwitchField
+                            id={`dock-edge-switch-${index}`}
+                            label="Dock to nearest detected edge"
+                            onBlur={() => inputProps().onBlur()}
+                            onChange={enabled =>
+                              inputProps().onChange(
+                                enabled
+                                  ? null
+                                  : (anchorToEdges(
+                                      configForm.value.presets[index]
+                                        .anchor,
+                                    )[0] as any),
+                              )
+                            }
+                            value={inputProps().value === null}
                           />
-                        </Show>
-                      </>
-                    )}
-                  </Field>
 
-                  {/* TODO: Change to px/percent input. */}
-                  <Field
-                    of={configForm}
-                    path={`presets.${index}.dockToEdge.windowMargin`}
-                  >
-                    {inputProps => (
-                      <TextField
-                        id={`dock-margin-${index}`}
-                        label="Margin after window"
-                        {...inputProps()}
-                      />
-                    )}
-                  </Field>
-                </>
-              )}
+                          <Show when={inputProps().value}>
+                            <SelectField
+                              id={`dock-edge-dropdown-${index}`}
+                              label="Edge"
+                              options={(
+                                [
+                                  { value: 'top', label: 'Top' },
+                                  { value: 'bottom', label: 'Bottom' },
+                                  { value: 'left', label: 'Left' },
+                                  { value: 'right', label: 'Right' },
+                                ] as const
+                              ).filter(opt =>
+                                anchorToEdges(
+                                  configForm.value.presets[index].anchor,
+                                ).includes(opt.value),
+                              )}
+                              {...inputProps()}
+                            />
+                          </Show>
+                        </>
+                      )}
+                    </Field>
+
+                    {/* TODO: Change to px/percent input. */}
+                    <Field
+                      of={configForm}
+                      path={`presets.${index}.dockToEdge.windowMargin`}
+                    >
+                      {inputProps => (
+                        <TextField
+                          id={`dock-margin-${index}`}
+                          label="Margin after window"
+                          {...inputProps()}
+                        />
+                      )}
+                    </Field>
+                  </>
+                )}
             </div>
           ))}
 
