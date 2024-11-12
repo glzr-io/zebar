@@ -13,7 +13,7 @@ import {
 } from '@glzr/components';
 import { IconAlertTriangle, IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
-import { createEffect, on, Show } from 'solid-js';
+import { batch, createEffect, on, Show } from 'solid-js';
 import { WidgetConfig } from 'zebar';
 
 export interface WidgetConfigFormProps {
@@ -78,7 +78,9 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
     );
   }
 
-  function anchorToEdges(anchor: string) {
+  function anchorToEdges(
+    anchor: string,
+  ): ('top' | 'left' | 'right' | 'bottom')[] {
     switch (anchor) {
       case 'top_left':
         return ['top', 'left'];
@@ -240,6 +242,23 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                         ] as const
                       }
                       {...inputProps()}
+                      onChange={(value: any) => {
+                        batch(() => {
+                          inputProps().onChange(value);
+
+                          // Dock edges depend on the anchor point. Change
+                          // to first valid edge for given anchor point.
+                          if (
+                            configForm.value.presets[index].dockToEdge
+                              .edge !== null
+                          ) {
+                            configForm.setFieldValue(
+                              `presets.${index}.dockToEdge.edge`,
+                              anchorToEdges(value)[0] ?? null,
+                            );
+                          }
+                        });
+                      }}
                     />
                   )}
                 </Field>
@@ -364,15 +383,16 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                           <SwitchField
                             id={`dock-edge-switch-${index}`}
                             label="Dock to nearest detected edge"
+                            class="flex items-center gap-x-4"
                             onBlur={() => inputProps().onBlur()}
                             onChange={enabled =>
                               inputProps().onChange(
                                 enabled
                                   ? null
-                                  : (anchorToEdges(
+                                  : anchorToEdges(
                                       configForm.value.presets[index]
                                         .anchor,
-                                    )[0] as any),
+                                    )[0] ?? null,
                               )
                             }
                             value={inputProps().value === null}
