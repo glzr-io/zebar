@@ -2,7 +2,7 @@ use std::{ffi::c_void, mem::zeroed, sync::OnceLock};
 
 use anyhow::Ok;
 use async_trait::async_trait;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{prelude::BASE64_STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 use tokio::{
   sync::mpsc::{self, Sender},
@@ -39,7 +39,7 @@ pub struct FocusedWindowProviderConfig {}
 #[serde(rename_all = "camelCase")]
 pub struct FocusedWindowOutput {
   pub title: String,
-  pub icon: Option<usize>,
+  pub icon: String,
 }
 
 pub struct FocusedWindowProvider {
@@ -56,12 +56,13 @@ unsafe extern "system" fn win_event_proc(
   _dwEventThread: u32,
   _dwmsEventTime: u32,
 ) {
-  if let Some(title) = FocusedWindowProvider::get_foreground_window_title()
-  {
-    println!("Focused window title: {}", title);
-    let icon = FocusedWindowProvider::get_foreground_window_icon(_hwnd);
+  if let (Some(title), Some(icon)) = (
+    FocusedWindowProvider::get_foreground_window_title(),
+    FocusedWindowProvider::get_foreground_window_icon(_hwnd),
+  ) {
+    println!("Title: {} Icon: {}", title, icon);
     let emit_results_tx = PROVIDER_TX.get().clone().unwrap();
-    let output = FocusedWindowOutput { title, icon: None };
+    let output = FocusedWindowOutput { title, icon };
     if let Err(err) = emit_results_tx
       .blocking_send(Ok(ProviderOutput::FocusedWindow(output)).into())
     {
@@ -137,7 +138,7 @@ impl FocusedWindowProvider {
     }
   }
 
-  fn get_foreground_window_icon(hwnd: HWND) -> Option<usize> {
+  fn get_foreground_window_icon(hwnd: HWND) -> Option<String> {
     unsafe {
       // Attempt to get the large icon first
       let hicon = SendMessageW(
@@ -238,13 +239,8 @@ impl FocusedWindowProvider {
               pixels[i * 4 + 3] = a; // Set alpha
             }
 
-            // b64 requires 4/3 of the initial data to encode
-            // +2 to account for partial bytes
-            let required_size = (pixels.len() + 2) / 3 * 4;
-            let mut output_buf = vec![0u8; required_size];
-            let b64_image = general_purpose::STANDARD
-              .encode_slice(&pixels, &mut output_buf)
-              .expect("Error encoding focused window icon to base64");
+            let b64_image = BASE64_STANDARD.encode(&pixels);
+            println!("Base64 Encoded Image: {}", b64_image);
 
             // Clean up bitmap
             let _ = DeleteObject(hbitmap);
