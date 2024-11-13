@@ -23,6 +23,7 @@ pub fn create_app_bar(
     right: position.x + size.width,
     bottom: position.y + size.height,
   };
+  info!("Creating app bar with rect: {:?}", rect.clone());
 
   let edge = match edge {
     DockEdge::Left => ABE_LEFT,
@@ -44,14 +45,32 @@ pub fn create_app_bar(
     bail!("Failed to register new app bar.");
   }
 
+  // Query to get the adjusted position. This only adjusts the edges of the
+  // rect that have an appbar on them.
+  // e.g. { left: 0, top: 0, right: 1920, bottom: 40 }
+  // -> { left: 0, top: 80, right: 1920, bottom: 40 } (top edge adjusted)
   if unsafe { SHAppBarMessage(ABM_QUERYPOS, &mut data) } == 0 {
     bail!("Failed to query for app bar position.");
   }
 
-  // Calculate the adjusted position directly from data.rc.
-  let adjusted_position = PhysicalPosition::new(
-    position.x + (data.rc.left - rect.left) + (data.rc.right - rect.right),
-    position.y + (data.rc.top - rect.top) + (data.rc.bottom - rect.bottom),
+  let adjusted_position = PhysicalPosition::new(data.rc.left, data.rc.top);
+
+  // should be original width and height, but minus the adjusted position
+  // delta if xxxx.
+  let adjusted_size = PhysicalSize::new(
+    data.rc.right - data.rc.left,
+    data.rc.bottom - data.rc.top,
+  );
+
+  info!("asdf {:?}", data.rc);
+  info!(
+    "Adjusting app bar position from {:?} to {:?}.",
+    position, adjusted_position
+  );
+
+  info!(
+    "Adjusting app bar size from {:?} to {:?}.",
+    size, adjusted_size
   );
 
   // Update the rect with the adjusted position while keeping the original
@@ -70,7 +89,7 @@ pub fn create_app_bar(
 
   info!("Successfully registered appbar with rect: {:?}", data.rc);
 
-  Ok((size, adjusted_position))
+  Ok((adjusted_size, adjusted_position))
 }
 
 /// Deallocate the app bar for given window handle.
