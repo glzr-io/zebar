@@ -11,24 +11,30 @@ import {
   Tooltip,
   TooltipTrigger,
 } from '@glzr/components';
-import { IconTrash } from '@tabler/icons-solidjs';
+import { IconAlertTriangle, IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
-import { createEffect, on } from 'solid-js';
+import { batch, createEffect, on, Show } from 'solid-js';
 import { WidgetConfig } from 'zebar';
 
 export interface WidgetConfigFormProps {
   config: WidgetConfig;
+  configPath: string;
   onChange: (config: WidgetConfig) => void;
 }
 
 export function WidgetConfigForm(props: WidgetConfigFormProps) {
   const configForm = createForm<WidgetConfig>(props.config);
 
-  // Update the form when the incoming config changes.
+  // Update the form when the config is different.
   createEffect(
     on(
-      () => props.config,
-      config => configForm.setValue(config),
+      () => props.configPath,
+      () => {
+        configForm.unsetDirty();
+        configForm.unsetTouched();
+        configForm.setValue(props.config);
+      },
+      { defer: true },
     ),
   );
 
@@ -57,11 +63,10 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
         monitorSelection: {
           type: 'all',
         },
-        reserveSpace: {
+        dockToEdge: {
           enabled: false,
           edge: null,
-          thickness: null,
-          offset: null,
+          windowMargin: '0px',
         },
       },
     ]);
@@ -71,6 +76,27 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
     configForm.setFieldValue('presets', presets =>
       presets.filter((_, index) => index !== targetIndex),
     );
+  }
+
+  function anchorToEdges(
+    anchor: string,
+  ): ('top' | 'left' | 'right' | 'bottom')[] {
+    switch (anchor) {
+      case 'top_left':
+        return ['top', 'left'];
+      case 'top_center':
+        return ['top'];
+      case 'top_right':
+        return ['top', 'right'];
+      case 'center':
+        return [];
+      case 'bottom_left':
+        return ['bottom', 'left'];
+      case 'bottom_center':
+        return ['bottom'];
+      case 'bottom_right':
+        return ['bottom', 'right'];
+    }
   }
 
   return (
@@ -216,6 +242,23 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                         ] as const
                       }
                       {...inputProps()}
+                      onChange={(value: any) => {
+                        batch(() => {
+                          inputProps().onChange(value);
+
+                          // Dock edges depend on the anchor point. Change
+                          // to first valid edge for given anchor point.
+                          if (
+                            configForm.value.presets[index].dockToEdge
+                              .edge !== null
+                          ) {
+                            configForm.setFieldValue(
+                              `presets.${index}.dockToEdge.edge`,
+                              anchorToEdges(value)[0] ?? null,
+                            );
+                          }
+                        });
+                      }}
                     />
                   )}
                 </Field>
@@ -289,71 +332,111 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 </Field>
               </div>
 
-              <h2 class="text-md font-semibold pt-4">Reserve space</h2>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div class="flex justify-between">
                 <Field
                   of={configForm}
-                  path={`presets.${index}.reserveSpace.enabled`}
+                  path={`presets.${index}.dockToEdge.enabled`}
                 >
                   {inputProps => (
                     <SwitchField
-                      id={`reserve-space-${index}`}
-                      label="Enabled"
+                      id={`dock-enabled-${index}`}
+                      class="flex flex-wrap items-center gap-x-4 [&>:last-child]:w-full"
+                      label="Dock to edge (Windows-only)"
+                      description="Whether to dock the widget to the monitor edge and reserve screen space for it."
                       {...inputProps()}
                     />
                   )}
                 </Field>
 
-                <Field
-                  of={configForm}
-                  path={`presets.${index}.reserveSpace.edge`}
+                <Show
+                  when={
+                    configForm.value.presets[index].dockToEdge.enabled &&
+                    configForm.value.presets[index].anchor === 'center'
+                  }
                 >
-                  {inputProps => (
-                    <SelectField
-                      id={`reserve-space-edge-${index}`}
-                      label="Edge"
-                      options={
-                        [
-                          { value: 'top', label: 'Top' },
-                          { value: 'bottom', label: 'Bottom' },
-                          { value: 'left', label: 'Left' },
-                          { value: 'right', label: 'Right' },
-                        ] as const
-                      }
-                      {...inputProps()}
+                  <Tooltip openDelay={0} closeDelay={0}>
+                    <TooltipTrigger
+                      as={(props: any) => (
+                        <IconAlertTriangle
+                          class="size-5 shrink-0"
+                          {...props}
+                        />
+                      )}
                     />
-                  )}
-                </Field>
-
-                {/* TODO: Change to px/percent input. */}
-                <Field
-                  of={configForm}
-                  path={`presets.${index}.reserveSpace.thickness`}
-                >
-                  {inputProps => (
-                    <TextField
-                      id={`reserve-space-thickness-${index}`}
-                      label="Thickness"
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
-
-                {/* TODO: Change to px/percent input. */}
-                <Field
-                  of={configForm}
-                  path={`presets.${index}.reserveSpace.offset`}
-                >
-                  {inputProps => (
-                    <TextField
-                      id={`reserve-space-offset-${index}`}
-                      label="Offset"
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
+                    <TooltipContent>
+                      Dock to edge has no effect with a centered anchor
+                      point.
+                    </TooltipContent>
+                  </Tooltip>
+                </Show>
               </div>
+
+              {configForm.value.presets[index].dockToEdge.enabled &&
+                configForm.value.presets[index].anchor !== 'center' && (
+                  <>
+                    <Field
+                      of={configForm}
+                      path={`presets.${index}.dockToEdge.edge`}
+                    >
+                      {inputProps => (
+                        <>
+                          <SwitchField
+                            id={`dock-edge-switch-${index}`}
+                            label="Dock to nearest detected edge"
+                            class="flex items-center gap-x-4"
+                            onBlur={() => inputProps().onBlur()}
+                            onChange={enabled =>
+                              inputProps().onChange(
+                                enabled
+                                  ? null
+                                  : anchorToEdges(
+                                      configForm.value.presets[index]
+                                        .anchor,
+                                    )[0] ?? null,
+                              )
+                            }
+                            value={inputProps().value === null}
+                          />
+
+                          <Show when={inputProps().value}>
+                            <SelectField
+                              id={`dock-edge-dropdown-${index}`}
+                              label="Edge"
+                              options={(
+                                [
+                                  { value: 'top', label: 'Top' },
+                                  { value: 'bottom', label: 'Bottom' },
+                                  { value: 'left', label: 'Left' },
+                                  { value: 'right', label: 'Right' },
+                                ] as const
+                              ).filter(opt =>
+                                anchorToEdges(
+                                  configForm.value.presets[index].anchor,
+                                ).includes(opt.value),
+                              )}
+                              {...inputProps()}
+                            />
+                          </Show>
+                        </>
+                      )}
+                    </Field>
+
+                    {/* TODO: Change to px/percent input. */}
+                    <Field
+                      of={configForm}
+                      path={`presets.${index}.dockToEdge.windowMargin`}
+                    >
+                      {inputProps => (
+                        <TextField
+                          id={`dock-margin-${index}`}
+                          label="Margin after window"
+                          description="Margin to reserve after the widget window. Can be positive or negative."
+                          {...inputProps()}
+                        />
+                      )}
+                    </Field>
+                  </>
+                )}
             </div>
           ))}
 

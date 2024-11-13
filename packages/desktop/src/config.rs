@@ -137,7 +137,7 @@ pub struct WidgetPlacement {
 
   /// How to reserve space for the widget.
   #[serde(default)]
-  pub reserve_space: ReserveSpaceConfig,
+  pub dock_to_edge: DockConfig,
 }
 
 #[derive(
@@ -167,40 +167,33 @@ pub enum MonitorSelection {
   Name(String),
 }
 
-fn no() -> bool {
-  false
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct ReserveSpaceConfig {
-  /// Whether to reserve space for the widget.
-  #[serde(default = "no")]
+pub struct DockConfig {
+  /// Whether to dock the widget to the monitor edge and reserve screen
+  /// space for it.
+  #[serde(default = "default_bool::<false>")]
   pub enabled: bool,
 
-  /// Edge to reserve space on.
-  pub edge: Option<WidgetEdge>,
+  /// Edge to dock the widget to.
+  pub edge: Option<DockEdge>,
 
-  /// Thickness of the reserved space.
-  pub thickness: Option<LengthValue>,
-
-  /// Offset from the edge.
-  pub offset: Option<LengthValue>,
+  /// Margin to reserve after the widget window. Can be positive or
+  /// negative.
+  #[serde(default)]
+  pub window_margin: LengthValue,
 }
 
-#[derive(
-  Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Default,
-)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum WidgetEdge {
-  #[default]
+pub enum DockEdge {
   Top,
   Bottom,
   Left,
   Right,
 }
 
-impl WidgetEdge {
+impl DockEdge {
   pub fn is_horizontal(&self) -> bool {
     matches!(self, Self::Top | Self::Bottom)
   }
@@ -635,6 +628,11 @@ fn is_app_installed(app_name: &str) -> bool {
       .map(|output| output.status.success())
       .unwrap_or(false)
   }
+}
+
+/// Helper function for setting a default value for a boolean field.
+const fn default_bool<const V: bool>() -> bool {
+  V
 }
 
 /// Helper function for setting the default value for a

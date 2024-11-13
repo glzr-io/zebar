@@ -1,5 +1,6 @@
 use std::{
   collections::HashMap,
+  i32,
   path::PathBuf,
   sync::{
     atomic::{AtomicU32, Ordering},
@@ -19,12 +20,17 @@ use tokio::{
 };
 use tracing::{error, info};
 
+#[cfg(target_os = "macos")]
+use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
-use crate::config::WidgetEdge;
+use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
-  common::{PathExt, WindowExt},
-  config::{AnchorPoint, Config, WidgetConfig, WidgetPlacement},
-  monitor_state::MonitorState,
+  common::PathExt,
+  config::{
+    AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
+    WidgetPlacement,
+  },
+  monitor_state::{Monitor, MonitorState},
 };
 
 /// Manages the creation of Zebar widgets.
@@ -66,6 +72,11 @@ pub struct WidgetState {
   /// Used as the Tauri window label.
   pub id: String,
 
+  /// Handle to the underlying Tauri window.
+  ///
+  /// This is only available on Windows.
+  pub window_handle: Option<isize>,
+
   /// User-defined config for the widget.
   pub config: WidgetConfig,
 
@@ -86,13 +97,55 @@ pub enum WidgetOpenOptions {
   Preset(String),
 }
 
-struct Coordinates {
+struct WidgetCoordinates {
   size: PhysicalSize<i32>,
   position: PhysicalPosition<i32>,
-  monitor_size: PhysicalSize<i32>,
-  scale_factor: f32,
-  anchor: AnchorPoint,
   offset: PhysicalPosition<i32>,
+  anchor: AnchorPoint,
+  monitor: Monitor,
+}
+
+impl WidgetCoordinates {
+  /// Gets which monitor edge (top, bottom, left, right) the widget is
+  /// closest to.
+  ///
+  /// This is determined by dividing the monitor into four triangular
+  /// quadrants (forming an "X") and checking which quadrant contains the
+  /// widget's center point.
+  fn closest_edge(&self) -> DockEdge {
+    let widget_center = PhysicalPosition::new(
+      self.position.x + (self.size.width / 2),
+      self.position.y + (self.size.height / 2),
+    );
+
+    let monitor_center = PhysicalPosition::new(
+      self.monitor.x + (self.monitor.width as i32 / 2),
+      self.monitor.y + (self.monitor.height as i32 / 2),
+    );
+
+    // Get relative position from monitor center.
+    let delta_x = widget_center.x - monitor_center.x;
+    let delta_y = widget_center.y - monitor_center.y;
+
+    match delta_x.abs() > delta_y.abs() {
+      // Widget is in left or right triangle.
+      true => {
+        if delta_x > 0 {
+          DockEdge::Right
+        } else {
+          DockEdge::Left
+        }
+      }
+      // Widget is in top or bottom triangle.
+      false => {
+        if delta_y > 0 {
+          DockEdge::Bottom
+        } else {
+          DockEdge::Top
+        }
+      }
+    }
+  }
 }
 
 impl WidgetFactory {
@@ -174,15 +227,6 @@ impl WidgetFactory {
     };
 
     for coordinates in self.widget_coordinates(placement).await {
-      let Coordinates {
-        size,
-        position,
-        monitor_size,
-        scale_factor,
-        anchor,
-        offset,
-      } = coordinates;
-
       let new_count =
         self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
 
@@ -227,6 +271,17 @@ impl WidgetFactory {
       .resizable(widget_config.resizable)
       .build()?;
 
+      let mut size = coordinates.size;
+      let mut position = coordinates.position;
+
+      if placement.dock_to_edge.enabled {
+        (size, position) = self.dock_to_edge(
+          &window,
+          &placement.dock_to_edge,
+          &coordinates,
+        )?;
+      }
+
       info!("Positioning widget to {:?} {:?}", size, position);
       let _ = window.set_size(size);
       let _ = window.set_position(position);
@@ -239,8 +294,22 @@ impl WidgetFactory {
         let _ = window.set_position(position);
       }
 
+      let window_handle = {
+        #[cfg(target_os = "windows")]
+        {
+          let handle =
+            window.hwnd().context("Failed to get window handle.")?;
+
+          Some(handle.0 as isize)
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        None
+      };
+
       let state = WidgetState {
         id: widget_id.clone(),
+        window_handle,
         config: widget_config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
@@ -252,104 +321,13 @@ impl WidgetFactory {
         serde_json::to_string(&state)?
       ));
 
+      // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
+      // so we also set the window as a tool window.
       #[cfg(target_os = "windows")]
-      {
-        let window = window.as_ref().window();
-
-        // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
-        // so we also set the window as a tool window.
-        let _ = window.set_tool_window(!widget_config.shown_in_taskbar);
-
-        // Reserve space for the app bar if enabled.
-        if placement.reserve_space.enabled {
-          let edge = if let Some(edge) = placement.reserve_space.edge {
-            edge
-          } else {
-            // default to whichever edge the widget appears to be on
-            let widget_horizontal = size.width > size.height;
-
-            match (anchor, widget_horizontal) {
-              (AnchorPoint::Center, true) => WidgetEdge::Top,
-              (AnchorPoint::Center, false) => WidgetEdge::Left,
-              (AnchorPoint::TopCenter, _) => WidgetEdge::Top,
-              (AnchorPoint::CenterLeft, _) => WidgetEdge::Left,
-              (AnchorPoint::CenterRight, _) => WidgetEdge::Right,
-              (AnchorPoint::BottomCenter, _) => WidgetEdge::Bottom,
-              (AnchorPoint::TopLeft, true) => WidgetEdge::Top,
-              (AnchorPoint::TopLeft, false) => WidgetEdge::Left,
-              (AnchorPoint::TopRight, true) => WidgetEdge::Top,
-              (AnchorPoint::TopRight, false) => WidgetEdge::Right,
-              (AnchorPoint::BottomLeft, true) => WidgetEdge::Bottom,
-              (AnchorPoint::BottomLeft, false) => WidgetEdge::Left,
-              (AnchorPoint::BottomRight, true) => WidgetEdge::Bottom,
-              (AnchorPoint::BottomRight, false) => WidgetEdge::Right,
-            }
-          };
-
-          // total height of monitor perpendicular to the edge
-          let total_height = if edge.is_horizontal() {
-            monitor_size.height
-          } else {
-            monitor_size.width
-          };
-
-          let thickness =
-            if let Some(thickness) = &placement.reserve_space.thickness {
-              thickness.to_px_scaled(total_height, scale_factor)
-            } else {
-              // default to whichever dimension of widget is smaller
-              // if this is not desired the user should specify a thickness
-              // anyway
-              if size.width > size.height {
-                size.height
-              } else {
-                size.width
-              }
-            };
-
-          let offset =
-            if let Some(offset) = &placement.reserve_space.offset {
-              offset.to_px_scaled(total_height, scale_factor)
-            } else {
-              // default to widget position offset
-              match edge {
-                WidgetEdge::Top => offset.y,
-                WidgetEdge::Bottom => -offset.y,
-                WidgetEdge::Left => offset.x,
-                WidgetEdge::Right => -offset.x,
-              }
-            };
-
-          let reserve_size = if edge.is_horizontal() {
-            PhysicalSize::new(monitor_size.width, thickness)
-          } else {
-            PhysicalSize::new(thickness, monitor_size.height)
-          };
-
-          let reserve_position = match edge {
-            WidgetEdge::Top => PhysicalPosition::new(0, offset),
-            WidgetEdge::Bottom => PhysicalPosition::new(
-              0,
-              monitor_size.height - thickness - offset,
-            ),
-            WidgetEdge::Left => PhysicalPosition::new(offset, 0),
-            WidgetEdge::Right => PhysicalPosition::new(
-              monitor_size.width - thickness - offset,
-              0,
-            ),
-          };
-
-          tracing::info!(
-            "Reserving app bar space on {:?}: {:?} {:?}",
-            edge,
-            reserve_size,
-            reserve_position
-          );
-
-          let _ =
-            window.allocate_app_bar(reserve_size, reserve_position, edge);
-        }
-      }
+      let _ = window
+        .as_ref()
+        .window()
+        .set_tool_window(!widget_config.shown_in_taskbar);
 
       // On MacOS, we need to set the window as above the menu bar for it
       // to truly be always on top.
@@ -370,6 +348,130 @@ impl WidgetFactory {
     }
 
     Ok(())
+  }
+
+  /// Dock the widget window to a given edge. This might result in the
+  /// window being resized or repositioned (e.g. if a window is already
+  /// docked to the given edge).
+  ///
+  /// Returns the new window size and position.
+  fn dock_to_edge(
+    &self,
+    window: &tauri::WebviewWindow,
+    dock_config: &DockConfig,
+    coords: &WidgetCoordinates,
+  ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
+    #[cfg(not(target_os = "windows"))]
+    {
+      return Ok((coords.size, coords.position));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+      // Disallow docking with a centered anchor point. Doesn't make sense.
+      if coords.anchor == AnchorPoint::Center {
+        return Ok((coords.size, coords.position));
+      }
+
+      let edge = dock_config.edge.unwrap_or_else(|| coords.closest_edge());
+
+      // Offset from the monitor edge to the window.
+      let offset = match edge {
+        DockEdge::Top => coords.offset.y,
+        DockEdge::Bottom => -coords.offset.y,
+        DockEdge::Left => coords.offset.x,
+        DockEdge::Right => -coords.offset.x,
+      };
+
+      // Length of the window perpendicular to the monitor edge.
+      let window_length = if edge.is_horizontal() {
+        coords.size.height
+      } else {
+        coords.size.width
+      };
+
+      // Margin to reserve *after* the window. Can be negative, but should
+      // not be smaller than the size of the window.
+      let window_margin = dock_config
+        .window_margin
+        .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
+        .clamp(-coords.size.height, i32::MAX);
+
+      let monitor_length = if edge.is_horizontal() {
+        coords.monitor.height
+      } else {
+        coords.monitor.width
+      };
+
+      // Prevent the reserved amount from exceeding 50% of the monitor
+      // size. This maximum is arbitrary but should be sufficient for
+      // most cases.
+      let reserved_length = (offset + window_length + window_margin)
+        .clamp(0, monitor_length as i32 / 2);
+
+      let reserve_size = if edge.is_horizontal() {
+        PhysicalSize::new(coords.monitor.width as i32, reserved_length)
+      } else {
+        PhysicalSize::new(reserved_length, coords.monitor.height as i32)
+      };
+
+      let reserve_position = match edge {
+        DockEdge::Top | DockEdge::Left => {
+          PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
+        }
+        DockEdge::Bottom => PhysicalPosition::new(
+          coords.monitor.x,
+          coords.monitor.y + coords.monitor.height as i32
+            - reserved_length,
+        ),
+        DockEdge::Right => PhysicalPosition::new(
+          coords.monitor.x + coords.monitor.width as i32 - reserved_length,
+          coords.monitor.y,
+        ),
+      };
+
+      let (allocated_size, allocated_position) = window
+        .as_ref()
+        .window()
+        .allocate_app_bar(reserve_size, reserve_position, edge)?;
+
+      // Adjust the size to account for the window margin.
+      let final_size = if edge.is_horizontal() {
+        PhysicalSize::new(
+          allocated_size.width,
+          allocated_size.height.saturating_sub(window_margin.abs()),
+        )
+      } else {
+        PhysicalSize::new(
+          allocated_size.width.saturating_sub(window_margin.abs()),
+          allocated_size.height,
+        )
+      };
+
+      // Adjust position if we're docked to bottom or right edge to account
+      // for the size reduction.
+      let final_position = match edge {
+        DockEdge::Bottom => PhysicalPosition::new(
+          allocated_position.x,
+          allocated_position.y
+            + (allocated_size.height - final_size.height),
+        ),
+        DockEdge::Right => PhysicalPosition::new(
+          allocated_position.x + (allocated_size.width - final_size.width),
+          allocated_position.y,
+        ),
+        _ => allocated_position,
+      };
+
+      tracing::info!(
+        "Docked widget to edge '{:?}' with size {:?} and position {:?}.",
+        edge,
+        final_size,
+        final_position
+      );
+
+      Ok((final_size, final_position))
+    }
   }
 
   /// Opens presets that are configured to be launched on startup.
@@ -408,25 +510,27 @@ impl WidgetFactory {
     let widget_states = self.widget_states.clone();
     let close_tx = self.close_tx.clone();
 
-    #[cfg(target_os = "windows")]
-    let window_handle =
-      window.hwnd().context("Failed to get window handle.")?.0 as _;
-
     window.on_window_event(move |event| {
       if let WindowEvent::Destroyed = event {
         let widget_states = widget_states.clone();
         let close_tx = close_tx.clone();
         let widget_id = widget_id.clone();
 
-        // Ensure appbar space is deallocated on close.
-        #[cfg(target_os = "windows")]
-        crate::common::remove_app_bar(window_handle);
-
         task::spawn(async move {
           let mut widget_states = widget_states.lock().await;
 
           // Remove the widget state.
-          let _ = widget_states.remove(&widget_id);
+          let state = widget_states.remove(&widget_id);
+
+          // Ensure appbar space is deallocated on close.
+          #[cfg(target_os = "windows")]
+          {
+            if let Some(window_handle) =
+              state.and_then(|state| state.window_handle)
+            {
+              let _ = remove_app_bar(window_handle);
+            }
+          }
 
           // Broadcast the close event.
           if let Err(err) = close_tx.send(widget_id) {
@@ -443,7 +547,7 @@ impl WidgetFactory {
   async fn widget_coordinates(
     &self,
     placement: &WidgetPlacement,
-  ) -> Vec<Coordinates> {
+  ) -> Vec<WidgetCoordinates> {
     let mut coordinates = vec![];
 
     let monitors = self
@@ -513,13 +617,12 @@ impl WidgetFactory {
       let window_position =
         PhysicalPosition::new(anchor_x + offset_x, anchor_y + offset_y);
 
-      coordinates.push(Coordinates {
+      coordinates.push(WidgetCoordinates {
         size: window_size,
         position: window_position,
-        monitor_size: PhysicalSize::new(monitor_width, monitor_height),
-        scale_factor: monitor.scale_factor,
-        anchor: placement.anchor,
         offset: PhysicalPosition::new(offset_x, offset_y),
+        monitor: monitor.clone(),
+        anchor: placement.anchor,
       });
     }
 
@@ -602,10 +705,19 @@ impl WidgetFactory {
       widget_ids
         .iter()
         .filter_map(|id| widget_states.remove(id))
+        .inspect(|widget_state| {
+          // Need to clean up any appbars prior to restarting.
+          #[cfg(target_os = "windows")]
+          {
+            if let Some(window_handle) = widget_state.window_handle {
+              let _ = remove_app_bar(window_handle);
+            }
+          }
+        })
         .collect::<Vec<_>>()
     };
 
-    for widget_state in changed_states {
+    for widget_state in &changed_states {
       info!(
         "Relaunching widget #{} from {}",
         widget_state.id,
