@@ -54,48 +54,26 @@ pub fn create_app_bar(
 
   let adjusted_position = PhysicalPosition::new(data.rc.left, data.rc.top);
 
-  // Size has changed if the edge that is not being docked to has been
-  // adjusted.
-  let adjusted_size = match edge {
-    DockEdge::Top => PhysicalSize::new(
-      size.width
-        - (rect.right - data.rc.right)
-        - (rect.left - data.rc.left),
-      size.height - (rect.bottom - data.rc.bottom),
-    ),
-    DockEdge::Bottom => PhysicalSize::new(
-      size.width
-        - (rect.right - data.rc.right)
-        - (rect.left - data.rc.left),
-      size.height - (rect.top - data.rc.top),
-    ),
-    DockEdge::Left => PhysicalSize::new(
-      size.width - (rect.right - data.rc.right),
-      size.height
-        - (rect.bottom - data.rc.bottom)
-        - (rect.top - data.rc.top),
-    ),
-    DockEdge::Right => PhysicalSize::new(
-      size.width - (rect.left - data.rc.left),
-      size.height
-        - (rect.bottom - data.rc.bottom)
-        - (rect.top - data.rc.top),
-    ),
+  let width_delta = match edge {
+    DockEdge::Left => rect.right - data.rc.right,
+    DockEdge::Right => rect.left - data.rc.left,
+    _ => (rect.right - data.rc.right) - (rect.left - data.rc.left),
   };
 
-  info!("asdf {:?}", data.rc);
-  info!(
-    "Adjusting app bar position from {:?} to {:?}.",
-    position, adjusted_position
+  let height_delta = match edge {
+    DockEdge::Top => rect.bottom - data.rc.bottom,
+    DockEdge::Bottom => rect.top - data.rc.top,
+    _ => (rect.bottom - data.rc.bottom) - (rect.top - data.rc.top),
+  };
+
+  // Size has changed if the edge that is not being docked has been
+  // adjusted by ABM_QUERYPOS. For example, if the top edge is docked, then
+  // diffs in the left and right edges are the size changes.
+  let adjusted_size = PhysicalSize::new(
+    size.width - width_delta,
+    size.height - height_delta,
   );
 
-  info!(
-    "Adjusting app bar size from {:?} to {:?}.",
-    size, adjusted_size
-  );
-
-  // Update the rect with the adjusted position while keeping the original
-  // size.
   data.rc = RECT {
     left: adjusted_position.x,
     top: adjusted_position.y,
