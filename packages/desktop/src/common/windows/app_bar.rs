@@ -23,20 +23,19 @@ pub fn create_app_bar(
     right: position.x + size.width,
     bottom: position.y + size.height,
   };
-  info!("Creating app bar with rect: {:?}", rect.clone());
 
-  let edge = match edge {
-    DockEdge::Left => ABE_LEFT,
-    DockEdge::Top => ABE_TOP,
-    DockEdge::Right => ABE_RIGHT,
-    DockEdge::Bottom => ABE_BOTTOM,
-  };
+  info!("Creating app bar with initial rect: {:?}", rect);
 
   let mut data = APPBARDATA {
     cbSize: std::mem::size_of::<APPBARDATA>() as u32,
     hWnd: HWND(window_handle as _),
     uCallbackMessage: 0,
-    uEdge: edge,
+    uEdge: match edge {
+      DockEdge::Left => ABE_LEFT,
+      DockEdge::Top => ABE_TOP,
+      DockEdge::Right => ABE_RIGHT,
+      DockEdge::Bottom => ABE_BOTTOM,
+    },
     rc: rect.clone(),
     ..Default::default()
   };
@@ -55,12 +54,34 @@ pub fn create_app_bar(
 
   let adjusted_position = PhysicalPosition::new(data.rc.left, data.rc.top);
 
-  // should be original width and height, but minus the adjusted position
-  // delta if xxxx.
-  let adjusted_size = PhysicalSize::new(
-    data.rc.right - data.rc.left,
-    data.rc.bottom - data.rc.top,
-  );
+  // Size has changed if the edge that is not being docked to has been
+  // adjusted.
+  let adjusted_size = match edge {
+    DockEdge::Top => PhysicalSize::new(
+      size.width
+        - (rect.right - data.rc.right)
+        - (rect.left - data.rc.left),
+      size.height - (rect.bottom - data.rc.bottom),
+    ),
+    DockEdge::Bottom => PhysicalSize::new(
+      size.width
+        - (rect.right - data.rc.right)
+        - (rect.left - data.rc.left),
+      size.height - (rect.top - data.rc.top),
+    ),
+    DockEdge::Left => PhysicalSize::new(
+      size.width - (rect.right - data.rc.right),
+      size.height
+        - (rect.bottom - data.rc.bottom)
+        - (rect.top - data.rc.top),
+    ),
+    DockEdge::Right => PhysicalSize::new(
+      size.width - (rect.left - data.rc.left),
+      size.height
+        - (rect.bottom - data.rc.bottom)
+        - (rect.top - data.rc.top),
+    ),
+  };
 
   info!("asdf {:?}", data.rc);
   info!(
