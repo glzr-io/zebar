@@ -6,7 +6,9 @@ use super::{
   network::NetworkOutput, weather::WeatherOutput,
 };
 #[cfg(windows)]
-use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
+use super::{
+  keyboard::KeyboardOutput, komorebi::KomorebiOutput, media::MediaOutput,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
@@ -17,6 +19,8 @@ pub enum ProviderOutput {
   Ip(IpOutput),
   #[cfg(windows)]
   Komorebi(KomorebiOutput),
+  #[cfg(windows)]
+  Media(MediaOutput),
   Memory(MemoryOutput),
   Disk(DiskOutput),
   Network(NetworkOutput),

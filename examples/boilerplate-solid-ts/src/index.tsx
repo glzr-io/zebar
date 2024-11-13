@@ -9,6 +9,7 @@ const providers = zebar.createProviderGroup({
   battery: { type: 'battery' },
   memory: { type: 'memory' },
   weather: { type: 'weather' },
+  media: { type: 'media' },
 });
 
 render(() => <App />, document.getElementById('root')!);
@@ -20,6 +21,7 @@ function App() {
 
   return (
     <div class="app">
+      <div class="chip">Media: {output.media?.artist}</div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">
         Battery charge: {output.battery?.chargePercent}
