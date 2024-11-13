@@ -239,8 +239,21 @@ impl FocusedWindowProvider {
               pixels[i * 4 + 3] = a; // Set alpha
             }
 
-            let b64_image = BASE64_STANDARD.encode(&pixels);
-            println!("Base64 Encoded Image: {}", b64_image);
+            let image_buffer: image::ImageBuffer<
+              image::Rgba<u8>,
+              Vec<u8>,
+            > = image::ImageBuffer::from_raw(
+              width as u32,
+              height as u32,
+              pixels,
+            )
+            .unwrap();
+            let mut png_data = Vec::new();
+            let mut cursor = std::io::Cursor::new(&mut png_data);
+            image_buffer
+              .write_to(&mut cursor, image::ImageFormat::Png)
+              .unwrap();
+            let b64_image = BASE64_STANDARD.encode(&png_data);
 
             // Clean up bitmap
             let _ = DeleteObject(hbitmap);
