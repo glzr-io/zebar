@@ -424,18 +424,46 @@ impl WidgetFactory {
       ),
     };
 
+    let (allocated_size, allocated_position) = window
+      .as_ref()
+      .window()
+      .allocate_app_bar(reserve_size, reserve_position, edge)?;
+
+    // Adjust the size to account for the window margin.
+    let final_size = if edge.is_horizontal() {
+      PhysicalSize::new(
+        allocated_size.width,
+        allocated_size.height.saturating_sub(window_margin.abs()),
+      )
+    } else {
+      PhysicalSize::new(
+        allocated_size.width.saturating_sub(window_margin.abs()),
+        allocated_size.height,
+      )
+    };
+
+    // Adjust position if we're docked to bottom or right edge to account
+    // for the size reduction.
+    let final_position = match edge {
+      DockEdge::Bottom => PhysicalPosition::new(
+        allocated_position.x,
+        allocated_position.y + (allocated_size.height - final_size.height),
+      ),
+      DockEdge::Right => PhysicalPosition::new(
+        allocated_position.x + (allocated_size.width - final_size.width),
+        allocated_position.y,
+      ),
+      _ => allocated_position,
+    };
+
     tracing::info!(
-      "Docking widget to edge '{:?}' with size {:?} and position {:?}.",
+      "Docked widget to edge '{:?}' with size {:?} and position {:?}.",
       edge,
-      reserve_size,
-      reserve_position
+      final_size,
+      final_position
     );
 
-    window.as_ref().window().allocate_app_bar(
-      reserve_size,
-      reserve_position,
-      edge,
-    )
+    Ok((final_size, final_position))
   }
 
   /// Opens presets that are configured to be launched on startup.
