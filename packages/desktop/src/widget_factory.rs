@@ -21,14 +21,12 @@ use tokio::{
 use tracing::{error, info};
 
 #[cfg(target_os = "windows")]
-use crate::{
-  common::windows::{remove_app_bar, WindowExtWindows},
-  config::DockEdge,
-};
+use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
   common::PathExt,
   config::{
-    AnchorPoint, Config, DockConfig, WidgetConfig, WidgetPlacement,
+    AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
+    WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
 };
@@ -274,15 +272,12 @@ impl WidgetFactory {
       let mut size = coordinates.size;
       let mut position = coordinates.position;
 
-      #[cfg(target_os = "windows")]
-      {
-        if placement.dock_to_edge.enabled {
-          (size, position) = self.dock_to_edge(
-            &window,
-            &placement.dock_to_edge,
-            &coordinates,
-          )?;
-        }
+      if placement.dock_to_edge.enabled {
+        (size, position) = self.dock_to_edge(
+          &window,
+          &placement.dock_to_edge,
+          &coordinates,
+        )?;
       }
 
       info!("Positioning widget to {:?} {:?}", size, position);
@@ -364,106 +359,117 @@ impl WidgetFactory {
     dock_config: &DockConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
-    // Disallow docking with a centered anchor point. Doesn't make sense.
-    if coords.anchor == AnchorPoint::Center {
+    #[cfg(not(target_os = "windows"))]
+    {
       return Ok((coords.size, coords.position));
     }
 
-    let edge = dock_config.edge.unwrap_or_else(|| coords.closest_edge());
-
-    // Offset from the monitor edge to the window.
-    let offset = match edge {
-      DockEdge::Top => coords.offset.y,
-      DockEdge::Bottom => -coords.offset.y,
-      DockEdge::Left => coords.offset.x,
-      DockEdge::Right => -coords.offset.x,
-    };
-
-    // Length of the window perpendicular to the monitor edge.
-    let window_length = if edge.is_horizontal() {
-      coords.size.height
-    } else {
-      coords.size.width
-    };
-
-    // Margin to reserve *after* the window. Can be negative, but should
-    // not be smaller than the size of the window.
-    let window_margin = dock_config
-      .window_margin
-      .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
-      .clamp(-coords.size.height, i32::MAX);
-
-    let monitor_length = if edge.is_horizontal() {
-      coords.monitor.height
-    } else {
-      coords.monitor.width
-    };
-
-    // Prevent the reserved amount from exceeding 50% of the monitor size.
-    // This maximum is arbitrary but should be sufficient for most cases.
-    let reserved_length = (offset + window_length + window_margin)
-      .clamp(0, monitor_length as i32 / 2);
-
-    let reserve_size = if edge.is_horizontal() {
-      PhysicalSize::new(coords.monitor.width as i32, reserved_length)
-    } else {
-      PhysicalSize::new(reserved_length, coords.monitor.height as i32)
-    };
-
-    let reserve_position = match edge {
-      DockEdge::Top | DockEdge::Left => {
-        PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
+    #[cfg(target_os = "windows")]
+    {
+      // Disallow docking with a centered anchor point. Doesn't make sense.
+      if coords.anchor == AnchorPoint::Center {
+        return Ok((coords.size, coords.position));
       }
-      DockEdge::Bottom => PhysicalPosition::new(
-        coords.monitor.x,
-        coords.monitor.y + coords.monitor.height as i32 - reserved_length,
-      ),
-      DockEdge::Right => PhysicalPosition::new(
-        coords.monitor.x + coords.monitor.width as i32 - reserved_length,
-        coords.monitor.y,
-      ),
-    };
 
-    let (allocated_size, allocated_position) = window
-      .as_ref()
-      .window()
-      .allocate_app_bar(reserve_size, reserve_position, edge)?;
+      let edge = dock_config.edge.unwrap_or_else(|| coords.closest_edge());
 
-    // Adjust the size to account for the window margin.
-    let final_size = if edge.is_horizontal() {
-      PhysicalSize::new(
-        allocated_size.width,
-        allocated_size.height.saturating_sub(window_margin.abs()),
-      )
-    } else {
-      PhysicalSize::new(
-        allocated_size.width.saturating_sub(window_margin.abs()),
-        allocated_size.height,
-      )
-    };
+      // Offset from the monitor edge to the window.
+      let offset = match edge {
+        DockEdge::Top => coords.offset.y,
+        DockEdge::Bottom => -coords.offset.y,
+        DockEdge::Left => coords.offset.x,
+        DockEdge::Right => -coords.offset.x,
+      };
 
-    // Adjust position if we're docked to bottom or right edge to account
-    // for the size reduction.
-    let final_position = match edge {
-      DockEdge::Bottom => PhysicalPosition::new(
-        allocated_position.x,
-        allocated_position.y + (allocated_size.height - final_size.height),
-      ),
-      DockEdge::Right => PhysicalPosition::new(
-        allocated_position.x + (allocated_size.width - final_size.width),
-        allocated_position.y,
-      ),
-      _ => allocated_position,
-    };
+      // Length of the window perpendicular to the monitor edge.
+      let window_length = if edge.is_horizontal() {
+        coords.size.height
+      } else {
+        coords.size.width
+      };
 
-    tracing::info!(
-      "Docked widget to edge '{:?}' with size {:?} and position {:?}.",
-      edge,
-      final_size,
-      final_position
-    );
+      // Margin to reserve *after* the window. Can be negative, but should
+      // not be smaller than the size of the window.
+      let window_margin = dock_config
+        .window_margin
+        .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
+        .clamp(-coords.size.height, i32::MAX);
 
-    Ok((final_size, final_position))
+      let monitor_length = if edge.is_horizontal() {
+        coords.monitor.height
+      } else {
+        coords.monitor.width
+      };
+
+      // Prevent the reserved amount from exceeding 50% of the monitor
+      // size. This maximum is arbitrary but should be sufficient for
+      // most cases.
+      let reserved_length = (offset + window_length + window_margin)
+        .clamp(0, monitor_length as i32 / 2);
+
+      let reserve_size = if edge.is_horizontal() {
+        PhysicalSize::new(coords.monitor.width as i32, reserved_length)
+      } else {
+        PhysicalSize::new(reserved_length, coords.monitor.height as i32)
+      };
+
+      let reserve_position = match edge {
+        DockEdge::Top | DockEdge::Left => {
+          PhysicalPosition::new(coords.monitor.x, coords.monitor.y)
+        }
+        DockEdge::Bottom => PhysicalPosition::new(
+          coords.monitor.x,
+          coords.monitor.y + coords.monitor.height as i32
+            - reserved_length,
+        ),
+        DockEdge::Right => PhysicalPosition::new(
+          coords.monitor.x + coords.monitor.width as i32 - reserved_length,
+          coords.monitor.y,
+        ),
+      };
+
+      let (allocated_size, allocated_position) = window
+        .as_ref()
+        .window()
+        .allocate_app_bar(reserve_size, reserve_position, edge)?;
+
+      // Adjust the size to account for the window margin.
+      let final_size = if edge.is_horizontal() {
+        PhysicalSize::new(
+          allocated_size.width,
+          allocated_size.height.saturating_sub(window_margin.abs()),
+        )
+      } else {
+        PhysicalSize::new(
+          allocated_size.width.saturating_sub(window_margin.abs()),
+          allocated_size.height,
+        )
+      };
+
+      // Adjust position if we're docked to bottom or right edge to account
+      // for the size reduction.
+      let final_position = match edge {
+        DockEdge::Bottom => PhysicalPosition::new(
+          allocated_position.x,
+          allocated_position.y
+            + (allocated_size.height - final_size.height),
+        ),
+        DockEdge::Right => PhysicalPosition::new(
+          allocated_position.x + (allocated_size.width - final_size.width),
+          allocated_position.y,
+        ),
+        _ => allocated_position,
+      };
+
+      tracing::info!(
+        "Docked widget to edge '{:?}' with size {:?} and position {:?}.",
+        edge,
+        final_size,
+        final_position
+      );
+
+      Ok((final_size, final_position))
+    }
   }
 
   /// Opens presets that are configured to be launched on startup.

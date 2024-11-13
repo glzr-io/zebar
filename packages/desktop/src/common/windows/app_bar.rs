@@ -44,6 +44,11 @@ pub fn create_app_bar(
     bail!("Failed to register new app bar.");
   }
 
+  // TODO: Ideally we should respond to incoming `ABN_POSCHANGED` messages.
+  // Not responding to these messages causes space to be continually
+  // reserved on hot-reloads in development. This is blocked by #11650.
+  // Ref: https://github.com/tauri-apps/tauri/issues/11650.
+
   // Query to get the adjusted position. This only adjusts the edges of the
   // rect that have an appbar on them.
   // e.g. { left: 0, top: 0, right: 1920, bottom: 40 }

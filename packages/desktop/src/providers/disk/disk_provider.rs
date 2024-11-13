@@ -1,7 +1,7 @@
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use sysinfo::{Disk, Disks};
+use sysinfo::Disks;
 use tokio::sync::Mutex;
 
 use crate::{

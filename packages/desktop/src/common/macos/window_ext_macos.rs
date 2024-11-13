@@ -5,7 +5,7 @@ use cocoa::{
 };
 use tauri::{Runtime, Window};
 
-pub trait WindowExt {
+pub trait WindowExtMacOs {
   fn set_above_menu_bar(&self) -> anyhow::Result<()>;
 }
 
