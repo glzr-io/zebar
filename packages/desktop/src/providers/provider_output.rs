@@ -2,11 +2,12 @@ use serde::Serialize;
 
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, host::HostOutput, ip::IpOutput,
-  media::MediaOutput, memory::MemoryOutput, network::NetworkOutput,
-  weather::WeatherOutput,
+  memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
 };
 #[cfg(windows)]
-use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
+use super::{
+  keyboard::KeyboardOutput, komorebi::KomorebiOutput, media::MediaOutput,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]

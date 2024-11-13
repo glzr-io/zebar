@@ -6,19 +6,13 @@ use std::{
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
+use tracing::debug;
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
   Media::Control::{
     GlobalSystemMediaTransportControlsSession as MediaSession,
     GlobalSystemMediaTransportControlsSessionManager as MediaManager,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as MediaPlaybackStatus,
-    // GlobalSystemMediaTransportControlsSessionMediaProperties as
-    // MediaProperties,
-    // GlobalSystemMediaTransportControlsSessionPlaybackInfo as
-    // PlaybackInfo,
-    // GlobalSystemMediaTransportControlsSessionTimelineProperties as
-    // TimelineProperties, MediaPropertiesChangedEventArgs,
-    // PlaybackInfoChangedEventArgs,
   },
 };
 
@@ -33,7 +27,7 @@ pub struct MediaProviderConfig {}
 pub struct MediaOutput {
   pub title: String,
   pub artist: String,
-  pub album: String,
+  pub album_title: String,
   pub album_artist: String,
   pub track_number: u32,
   pub start_time: u64,
@@ -69,10 +63,8 @@ impl MediaProvider {
     emit_result_tx: Sender<ProviderResult>,
   ) {
     if let Ok(media_output) = Self::media_output(session) {
-      println!("media_output: {:?}", media_output);
-      emit_result_tx
-        .try_send(Ok(ProviderOutput::Media(media_output)).into())
-        .expect("Errror emitting media info.");
+      let _ = emit_result_tx
+        .try_send(Ok(ProviderOutput::Media(media_output)).into());
     }
   }
 
@@ -80,20 +72,20 @@ impl MediaProvider {
     let media_properties = session.TryGetMediaPropertiesAsync()?.get()?;
     let timeline_properties = session.GetTimelineProperties()?;
     let playback_info = session.GetPlaybackInfo()?;
-    let is_playing = matches!(
-      playback_info.PlaybackStatus(),
-      Ok(MediaPlaybackStatus::Playing)
-    );
+
+    let is_playing =
+      playback_info.PlaybackStatus()? == MediaPlaybackStatus::Playing;
     let start_time =
       timeline_properties.StartTime()?.Duration as u64 / 10_000_000;
     let end_time =
       timeline_properties.EndTime()?.Duration as u64 / 10_000_000;
     let position =
       timeline_properties.Position()?.Duration as u64 / 10_000_000;
+
     Ok(MediaOutput {
       title: media_properties.Title()?.to_string(),
       artist: media_properties.Artist()?.to_string(),
-      album: media_properties.AlbumTitle()?.to_string(),
+      album_title: media_properties.AlbumTitle()?.to_string(),
       album_artist: media_properties.AlbumArtist()?.to_string(),
       track_number: media_properties.TrackNumber()? as u32,
       start_time,
@@ -109,15 +101,19 @@ impl MediaProvider {
   ) -> anyhow::Result<()> {
     // Find the current GSMTC session & add listeners.
     let session_manager = MediaManager::RequestAsync()?.get()?;
-    println!("Media Session manager obtained.");
-    *self.current_session.lock().unwrap() =
-      session_manager.GetCurrentSession().ok();
-
-    let tokens = Self::add_session_listeners(
-      &self.current_session.lock().unwrap().as_ref().unwrap(),
+    let current_session = session_manager.GetCurrentSession()?;
+    let event_tokens = Self::add_session_listeners(
+      &current_session,
       emit_result_tx.clone(),
-    );
-    *self.event_tokens.lock().unwrap() = tokens.ok();
+    )?;
+
+    debug!("Media session manager obtained.");
+
+    // Emit initial media info.
+    Self::emit_media_info(&current_session, emit_result_tx.clone());
+
+    *self.current_session.lock().unwrap() = Some(current_session);
+    *self.event_tokens.lock().unwrap() = Some(event_tokens);
 
     // Clean up & rebind listeners when session changes.
     let current_session = self.current_session.clone();
@@ -125,14 +121,15 @@ impl MediaProvider {
     let session_changed_handler = TypedEventHandler::new(
       move |session_manager: &Option<MediaManager>, _| {
         {
-          // Remove listeners from the previous session.
           let mut current_session = current_session.lock().unwrap();
           let mut event_tokens = event_tokens.lock().unwrap();
+
+          // Remove listeners from the previous session.
           if let Err(err) = Self::remove_session_listeners(
             &current_session.as_ref().unwrap(),
-            event_tokens.as_ref(),
+            event_tokens.as_ref().unwrap(),
           ) {
-            eprintln!("Error removing media session listeners: {:?}", err);
+            debug!("Error removing media session listeners: {:?}", err);
           }
 
           // Set up new session.
@@ -149,9 +146,10 @@ impl MediaProvider {
           *current_session = Some(new_session);
         }
 
-        windows::core::Result::Ok(())
+        Ok(())
       },
     );
+
     session_manager.CurrentSessionChanged(&session_changed_handler)?;
 
     loop {
@@ -161,17 +159,19 @@ impl MediaProvider {
 
   fn remove_session_listeners(
     session: &MediaSession,
-    event_tokens: Option<&EventTokens>,
+    tokens: &EventTokens,
   ) -> anyhow::Result<()> {
-    let token = event_tokens.unwrap();
     session.RemoveMediaPropertiesChanged(
-      token.media_properties_changed_token,
+      tokens.media_properties_changed_token,
     )?;
+
     session
-      .RemovePlaybackInfoChanged(token.playback_info_changed_token)?;
+      .RemovePlaybackInfoChanged(tokens.playback_info_changed_token)?;
+
     session.RemoveTimelinePropertiesChanged(
-      token.timeline_properties_changed_token,
+      tokens.timeline_properties_changed_token,
     )?;
+
     Ok(())
   }
 
@@ -181,36 +181,43 @@ impl MediaProvider {
   ) -> anyhow::Result<EventTokens> {
     let media_properties_changed_handler = {
       let emit_result_tx = emit_result_tx.clone();
+
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
-        println!("Media properties changed event triggered.");
-        let session = session
-          .as_ref()
-          .expect("No session available on media properties change.");
-        Self::emit_media_info(session, emit_result_tx.clone());
-        windows::core::Result::Ok(())
+        debug!("Media properties changed event triggered.");
+
+        if let Some(session) = session {
+          Self::emit_media_info(session, emit_result_tx.clone());
+        }
+
+        Ok(())
       })
     };
 
     let playback_info_changed_handler = {
       let emit_result_tx = emit_result_tx.clone();
+
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
-        println!("Playback info changed event triggered.");
-        let session = session
-          .as_ref()
-          .expect("No session available on playback info change.");
-        Self::emit_media_info(session, emit_result_tx.clone());
-        windows::core::Result::Ok(())
+        debug!("Playback info changed event triggered.");
+
+        if let Some(session) = session {
+          Self::emit_media_info(session, emit_result_tx.clone());
+        }
+
+        Ok(())
       })
     };
+
     let timeline_properties_changed_handler = {
       let emit_result_tx = emit_result_tx.clone();
+
       TypedEventHandler::new(move |session: &Option<MediaSession>, _| {
-        println!("Timeline properties changed event triggered.");
-        let session = session
-          .as_ref()
-          .expect("No session available on timeline properties change.");
-        Self::emit_media_info(session, emit_result_tx.clone());
-        windows::core::Result::Ok(())
+        debug!("Timeline properties changed event triggered.");
+
+        if let Some(session) = session {
+          Self::emit_media_info(session, emit_result_tx.clone());
+        }
+
+        Ok(())
       })
     };
 
@@ -235,10 +242,7 @@ impl MediaProvider {
 impl Provider for MediaProvider {
   async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
     if let Err(err) = self.create_session_manager(emit_result_tx.clone()) {
-      emit_result_tx
-        .send(Err(err).into())
-        .await
-        .expect("Erroring emitting media provider err.");
+      let _ = emit_result_tx.send(Err(err).into()).await;
     }
   }
 }

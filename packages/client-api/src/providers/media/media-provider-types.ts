@@ -7,7 +7,7 @@ export interface MediaProviderConfig {
 export interface MediaOutput {
   title: string;
   artist: string;
-  album: string;
+  albumTitle: string;
   albumArtist: string;
   trackNumber: number;
   startTime: number;

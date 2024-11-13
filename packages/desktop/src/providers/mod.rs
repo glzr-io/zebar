@@ -6,6 +6,7 @@ mod ip;
 mod keyboard;
 #[cfg(windows)]
 mod komorebi;
+#[cfg(windows)]
 mod media;
 mod memory;
 mod network;

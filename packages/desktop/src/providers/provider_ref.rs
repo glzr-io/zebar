@@ -12,12 +12,15 @@ use tracing::{info, warn};
 
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, host::HostProvider,
-  ip::IpProvider, media::MediaProvider, memory::MemoryProvider,
-  network::NetworkProvider, weather::WeatherProvider, Provider,
-  ProviderConfig, ProviderOutput, SharedProviderState,
+  ip::IpProvider, memory::MemoryProvider, network::NetworkProvider,
+  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
+  SharedProviderState,
 };
 #[cfg(windows)]
-use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
+use super::{
+  keyboard::KeyboardProvider, komorebi::KomorebiProvider,
+  media::MediaProvider,
+};
 
 /// Reference to an active provider.
 pub struct ProviderRef {
