@@ -20,6 +20,8 @@ use tokio::{
 };
 use tracing::{error, info};
 
+#[cfg(target_os = "macos")]
+use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
