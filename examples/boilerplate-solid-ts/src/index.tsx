@@ -21,7 +21,9 @@ function App() {
 
   return (
     <div class="app">
-      <div class="chip">Audio volume: {output.audio?.volume}</div>
+      <div class="chip">
+        vol: {output.audio?.volume} dev: {output.audio?.currentDevice}
+      </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">
         Battery charge: {output.battery?.chargePercent}
