@@ -152,15 +152,15 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
-| `name`         | Disk name.    | `string` |
+| `name`         | Disk name.    | `string \| null` |
 | `fileSystem`      | File system used on the disk (e.g. `EXT4`, `NTFS`). | `string` |
 | `mountPoint`    | Mount point of the disk (e.g. `/`, `C:\\`).         | `string` |
-| `totalSpace` | Total disk size.      | `DiskSizeMeasure` |
-| `availableSpace` | Available disk size.      | `DiskSizeMeasure` |
+| `totalSpace` | Total disk size.      | `DataSizeMeasure` |
+| `availableSpace` | Available disk size.      | `DataSizeMeasure` |
 | `isRemovable` | Whether the disk is removable.      | `boolean` |
-| `diskType` | Type of disk.      | `string` |
+| `driveType` | Type of disk (e.g. `HDD`, `SSD`).      | `string` |
 
-#### `DiskSizeMeasure`
+#### `DataSizeMeasure`
 
 | Variable   | Description                                                                 | Return type |
 | ---------- | --------------------------------------------------------------------------- | ----------- |
@@ -276,12 +276,12 @@ No config options.
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
-| `received`         | Received bytes per second.    | `NetworkTrafficMeasure` |
-| `transmitted`      | Transmitted bytes per second. | `NetworkTrafficMeasure` |
-| `totalReceived`    | Total received bytes.         | `NetworkTrafficMeasure` |
-| `totalTransmitted` | Total transmitted bytes.      | `NetworkTrafficMeasure` |
+| `received`         | Received bytes per second.    | `DataSizeMeasure` |
+| `transmitted`      | Transmitted bytes per second. | `DataSizeMeasure` |
+| `totalReceived`    | Total received bytes.         | `DataSizeMeasure` |
+| `totalTransmitted` | Total transmitted bytes.      | `DataSizeMeasure` |
 
-#### `NetworkTrafficMeasure`
+#### `DataSizeMeasure`
 
 | Variable   | Description                                                                 | Return type |
 | ---------- | --------------------------------------------------------------------------- | ----------- |
@@ -333,15 +333,25 @@ No config options.
 
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `artist`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `albumTitle`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `albumArtist`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `trackNumber`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `startTime`         | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `endTime`         | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `position`         | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `isPlaying`         | TODO        | `boolean`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `session`         | Currently playing media session.        | `MediaSession \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Return types
+
+#### `MediaSession`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `title`         | TODO    | `string` |
+| `artist`      | TODO | `string \| null` |
+| `albumTitle`    | TODO         | `string \| null` |
+| `albumArtist` | TODO      | `string \| null` |
+| `trackNumber` | TODO      | `number` |
+| `startTime` | TODO      | `number` |
+| `endTime` | TODO      | `number` |
+| `position` | TODO      | `number` |
+| `isPlaying` | TODO      | `boolean` |
+
+#### `DataSizeMeasure`
 
 
 ### Weather
