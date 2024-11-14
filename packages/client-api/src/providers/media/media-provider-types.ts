@@ -5,10 +5,14 @@ export interface MediaProviderConfig {
 }
 
 export interface MediaOutput {
+  session: MediaSession | null;
+}
+
+export interface MediaSession {
   title: string;
-  artist: string;
-  albumTitle: string;
-  albumArtist: string;
+  artist: string | null;
+  albumTitle: string | null;
+  albumArtist: string | null;
   trackNumber: number;
   startTime: number;
   endTime: number;

@@ -9,7 +9,6 @@ import type {
 
 const mediaProviderConfigSchema = z.object({
   type: z.literal('media'),
-  refreshInterval: z.coerce.number().default(5 * 1000),
 });
 
 export function createMediaProvider(
