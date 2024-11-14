@@ -5,6 +5,10 @@ export interface MediaProviderConfig {
 }
 
 export interface MediaOutput {
+  session: MediaSession;
+}
+
+export interface MediaSession {
   title: string;
   artist: string;
   albumTitle: string;
