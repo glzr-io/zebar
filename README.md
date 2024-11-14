@@ -61,11 +61,13 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 - [battery](#Battery)
 - [cpu](#CPU)
 - [date](#Date)
+- [disk](#Disk)
 - [glazewm](#GlazeWM)
 - [host](#Host)
 - [ip](#IP)
 - [keyboard](#Keyboard)
 - [komorebi](#Komorebi)
+- [media](#Media)
 - [memory](#Memory)
 - [network](#Network)
 - [weather](#Weather)
@@ -129,6 +131,44 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 | `new`    | Current date/time as a JavaScript `Date` object. Uses `new Date()` under the hood.                                       | `Date`      | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `now`    | Current date/time as milliseconds since epoch. Uses `Date.now()` under the hood.                                         | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `iso`    | Current date/time as an ISO-8601 string (eg. `2017-04-22T20:47:05.335-04:00`). Uses `date.toISOString()` under the hood. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+### Disk
+
+#### Config
+
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `60000`        |
+
+#### Outputs
+
+| Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `disks`         | Available disks on the system.        | `Disk[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+#### Return types
+
+#### `Disk`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `name`         | Disk name.    | `string` |
+| `fileSystem`      | File system used on the disk (e.g. `EXT4`, `NTFS`). | `string` |
+| `mountPoint`    | Mount point of the disk (e.g. `/`, `C:\\`).         | `string` |
+| `totalSpace` | Total disk size.      | `DiskSizeMeasure` |
+| `availableSpace` | Available disk size.      | `DiskSizeMeasure` |
+| `isRemovable` | Whether the disk is removable.      | `boolean` |
+| `diskType` | Type of disk.      | `string` |
+
+#### `DiskSizeMeasure`
+
+| Variable   | Description                                                                 | Return type |
+| ---------- | --------------------------------------------------------------------------- | ----------- |
+| `bytes`    | Raw byte value.                                                             | `number`    |
+| `siValue`  | Bytes converted in according to the SI standard. 1000 bytes in a kilobyte.  | `number`    |
+| `siUnit`   | Unit of the converted bytes in according to the SI standard. KB, MB, ...    | `string`    |
+| `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
+| `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
 
 ### GlazeWM
 
@@ -232,7 +272,7 @@ No config options.
 
 #### Return types
 
-### NetworkTraffic
+#### `NetworkTraffic`
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
@@ -241,7 +281,7 @@ No config options.
 | `totalReceived`    | Total received bytes.         | `NetworkTrafficMeasure` |
 | `totalTransmitted` | Total transmitted bytes.      | `NetworkTrafficMeasure` |
 
-### NetworkTrafficMeasure
+#### `NetworkTrafficMeasure`
 
 | Variable   | Description                                                                 | Return type |
 | ---------- | --------------------------------------------------------------------------- | ----------- |
@@ -282,6 +322,26 @@ No config options.
 | `allMonitors` | All monitors.        | `KomorebiMonitor[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `focusedMonitor` | Monitor that currently has focus.        | `KomorebiMonitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `currentMonitor` | Monitor that is nearest to this Zebar widget.        | `KomorebiMonitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+### Media
+
+#### Config
+
+No config options.
+
+#### Outputs
+
+| Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `artist`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `albumTitle`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `albumArtist`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `trackNumber`         | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `startTime`         | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `endTime`         | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `position`         | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `isPlaying`         | TODO        | `boolean`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 
 ### Weather
