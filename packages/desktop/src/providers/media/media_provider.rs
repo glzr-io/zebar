@@ -6,7 +6,7 @@ use std::{
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::{sync::mpsc::Sender, task};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
   Media::Control::{
@@ -32,9 +32,9 @@ pub struct MediaOutput {
 #[serde(rename_all = "camelCase")]
 pub struct MediaSession {
   pub title: String,
-  pub artist: String,
-  pub album_title: String,
-  pub album_artist: String,
+  pub artist: Option<String>,
+  pub album_title: Option<String>,
+  pub album_artist: Option<String>,
   pub track_number: u32,
   pub start_time: u64,
   pub end_time: u64,
@@ -62,16 +62,14 @@ impl MediaProvider {
     session: Option<&GsmtcSession>,
     emit_result_tx: Sender<ProviderResult>,
   ) {
-    let res = match Self::media_output(session) {
+    let _ = match Self::media_output(session) {
       Ok(media_output) => emit_result_tx
         .blocking_send(Ok(ProviderOutput::Media(media_output)).into()),
       Err(err) => {
-        error!("Error emitting media info: {:?}", err);
+        error!("Error retrieving media output: {:?}", err);
         emit_result_tx.blocking_send(Err(err).into())
       }
     };
-
-    info!("Media info emitted: {:?}", res);
   }
 
   fn media_output(
@@ -79,7 +77,7 @@ impl MediaProvider {
   ) -> anyhow::Result<MediaOutput> {
     Ok(MediaOutput {
       session: match session {
-        Some(s) => Self::media_session(s)?,
+        Some(session) => Self::media_session(session)?,
         None => None,
       },
     })
@@ -91,7 +89,11 @@ impl MediaProvider {
     let media_properties = session.TryGetMediaPropertiesAsync()?.get()?;
     let timeline_properties = session.GetTimelineProperties()?;
     let playback_info = session.GetPlaybackInfo()?;
+
     let title = media_properties.Title()?.to_string();
+    let artist = media_properties.Artist()?.to_string();
+    let album_title = media_properties.AlbumTitle()?.to_string();
+    let album_artist = media_properties.AlbumArtist()?.to_string();
 
     // GSMTC can have a valid session, but return empty string for all
     // media properties. Check that we at least have a valid title.
@@ -109,10 +111,10 @@ impl MediaProvider {
       timeline_properties.Position()?.Duration as u64 / 10_000_000;
 
     Ok(Some(MediaSession {
-      title: title.to_string(),
-      artist: media_properties.Artist()?.to_string(),
-      album_title: media_properties.AlbumTitle()?.to_string(),
-      album_artist: media_properties.AlbumArtist()?.to_string(),
+      title,
+      artist: (!artist.is_empty()).then_some(artist),
+      album_title: (!album_title.is_empty()).then_some(album_title),
+      album_artist: (!album_artist.is_empty()).then_some(album_artist),
       track_number: media_properties.TrackNumber()? as u32,
       start_time,
       end_time,
@@ -124,7 +126,7 @@ impl MediaProvider {
   fn create_session_manager(
     emit_result_tx: Sender<ProviderResult>,
   ) -> anyhow::Result<()> {
-    info!("Creating media session manager.");
+    debug!("Creating media session manager.");
 
     // Find the current GSMTC session & add listeners.
     let session_manager = GsmtcManager::RequestAsync()?.get()?;
@@ -148,7 +150,6 @@ impl MediaProvider {
     let event_tokens = Arc::new(Mutex::new(event_tokens));
 
     // Clean up & rebind listeners when session changes.
-    info!("asjdifoasjoi");
     let session_changed_handler = TypedEventHandler::new(
       move |session_manager: &Option<GsmtcManager>, _| {
         {
@@ -217,13 +218,13 @@ impl MediaProvider {
     session: &GsmtcSession,
     emit_result_tx: Sender<ProviderResult>,
   ) -> windows::core::Result<EventTokens> {
-    info!("Adding session listeners.");
+    debug!("Adding session listeners.");
 
     let media_properties_changed_handler = {
       let emit_result_tx = emit_result_tx.clone();
 
       TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
-        info!("Media properties changed event triggered.");
+        debug!("Media properties changed event triggered.");
 
         if let Some(session) = session {
           Self::emit_media_info(Some(session), emit_result_tx.clone());
@@ -237,7 +238,7 @@ impl MediaProvider {
       let emit_result_tx = emit_result_tx.clone();
 
       TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
-        info!("Playback info changed event triggered.");
+        debug!("Playback info changed event triggered.");
 
         if let Some(session) = session {
           Self::emit_media_info(Some(session), emit_result_tx.clone());
@@ -251,7 +252,7 @@ impl MediaProvider {
       let emit_result_tx = emit_result_tx.clone();
 
       TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
-        info!("Timeline properties changed event triggered.");
+        debug!("Timeline properties changed event triggered.");
 
         if let Some(session) = session {
           Self::emit_media_info(Some(session), emit_result_tx.clone());
