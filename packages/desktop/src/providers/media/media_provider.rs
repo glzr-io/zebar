@@ -25,7 +25,7 @@ pub struct MediaProviderConfig {}
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaOutput {
-  pub session: MediaSession,
+  pub session: Option<MediaSession>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -62,22 +62,7 @@ impl MediaProvider {
     session: Option<&GsmtcSession>,
     emit_result_tx: Sender<ProviderResult>,
   ) {
-    let session_info = session.map(|s| Self::media_session_info(s));
-
-    // let media_output =     Ok(MediaOutput {
-    //   session: MediaSession {
-    //     title: media_properties.Title()?.to_string(),
-    //     artist: media_properties.Artist()?.to_string(),
-    //     album_title: media_properties.AlbumTitle()?.to_string(),
-    //     album_artist: media_properties.AlbumArtist()?.to_string(),
-    //     track_number: media_properties.TrackNumber()? as u32,
-    //     start_time,
-    //     end_time,
-    //     position,
-    //     is_playing,
-    //   },
-    // })
-    let res = match Self::media_session_info(session) {
+    let res = match Self::media_output(session) {
       Ok(media_output) => emit_result_tx
         .blocking_send(Ok(ProviderOutput::Media(media_output)).into()),
       Err(err) => {
@@ -89,12 +74,30 @@ impl MediaProvider {
     info!("Media info emitted: {:?}", res);
   }
 
-  fn media_session_info(
-    session: &GsmtcSession,
+  fn media_output(
+    session: Option<&GsmtcSession>,
   ) -> anyhow::Result<MediaOutput> {
+    Ok(MediaOutput {
+      session: match session {
+        Some(s) => Self::media_session(s)?,
+        None => None,
+      },
+    })
+  }
+
+  fn media_session(
+    session: &GsmtcSession,
+  ) -> anyhow::Result<Option<MediaSession>> {
     let media_properties = session.TryGetMediaPropertiesAsync()?.get()?;
     let timeline_properties = session.GetTimelineProperties()?;
     let playback_info = session.GetPlaybackInfo()?;
+    let title = media_properties.Title()?.to_string();
+
+    // GSMTC can have a valid session, but return empty string for all
+    // media properties. Check that we at least have a valid title.
+    if title.is_empty() {
+      return Ok(None);
+    }
 
     let is_playing =
       playback_info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
@@ -105,19 +108,17 @@ impl MediaProvider {
     let position =
       timeline_properties.Position()?.Duration as u64 / 10_000_000;
 
-    Ok(MediaOutput {
-      session: MediaSession {
-        title: media_properties.Title()?.to_string(),
-        artist: media_properties.Artist()?.to_string(),
-        album_title: media_properties.AlbumTitle()?.to_string(),
-        album_artist: media_properties.AlbumArtist()?.to_string(),
-        track_number: media_properties.TrackNumber()? as u32,
-        start_time,
-        end_time,
-        position,
-        is_playing,
-      },
-    })
+    Ok(Some(MediaSession {
+      title: title.to_string(),
+      artist: media_properties.Artist()?.to_string(),
+      album_title: media_properties.AlbumTitle()?.to_string(),
+      album_artist: media_properties.AlbumArtist()?.to_string(),
+      track_number: media_properties.TrackNumber()? as u32,
+      start_time,
+      end_time,
+      position,
+      is_playing,
+    }))
   }
 
   fn create_session_manager(
@@ -174,13 +175,13 @@ impl MediaProvider {
             emit_result_tx.clone(),
           )?;
 
-          *current_session = Some(new_session);
-          *event_tokens = Some(tokens);
-
           Self::emit_media_info(
             Some(&new_session),
             emit_result_tx.clone(),
           );
+
+          *current_session = Some(new_session);
+          *event_tokens = Some(tokens);
         }
 
         Ok(())
@@ -215,7 +216,7 @@ impl MediaProvider {
   fn add_session_listeners(
     session: &GsmtcSession,
     emit_result_tx: Sender<ProviderResult>,
-  ) -> anyhow::Result<EventTokens> {
+  ) -> windows::core::Result<EventTokens> {
     info!("Adding session listeners.");
 
     let media_properties_changed_handler = {
