@@ -21,7 +21,10 @@ function App() {
 
   return (
     <div class="app">
-      <div class="chip">Media: {JSON.stringify(output.media)}</div>
+      <div class="chip">
+        Media: {output.media?.session?.title} -
+        {output.media?.session?.artist}
+      </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">
         Battery charge: {output.battery?.chargePercent}
