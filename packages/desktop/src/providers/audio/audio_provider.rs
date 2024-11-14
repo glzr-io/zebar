@@ -75,6 +75,14 @@ impl AudioProvider {
       .set(emit_result_tx.clone())
       .expect("Error setting provider tx in focused window provider");
 
+    // todo do this at initialization
+    AUDIO_STATE
+      .set(Arc::new(Mutex::new(AudioOutput {
+        current_device: "n/a".to_string(),
+        volume: 0.0,
+      })))
+      .expect("Error setting initial state");
+
     unsafe {
       let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
 
@@ -93,16 +101,8 @@ impl AudioProvider {
         println!("Default audio render device: {}", name);
       }
 
-      let initial_device =
-        MediaDeviceEventHandler::get_device_name(&default_device)?;
-      let initial_volume =
-        handler.setup_volume_monitoring(&default_device)?;
-      AUDIO_STATE.set(Arc::new(Mutex::new(AudioOutput {
-        current_device: initial_device,
-        volume: initial_volume,
-      }))).expect("Error setting initial device volume");
-      Self::emit_volume();
-
+      // Set up initial volume monitoring
+      handler.setup_volume_monitoring(&default_device)?;
       enumerator.RegisterEndpointNotificationCallback(
         &device_notification_callback,
       )?;
@@ -150,13 +150,12 @@ impl MediaDeviceEventHandler {
   fn setup_volume_monitoring(
     &self,
     device: &IMMDevice,
-  ) -> windows_core::Result<f32> {
+  ) -> windows_core::Result<()> {
     unsafe {
       let endpoint_volume: IAudioEndpointVolume =
         device.Activate(CLSCTX_ALL, None)?;
       let handler = MediaDeviceEventHandler::new(self.enumerator.clone());
       let volume_callback = IAudioEndpointVolumeCallback::from(handler);
-      let inital_volume = endpoint_volume.GetMasterVolumeLevelScalar()?;
       endpoint_volume.RegisterControlChangeNotify(&volume_callback)?;
       self
         .device_state
@@ -164,8 +163,8 @@ impl MediaDeviceEventHandler {
         .lock()
         .unwrap()
         .push((volume_callback, endpoint_volume));
-      Ok(inital_volume)
     }
+    Ok(())
   }
 }
 
