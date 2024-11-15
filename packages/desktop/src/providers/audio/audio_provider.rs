@@ -2,7 +2,10 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::{self, Sender};
+use tokio::{
+  sync::mpsc::{self, Sender},
+  task,
+};
 use windows::Win32::{
   Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
   Media::Audio::{
@@ -46,12 +49,24 @@ pub struct AudioProvider {
 #[async_trait]
 impl Provider for AudioProvider {
   async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) = self.create_audio_manager(emit_result_tx.clone()) {
-      emit_result_tx
-        .send(Err(err).into())
-        .await
-        .expect("Error emitting media provider err.");
-    }
+    PROVIDER_TX
+      .set(emit_result_tx.clone())
+      .expect("Error setting provider tx in audio provider");
+
+    AUDIO_STATE
+      .set(Arc::new(Mutex::new(AudioOutput {
+        current_device: "n/a".to_string(),
+        volume: 0.0,
+      })))
+      .expect("Error setting initial audio state");
+
+    task::spawn_blocking(move || {
+      if let Err(err) = Self::create_audio_manager() {
+        emit_result_tx
+          .blocking_send(Err(err).into())
+          .expect("Error with media provider");
+      }
+    });
   }
 }
 
@@ -67,22 +82,7 @@ impl AudioProvider {
     }
   }
 
-  fn create_audio_manager(
-    &self,
-    emit_result_tx: Sender<ProviderResult>,
-  ) -> anyhow::Result<()> {
-    PROVIDER_TX
-      .set(emit_result_tx.clone())
-      .expect("Error setting provider tx in focused window provider");
-
-    // todo do this at initialization
-    AUDIO_STATE
-      .set(Arc::new(Mutex::new(AudioOutput {
-        current_device: "n/a".to_string(),
-        volume: 0.0,
-      })))
-      .expect("Error setting initial state");
-
+  fn create_audio_manager() -> anyhow::Result<()> {
     unsafe {
       let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
 
@@ -114,11 +114,6 @@ impl AudioProvider {
   }
 }
 
-struct DeviceState {
-  volume_callbacks:
-    Arc<Mutex<Vec<(IAudioEndpointVolumeCallback, IAudioEndpointVolume)>>>,
-}
-
 #[derive(Clone)]
 #[windows::core::implement(
   IMMNotificationClient,
@@ -126,16 +121,15 @@ struct DeviceState {
 )]
 struct MediaDeviceEventHandler {
   enumerator: IMMDeviceEnumerator,
-  device_state: Arc<DeviceState>,
+  device_state:
+    Arc<Mutex<Vec<(IAudioEndpointVolumeCallback, IAudioEndpointVolume)>>>,
 }
 
 impl MediaDeviceEventHandler {
   fn new(enumerator: IMMDeviceEnumerator) -> Self {
     Self {
       enumerator,
-      device_state: Arc::new(DeviceState {
-        volume_callbacks: Arc::new(Mutex::new(Vec::new())),
-      }),
+      device_state: Arc::new(Mutex::new(Vec::new())),
     }
   }
 
@@ -159,7 +153,6 @@ impl MediaDeviceEventHandler {
       endpoint_volume.RegisterControlChangeNotify(&volume_callback)?;
       self
         .device_state
-        .volume_callbacks
         .lock()
         .unwrap()
         .push((volume_callback, endpoint_volume));
@@ -187,6 +180,30 @@ impl IAudioEndpointVolumeCallback_Impl for MediaDeviceEventHandler_Impl {
 }
 
 impl IMMNotificationClient_Impl for MediaDeviceEventHandler_Impl {
+  fn OnDefaultDeviceChanged(
+    &self,
+    flow: EDataFlow,
+    role: ERole,
+    pwstrDefaultDeviceId: &PCWSTR,
+  ) -> windows_core::Result<()> {
+    unsafe {
+      if flow == eRender && role == eMultimedia {
+        let device = self.enumerator.GetDevice(*pwstrDefaultDeviceId)?;
+        if let Ok(name) = MediaDeviceEventHandler::get_device_name(&device)
+        {
+          println!("Default device changed to: {}", name);
+          self.setup_volume_monitoring(&device)?;
+          if let Ok(mut output) = AUDIO_STATE.get().unwrap().lock() {
+            output.current_device = name;
+          }
+          AudioProvider::emit_volume();
+        }
+      }
+    }
+    Ok(())
+  }
+
+  // Unused fns, required for IMMNotificationClient_Impl
   fn OnDeviceStateChanged(
     &self,
     pwstrDeviceId: &PCWSTR,
@@ -218,36 +235,12 @@ impl IMMNotificationClient_Impl for MediaDeviceEventHandler_Impl {
     Ok(())
   }
 
-  fn OnDefaultDeviceChanged(
-    &self,
-    flow: EDataFlow,
-    role: ERole,
-    pwstrDefaultDeviceId: &PCWSTR,
-  ) -> windows_core::Result<()> {
-    unsafe {
-      if flow == eRender && role == eMultimedia {
-        let device = self.enumerator.GetDevice(*pwstrDefaultDeviceId)?;
-        if let Ok(name) = MediaDeviceEventHandler::get_device_name(&device)
-        {
-          println!("Default device changed to: {}", name);
-          self.setup_volume_monitoring(&device)?;
-          if let Ok(mut output) = AUDIO_STATE.get().unwrap().lock() {
-            output.current_device = name;
-          }
-          AudioProvider::emit_volume();
-        }
-      }
-    }
-    Ok(())
-  }
-
   fn OnPropertyValueChanged(
     &self,
     pwstrDeviceId: &PCWSTR,
     key: &windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY,
   ) -> windows_core::Result<()> {
     let device_id = unsafe { pwstrDeviceId.to_string()? };
-    println!("Property changed: {} - Key: {:?}", device_id, key);
     Ok(())
   }
 }
