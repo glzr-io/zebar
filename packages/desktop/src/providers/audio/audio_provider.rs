@@ -126,16 +126,15 @@ struct DeviceState {
 )]
 struct MediaDeviceEventHandler {
   enumerator: IMMDeviceEnumerator,
-  device_state: Arc<DeviceState>,
+  device_state:
+    Arc<Mutex<Option<(IAudioEndpointVolumeCallback, IAudioEndpointVolume)>>>,
 }
 
 impl MediaDeviceEventHandler {
   fn new(enumerator: IMMDeviceEnumerator) -> Self {
     Self {
       enumerator,
-      device_state: Arc::new(DeviceState {
-        volume_callbacks: Arc::new(Mutex::new(Vec::new())),
-      }),
+      device_state: Arc::new(Mutex::new(None)),
     }
   }
 
@@ -152,17 +151,16 @@ impl MediaDeviceEventHandler {
     device: &IMMDevice,
   ) -> windows_core::Result<()> {
     unsafe {
+      // unbind previous volume callback
+      if let Some((prev_callback, prev_endpoint)) = self.device_state.lock().unwrap().take() {
+        prev_endpoint.UnregisterControlChangeNotify(&prev_callback)?;
+      }
       let endpoint_volume: IAudioEndpointVolume =
         device.Activate(CLSCTX_ALL, None)?;
       let handler = MediaDeviceEventHandler::new(self.enumerator.clone());
       let volume_callback = IAudioEndpointVolumeCallback::from(handler);
       endpoint_volume.RegisterControlChangeNotify(&volume_callback)?;
-      self
-        .device_state
-        .volume_callbacks
-        .lock()
-        .unwrap()
-        .push((volume_callback, endpoint_volume));
+      self.device_state.lock().unwrap().replace((volume_callback, endpoint_volume));
     }
     Ok(())
   }
