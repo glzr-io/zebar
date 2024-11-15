@@ -187,7 +187,7 @@ impl Provider for KomorebiProvider {
     ThreadingType::Sync
   }
 
-  fn run_sync(&self, emit_result_tx: Sender<ProviderResult>) {
+  fn run_sync(&mut self, emit_result_tx: Sender<ProviderResult>) {
     if let Err(err) = self.create_socket(emit_result_tx.clone()) {
       emit_result_tx.try_send(Err(err).into());
     }

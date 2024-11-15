@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc;
 
 use super::ProviderResult;
 
@@ -8,13 +8,21 @@ pub trait Provider: Send + Sync {
   fn threading_type(&self) -> ThreadingType;
 
   /// Callback for when the provider is started.
-  async fn run_async(&self, _emit_result_tx: Sender<ProviderResult>) {
-    // TODO: Change to not implemented exception.
+  async fn run_async(
+    &mut self,
+    _emit_result_tx: mpsc::Sender<ProviderResult>,
+    _stop_rx: mpsc::Receiver<()>,
+  ) {
+    // TODO: mpsc::Change to not implemented exception.
     todo!()
   }
 
   /// Callback for when the provider is started.
-  fn run_sync(&self, _emit_result_tx: Sender<ProviderResult>) {
+  fn run_sync(
+    &mut self,
+    _emit_result_tx: mpsc::Sender<ProviderResult>,
+    _stop_rx: mpsc::Receiver<()>,
+  ) {
     // TODO: Change to not implemented exception.
     todo!()
   }
@@ -41,14 +49,15 @@ macro_rules! impl_interval_provider {
     #[async_trait::async_trait]
     impl crate::providers::Provider for $type {
       fn threading_type(&self) -> crate::providers::ThreadingType {
-        crate::providers::ThreadingType::Sync
+        crate::providers::ThreadingType::Async
       }
 
       async fn run_async(
-        &self,
+        &mut self,
         emit_result_tx: tokio::sync::mpsc::Sender<
           crate::providers::ProviderResult,
         >,
+        _stop_rx: tokio::sync::mpsc::Receiver<()>,
       ) {
         let mut interval = tokio::time::interval(
           std::time::Duration::from_millis(self.refresh_interval_ms()),

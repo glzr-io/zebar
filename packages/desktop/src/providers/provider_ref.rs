@@ -130,36 +130,16 @@ impl ProviderRef {
     emit_result_tx: mpsc::Sender<ProviderResult>,
     mut stop_rx: mpsc::Receiver<()>,
   ) -> anyhow::Result<()> {
-    let provider = Self::create_provider(config, shared_state)?;
+    let mut provider = Self::create_provider(config, shared_state)?;
 
     let _ = match provider.threading_type() {
-      ThreadingType::Async => {
-        task::spawn(async move {
-          // TODO: Add arc `should_stop` to be passed to `run`.
-
-          let run = provider.run_async(emit_result_tx);
-          tokio::pin!(run);
-
-          // Ref: https://tokio.rs/tokio/tutorial/select#resuming-an-async-operation
-          loop {
-            tokio::select! {
-              // Default match arm which continuously runs the provider.
-              _ = run => break,
-
-              // On stop, perform any necessary clean up and exit the loop.
-              Some(_) = stop_rx.recv() => {
-                info!("Stopping provider: {}", config_hash);
-                _ = provider.on_stop().await;
-                break;
-              },
-            }
-          }
-
-          info!("Provider stopped: {}", config_hash);
-        })
-      }
+      ThreadingType::Async => task::spawn(async move {
+        provider.run_async(emit_result_tx, stop_rx).await;
+        info!("Provider stopped: {}", config_hash);
+      }),
       ThreadingType::Sync => task::spawn_blocking(move || {
-        let run = provider.run_sync(emit_result_tx);
+        provider.run_sync(emit_result_tx, stop_rx);
+        info!("Provider stopped: {}", config_hash);
       }),
     };
 
