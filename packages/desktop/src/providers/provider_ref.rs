@@ -19,7 +19,7 @@ use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
   network::NetworkProvider, weather::WeatherProvider, Provider,
-  ProviderConfig, ProviderOutput, SharedProviderState, ThreadingType,
+  ProviderConfig, ProviderOutput, RuntimeType, SharedProviderState,
 };
 
 /// Reference to an active provider.
@@ -132,13 +132,13 @@ impl ProviderRef {
   ) -> anyhow::Result<()> {
     let mut provider = Self::create_provider(config, shared_state)?;
 
-    let _ = match provider.threading_type() {
-      ThreadingType::Async => task::spawn(async move {
-        provider.run_async(emit_result_tx, stop_rx).await;
+    let _ = match provider.runtime_type() {
+      RuntimeType::Async => task::spawn(async move {
+        provider.start_async(emit_result_tx, stop_rx).await;
         info!("Provider stopped: {}", config_hash);
       }),
-      ThreadingType::Sync => task::spawn_blocking(move || {
-        provider.run_sync(emit_result_tx, stop_rx);
+      RuntimeType::Sync => task::spawn_blocking(move || {
+        provider.start_sync(emit_result_tx, stop_rx);
         info!("Provider stopped: {}", config_hash);
       }),
     };

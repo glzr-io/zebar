@@ -5,36 +5,91 @@ use super::ProviderResult;
 
 #[async_trait]
 pub trait Provider: Send + Sync {
-  fn threading_type(&self) -> ThreadingType;
+  fn runtime_type(&self) -> RuntimeType;
 
   /// Callback for when the provider is started.
-  async fn run_async(
+  ///
+  /// # Panics
+  ///
+  /// Panics if wrong runtime type is used.
+  fn start_sync(
     &mut self,
     _emit_result_tx: mpsc::Sender<ProviderResult>,
     _stop_rx: mpsc::Receiver<()>,
   ) {
-    // TODO: mpsc::Change to not implemented exception.
-    todo!()
+    match self.runtime_type() {
+      RuntimeType::Sync => {
+        unreachable!("Sync providers must implement `start_sync`.")
+      }
+      RuntimeType::Async => {
+        panic!("Cannot call sync function on async provider.")
+      }
+    }
   }
 
   /// Callback for when the provider is started.
-  fn run_sync(
+  ///
+  /// # Panics
+  ///
+  /// Panics if wrong runtime type is used.
+  async fn start_async(
     &mut self,
     _emit_result_tx: mpsc::Sender<ProviderResult>,
     _stop_rx: mpsc::Receiver<()>,
   ) {
-    // TODO: Change to not implemented exception.
-    todo!()
+    match self.runtime_type() {
+      RuntimeType::Async => {
+        unreachable!("Async providers must implement `start_async`.")
+      }
+      RuntimeType::Sync => {
+        panic!("Cannot call async function on sync provider.")
+      }
+    }
   }
 
-  /// Callback for when the provider is stopped.
-  async fn on_stop(&self) {
-    // No-op by default.
+  /// Runs the given function.
+  ///
+  /// # Panics
+  ///
+  /// Panics if wrong runtime type is used.
+  fn call_function_sync(
+    &self,
+    function: ProviderFunction,
+  ) -> anyhow::Result<ProviderFunctionResult> {
+    match self.runtime_type() {
+      RuntimeType::Sync => {
+        unreachable!("Sync providers must implement `call_function_sync`.")
+      }
+      RuntimeType::Async => {
+        panic!("Cannot call sync function on async provider.")
+      }
+    }
+  }
+
+  /// Runs the given function.
+  ///
+  /// # Panics
+  ///
+  /// Panics if wrong runtime type is used.
+  async fn call_function_async(
+    &self,
+    function: ProviderFunction,
+  ) -> anyhow::Result<ProviderFunctionResult> {
+    match self.runtime_type() {
+      RuntimeType::Async => {
+        unreachable!(
+          "Async providers must implement `call_function_async`."
+        )
+      }
+      RuntimeType::Sync => {
+        panic!("Cannot call async function on sync provider.")
+      }
+    }
   }
 }
 
 /// Determines whether `run_sync` or `run_async` is called.`
-pub enum ThreadingType {
+pub enum RuntimeType {
   Sync,
   Async,
 }
@@ -48,8 +103,8 @@ macro_rules! impl_interval_provider {
   ($type:ty, $allow_identical_emits:expr) => {
     #[async_trait::async_trait]
     impl crate::providers::Provider for $type {
-      fn threading_type(&self) -> crate::providers::ThreadingType {
-        crate::providers::ThreadingType::Async
+      fn runtime_type(&self) -> crate::providers::RuntimeType {
+        crate::providers::RuntimeType::Async
       }
 
       async fn run_async(

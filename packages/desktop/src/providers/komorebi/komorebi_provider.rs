@@ -183,11 +183,11 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
-  fn threading_type(&self) -> ThreadingType {
-    ThreadingType::Sync
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
   }
 
-  fn run_sync(&mut self, emit_result_tx: Sender<ProviderResult>) {
+  fn start_sync(&mut self, emit_result_tx: Sender<ProviderResult>) {
     if let Err(err) = self.create_socket(emit_result_tx.clone()) {
       emit_result_tx.try_send(Err(err).into());
     }
