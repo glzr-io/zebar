@@ -87,7 +87,7 @@ pub async fn listen_provider(
   provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .create(config_hash, config)
+    .create(&config_hash, config)
     .await
     .map_err(|err| err.to_string())
 }
@@ -98,7 +98,7 @@ pub async fn unlisten_provider(
   provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .destroy(config_hash)
+    .destroy(&config_hash)
     .await
     .map_err(|err| err.to_string())
 }

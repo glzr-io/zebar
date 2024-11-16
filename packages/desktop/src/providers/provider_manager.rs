@@ -3,15 +3,11 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Context;
 use sysinfo::System;
 use tauri::{AppHandle, Emitter};
-use tokio::{
-  sync::{mpsc, Mutex},
-  task,
-};
-use tracing::warn;
+use tokio::sync::{mpsc, oneshot, Mutex};
 
 use super::{
   ProviderConfig, ProviderEmission, ProviderFunction,
-  ProviderFunctionResult, ProviderRef, RuntimeType,
+  ProviderFunctionResult, ProviderRef,
 };
 
 /// State shared between providers.
@@ -56,14 +52,14 @@ impl ProviderManager {
   /// Creates a provider with the given config.
   pub async fn create(
     &self,
-    config_hash: String,
+    config_hash: &str,
     config: ProviderConfig,
   ) -> anyhow::Result<()> {
     // If a provider with the given config already exists, re-emit its
     // latest emission and return early.
     {
       if let Some(found_emit) =
-        self.emit_cache.lock().await.get(&config_hash)
+        self.emit_cache.lock().await.get(config_hash)
       {
         self.app_handle.emit("provider-emit", found_emit);
         return Ok(());
@@ -84,40 +80,35 @@ impl ProviderManager {
     Ok(())
   }
 
-  /// Calls the given function on the provider with the given config hash.
+  /// Sends a function call through a channel to be executed by the
+  /// provider.
+  ///
+  /// Returns the result of the function execution.
   async fn call_function(
     &self,
     config_hash: &str,
     function: ProviderFunction,
   ) -> anyhow::Result<ProviderFunctionResult> {
-    let mut providers = self.provider_refs.lock().await;
-    let provider = providers
-      .get_mut(config_hash)
+    let mut provider_refs = self.provider_refs.lock().await;
+    let provider_ref = provider_refs
+      .get(config_hash)
       .context("No provider found with config.")?;
 
-    match provider.runtime_type() {
-      RuntimeType::Async => provider.call_async_function(function).await,
-      RuntimeType::Sync => {
-        task::spawn_blocking(move || provider.call_sync_function(function))
-          .await
-          .map_err(|err| format!("Function execution failed: {}", err))?
-      }
-    }
+    let (tx, rx) = oneshot::channel();
+    provider_ref.function_tx.send((function, tx))?;
+    rx.await?
   }
 
   /// Destroys and cleans up the provider with the given config.
-  pub async fn destroy(&self, config_hash: String) -> anyhow::Result<()> {
-    let mut providers = self.provider_refs.lock().await;
+  pub async fn destroy(&self, config_hash: &str) -> anyhow::Result<()> {
+    let mut provider_refs = self.provider_refs.lock().await;
+    let provider_ref = provider_refs
+      .remove(config_hash)
+      .context("No provider found with config.")?;
 
-    if let Some(found_provider) = providers.get_mut(&config_hash) {
-      if let Err(err) = found_provider.stop().await {
-        warn!("Error stopping provider: {:?}", err);
-      }
-    }
-
-    providers.remove(&config_hash);
-
-    Ok(())
+    let (tx, rx) = oneshot::channel();
+    provider_ref.stop_tx.send(tx)?;
+    rx.await?
   }
 
   /// Updates the cache with the given provider emission.
