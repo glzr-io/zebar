@@ -6,8 +6,15 @@ export interface AudioProviderConfig {
 
 export type AudioProvider = Provider<AudioProviderConfig, AudioOutput>;
 
-export interface AudioOutput {
+export interface AudioDeviceInfo {
+  deviceId: string;
+  name: string;
   volume: number;
-  currentDevice: string;
+  isDefault: boolean;
+}
+
+export interface AudioOutput {
+  devices: Record<string, AudioDeviceInfo>;
+  defaultDevice: string | null;
 }
 

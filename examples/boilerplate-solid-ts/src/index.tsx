@@ -22,7 +22,8 @@ function App() {
   return (
     <div class="app">
       <div class="chip">
-        vol: {output.audio?.volume} dev: {output.audio?.currentDevice}
+        {output.audio?.devices[output.audio?.defaultDevice!].name} :
+        {output.audio?.devices[output.audio?.defaultDevice!].volume}
       </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">
