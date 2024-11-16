@@ -12,11 +12,7 @@ pub trait Provider: Send + Sync {
   /// # Panics
   ///
   /// Panics if wrong runtime type is used.
-  fn start_sync(
-    &mut self,
-    _emit_result_tx: mpsc::Sender<ProviderResult>,
-    _stop_rx: mpsc::Receiver<()>,
-  ) {
+  fn start_sync(&mut self) {
     match self.runtime_type() {
       RuntimeType::Sync => {
         unreachable!("Sync providers must implement `start_sync`.")
@@ -32,11 +28,7 @@ pub trait Provider: Send + Sync {
   /// # Panics
   ///
   /// Panics if wrong runtime type is used.
-  async fn start_async(
-    &mut self,
-    _emit_result_tx: mpsc::Sender<ProviderResult>,
-    _stop_rx: mpsc::Receiver<()>,
-  ) {
+  async fn start_async(&mut self) {
     match self.runtime_type() {
       RuntimeType::Async => {
         unreachable!("Async providers must implement `start_async`.")
@@ -88,7 +80,7 @@ pub trait Provider: Send + Sync {
   }
 }
 
-/// Determines whether `run_sync` or `run_async` is called.`
+/// Determines whether `start_sync` or `start_async` is called.
 pub enum RuntimeType {
   Sync,
   Async,
