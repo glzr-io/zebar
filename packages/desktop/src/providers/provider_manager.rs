@@ -1,12 +1,18 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Context;
-use sysinfo::{Disks, Networks, System};
-use tauri::AppHandle;
-use tokio::sync::Mutex;
+use sysinfo::System;
+use tauri::{AppHandle, Emitter};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task,
+};
 use tracing::warn;
 
-use super::{ProviderConfig, ProviderRef};
+use super::{
+  ProviderConfig, ProviderEmission, ProviderFunction,
+  ProviderFunctionResult, ProviderRef, RuntimeType,
+};
 
 /// State shared between providers.
 #[derive(Clone)]
@@ -18,18 +24,33 @@ pub struct SharedProviderState {
 pub struct ProviderManager {
   app_handle: AppHandle,
   provider_refs: Arc<Mutex<HashMap<String, ProviderRef>>>,
+  emit_cache: Arc<Mutex<HashMap<String, ProviderEmission>>>,
   shared_state: SharedProviderState,
+  emit_tx: mpsc::UnboundedSender<ProviderEmission>,
 }
 
 impl ProviderManager {
-  pub fn new(app_handle: &AppHandle) -> Self {
-    Self {
-      app_handle: app_handle.clone(),
-      provider_refs: Arc::new(Mutex::new(HashMap::new())),
-      shared_state: SharedProviderState {
-        sysinfo: Arc::new(Mutex::new(System::new_all())),
-      },
-    }
+  /// Creates a new provider manager.
+  ///
+  /// Returns a tuple containing the manager and a channel for provider
+  /// emissions.
+  pub fn new(
+    app_handle: &AppHandle,
+  ) -> (Arc<Self>, mpsc::UnboundedReceiver<ProviderEmission>) {
+    let (emit_tx, emit_rx) = mpsc::unbounded_channel::<ProviderEmission>();
+
+    (
+      Arc::new(Self {
+        app_handle: app_handle.clone(),
+        provider_refs: Arc::new(Mutex::new(HashMap::new())),
+        emit_cache: Arc::new(Mutex::new(HashMap::new())),
+        shared_state: SharedProviderState {
+          sysinfo: Arc::new(Mutex::new(System::new_all())),
+        },
+        emit_tx,
+      }),
+      emit_rx,
+    )
   }
 
   /// Creates a provider with the given config.
@@ -38,22 +59,19 @@ impl ProviderManager {
     config_hash: String,
     config: ProviderConfig,
   ) -> anyhow::Result<()> {
+    // If a provider with the given config already exists, re-emit its
+    // latest emission and return early.
     {
-      let mut providers = self.provider_refs.lock().await;
-
-      // If a provider with the given config already exists, refresh it
-      // and return early.
-      if let Some(found_provider) = providers.get_mut(&config_hash) {
-        if let Err(err) = found_provider.refresh().await {
-          warn!("Error refreshing provider: {:?}", err);
-        }
-
+      if let Some(found_emit) =
+        self.emit_cache.lock().await.get(&config_hash)
+      {
+        self.app_handle.emit("provider-emit", found_emit);
         return Ok(());
       };
     }
 
     let provider_ref = ProviderRef::new(
-      &self.app_handle,
+      self.emit_tx.clone(),
       config,
       config_hash.clone(),
       self.shared_state.clone(),
@@ -73,19 +91,17 @@ impl ProviderManager {
     function: ProviderFunction,
   ) -> anyhow::Result<ProviderFunctionResult> {
     let mut providers = self.provider_refs.lock().await;
-    let found_provider = providers
-      .get_mut(&config_hash)
+    let provider = providers
+      .get_mut(config_hash)
       .context("No provider found with config.")?;
 
-    match found_provider.runtime_type() {
-      RuntimeType::Async => {
-        found_provider.call_async_function(function).await
+    match provider.runtime_type() {
+      RuntimeType::Async => provider.call_async_function(function).await,
+      RuntimeType::Sync => {
+        task::spawn_blocking(move || provider.call_sync_function(function))
+          .await
+          .map_err(|err| format!("Function execution failed: {}", err))?
       }
-      RuntimeType::Sync => task::spawn_blocking(move || {
-        found_provider.call_sync_function(function)
-      })
-      .await
-      .map_err(|err| format!("Function execution failed: {}", err))?,
     }
   }
 
@@ -102,5 +118,11 @@ impl ProviderManager {
     providers.remove(&config_hash);
 
     Ok(())
+  }
+
+  /// Updates the cache with the given provider emission.
+  pub async fn update_cache(&self, emit: ProviderEmission) {
+    let mut cache = self.emit_cache.lock().await;
+    cache.insert(emit.config_hash, emit);
   }
 }

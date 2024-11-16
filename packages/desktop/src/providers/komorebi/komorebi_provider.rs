@@ -16,7 +16,7 @@ use super::{
   KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
   KomorebiWindow, KomorebiWorkspace,
 };
-use crate::providers::{Provider, ProviderOutput, ProviderResult};
+use crate::providers::{Provider, ProviderEmission, ProviderOutput};
 
 const SOCKET_NAME: &str = "zebar.sock";
 
@@ -42,7 +42,7 @@ impl KomorebiProvider {
 
   fn create_socket(
     &self,
-    emit_result_tx: Sender<ProviderResult>,
+    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
   ) -> anyhow::Result<()> {
     let socket = komorebi_client::subscribe(SOCKET_NAME)
       .context("Failed to initialize Komorebi socket.")?;
@@ -187,7 +187,10 @@ impl Provider for KomorebiProvider {
     RuntimeType::Sync
   }
 
-  fn start_sync(&mut self, emit_result_tx: Sender<ProviderResult>) {
+  fn start_sync(
+    &mut self,
+    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
+  ) {
     if let Err(err) = self.create_socket(emit_result_tx.clone()) {
       emit_result_tx.try_send(Err(err).into());
     }

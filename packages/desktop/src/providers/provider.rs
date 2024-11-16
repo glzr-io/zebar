@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use tokio::sync::mpsc;
 
-use super::ProviderResult;
+use super::{ProviderFunction, ProviderFunctionResult};
 
 #[async_trait]
 pub trait Provider: Send + Sync {
@@ -99,13 +98,7 @@ macro_rules! impl_interval_provider {
         crate::providers::RuntimeType::Async
       }
 
-      async fn run_async(
-        &mut self,
-        emit_result_tx: tokio::sync::mpsc::Sender<
-          crate::providers::ProviderResult,
-        >,
-        _stop_rx: tokio::sync::mpsc::Receiver<()>,
-      ) {
+      async fn start_async(&mut self) {
         let mut interval = tokio::time::interval(
           std::time::Duration::from_millis(self.refresh_interval_ms()),
         );
@@ -116,7 +109,7 @@ macro_rules! impl_interval_provider {
           .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
         let mut last_interval_res: Option<
-          crate::providers::ProviderResult,
+          crate::providers::ProviderEmission,
         > = None;
 
         loop {

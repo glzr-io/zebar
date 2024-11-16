@@ -5,7 +5,10 @@ use std::{
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::{sync::mpsc::Sender, task};
+use tokio::{
+  sync::mpsc::{self, Sender},
+  task,
+};
 use tracing::{debug, error};
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
@@ -16,7 +19,9 @@ use windows::{
   },
 };
 
-use crate::providers::{Provider, ProviderOutput, ProviderResult};
+use crate::providers::{
+  Provider, ProviderEmission, ProviderOutput, RuntimeType,
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -60,7 +65,7 @@ impl MediaProvider {
 
   fn emit_media_info(
     session: Option<&GsmtcSession>,
-    emit_result_tx: Sender<ProviderResult>,
+    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
   ) {
     let _ = match Self::media_output(session) {
       Ok(media_output) => emit_result_tx
@@ -124,7 +129,7 @@ impl MediaProvider {
   }
 
   fn create_session_manager(
-    emit_result_tx: Sender<ProviderResult>,
+    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
   ) -> anyhow::Result<()> {
     debug!("Creating media session manager.");
 
@@ -216,7 +221,7 @@ impl MediaProvider {
 
   fn add_session_listeners(
     session: &GsmtcSession,
-    emit_result_tx: Sender<ProviderResult>,
+    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
   ) -> windows::core::Result<EventTokens> {
     debug!("Adding session listeners.");
 
@@ -281,7 +286,11 @@ impl MediaProvider {
 
 #[async_trait]
 impl Provider for MediaProvider {
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Async
+  }
+
+  async fn start_async(&mut self) {
     task::spawn_blocking(move || {
       if let Err(err) =
         Self::create_session_manager(emit_result_tx.clone())

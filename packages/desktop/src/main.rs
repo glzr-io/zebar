@@ -173,8 +173,8 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.handle().plugin(tauri_plugin_dialog::init())?;
 
   // Initialize `ProviderManager` in Tauri state.
-  let manager = Arc::new(ProviderManager::new(app.handle()));
-  app.manage(manager);
+  let (manager, emit_rx) = ProviderManager::new(app.handle());
+  app.manage(manager.clone());
 
   // Open widgets based on CLI command.
   open_widgets_by_cli_command(cli, widget_factory.clone()).await?;
@@ -184,7 +184,15 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     SysTray::new(app.handle(), config.clone(), widget_factory.clone())
       .await?;
 
-  listen_events(app.handle(), config, monitor_state, widget_factory, tray);
+  listen_events(
+    app.handle(),
+    config,
+    monitor_state,
+    widget_factory,
+    tray,
+    manager,
+    emit_rx,
+  );
 
   Ok(())
 }
@@ -194,7 +202,9 @@ fn listen_events(
   config: Arc<Config>,
   monitor_state: Arc<MonitorState>,
   widget_factory: Arc<WidgetFactory>,
-  tray: Arc<SysTray>,
+  tray: SysTray,
+  manager: Arc<ProviderManager>,
+  emit_rx: mpsc::Receiver<ProviderResult>,
 ) {
   let app_handle = app_handle.clone();
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
@@ -230,6 +240,12 @@ fn listen_events(
         Ok(changed_configs) = widget_configs_change_rx.recv() => {
           info!("Widget configs changed.");
           widget_factory.relaunch_by_paths(&changed_configs.keys().cloned().collect()).await
+        },
+        Ok(provider_emit) = emit_rx.recv() => {
+          info!("Provider emission: {:?}", provider_emit);
+          app_handle.emit("provider-emit", provider_emit);
+          manager.update_cache(provider_emit).await;
+          Ok(())
         },
       };
 

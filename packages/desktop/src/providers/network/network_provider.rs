@@ -36,11 +36,11 @@ pub struct NetworkProvider {
 }
 
 impl NetworkProvider {
-  pub fn new(
-    config: NetworkProviderConfig,
-    netinfo: Arc<Mutex<Networks>>,
-  ) -> NetworkProvider {
-    NetworkProvider { config, netinfo }
+  pub fn new(config: NetworkProviderConfig) -> NetworkProvider {
+    NetworkProvider {
+      config,
+      netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
+    }
   }
 
   fn refresh_interval_ms(&self) -> u64 {

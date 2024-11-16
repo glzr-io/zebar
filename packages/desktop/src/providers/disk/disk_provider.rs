@@ -36,7 +36,7 @@ pub struct Disk {
 
 pub struct DiskProvider {
   config: DiskProviderConfig,
-  system: Arc<Mutex<Disks>>,
+  disks: Arc<Mutex<Disks>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -50,11 +50,11 @@ pub struct DiskSizeMeasure {
 }
 
 impl DiskProvider {
-  pub fn new(
-    config: DiskProviderConfig,
-    system: Arc<Mutex<Disks>>,
-  ) -> DiskProvider {
-    DiskProvider { config, system }
+  pub fn new(config: DiskProviderConfig) -> DiskProvider {
+    DiskProvider {
+      config,
+      disks: Arc::new(Mutex::new(Disks::new_with_refreshed_list())),
+    }
   }
 
   fn refresh_interval_ms(&self) -> u64 {
@@ -62,7 +62,7 @@ impl DiskProvider {
   }
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut disks = self.system.lock().await;
+    let mut disks = self.disks.lock().await;
     disks.refresh();
 
     let disks = disks

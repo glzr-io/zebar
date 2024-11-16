@@ -5,7 +5,10 @@ use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
 use tokio::{
-  sync::{mpsc, Mutex},
+  sync::{
+    mpsc::{self, UnboundedSender},
+    Mutex,
+  },
   task,
 };
 use tracing::{info, warn};
@@ -25,11 +28,11 @@ use super::{
 /// Reference to an active provider.
 pub struct ProviderRef {
   /// Cache for provider output.
-  cache: Arc<Mutex<Option<Box<ProviderResult>>>>,
+  cache: Arc<Mutex<Option<Box<ProviderEmission>>>>,
 
   /// Sender channel for emitting provider output/error to frontend
   /// clients.
-  emit_result_tx: mpsc::Sender<ProviderResult>,
+  emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
 
   /// Sender channel for stopping the provider.
   stop_tx: mpsc::Sender<()>,
@@ -41,17 +44,17 @@ pub struct ProviderRef {
 /// in a nicer way.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ProviderResult {
+pub enum ProviderEmission {
   Output(ProviderOutput),
   Error(String),
 }
 
 /// Implements conversion from `anyhow::Result`.
-impl From<anyhow::Result<ProviderOutput>> for ProviderResult {
+impl From<anyhow::Result<ProviderOutput>> for ProviderEmission {
   fn from(result: anyhow::Result<ProviderOutput>) -> Self {
     match result {
-      Ok(output) => ProviderResult::Output(output),
-      Err(err) => ProviderResult::Error(err.to_string()),
+      Ok(output) => ProviderEmission::Output(output),
+      Err(err) => ProviderEmission::Error(err.to_string()),
     }
   }
 }
@@ -59,7 +62,7 @@ impl From<anyhow::Result<ProviderOutput>> for ProviderResult {
 impl ProviderRef {
   /// Creates a new `ProviderRef` instance.
   pub async fn new(
-    app_handle: &AppHandle,
+    emit_result_tx: UnboundedSender<ProviderEmission>,
     config: ProviderConfig,
     config_hash: String,
     shared_state: SharedProviderState,
@@ -67,15 +70,6 @@ impl ProviderRef {
     let cache = Arc::new(Mutex::new(None));
 
     let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
-    let (emit_result_tx, emit_result_rx) =
-      mpsc::channel::<ProviderResult>(1);
-
-    Self::start_output_listener(
-      app_handle.clone(),
-      config_hash.clone(),
-      cache.clone(),
-      emit_result_rx,
-    );
 
     Self::start_provider(
       config,
@@ -92,42 +86,12 @@ impl ProviderRef {
     })
   }
 
-  fn start_output_listener(
-    app_handle: AppHandle,
-    config_hash: String,
-    cache: Arc<Mutex<Option<Box<ProviderResult>>>>,
-    mut emit_result_rx: mpsc::Receiver<ProviderResult>,
-  ) {
-    task::spawn(async move {
-      while let Some(output) = emit_result_rx.recv().await {
-        info!("Emitting for provider: {}", config_hash);
-
-        let output = Box::new(output);
-        let payload = json!({
-          "configHash": config_hash.clone(),
-          "result": *output.clone(),
-        });
-
-        if let Err(err) = app_handle.emit("provider-emit", payload) {
-          warn!("Error emitting provider output: {:?}", err);
-        }
-
-        // Update the provider's output cache.
-        if let Ok(mut providers) = cache.try_lock() {
-          *providers = Some(output);
-        } else {
-          warn!("Failed to update provider output cache.");
-        }
-      }
-    });
-  }
-
   /// Starts the provider in a separate task.
   fn start_provider(
     config: ProviderConfig,
     config_hash: String,
     shared_state: SharedProviderState,
-    emit_result_tx: mpsc::Sender<ProviderResult>,
+    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
     mut stop_rx: mpsc::Receiver<()>,
   ) -> anyhow::Result<()> {
     let mut provider = Self::create_provider(config, shared_state)?;
@@ -174,13 +138,10 @@ impl ProviderRef {
       ProviderConfig::Memory(config) => {
         Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
       }
-      ProviderConfig::Disk(config) => {
-        Box::new(DiskProvider::new(config, shared_state.diskinfo.clone()))
+      ProviderConfig::Disk(config) => Box::new(DiskProvider::new(config)),
+      ProviderConfig::Network(config) => {
+        Box::new(NetworkProvider::new(config))
       }
-      ProviderConfig::Network(config) => Box::new(NetworkProvider::new(
-        config,
-        shared_state.netinfo.clone(),
-      )),
       ProviderConfig::Weather(config) => {
         Box::new(WeatherProvider::new(config))
       }

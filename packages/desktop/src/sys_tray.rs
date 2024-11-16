@@ -116,7 +116,7 @@ impl SysTray {
     app_handle: &AppHandle,
     config: Arc<Config>,
     widget_factory: Arc<WidgetFactory>,
-  ) -> anyhow::Result<Arc<SysTray>> {
+  ) -> anyhow::Result<SysTray> {
     let mut sys_tray = Self {
       app_handle: app_handle.clone(),
       config,
@@ -126,7 +126,7 @@ impl SysTray {
 
     sys_tray.tray_icon = Some(sys_tray.create_tray_icon().await?);
 
-    Ok(Arc::new(sys_tray))
+    Ok(sys_tray)
   }
 
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {

@@ -11,3 +11,15 @@ pub enum MediaFunction {
   Next,
   Previous,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ProviderFunctionResult {
+  Media(MediaFunctionResult),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MediaFunctionResult {
+  PlayPause(bool),
+  Next(bool),
+  Previous(bool),
+}
