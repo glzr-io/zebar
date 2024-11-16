@@ -202,6 +202,7 @@ impl IAudioEndpointVolumeCallback_Impl for MediaDeviceEventHandler_Impl {
               "Volume update for {} (ID: {}): {}",
               device.name, device_id, data.fMasterVolume
             );
+            drop(output);
             AudioProvider::emit_volume();
           }
         }
