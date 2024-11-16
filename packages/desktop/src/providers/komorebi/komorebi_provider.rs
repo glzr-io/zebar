@@ -9,7 +9,7 @@ use komorebi_client::{
   Container, Monitor, SocketMessage, Window, Workspace,
 };
 use serde::{Deserialize, Serialize};
-use tokio::{sync::mpsc::Sender, time};
+use tokio::sync::mpsc::{self};
 use tracing::debug;
 
 use super::{
@@ -78,7 +78,7 @@ impl KomorebiProvider {
               &String::from_utf8(buffer).unwrap(),
             )
           {
-            emit_result_tx.try_send(
+            emit_result_tx.send(
               Ok(ProviderOutput::Komorebi(Self::transform_response(
                 notification.state,
               )))
@@ -86,14 +86,9 @@ impl KomorebiProvider {
             )
           }
         }
-        Err(_) => {
-          emit_result_tx
-            .try_send(
-              Err(anyhow::anyhow!("Failed to read Komorebi stream."))
-                .into(),
-            )
-            .await;
-        }
+        Err(_) => emit_result_tx.send(
+          Err(anyhow::anyhow!("Failed to read Komorebi stream.")).into(),
+        ),
       }
     }
 

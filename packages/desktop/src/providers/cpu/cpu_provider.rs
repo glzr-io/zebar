@@ -24,13 +24,13 @@ pub struct CpuOutput {
 
 pub struct CpuProvider {
   config: CpuProviderConfig,
-  sysinfo: Arc<Mutex<System>>,
+  sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
 impl CpuProvider {
   pub fn new(
     config: CpuProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
+    sysinfo: Arc<Mutex<sysinfo::System>>,
   ) -> CpuProvider {
     CpuProvider { config, sysinfo }
   }

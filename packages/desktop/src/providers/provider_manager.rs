@@ -1,8 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{bail, Context};
-use serde::Serialize;
-use sysinfo::System;
 use tauri::{AppHandle, Emitter};
 use tokio::{
   sync::{mpsc, oneshot, Mutex},
@@ -23,10 +21,28 @@ use super::{
   media::MediaProvider,
 };
 
+/// Common fields for a provider.
+pub struct CommonProviderState {
+  /// Receiver channel for stopping the provider.
+  stop_rx: oneshot::Receiver<()>,
+
+  /// Receiver channel for sending function calls to the provider.
+  function_rx: mpsc::Receiver<(
+    ProviderFunction,
+    oneshot::Sender<ProviderFunctionResult>,
+  )>,
+
+  /// Hash of the provider's config.
+  config_hash: String,
+
+  /// Shared `sysinfo` instance.
+  sysinfo: Arc<Mutex<sysinfo::System>>,
+}
+
 /// Reference to an active provider.
 pub struct ProviderRef {
   /// Sender channel for stopping the provider.
-  stop_tx: mpsc::Sender<()>,
+  stop_tx: oneshot::Sender<()>,
 
   /// Sender channel for sending function calls to the provider.
   function_tx: mpsc::Sender<(
@@ -38,26 +54,8 @@ pub struct ProviderRef {
   task_handle: task::JoinHandle<()>,
 }
 
-/// Provider output/error emitted to frontend clients.
-///
-/// This is used instead of a normal `Result` type in order to serialize it
-/// in a nicer way.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ProviderEmission {
-  Output(ProviderOutput),
-  Error(String),
-}
-
-/// Implements conversion from `anyhow::Result`.
-impl From<anyhow::Result<ProviderOutput>> for ProviderEmission {
-  fn from(result: anyhow::Result<ProviderOutput>) -> Self {
-    match result {
-      Ok(output) => ProviderEmission::Output(output),
-      Err(err) => ProviderEmission::Error(err.to_string()),
-    }
-  }
-}
+/// A thread-safe `Result` type for provider outputs and errors.
+pub type ProviderEmission = Result<ProviderOutput, String>;
 
 /// Manages the creation and cleanup of providers.
 pub struct ProviderManager {
@@ -74,7 +72,7 @@ pub struct ProviderManager {
   emit_tx: mpsc::UnboundedSender<ProviderEmission>,
 
   /// Shared `sysinfo` instance.
-  sysinfo: Arc<Mutex<System>>,
+  sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
 impl ProviderManager {
@@ -92,7 +90,7 @@ impl ProviderManager {
         app_handle: app_handle.clone(),
         provider_refs: Arc::new(Mutex::new(HashMap::new())),
         emit_cache: Arc::new(Mutex::new(HashMap::new())),
-        sysinfo: Arc::new(Mutex::new(System::new_all())),
+        sysinfo: Arc::new(Mutex::new(sysinfo::System::new_all())),
         emit_tx,
       }),
       emit_rx,
@@ -116,20 +114,28 @@ impl ProviderManager {
       };
     }
 
-    let (stop_tx, stop_rx) = mpsc::channel(1);
+    let (stop_tx, stop_rx) = oneshot::channel();
     let (function_tx, function_rx) = mpsc::channel(1);
 
-    let mut provider =
-      self.create_instance(config, stop_rx, function_rx)?;
+    let common = CommonProviderState {
+      stop_rx,
+      function_rx,
+      config_hash: config_hash.clone(),
+      sysinfo: self.sysinfo.clone(),
+    };
 
+    let mut provider = self.create_instance(config, common)?;
+
+    // Spawn the provider's task based on its runtime type.
+    let config_hash_clone = config_hash.clone();
     let task_handle = match provider.runtime_type() {
       RuntimeType::Async => task::spawn(async move {
         provider.start_async().await;
-        info!("Provider stopped: {}", config_hash);
+        info!("Provider stopped: {}", config_hash_clone);
       }),
       RuntimeType::Sync => task::spawn_blocking(move || {
         provider.start_sync();
-        info!("Provider stopped: {}", config_hash);
+        info!("Provider stopped: {}", config_hash_clone);
       }),
     };
 
@@ -140,7 +146,7 @@ impl ProviderManager {
     };
 
     let mut providers = self.provider_refs.lock().await;
-    providers.insert(config_hash.clone(), provider_ref);
+    providers.insert(config_hash, provider_ref);
 
     Ok(())
   }
@@ -149,42 +155,44 @@ impl ProviderManager {
   fn create_instance(
     &self,
     config: ProviderConfig,
-    stop_rx: mpsc::Receiver<()>,
-    function_rx: mpsc::Receiver<(
-      ProviderFunction,
-      oneshot::Sender<ProviderFunctionResult>,
-    )>,
+    common: CommonProviderState,
   ) -> anyhow::Result<Box<dyn Provider>> {
     let provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
-        Box::new(BatteryProvider::new(config))
+        Box::new(BatteryProvider::new(config, common))
       }
       ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, self.sysinfo.clone()))
+        Box::new(CpuProvider::new(config, common))
       }
-      ProviderConfig::Host(config) => Box::new(HostProvider::new(config)),
-      ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
+      ProviderConfig::Host(config) => {
+        Box::new(HostProvider::new(config, common))
+      }
+      ProviderConfig::Ip(config) => {
+        Box::new(IpProvider::new(config, common))
+      }
       #[cfg(windows)]
       ProviderConfig::Komorebi(config) => {
-        Box::new(KomorebiProvider::new(config))
+        Box::new(KomorebiProvider::new(config, common))
       }
       #[cfg(windows)]
       ProviderConfig::Media(config) => {
-        Box::new(MediaProvider::new(config))
+        Box::new(MediaProvider::new(config, common))
       }
       ProviderConfig::Memory(config) => {
-        Box::new(MemoryProvider::new(config, self.sysinfo.clone()))
+        Box::new(MemoryProvider::new(config, common))
       }
-      ProviderConfig::Disk(config) => Box::new(DiskProvider::new(config)),
+      ProviderConfig::Disk(config) => {
+        Box::new(DiskProvider::new(config, common))
+      }
       ProviderConfig::Network(config) => {
-        Box::new(NetworkProvider::new(config))
+        Box::new(NetworkProvider::new(config, common))
       }
       ProviderConfig::Weather(config) => {
-        Box::new(WeatherProvider::new(config))
+        Box::new(WeatherProvider::new(config, common))
       }
       #[cfg(windows)]
       ProviderConfig::Keyboard(config) => {
-        Box::new(KeyboardProvider::new(config))
+        Box::new(KeyboardProvider::new(config, common))
       }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),

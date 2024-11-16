@@ -8,10 +8,11 @@ use std::{env, sync::Arc};
 use clap::Parser;
 use cli::MonitorType;
 use config::{MonitorSelection, WidgetPlacement};
+use providers::ProviderEmission;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
-use tokio::task;
+use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 use widget_factory::WidgetOpenOptions;
@@ -204,7 +205,7 @@ fn listen_events(
   widget_factory: Arc<WidgetFactory>,
   tray: SysTray,
   manager: Arc<ProviderManager>,
-  emit_rx: mpsc::Receiver<ProviderResult>,
+  mut emit_rx: mpsc::UnboundedReceiver<ProviderEmission>,
 ) {
   let app_handle = app_handle.clone();
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
@@ -241,9 +242,9 @@ fn listen_events(
           info!("Widget configs changed.");
           widget_factory.relaunch_by_paths(&changed_configs.keys().cloned().collect()).await
         },
-        Ok(provider_emit) = emit_rx.recv() => {
+        Some(provider_emit) = emit_rx.recv() => {
           info!("Provider emission: {:?}", provider_emit);
-          app_handle.emit("provider-emit", provider_emit);
+          app_handle.emit("provider-emit", provider_emit.clone());
           manager.update_cache(provider_emit).await;
           Ok(())
         },

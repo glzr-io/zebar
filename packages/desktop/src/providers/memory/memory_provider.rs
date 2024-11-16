@@ -26,13 +26,13 @@ pub struct MemoryOutput {
 
 pub struct MemoryProvider {
   config: MemoryProviderConfig,
-  sysinfo: Arc<Mutex<System>>,
+  sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
 impl MemoryProvider {
   pub fn new(
     config: MemoryProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
+    sysinfo: Arc<Mutex<sysinfo::System>>,
   ) -> MemoryProvider {
     MemoryProvider { config, sysinfo }
   }
