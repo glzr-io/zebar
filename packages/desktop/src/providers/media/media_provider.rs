@@ -20,7 +20,8 @@ use windows::{
 };
 
 use crate::providers::{
-  Provider, ProviderEmission, ProviderOutput, RuntimeType,
+  CommonProviderState, Provider, ProviderEmission, ProviderOutput,
+  RuntimeType,
 };
 
 #[derive(Deserialize, Debug)]
@@ -55,12 +56,15 @@ struct EventTokens {
 }
 
 pub struct MediaProvider {
-  _config: MediaProviderConfig,
+  common: CommonProviderState,
 }
 
 impl MediaProvider {
-  pub fn new(config: MediaProviderConfig) -> MediaProvider {
-    MediaProvider { _config: config }
+  pub fn new(
+    _config: MediaProviderConfig,
+    common: CommonProviderState,
+  ) -> MediaProvider {
+    MediaProvider { common }
   }
 
   fn emit_media_info(

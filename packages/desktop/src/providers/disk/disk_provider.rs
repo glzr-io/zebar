@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 use crate::{
   common::{to_iec_bytes, to_si_bytes},
   impl_interval_provider,
-  providers::ProviderOutput,
+  providers::{CommonProviderState, ProviderOutput},
 };
 
 #[derive(Deserialize, Debug)]
@@ -36,6 +36,7 @@ pub struct Disk {
 
 pub struct DiskProvider {
   config: DiskProviderConfig,
+  common: CommonProviderState,
   disks: Arc<Mutex<Disks>>,
 }
 
@@ -50,9 +51,13 @@ pub struct DiskSizeMeasure {
 }
 
 impl DiskProvider {
-  pub fn new(config: DiskProviderConfig) -> DiskProvider {
+  pub fn new(
+    config: DiskProviderConfig,
+    common: CommonProviderState,
+  ) -> DiskProvider {
     DiskProvider {
       config,
+      common,
       disks: Arc::new(Mutex::new(Disks::new_with_refreshed_list())),
     }
   }

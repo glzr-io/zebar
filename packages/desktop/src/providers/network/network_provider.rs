@@ -12,7 +12,7 @@ use super::{
 use crate::{
   common::{to_iec_bytes, to_si_bytes},
   impl_interval_provider,
-  providers::ProviderOutput,
+  providers::{CommonProviderState, ProviderOutput},
 };
 
 #[derive(Deserialize, Debug)]
@@ -32,13 +32,18 @@ pub struct NetworkOutput {
 
 pub struct NetworkProvider {
   config: NetworkProviderConfig,
+  common: CommonProviderState,
   netinfo: Arc<Mutex<Networks>>,
 }
 
 impl NetworkProvider {
-  pub fn new(config: NetworkProviderConfig) -> NetworkProvider {
+  pub fn new(
+    config: NetworkProviderConfig,
+    common: CommonProviderState,
+  ) -> NetworkProvider {
     NetworkProvider {
       config,
+      common,
       netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
     }
   }

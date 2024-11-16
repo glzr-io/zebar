@@ -16,7 +16,9 @@ use super::{
   KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
   KomorebiWindow, KomorebiWorkspace,
 };
-use crate::providers::{Provider, ProviderEmission, ProviderOutput};
+use crate::providers::{
+  CommonProviderState, Provider, ProviderEmission, ProviderOutput,
+};
 
 const SOCKET_NAME: &str = "zebar.sock";
 
@@ -32,12 +34,15 @@ pub struct KomorebiOutput {
 }
 
 pub struct KomorebiProvider {
-  _config: KomorebiProviderConfig,
+  common: CommonProviderState,
 }
 
 impl KomorebiProvider {
-  pub fn new(config: KomorebiProviderConfig) -> KomorebiProvider {
-    KomorebiProvider { _config: config }
+  pub fn new(
+    _config: KomorebiProviderConfig,
+    common: CommonProviderState,
+  ) -> KomorebiProvider {
+    KomorebiProvider { common }
   }
 
   fn create_socket(

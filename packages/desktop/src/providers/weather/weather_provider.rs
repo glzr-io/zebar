@@ -6,7 +6,7 @@ use crate::{
   impl_interval_provider,
   providers::{
     ip::{IpProvider, IpProviderConfig},
-    ProviderOutput,
+    CommonProviderState, ProviderOutput,
   },
 };
 
@@ -47,13 +47,18 @@ pub enum WeatherStatus {
 
 pub struct WeatherProvider {
   config: WeatherProviderConfig,
+  common: CommonProviderState,
   http_client: Client,
 }
 
 impl WeatherProvider {
-  pub fn new(config: WeatherProviderConfig) -> WeatherProvider {
+  pub fn new(
+    config: WeatherProviderConfig,
+    common: CommonProviderState,
+  ) -> WeatherProvider {
     WeatherProvider {
       config,
+      common,
       http_client: Client::new(),
     }
   }
@@ -67,9 +72,12 @@ impl WeatherProvider {
       match (self.config.latitude, self.config.longitude) {
         (Some(lat), Some(lon)) => (lat, lon),
         _ => {
-          let ip_output = IpProvider::new(IpProviderConfig {
-            refresh_interval: 0,
-          })
+          let ip_output = IpProvider::new(
+            IpProviderConfig {
+              refresh_interval: 0,
+            },
+            self.common,
+          )
           .run_interval()
           .await?;
 

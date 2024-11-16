@@ -8,7 +8,10 @@ use starship_battery::{
   Manager, State,
 };
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  impl_interval_provider,
+  providers::{CommonProviderState, ProviderOutput},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -32,11 +35,15 @@ pub struct BatteryOutput {
 
 pub struct BatteryProvider {
   config: BatteryProviderConfig,
+  common: CommonProviderState,
 }
 
 impl BatteryProvider {
-  pub fn new(config: BatteryProviderConfig) -> BatteryProvider {
-    BatteryProvider { config }
+  pub fn new(
+    config: BatteryProviderConfig,
+    common: CommonProviderState,
+  ) -> BatteryProvider {
+    BatteryProvider { config, common }
   }
 
   fn refresh_interval_ms(&self) -> u64 {

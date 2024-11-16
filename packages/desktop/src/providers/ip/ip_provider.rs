@@ -3,7 +3,10 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::ipinfo_res::IpinfoRes;
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  impl_interval_provider,
+  providers::{CommonProviderState, ProviderOutput},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -23,13 +26,18 @@ pub struct IpOutput {
 
 pub struct IpProvider {
   config: IpProviderConfig,
+  common: CommonProviderState,
   http_client: Client,
 }
 
 impl IpProvider {
-  pub fn new(config: IpProviderConfig) -> IpProvider {
+  pub fn new(
+    config: IpProviderConfig,
+    common: CommonProviderState,
+  ) -> IpProvider {
     IpProvider {
       config,
+      common,
       http_client: Client::new(),
     }
   }

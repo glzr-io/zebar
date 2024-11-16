@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use sysinfo::System;
 use tokio::sync::Mutex;
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  impl_interval_provider,
+  providers::{CommonProviderState, ProviderOutput},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -26,15 +29,21 @@ pub struct MemoryOutput {
 
 pub struct MemoryProvider {
   config: MemoryProviderConfig,
+  common: CommonProviderState,
   sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
 impl MemoryProvider {
   pub fn new(
     config: MemoryProviderConfig,
+    common: CommonProviderState,
     sysinfo: Arc<Mutex<sysinfo::System>>,
   ) -> MemoryProvider {
-    MemoryProvider { config, sysinfo }
+    MemoryProvider {
+      config,
+      common,
+      sysinfo,
+    }
   }
 
   fn refresh_interval_ms(&self) -> u64 {

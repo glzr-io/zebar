@@ -9,7 +9,10 @@ use windows::Win32::{
   },
 };
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  impl_interval_provider,
+  providers::{CommonProviderState, ProviderOutput},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -25,11 +28,15 @@ pub struct KeyboardOutput {
 
 pub struct KeyboardProvider {
   config: KeyboardProviderConfig,
+  common: CommonProviderState,
 }
 
 impl KeyboardProvider {
-  pub fn new(config: KeyboardProviderConfig) -> KeyboardProvider {
-    KeyboardProvider { config }
+  pub fn new(
+    config: KeyboardProviderConfig,
+    common: CommonProviderState,
+  ) -> KeyboardProvider {
+    KeyboardProvider { config, common }
   }
 
   fn refresh_interval_ms(&self) -> u64 {

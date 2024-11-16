@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  impl_interval_provider,
+  providers::{CommonProviderState, ProviderOutput},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -22,11 +25,15 @@ pub struct HostOutput {
 
 pub struct HostProvider {
   config: HostProviderConfig,
+  common: CommonProviderState,
 }
 
 impl HostProvider {
-  pub fn new(config: HostProviderConfig) -> HostProvider {
-    HostProvider { config }
+  pub fn new(
+    config: HostProviderConfig,
+    common: CommonProviderState,
+  ) -> HostProvider {
+    HostProvider { config, common }
   }
 
   fn refresh_interval_ms(&self) -> u64 {

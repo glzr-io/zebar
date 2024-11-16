@@ -1,10 +1,9 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
-use sysinfo::System;
-use tokio::sync::Mutex;
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  impl_interval_provider,
+  providers::{CommonProviderState, ProviderOutput},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -24,15 +23,15 @@ pub struct CpuOutput {
 
 pub struct CpuProvider {
   config: CpuProviderConfig,
-  sysinfo: Arc<Mutex<sysinfo::System>>,
+  common: CommonProviderState,
 }
 
 impl CpuProvider {
   pub fn new(
     config: CpuProviderConfig,
-    sysinfo: Arc<Mutex<sysinfo::System>>,
+    common: CommonProviderState,
   ) -> CpuProvider {
-    CpuProvider { config, sysinfo }
+    CpuProvider { config, common }
   }
 
   fn refresh_interval_ms(&self) -> u64 {
@@ -40,7 +39,7 @@ impl CpuProvider {
   }
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut sysinfo = self.sysinfo.lock().await;
+    let mut sysinfo = self.common.sysinfo.lock().await;
     sysinfo.refresh_cpu();
 
     Ok(ProviderOutput::Cpu(CpuOutput {
