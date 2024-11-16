@@ -97,35 +97,6 @@ impl MediaDeviceEventHandler {
     }
   }
 
-  fn setup_volume_monitoring(
-    &self,
-    device: &IMMDevice,
-  ) -> windows::core::Result<(String, String)> {
-    unsafe {
-      let device_id = device.GetId()?.to_string()?;
-      let device_name = Self::get_device_name(device)?;
-      let mut device_state = self.device_state.lock().unwrap();
-
-      if !device_state.contains_key(&device_id) {
-        let endpoint_volume: IAudioEndpointVolume =
-          device.Activate(CLSCTX_ALL, None)?;
-        let mut handler = self.clone();
-        handler.current_device = device_id.clone();
-        let callback = IAudioEndpointVolumeCallback::from(handler);
-        endpoint_volume.RegisterControlChangeNotify(&callback)?;
-        device_state.insert(
-          device_id.clone(),
-          DeviceInfo {
-            name: device_name.clone(),
-            endpoint_volume,
-          },
-        );
-      }
-
-      Ok((device_id, device_name))
-    }
-  }
-
   fn enumerate_devices(&self) -> windows::core::Result<()> {
     unsafe {
       let collection = self
@@ -133,21 +104,34 @@ impl MediaDeviceEventHandler {
         .EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
       let mut audio_state = AUDIO_STATE.get().unwrap().lock().unwrap();
       let mut devices = HashMap::new();
+      let mut device_state = self.device_state.lock().unwrap();
 
       for i in 0..collection.GetCount()? {
         if let Ok(device) = collection.Item(i) {
-          let (device_id, device_name) =
-            self.setup_volume_monitoring(&device)?;
-          let volume = self
-            .device_state
-            .lock()
-            .unwrap()
-            .get(&device_id)
-            .map(|d| {
-              d.endpoint_volume
-                .GetMasterVolumeLevelScalar()
-                .unwrap_or(0.0)
-            })
+          let device_id = device.GetId()?.to_string()?;
+
+          // Check if the device is already being monitored
+          if !device_state.contains_key(&device_id) {
+            let device_name = Self::get_device_name(&device)?;
+            let endpoint_volume: IAudioEndpointVolume =
+              device.Activate(CLSCTX_ALL, None)?;
+            let mut handler = self.clone();
+            handler.current_device = device_id.clone();
+            let callback = IAudioEndpointVolumeCallback::from(handler);
+            endpoint_volume.RegisterControlChangeNotify(&callback)?;
+            device_state.insert(
+              device_id.clone(),
+              DeviceInfo {
+                name: device_name.clone(),
+                endpoint_volume,
+              },
+            );
+          }
+
+          let device_info = device_state.get(&device_id).unwrap();
+          let volume = device_info
+            .endpoint_volume
+            .GetMasterVolumeLevelScalar()
             .unwrap_or(0.0);
           let is_default = self
             .enumerator
@@ -162,7 +146,7 @@ impl MediaDeviceEventHandler {
           devices.insert(
             device_id,
             AudioDeviceInfo {
-              name: device_name,
+              name: device_info.name.clone(),
               volume,
               is_default,
             },
@@ -170,11 +154,6 @@ impl MediaDeviceEventHandler {
         }
       }
 
-      self
-        .device_state
-        .lock()
-        .unwrap()
-        .retain(|id, _| devices.contains_key(id));
       audio_state.devices = devices;
       audio_state.default_device = self
         .enumerator
@@ -223,7 +202,6 @@ impl IAudioEndpointVolumeCallback_Impl for MediaDeviceEventHandler_Impl {
               "Volume update for {} (ID: {}): {}",
               device.name, device_id, data.fMasterVolume
             );
-            drop(output);
             AudioProvider::emit_volume();
           }
         }
