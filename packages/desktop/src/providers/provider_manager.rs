@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{bail, Context};
+use serde::Serialize;
 use sysinfo::System;
 use tauri::{AppHandle, Emitter};
 use tokio::{
@@ -13,8 +14,8 @@ use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
   network::NetworkProvider, weather::WeatherProvider, Provider,
-  ProviderConfig, ProviderEmission, ProviderFunction,
-  ProviderFunctionResult, RuntimeType,
+  ProviderConfig, ProviderFunction, ProviderFunctionResult,
+  ProviderOutput, RuntimeType,
 };
 #[cfg(windows)]
 use super::{
@@ -25,19 +26,37 @@ use super::{
 /// Reference to an active provider.
 pub struct ProviderRef {
   /// Sender channel for stopping the provider.
-  destroy_tx: mpsc::Sender<()>,
+  stop_tx: mpsc::Sender<()>,
 
   /// Sender channel for sending function calls to the provider.
   function_tx: mpsc::Sender<(
     ProviderFunction,
     oneshot::Sender<ProviderFunctionResult>,
   )>,
+
+  /// Handle to the provider's task.
+  task_handle: task::JoinHandle<()>,
 }
 
-/// State shared between providers.
-#[derive(Clone)]
-pub struct SharedProviderState {
-  pub sysinfo: Arc<Mutex<System>>,
+/// Provider output/error emitted to frontend clients.
+///
+/// This is used instead of a normal `Result` type in order to serialize it
+/// in a nicer way.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProviderEmission {
+  Output(ProviderOutput),
+  Error(String),
+}
+
+/// Implements conversion from `anyhow::Result`.
+impl From<anyhow::Result<ProviderOutput>> for ProviderEmission {
+  fn from(result: anyhow::Result<ProviderOutput>) -> Self {
+    match result {
+      Ok(output) => ProviderEmission::Output(output),
+      Err(err) => ProviderEmission::Error(err.to_string()),
+    }
+  }
 }
 
 /// Manages the creation and cleanup of providers.
@@ -51,18 +70,18 @@ pub struct ProviderManager {
   /// Cache of provider emissions.
   emit_cache: Arc<Mutex<HashMap<String, ProviderEmission>>>,
 
-  /// Shared state between providers.
-  shared_state: SharedProviderState,
-
   /// Sender channel for provider emissions.
   emit_tx: mpsc::UnboundedSender<ProviderEmission>,
+
+  /// Shared `sysinfo` instance.
+  sysinfo: Arc<Mutex<System>>,
 }
 
 impl ProviderManager {
   /// Creates a new provider manager.
   ///
-  /// Returns a tuple containing the manager and a channel for provider
-  /// emissions.
+  /// Returns a tuple containing the `ProviderManager` instance and a
+  /// channel for provider emissions.
   pub fn new(
     app_handle: &AppHandle,
   ) -> (Arc<Self>, mpsc::UnboundedReceiver<ProviderEmission>) {
@@ -73,9 +92,7 @@ impl ProviderManager {
         app_handle: app_handle.clone(),
         provider_refs: Arc::new(Mutex::new(HashMap::new())),
         emit_cache: Arc::new(Mutex::new(HashMap::new())),
-        shared_state: SharedProviderState {
-          sysinfo: Arc::new(Mutex::new(System::new_all())),
-        },
+        sysinfo: Arc::new(Mutex::new(System::new_all())),
         emit_tx,
       }),
       emit_rx,
@@ -85,22 +102,25 @@ impl ProviderManager {
   /// Creates a provider with the given config.
   pub async fn create(
     &self,
-    config_hash: &str,
+    config_hash: String,
     config: ProviderConfig,
   ) -> anyhow::Result<()> {
     // If a provider with the given config already exists, re-emit its
     // latest emission and return early.
     {
       if let Some(found_emit) =
-        self.emit_cache.lock().await.get(config_hash)
+        self.emit_cache.lock().await.get(&config_hash)
       {
         self.app_handle.emit("provider-emit", found_emit);
         return Ok(());
       };
     }
 
-    let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
-    let mut provider = self.create_provider(config, stop_rx)?;
+    let (stop_tx, stop_rx) = mpsc::channel(1);
+    let (function_tx, function_rx) = mpsc::channel(1);
+
+    let mut provider =
+      self.create_instance(config, stop_rx, function_rx)?;
 
     let task_handle = match provider.runtime_type() {
       RuntimeType::Async => task::spawn(async move {
@@ -114,26 +134,33 @@ impl ProviderManager {
     };
 
     let provider_ref = ProviderRef {
-      destroy_tx: self.emit_tx.clone(),
-      function_tx: self.emit_tx.clone(),
+      stop_tx,
+      function_tx,
+      task_handle,
     };
 
     let mut providers = self.provider_refs.lock().await;
-    providers.insert(config_hash.to_string(), provider_ref);
+    providers.insert(config_hash.clone(), provider_ref);
 
     Ok(())
   }
 
-  fn create_provider(
+  /// Creates a new provider instance.
+  fn create_instance(
     &self,
     config: ProviderConfig,
+    stop_rx: mpsc::Receiver<()>,
+    function_rx: mpsc::Receiver<(
+      ProviderFunction,
+      oneshot::Sender<ProviderFunctionResult>,
+    )>,
   ) -> anyhow::Result<Box<dyn Provider>> {
     let provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
         Box::new(BatteryProvider::new(config))
       }
       ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, shared_state.sysinfo.clone()))
+        Box::new(CpuProvider::new(config, self.sysinfo.clone()))
       }
       ProviderConfig::Host(config) => Box::new(HostProvider::new(config)),
       ProviderConfig::Ip(config) => Box::new(IpProvider::new(config)),
@@ -146,7 +173,7 @@ impl ProviderManager {
         Box::new(MediaProvider::new(config))
       }
       ProviderConfig::Memory(config) => {
-        Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))
+        Box::new(MemoryProvider::new(config, self.sysinfo.clone()))
       }
       ProviderConfig::Disk(config) => Box::new(DiskProvider::new(config)),
       ProviderConfig::Network(config) => {
@@ -172,29 +199,31 @@ impl ProviderManager {
   /// Returns the result of the function execution.
   async fn call_function(
     &self,
-    config_hash: &str,
+    config_hash: String,
     function: ProviderFunction,
   ) -> anyhow::Result<ProviderFunctionResult> {
-    let mut provider_refs = self.provider_refs.lock().await;
+    let provider_refs = self.provider_refs.lock().await;
     let provider_ref = provider_refs
-      .get(config_hash)
+      .get(&config_hash)
       .context("No provider found with config.")?;
 
     let (tx, rx) = oneshot::channel();
-    provider_ref.function_tx.send((function, tx))?;
-    rx.await?
+    provider_ref.function_tx.send((function, tx)).await?;
+
+    Ok(rx.await?)
   }
 
   /// Destroys and cleans up the provider with the given config.
-  pub async fn stop(&self, config_hash: &str) -> anyhow::Result<()> {
+  pub async fn stop(&self, config_hash: String) -> anyhow::Result<()> {
     let mut provider_refs = self.provider_refs.lock().await;
     let provider_ref = provider_refs
-      .remove(config_hash)
+      .remove(&config_hash)
       .context("No provider found with config.")?;
 
     let (tx, rx) = oneshot::channel();
-    provider_ref.stop_tx.send(tx)?;
-    rx.await?
+    provider_ref.stop_tx.send(tx).await?;
+
+    Ok(rx.await?)
   }
 
   /// Updates the cache with the given provider emission.
