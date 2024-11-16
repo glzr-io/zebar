@@ -83,7 +83,7 @@ impl KomorebiProvider {
                 notification.state,
               )))
               .into(),
-            )
+            );
           }
         }
         Err(_) => emit_result_tx.send(

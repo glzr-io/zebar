@@ -124,20 +124,8 @@ impl ProviderManager {
       sysinfo: self.sysinfo.clone(),
     };
 
-    let mut provider = self.create_instance(config, common)?;
-
-    // Spawn the provider's task based on its runtime type.
-    let config_hash_clone = config_hash.clone();
-    let task_handle = match provider.runtime_type() {
-      RuntimeType::Async => task::spawn(async move {
-        provider.start_async().await;
-        info!("Provider stopped: {}", config_hash_clone);
-      }),
-      RuntimeType::Sync => task::spawn_blocking(move || {
-        provider.start_sync();
-        info!("Provider stopped: {}", config_hash_clone);
-      }),
-    };
+    let task_handle =
+      self.create_instance(config, config_hash.clone(), common)?;
 
     let provider_ref = ProviderRef {
       stop_tx,
@@ -155,8 +143,9 @@ impl ProviderManager {
   fn create_instance(
     &self,
     config: ProviderConfig,
+    config_hash: String,
     common: CommonProviderState,
-  ) -> anyhow::Result<Box<dyn Provider>> {
+  ) -> anyhow::Result<task::JoinHandle<()>> {
     let provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
         Box::new(BatteryProvider::new(config, common))
@@ -198,7 +187,19 @@ impl ProviderManager {
       _ => bail!("Provider not supported on this operating system."),
     };
 
-    Ok(provider)
+    // Spawn the provider's task based on its runtime type.
+    let task_handle = match provider.runtime_type() {
+      RuntimeType::Async => task::spawn(async move {
+        provider.start_async().await;
+        info!("Provider stopped: {}", config_hash);
+      }),
+      RuntimeType::Sync => task::spawn_blocking(move || {
+        provider.start_sync();
+        info!("Provider stopped: {}", config_hash);
+      }),
+    };
+
+    Ok(task_handle)
   }
 
   /// Sends a function call through a channel to be executed by the
