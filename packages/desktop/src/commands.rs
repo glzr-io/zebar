@@ -98,7 +98,7 @@ pub async fn unlisten_provider(
   provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .destroy(&config_hash)
+    .stop(&config_hash)
     .await
     .map_err(|err| err.to_string())
 }

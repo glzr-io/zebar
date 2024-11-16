@@ -2,8 +2,6 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use serde::Serialize;
-use serde_json::json;
-use tauri::{AppHandle, Emitter};
 use tokio::{
   sync::{
     mpsc::{self, UnboundedSender},
@@ -11,7 +9,7 @@ use tokio::{
   },
   task,
 };
-use tracing::{info, warn};
+use tracing::info;
 
 #[cfg(windows)]
 use super::{
