@@ -96,3 +96,12 @@ impl<'de> Deserialize<'de> for LengthValue {
     LengthValue::from_str(&s).map_err(serde::de::Error::custom)
   }
 }
+
+impl Default for LengthValue {
+  fn default() -> Self {
+    Self {
+      amount: 0.,
+      unit: LengthUnit::Pixel,
+    }
+  }
+}

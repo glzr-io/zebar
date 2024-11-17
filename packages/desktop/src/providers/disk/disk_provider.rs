@@ -1,7 +1,7 @@
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use sysinfo::{Disk, Disks};
+use sysinfo::Disks;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -19,19 +19,19 @@ pub struct DiskProviderConfig {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiskOutput {
-  pub disks: Vec<DiskInner>,
+  pub disks: Vec<Disk>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DiskInner {
-  pub name: String,
+pub struct Disk {
+  pub name: Option<String>,
   pub file_system: String,
   pub mount_point: String,
   pub total_space: DiskSizeMeasure,
   pub available_space: DiskSizeMeasure,
   pub is_removable: bool,
-  pub disk_type: String,
+  pub drive_type: String,
 }
 
 pub struct DiskProvider {
@@ -65,11 +65,13 @@ impl DiskProvider {
     let mut disks = self.system.lock().await;
     disks.refresh();
 
-    let list: Vec<DiskInner> = disks
+    let disks = disks
       .iter()
-      .map(|disk| -> anyhow::Result<DiskInner> {
-        Ok(DiskInner {
-          name: disk.name().to_string_lossy().to_string(),
+      .map(|disk| -> anyhow::Result<Disk> {
+        let name = disk.name().to_string_lossy().to_string();
+
+        Ok(Disk {
+          name: (!name.is_empty()).then_some(name),
           file_system: disk.file_system().to_string_lossy().to_string(),
           mount_point: disk.mount_point().to_string_lossy().to_string(),
           total_space: Self::to_disk_size_measure(disk.total_space())?,
@@ -77,13 +79,12 @@ impl DiskProvider {
             disk.available_space(),
           )?,
           is_removable: disk.is_removable(),
-          disk_type: disk.kind().to_string(),
+          drive_type: disk.kind().to_string(),
         })
       })
-      .collect::<anyhow::Result<Vec<DiskInner>>>()?;
+      .collect::<anyhow::Result<Vec<Disk>>>()?;
 
-    let output = DiskOutput { disks: list };
-    Ok(ProviderOutput::Disk(output))
+    Ok(ProviderOutput::Disk(DiskOutput { disks }))
   }
 
   fn to_disk_size_measure(bytes: u64) -> anyhow::Result<DiskSizeMeasure> {

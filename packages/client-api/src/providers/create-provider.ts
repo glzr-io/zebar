@@ -40,6 +40,11 @@ import type {
   KomorebiProviderConfig,
   KomorebiProvider,
 } from './komorebi/komorebi-provider-types';
+import type {
+  MediaProviderConfig,
+  MediaProvider,
+} from './media/media-provider-types';
+import { createMediaProvider } from './media/create-media-provider';
 import { createMemoryProvider } from './memory/create-memory-provider';
 import type {
   MemoryProviderConfig,
@@ -70,6 +75,7 @@ export interface ProviderConfigMap {
   host: HostProviderConfig;
   ip: IpProviderConfig;
   komorebi: KomorebiProviderConfig;
+  media: MediaProviderConfig;
   memory: MemoryProviderConfig;
   network: NetworkProviderConfig;
   weather: WeatherProviderConfig;
@@ -86,6 +92,7 @@ export interface ProviderMap {
   host: HostProvider;
   ip: IpProvider;
   komorebi: KomorebiProvider;
+  media: MediaProvider;
   memory: MemoryProvider;
   network: NetworkProvider;
   weather: WeatherProvider;
@@ -130,6 +137,8 @@ export function createProvider<T extends ProviderConfig>(
       return createIpProvider(config) as any;
     case 'komorebi':
       return createKomorebiProvider(config) as any;
+    case 'media':
+      return createMediaProvider(config) as any;
     case 'memory':
       return createMemoryProvider(config) as any;
     case 'network':

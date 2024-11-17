@@ -10,6 +10,7 @@ const providers = zebar.createProviderGroup({
   battery: { type: 'battery' },
   memory: { type: 'memory' },
   weather: { type: 'weather' },
+  media: { type: 'media' },
 });
 
 render(() => <App />, document.getElementById('root')!);
@@ -24,6 +25,10 @@ function App() {
       <div class="chip">
         {output.audio?.devices[output.audio?.defaultDevice!].name} :
         {output.audio?.devices[output.audio?.defaultDevice!].volume}
+      </div>
+      <div class="chip">
+        Media: {output.media?.session?.title} -
+        {output.media?.session?.artist}
       </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">

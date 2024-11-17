@@ -16,6 +16,8 @@ use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 use widget_factory::WidgetOpenOptions;
 
+#[cfg(target_os = "windows")]
+use crate::common::windows::WindowExtWindows;
 use crate::{
   cli::{Cli, CliCommand, QueryArgs},
   config::Config,
@@ -91,11 +93,19 @@ async fn main() -> anyhow::Result<()> {
     ])
     .build(tauri::generate_context!())?;
 
-  app.run(|_, event| {
+  app.run(|app, event| {
     if let RunEvent::ExitRequested { code, api, .. } = &event {
       if code.is_none() {
         // Keep the message loop running even if all windows are closed.
         api.prevent_exit();
+      } else {
+        // Deallocate any appbars on Windows.
+        #[cfg(target_os = "windows")]
+        {
+          for (_, window) in app.webview_windows() {
+            let _ = window.as_ref().window().deallocate_app_bar();
+          }
+        }
       }
     }
   });
@@ -283,6 +293,7 @@ async fn open_widgets_by_cli_command(
               MonitorType::Primary => MonitorSelection::Primary,
               MonitorType::Secondary => MonitorSelection::Secondary,
             },
+            dock_to_edge: Default::default(),
           }),
         )
         .await

@@ -18,7 +18,10 @@ use super::{
   SharedProviderState,
 };
 #[cfg(windows)]
-use super::{keyboard::KeyboardProvider, komorebi::KomorebiProvider};
+use super::{
+  keyboard::KeyboardProvider, komorebi::KomorebiProvider,
+  media::MediaProvider,
+};
 
 /// Reference to an active provider.
 pub struct ProviderRef {
@@ -177,6 +180,10 @@ impl ProviderRef {
       #[cfg(windows)]
       ProviderConfig::Komorebi(config) => {
         Box::new(KomorebiProvider::new(config))
+      }
+      #[cfg(windows)]
+      ProviderConfig::Media(config) => {
+        Box::new(MediaProvider::new(config))
       }
       ProviderConfig::Memory(config) => {
         Box::new(MemoryProvider::new(config, shared_state.sysinfo.clone()))

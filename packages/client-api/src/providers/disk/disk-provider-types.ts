@@ -1,3 +1,4 @@
+import type { DataSizeMeasure } from '~/utils';
 import type { Provider } from '../create-base-provider';
 
 export interface DiskProviderConfig {
@@ -12,23 +13,15 @@ export interface DiskProviderConfig {
 export type DiskProvider = Provider<DiskProviderConfig, DiskOutput>;
 
 export interface Disk {
-  name: string;
+  name: string | null;
   fileSystem: string;
   mountPoint: string;
-  totalSpace: DiskSizeMeasure;
-  availableSpace: DiskSizeMeasure;
+  totalSpace: DataSizeMeasure;
+  availableSpace: DataSizeMeasure;
   isRemovable: boolean;
-  diskType: string;
+  driveType: string;
 }
 
 export interface DiskOutput {
   disks: Disk[];
-}
-
-export interface DiskSizeMeasure {
-  bytes: number;
-  siValue: number;
-  siUnit: string;
-  iecValue: number;
-  iecUnit: string;
 }
