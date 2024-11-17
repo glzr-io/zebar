@@ -104,74 +104,99 @@ impl MediaDeviceEventHandler {
     }
   }
 
+  fn get_device_info(
+    &self,
+    device: &IMMDevice,
+  ) -> windows::core::Result<(String, AudioDeviceInfo)> {
+    unsafe {
+      let device_id = device.GetId()?.to_string()?;
+      let mut device_state = self.device_state.lock().unwrap();
+
+      if !device_state.contains_key(&device_id) {
+        let new_device = self.register_new_device(device)?;
+        device_state.insert(device_id.clone(), new_device);
+      }
+
+      let device_info = device_state.get(&device_id).unwrap();
+      Ok((
+        device_id.clone(),
+        AudioDeviceInfo {
+          name: device_info.name.clone(),
+          volume: device_info
+            .endpoint_volume
+            .GetMasterVolumeLevelScalar()
+            .unwrap_or(0.0),
+          is_default: self.is_default_device(&device_id)?,
+        },
+      ))
+    }
+  }
+
+  fn register_new_device(
+    &self,
+    device: &IMMDevice,
+  ) -> windows::core::Result<DeviceInfo> {
+    unsafe {
+      let device_name = Self::get_device_name(device)?;
+      let endpoint_volume: IAudioEndpointVolume =
+        device.Activate(CLSCTX_ALL, None)?;
+
+      let mut handler = self.clone();
+      handler.current_device = device.GetId()?.to_string()?;
+      endpoint_volume.RegisterControlChangeNotify(
+        &IAudioEndpointVolumeCallback::from(handler),
+      )?;
+
+      Ok(DeviceInfo {
+        name: device_name,
+        endpoint_volume,
+      })
+    }
+  }
+
+  fn is_default_device(
+    &self,
+    device_id: &str,
+  ) -> windows::core::Result<bool> {
+    unsafe {
+      let default = self
+        .enumerator
+        .GetDefaultAudioEndpoint(eRender, eMultimedia)?;
+      let default_id = default.GetId()?.to_string()?;
+      Ok(default_id == device_id)
+    }
+  }
+
   fn enumerate_devices(&self) -> windows::core::Result<()> {
     unsafe {
       let collection = self
         .enumerator
         .EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
-      let mut audio_state = AUDIO_STATE.get().unwrap().lock().unwrap();
-      let mut devices = HashMap::new();
-      let mut device_state = self.device_state.lock().unwrap();
 
+      let mut devices = HashMap::new();
+      let mut default_device = None;
+
+      // Get info for all active devices
       for i in 0..collection.GetCount()? {
         if let Ok(device) = collection.Item(i) {
-          let device_id = device.GetId()?.to_string()?;
-
-          // Check if the device is already being monitored
-          if !device_state.contains_key(&device_id) {
-            let device_name = Self::get_device_name(&device)?;
-            let endpoint_volume: IAudioEndpointVolume =
-              device.Activate(CLSCTX_ALL, None)?;
-            let mut handler = self.clone();
-            handler.current_device = device_id.clone();
-            let callback = IAudioEndpointVolumeCallback::from(handler);
-            endpoint_volume.RegisterControlChangeNotify(&callback)?;
-            device_state.insert(
-              device_id.clone(),
-              DeviceInfo {
-                name: device_name.clone(),
-                endpoint_volume,
-              },
-            );
+          let (id, info) = self.get_device_info(&device)?;
+          if info.is_default {
+            default_device = Some(id.clone());
           }
-
-          let device_info = device_state.get(&device_id).unwrap();
-          let volume = device_info
-            .endpoint_volume
-            .GetMasterVolumeLevelScalar()
-            .unwrap_or(0.0);
-          let is_default = self
-            .enumerator
-            .GetDefaultAudioEndpoint(eRender, eMultimedia)
-            .ok()
-            .and_then(|d| d.GetId().ok())
-            .and_then(|id| id.to_string().ok())
-            .as_ref()
-            .map(|id| id == &device_id)
-            .unwrap_or(false);
-
-          devices.insert(
-            device_id,
-            AudioDeviceInfo {
-              name: device_info.name.clone(),
-              volume,
-              is_default,
-            },
-          );
+          devices.insert(id, info);
         }
       }
 
-      audio_state.devices = devices;
-      audio_state.default_device = self
-        .enumerator
-        .GetDefaultAudioEndpoint(eRender, eMultimedia)
-        .ok()
-        .and_then(|d| d.GetId().ok())
-        .and_then(|id| id.to_string().ok());
-    }
+      // Update global state once
+      if let Some(state) = AUDIO_STATE.get() {
+        let mut audio_state = state.lock().unwrap();
+        audio_state.devices = devices;
+        audio_state.default_device = default_device;
+      }
 
-    AudioProvider::emit_volume();
-    Ok(())
+      AudioProvider::emit_volume();
+      Ok(())
+    }
   }
 }
 
