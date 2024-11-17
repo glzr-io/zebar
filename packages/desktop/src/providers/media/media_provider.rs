@@ -66,15 +66,15 @@ impl MediaProvider {
 
   fn emit_media_info(
     session: Option<&GsmtcSession>,
-    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
+    emit_tx: mpsc::UnboundedSender<ProviderEmission>,
   ) {
     let _ = match Self::media_output(session) {
       Ok(media_output) => {
-        emit_result_tx.send(Ok(ProviderOutput::Media(media_output)).into())
+        emit_tx.send(Ok(ProviderOutput::Media(media_output)).into())
       }
       Err(err) => {
         error!("Error retrieving media output: {:?}", err);
-        emit_result_tx.send(Err(err).into())
+        emit_tx.send(Err(err).into())
       }
     };
   }
@@ -140,7 +140,7 @@ impl MediaProvider {
     let event_tokens = match &current_session {
       Some(session) => Some(Self::add_session_listeners(
         session,
-        self.common.emit_result_tx.clone(),
+        self.common.emit_tx.clone(),
       )?),
       None => None,
     };
@@ -148,7 +148,7 @@ impl MediaProvider {
     // Emit initial media info.
     Self::emit_media_info(
       current_session.as_ref(),
-      self.common.emit_result_tx.clone(),
+      self.common.emit_tx.clone(),
     );
 
     let current_session = Arc::new(Mutex::new(current_session));
@@ -178,12 +178,12 @@ impl MediaProvider {
 
           let tokens = Self::add_session_listeners(
             &new_session,
-            self.common.emit_result_tx.clone(),
+            self.common.emit_tx.clone(),
           )?;
 
           Self::emit_media_info(
             Some(&new_session),
-            self.common.emit_result_tx.clone(),
+            self.common.emit_tx.clone(),
           );
 
           *current_session = Some(new_session);
@@ -221,18 +221,18 @@ impl MediaProvider {
 
   fn add_session_listeners(
     session: &GsmtcSession,
-    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
+    emit_tx: mpsc::UnboundedSender<ProviderEmission>,
   ) -> windows::core::Result<EventTokens> {
     debug!("Adding session listeners.");
 
     let media_properties_changed_handler = {
-      let emit_result_tx = emit_result_tx.clone();
+      let emit_tx = emit_tx.clone();
 
       TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
         debug!("Media properties changed event triggered.");
 
         if let Some(session) = session {
-          Self::emit_media_info(Some(session), emit_result_tx.clone());
+          Self::emit_media_info(Some(session), emit_tx.clone());
         }
 
         Ok(())
@@ -240,13 +240,13 @@ impl MediaProvider {
     };
 
     let playback_info_changed_handler = {
-      let emit_result_tx = emit_result_tx.clone();
+      let emit_tx = emit_tx.clone();
 
       TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
         debug!("Playback info changed event triggered.");
 
         if let Some(session) = session {
-          Self::emit_media_info(Some(session), emit_result_tx.clone());
+          Self::emit_media_info(Some(session), emit_tx.clone());
         }
 
         Ok(())
@@ -254,13 +254,13 @@ impl MediaProvider {
     };
 
     let timeline_properties_changed_handler = {
-      let emit_result_tx = emit_result_tx.clone();
+      let emit_tx = emit_tx.clone();
 
       TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
         debug!("Timeline properties changed event triggered.");
 
         if let Some(session) = session {
-          Self::emit_media_info(Some(session), emit_result_tx.clone());
+          Self::emit_media_info(Some(session), emit_tx.clone());
         }
 
         Ok(())
@@ -286,7 +286,7 @@ impl Provider for MediaProvider {
 
   fn start_sync(&mut self) {
     if let Err(err) = self.create_session_manager() {
-      let _ = self.common.emit_result_tx.send(Err(err).into());
+      let _ = self.common.emit_tx.send(Err(err).into());
     }
   }
 }

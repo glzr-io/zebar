@@ -26,11 +26,14 @@ pub struct CommonProviderState {
   /// Receiver channel for stopping the provider.
   pub stop_rx: oneshot::Receiver<()>,
 
-  /// Receiver channel for sending function calls to the provider.
+  /// Receiver channel for incoming function calls to the provider.
   pub function_rx: mpsc::Receiver<(
     ProviderFunction,
     oneshot::Sender<ProviderFunctionResult>,
   )>,
+
+  /// Sender channel for outgoing provider emissions.
+  pub emit_tx: mpsc::UnboundedSender<ProviderEmission>,
 
   /// Hash of the provider's config.
   pub config_hash: String,
@@ -120,6 +123,7 @@ impl ProviderManager {
     let common = CommonProviderState {
       stop_rx,
       function_rx,
+      emit_tx: self.emit_tx.clone(),
       config_hash: config_hash.clone(),
       sysinfo: self.sysinfo.clone(),
     };

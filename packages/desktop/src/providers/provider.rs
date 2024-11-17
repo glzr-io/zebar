@@ -120,7 +120,7 @@ macro_rules! impl_interval_provider {
           if $allow_identical_emits
             || last_interval_res.as_ref() != Some(&interval_res)
           {
-            let send_res = emit_result_tx.send(interval_res.clone()).await;
+            let send_res = emit_tx.send(interval_res.clone()).await;
 
             if let Err(err) = send_res {
               tracing::error!("Error sending provider result: {:?}", err);
