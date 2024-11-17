@@ -22,16 +22,15 @@ use super::{
   media::MediaProvider,
 };
 
+pub enum IncomingProviderMessage {
+  Function(ProviderFunction, oneshot::Sender<ProviderFunctionResult>),
+  Stop,
+}
+
 /// Common fields for a provider.
 pub struct CommonProviderState {
-  /// Receiver channel for stopping the provider.
-  pub stop_rx: oneshot::Receiver<()>,
-
-  /// Receiver channel for incoming function calls to the provider.
-  pub function_rx: mpsc::Receiver<(
-    ProviderFunction,
-    oneshot::Sender<ProviderFunctionResult>,
-  )>,
+  /// Receiver channel for incoming messages to the provider.
+  pub message_rx: mpsc::Receiver<IncomingProviderMessage>,
 
   /// Wrapper around the sender channel of provider emissions.
   pub emitter: ProviderEmitter,
@@ -81,14 +80,8 @@ pub struct ProviderEmission {
 
 /// Reference to an active provider.
 struct ProviderRef {
-  /// Sender channel for stopping the provider.
-  stop_tx: oneshot::Sender<()>,
-
-  /// Sender channel for sending function calls to the provider.
-  function_tx: mpsc::Sender<(
-    ProviderFunction,
-    oneshot::Sender<ProviderFunctionResult>,
-  )>,
+  /// Sender channel for sending messages to the provider.
+  message_tx: mpsc::Sender<IncomingProviderMessage>,
 
   /// Handle to the provider's task.
   task_handle: task::JoinHandle<()>,
@@ -151,12 +144,10 @@ impl ProviderManager {
       };
     }
 
-    let (stop_tx, stop_rx) = oneshot::channel();
-    let (function_tx, function_rx) = mpsc::channel(1);
+    let (message_tx, message_rx) = mpsc::channel(1);
 
     let common = CommonProviderState {
-      stop_rx,
-      function_rx,
+      message_rx,
       emitter: ProviderEmitter {
         emit_tx: self.emit_tx.clone(),
         config_hash: config_hash.clone(),
@@ -168,8 +159,7 @@ impl ProviderManager {
       self.create_instance(config, config_hash.clone(), common)?;
 
     let provider_ref = ProviderRef {
-      stop_tx,
-      function_tx,
+      message_tx,
       task_handle,
     };
 
@@ -257,7 +247,11 @@ impl ProviderManager {
       .context("No provider found with config.")?;
 
     let (tx, rx) = oneshot::channel();
-    provider_ref.function_tx.send((function, tx)).await?;
+    provider_ref
+      .message_tx
+      .send(IncomingProviderMessage::Function(function, tx))
+      .await
+      .context("Failed to send function call to provider.")?;
 
     rx.await?.map_err(anyhow::Error::msg)
   }
@@ -270,9 +264,11 @@ impl ProviderManager {
       .context("No provider found with config.")?;
 
     // Send shutdown signal to the provider.
-    if let Err(_) = provider_ref.stop_tx.send(()) {
-      bail!("Failed to send shutdown signal to provider.");
-    }
+    provider_ref
+      .message_tx
+      .send(IncomingProviderMessage::Stop)
+      .await
+      .context("Failed to send shutdown signal to provider.")?;
 
     // Wait for the provider to stop.
     provider_ref.task_handle.await?;
