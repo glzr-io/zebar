@@ -17,4 +17,3 @@ export interface AudioOutput {
   devices: Record<string, AudioDeviceInfo>;
   defaultDevice: string | null;
 }
-

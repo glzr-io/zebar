@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { createBaseProvider } from '../create-base-provider';
 import { onProviderEmit } from '~/desktop';
 import type {
-    AudioOutput,
-    AudioProvider,
-    AudioProviderConfig
+  AudioOutput,
+  AudioProvider,
+  AudioProviderConfig,
 } from './audio-provider-types';
 
 const audioProviderConfigSchema = z.object({
@@ -28,4 +28,3 @@ export function createAudioProvider(
     });
   });
 }
-
