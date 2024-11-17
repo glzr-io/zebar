@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{bail, Context};
+use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::{
   sync::{mpsc, oneshot, Mutex},
@@ -42,8 +43,15 @@ pub struct CommonProviderState {
   pub sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
-/// A thread-safe `Result` type for provider outputs and errors.
-pub type ProviderEmission = Result<ProviderOutput, String>;
+/// Emission from a provider.
+#[derive(Debug, Clone, Serialize)]
+pub struct ProviderEmission {
+  /// Hash of the provider's config.
+  pub config_hash: String,
+
+  /// A thread-safe `Result` type for provider outputs and errors.
+  pub result: Result<ProviderOutput, String>,
+}
 
 /// Reference to an active provider.
 struct ProviderRef {
@@ -241,8 +249,8 @@ impl ProviderManager {
   }
 
   /// Updates the cache with the given provider emission.
-  pub async fn update_cache(&self, emit: ProviderEmission) {
+  pub async fn update_cache(&self, emission: ProviderEmission) {
     let mut cache = self.emit_cache.lock().await;
-    cache.insert(emit.config_hash, emit);
+    cache.insert(emission.config_hash.clone(), emission);
   }
 }

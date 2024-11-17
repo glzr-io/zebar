@@ -242,10 +242,10 @@ fn listen_events(
           info!("Widget configs changed.");
           widget_factory.relaunch_by_paths(&changed_configs.keys().cloned().collect()).await
         },
-        Some(provider_emit) = emit_rx.recv() => {
-          info!("Provider emission: {:?}", provider_emit);
-          app_handle.emit("provider-emit", provider_emit.clone());
-          manager.update_cache(provider_emit).await;
+        Some(provider_emission) = emit_rx.recv() => {
+          info!("Provider emission: {:?}", provider_emission);
+          app_handle.emit("provider-emit", provider_emission.clone());
+          manager.update_cache(provider_emission).await;
           Ok(())
         },
       };
