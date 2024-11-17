@@ -5,7 +5,6 @@ use std::{
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::{self};
 use tracing::{debug, error};
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
@@ -17,8 +16,7 @@ use windows::{
 };
 
 use crate::providers::{
-  CommonProviderState, Provider, ProviderEmission, ProviderEmitter,
-  ProviderOutput, RuntimeType,
+  CommonProviderState, Provider, ProviderEmitter, RuntimeType,
 };
 
 #[derive(Deserialize, Debug)]

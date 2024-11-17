@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{bail, Context};
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize};
 use tauri::{AppHandle, Emitter};
 use tokio::{
   sync::{mpsc, oneshot, Mutex},
@@ -33,14 +33,14 @@ pub struct CommonProviderState {
     oneshot::Sender<ProviderFunctionResult>,
   )>,
 
-  /// Wrapper for the sender channel for outgoing provider emissions.
+  /// Wrapper around the sender channel of provider emissions.
   pub emitter: ProviderEmitter,
 
   /// Shared `sysinfo` instance.
   pub sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
-/// A lightweight handle for emitting provider outputs from any thread.
+/// Handle for sending provider emissions.
 #[derive(Clone, Debug)]
 pub struct ProviderEmitter {
   /// Sender channel for outgoing provider emissions.
@@ -51,6 +51,7 @@ pub struct ProviderEmitter {
 }
 
 impl ProviderEmitter {
+  /// Emits an output from a provider.
   pub fn emit_output<T>(&self, output: anyhow::Result<T>)
   where
     T: Into<ProviderOutput>,
@@ -68,11 +69,13 @@ impl ProviderEmitter {
 
 /// Emission from a provider.
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderEmission {
   /// Hash of the provider's config.
   pub config_hash: String,
 
   /// A thread-safe `Result` type for provider outputs and errors.
+  #[serde(serialize_with = "serialize_result")]
   pub result: Result<ProviderOutput, String>,
 }
 
@@ -143,7 +146,7 @@ impl ProviderManager {
       if let Some(found_emit) =
         self.emit_cache.lock().await.get(&config_hash)
       {
-        self.app_handle.emit("provider-emit", found_emit);
+        self.app_handle.emit("provider-emit", found_emit)?;
         return Ok(());
       };
     }
@@ -243,7 +246,7 @@ impl ProviderManager {
   /// provider.
   ///
   /// Returns the result of the function execution.
-  async fn call_function(
+  pub async fn call_function(
     &self,
     config_hash: String,
     function: ProviderFunction,
@@ -266,8 +269,12 @@ impl ProviderManager {
       .remove(&config_hash)
       .context("No provider found with config.")?;
 
-    // Send shutdown signal to the provider and wait for it to stop.
-    provider_ref.stop_tx.send(());
+    // Send shutdown signal to the provider.
+    if let Err(_) = provider_ref.stop_tx.send(()) {
+      bail!("Failed to send shutdown signal to provider.");
+    }
+
+    // Wait for the provider to stop.
     provider_ref.task_handle.await?;
 
     Ok(())
@@ -278,4 +285,24 @@ impl ProviderManager {
     let mut cache = self.emit_cache.lock().await;
     cache.insert(emission.config_hash.clone(), emission);
   }
+}
+
+/// Custom serializer for Result<ProviderOutput, String> that converts:
+/// - Ok(output) -> {"output": output}
+/// - Err(error) -> {"error": error}
+fn serialize_result<S>(
+  result: &Result<ProviderOutput, String>,
+  serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+  S: serde::Serializer,
+{
+  let mut state = serializer.serialize_struct("Result", 1)?;
+
+  match result {
+    Ok(output) => state.serialize_field("output", output)?,
+    Err(error) => state.serialize_field("error", error)?,
+  }
+
+  state.end()
 }
