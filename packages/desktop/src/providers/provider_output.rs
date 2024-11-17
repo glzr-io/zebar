@@ -13,6 +13,7 @@ use super::{
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum ProviderOutput {
+  #[cfg(windows)]
   Audio(AudioOutput),
   Battery(BatteryOutput),
   Cpu(CpuOutput),

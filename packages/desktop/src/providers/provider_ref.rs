@@ -10,17 +10,16 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-use super::{
-  audio::AudioProvider, battery::BatteryProvider, cpu::CpuProvider,
-  disk::DiskProvider, host::HostProvider, ip::IpProvider,
-  memory::MemoryProvider, network::NetworkProvider,
-  weather::WeatherProvider, Provider, ProviderConfig, ProviderOutput,
-  SharedProviderState,
-};
 #[cfg(windows)]
 use super::{
-  keyboard::KeyboardProvider, komorebi::KomorebiProvider,
-  media::MediaProvider,
+  audio::AudioProvider, keyboard::KeyboardProvider,
+  komorebi::KomorebiProvider, media::MediaProvider,
+};
+use super::{
+  battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
+  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
+  network::NetworkProvider, weather::WeatherProvider, Provider,
+  ProviderConfig, ProviderOutput, SharedProviderState,
 };
 
 /// Reference to an active provider.
