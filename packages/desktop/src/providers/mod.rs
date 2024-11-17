@@ -1,3 +1,5 @@
+#[cfg(windows)]
+mod audio;
 mod battery;
 mod cpu;
 mod disk;
@@ -16,8 +18,6 @@ mod provider_config;
 mod provider_manager;
 mod provider_output;
 mod provider_ref;
-#[cfg(windows)]
-mod audio;
 mod weather;
 
 pub use provider::*;

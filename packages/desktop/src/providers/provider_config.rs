@@ -1,7 +1,11 @@
 use serde::Deserialize;
 
 use super::{
-  audio::AudioProviderConfig, battery::BatteryProviderConfig, cpu::CpuProviderConfig, disk::DiskProviderConfig, host::HostProviderConfig, ip::IpProviderConfig, memory::MemoryProviderConfig, network::NetworkProviderConfig, weather::WeatherProviderConfig
+  audio::AudioProviderConfig, battery::BatteryProviderConfig,
+  cpu::CpuProviderConfig, disk::DiskProviderConfig,
+  host::HostProviderConfig, ip::IpProviderConfig,
+  memory::MemoryProviderConfig, network::NetworkProviderConfig,
+  weather::WeatherProviderConfig,
 };
 #[cfg(windows)]
 use super::{
