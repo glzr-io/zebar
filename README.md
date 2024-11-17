@@ -58,6 +58,7 @@ In some cases, updating to the latest Microsoft Webview2 version is needed ([sta
 
 Through the `zebar` NPM package, Zebar exposes various system information via reactive "providers". Providers are a collection of functions and variables that can change over time.
 
+- [audio](#Audio)
 - [battery](#Battery)
 - [cpu](#CPU)
 - [date](#Date)
@@ -71,6 +72,30 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 - [memory](#Memory)
 - [network](#Network)
 - [weather](#Weather)
+
+### Media
+
+#### Config
+
+No config options.
+
+#### Outputs
+
+| Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultDevice`         | ID of default audio output device.        | `string \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `devices`         | All devices.        | `Record<string, AudioDeviceInfo>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Return types
+
+#### `AudioDeviceInfo`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `deviceId`         | Device ID. | `string` |
+| `name`      | Display name. | `string ` |
+| `volume`    | Volume as a % of maximum volume.  Returned value is between `0` and `100`. | `string ` |
+| `isDefault` | `True` if the device is selected as the default output device.| `string \| null` |
 
 ### Battery
 
