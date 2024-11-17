@@ -1,16 +1,15 @@
 use serde::Deserialize;
 
-use super::{
-  audio::AudioProviderConfig, battery::BatteryProviderConfig,
-  cpu::CpuProviderConfig, disk::DiskProviderConfig,
-  host::HostProviderConfig, ip::IpProviderConfig,
-  memory::MemoryProviderConfig, network::NetworkProviderConfig,
-  weather::WeatherProviderConfig,
-};
 #[cfg(windows)]
 use super::{
-  keyboard::KeyboardProviderConfig, komorebi::KomorebiProviderConfig,
-  media::MediaProviderConfig,
+  audio::AudioProviderConfig, keyboard::KeyboardProviderConfig,
+  komorebi::KomorebiProviderConfig, media::MediaProviderConfig,
+};
+use super::{
+  battery::BatteryProviderConfig, cpu::CpuProviderConfig,
+  disk::DiskProviderConfig, host::HostProviderConfig,
+  ip::IpProviderConfig, memory::MemoryProviderConfig,
+  network::NetworkProviderConfig, weather::WeatherProviderConfig,
 };
 
 #[derive(Deserialize, Debug)]

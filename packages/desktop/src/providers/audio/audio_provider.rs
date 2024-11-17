@@ -187,7 +187,6 @@ impl MediaDeviceEventHandler {
         }
       }
 
-      // Update global state once
       if let Some(state) = AUDIO_STATE.get() {
         let mut audio_state = state.lock().unwrap();
         audio_state.devices = devices;
