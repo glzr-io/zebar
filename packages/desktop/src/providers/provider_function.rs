@@ -12,14 +12,10 @@ pub enum MediaFunction {
   Previous,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ProviderFunctionResult {
-  Media(MediaFunctionResult),
-}
+pub type ProviderFunctionResult = Result<ProviderFunctionResponse, String>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MediaFunctionResult {
-  PlayPause(bool),
-  Next(bool),
-  Previous(bool),
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum ProviderFunctionResponse {
+  Null,
 }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use super::{ProviderFunction, ProviderFunctionResult};
+use super::{ProviderFunction, ProviderFunctionResponse};
 
 #[async_trait]
 pub trait Provider: Send + Sync {
@@ -46,7 +46,7 @@ pub trait Provider: Send + Sync {
   fn call_function_sync(
     &self,
     function: ProviderFunction,
-  ) -> anyhow::Result<ProviderFunctionResult> {
+  ) -> anyhow::Result<ProviderFunctionResponse> {
     let _function = function;
     match self.runtime_type() {
       RuntimeType::Sync => {
@@ -66,7 +66,7 @@ pub trait Provider: Send + Sync {
   async fn call_function_async(
     &self,
     function: ProviderFunction,
-  ) -> anyhow::Result<ProviderFunctionResult> {
+  ) -> anyhow::Result<ProviderFunctionResponse> {
     let _function = function;
     match self.runtime_type() {
       RuntimeType::Async => {

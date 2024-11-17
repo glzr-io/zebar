@@ -89,6 +89,7 @@ async fn main() -> anyhow::Result<()> {
       commands::update_widget_config,
       commands::listen_provider,
       commands::unlisten_provider,
+      commands::call_provider_function,
       commands::set_always_on_top,
       commands::set_skip_taskbar
     ])

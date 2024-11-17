@@ -13,8 +13,8 @@ use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
   network::NetworkProvider, weather::WeatherProvider, Provider,
-  ProviderConfig, ProviderFunction, ProviderFunctionResult,
-  ProviderOutput, RuntimeType,
+  ProviderConfig, ProviderFunction, ProviderFunctionResponse,
+  ProviderFunctionResult, ProviderOutput, RuntimeType,
 };
 #[cfg(windows)]
 use super::{
@@ -250,7 +250,7 @@ impl ProviderManager {
     &self,
     config_hash: String,
     function: ProviderFunction,
-  ) -> anyhow::Result<ProviderFunctionResult> {
+  ) -> anyhow::Result<ProviderFunctionResponse> {
     let provider_refs = self.provider_refs.lock().await;
     let provider_ref = provider_refs
       .get(&config_hash)
@@ -259,7 +259,7 @@ impl ProviderManager {
     let (tx, rx) = oneshot::channel();
     provider_ref.function_tx.send((function, tx)).await?;
 
-    Ok(rx.await?)
+    rx.await?.map_err(anyhow::Error::msg)
   }
 
   /// Destroys and cleans up the provider with the given config.
