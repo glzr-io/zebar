@@ -3,10 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::ipinfo_res::IpinfoRes;
-use crate::{
-  impl_interval_provider,
-  providers::{CommonProviderState, ProviderOutput},
-};
+use crate::{impl_interval_provider, providers::CommonProviderState};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -46,9 +43,12 @@ impl IpProvider {
     self.config.refresh_interval
   }
 
-  pub async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let res = self
-      .http_client
+  async fn run_interval(&self) -> anyhow::Result<IpOutput> {
+    Self::query_ip(&self.http_client).await
+  }
+
+  pub async fn query_ip(http_client: &Client) -> anyhow::Result<IpOutput> {
+    let res = http_client
       .get("https://ipinfo.io/json")
       .send()
       .await?
@@ -57,7 +57,7 @@ impl IpProvider {
 
     let mut loc_parts = res.loc.split(',');
 
-    Ok(ProviderOutput::Ip(IpOutput {
+    Ok(IpOutput {
       address: res.ip,
       approx_city: res.city,
       approx_country: res.country,
@@ -69,7 +69,7 @@ impl IpProvider {
         .next()
         .and_then(|long| long.parse::<f32>().ok())
         .context("Failed to parse longitude from IPinfo.")?,
-    }))
+    })
   }
 }
 

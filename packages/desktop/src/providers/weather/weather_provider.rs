@@ -72,21 +72,8 @@ impl WeatherProvider {
       match (self.config.latitude, self.config.longitude) {
         (Some(lat), Some(lon)) => (lat, lon),
         _ => {
-          let ip_output = IpProvider::new(
-            IpProviderConfig {
-              refresh_interval: 0,
-            },
-            self.common,
-          )
-          .run_interval()
-          .await?;
-
-          match ip_output {
-            ProviderOutput::Ip(ip_output) => {
-              (ip_output.approx_latitude, ip_output.approx_longitude)
-            }
-            _ => anyhow::bail!("Unexpected output from IP provider."),
-          }
+          let ip_output = IpProvider::query_ip(&self.http_client).await?;
+          (ip_output.approx_latitude, ip_output.approx_longitude)
         }
       }
     };
