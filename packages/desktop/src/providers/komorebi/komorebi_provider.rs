@@ -9,7 +9,6 @@ use komorebi_client::{
   Container, Monitor, SocketMessage, Window, Workspace,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::{self};
 use tracing::debug;
 
 use super::{
@@ -17,7 +16,7 @@ use super::{
   KomorebiWindow, KomorebiWorkspace,
 };
 use crate::providers::{
-  CommonProviderState, Provider, ProviderEmission, ProviderOutput,
+  CommonProviderState, Provider, ProviderOutput, RuntimeType,
 };
 
 const SOCKET_NAME: &str = "zebar.sock";
@@ -45,10 +44,7 @@ impl KomorebiProvider {
     KomorebiProvider { common }
   }
 
-  fn create_socket(
-    &self,
-    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
-  ) -> anyhow::Result<()> {
+  fn create_socket(&mut self) -> anyhow::Result<()> {
     let socket = komorebi_client::subscribe(SOCKET_NAME)
       .context("Failed to initialize Komorebi socket.")?;
 
@@ -83,7 +79,7 @@ impl KomorebiProvider {
               &String::from_utf8(buffer).unwrap(),
             )
           {
-            emit_result_tx.send(
+            self.common.emit_result_tx.send(
               Ok(ProviderOutput::Komorebi(Self::transform_response(
                 notification.state,
               )))
@@ -91,7 +87,7 @@ impl KomorebiProvider {
             );
           }
         }
-        Err(_) => emit_result_tx.send(
+        Err(_) => self.common.emit_result_tx.send(
           Err(anyhow::anyhow!("Failed to read Komorebi stream.")).into(),
         ),
       }
@@ -187,12 +183,9 @@ impl Provider for KomorebiProvider {
     RuntimeType::Sync
   }
 
-  fn start_sync(
-    &mut self,
-    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
-  ) {
-    if let Err(err) = self.create_socket(emit_result_tx.clone()) {
-      emit_result_tx.try_send(Err(err).into());
+  fn start_sync(&mut self) {
+    if let Err(err) = self.create_socket() {
+      self.common.emit_result_tx.try_send(Err(err).into());
     }
   }
 }

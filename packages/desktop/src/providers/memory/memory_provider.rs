@@ -1,8 +1,4 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
-use sysinfo::System;
-use tokio::sync::Mutex;
 
 use crate::{
   impl_interval_provider,
@@ -30,20 +26,14 @@ pub struct MemoryOutput {
 pub struct MemoryProvider {
   config: MemoryProviderConfig,
   common: CommonProviderState,
-  sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
 impl MemoryProvider {
   pub fn new(
     config: MemoryProviderConfig,
     common: CommonProviderState,
-    sysinfo: Arc<Mutex<sysinfo::System>>,
   ) -> MemoryProvider {
-    MemoryProvider {
-      config,
-      common,
-      sysinfo,
-    }
+    MemoryProvider { config, common }
   }
 
   fn refresh_interval_ms(&self) -> u64 {
@@ -51,7 +41,7 @@ impl MemoryProvider {
   }
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut sysinfo = self.sysinfo.lock().await;
+    let mut sysinfo = self.common.sysinfo.lock().await;
     sysinfo.refresh_memory();
 
     let usage = (sysinfo.used_memory() as f32

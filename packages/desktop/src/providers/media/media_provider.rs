@@ -5,10 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::{
-  sync::mpsc::{self},
-  task,
-};
+use tokio::sync::mpsc::{self};
 use tracing::{debug, error};
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
@@ -72,11 +69,12 @@ impl MediaProvider {
     emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
   ) {
     let _ = match Self::media_output(session) {
-      Ok(media_output) => emit_result_tx
-        .blocking_send(Ok(ProviderOutput::Media(media_output)).into()),
+      Ok(media_output) => {
+        emit_result_tx.send(Ok(ProviderOutput::Media(media_output)).into())
+      }
       Err(err) => {
         error!("Error retrieving media output: {:?}", err);
-        emit_result_tx.blocking_send(Err(err).into())
+        emit_result_tx.send(Err(err).into())
       }
     };
   }
@@ -132,9 +130,7 @@ impl MediaProvider {
     }))
   }
 
-  fn create_session_manager(
-    emit_result_tx: mpsc::UnboundedSender<ProviderEmission>,
-  ) -> anyhow::Result<()> {
+  fn create_session_manager(&mut self) -> anyhow::Result<()> {
     debug!("Creating media session manager.");
 
     // Find the current GSMTC session & add listeners.
@@ -144,7 +140,7 @@ impl MediaProvider {
     let event_tokens = match &current_session {
       Some(session) => Some(Self::add_session_listeners(
         session,
-        emit_result_tx.clone(),
+        self.common.emit_result_tx.clone(),
       )?),
       None => None,
     };
@@ -152,7 +148,7 @@ impl MediaProvider {
     // Emit initial media info.
     Self::emit_media_info(
       current_session.as_ref(),
-      emit_result_tx.clone(),
+      self.common.emit_result_tx.clone(),
     );
 
     let current_session = Arc::new(Mutex::new(current_session));
@@ -182,12 +178,12 @@ impl MediaProvider {
 
           let tokens = Self::add_session_listeners(
             &new_session,
-            emit_result_tx.clone(),
+            self.common.emit_result_tx.clone(),
           )?;
 
           Self::emit_media_info(
             Some(&new_session),
-            emit_result_tx.clone(),
+            self.common.emit_result_tx.clone(),
           );
 
           *current_session = Some(new_session);
@@ -271,19 +267,13 @@ impl MediaProvider {
       })
     };
 
-    let timeline_token = session
-      .TimelinePropertiesChanged(&timeline_properties_changed_handler)?;
-    let playback_token =
-      session.PlaybackInfoChanged(&playback_info_changed_handler)?;
-    let media_token =
-      session.MediaPropertiesChanged(&media_properties_changed_handler)?;
-
-    Ok({
-      EventTokens {
-        playback_info_changed_token: playback_token,
-        media_properties_changed_token: media_token,
-        timeline_properties_changed_token: timeline_token,
-      }
+    Ok(EventTokens {
+      playback_info_changed_token: session
+        .PlaybackInfoChanged(&playback_info_changed_handler)?,
+      media_properties_changed_token: session
+        .MediaPropertiesChanged(&media_properties_changed_handler)?,
+      timeline_properties_changed_token: session
+        .TimelinePropertiesChanged(&timeline_properties_changed_handler)?,
     })
   }
 }
@@ -291,16 +281,12 @@ impl MediaProvider {
 #[async_trait]
 impl Provider for MediaProvider {
   fn runtime_type(&self) -> RuntimeType {
-    RuntimeType::Async
+    RuntimeType::Sync
   }
 
-  async fn start_async(&mut self) {
-    task::spawn_blocking(move || {
-      if let Err(err) =
-        Self::create_session_manager(emit_result_tx.clone())
-      {
-        let _ = emit_result_tx.blocking_send(Err(err).into());
-      }
-    });
+  fn start_sync(&mut self) {
+    if let Err(err) = self.create_session_manager() {
+      let _ = self.common.emit_result_tx.send(Err(err).into());
+    }
   }
 }

@@ -24,23 +24,26 @@ use super::{
 /// Common fields for a provider.
 pub struct CommonProviderState {
   /// Receiver channel for stopping the provider.
-  stop_rx: oneshot::Receiver<()>,
+  pub stop_rx: oneshot::Receiver<()>,
 
   /// Receiver channel for sending function calls to the provider.
-  function_rx: mpsc::Receiver<(
+  pub function_rx: mpsc::Receiver<(
     ProviderFunction,
     oneshot::Sender<ProviderFunctionResult>,
   )>,
 
   /// Hash of the provider's config.
-  config_hash: String,
+  pub config_hash: String,
 
   /// Shared `sysinfo` instance.
-  sysinfo: Arc<Mutex<sysinfo::System>>,
+  pub sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
+/// A thread-safe `Result` type for provider outputs and errors.
+pub type ProviderEmission = Result<ProviderOutput, String>;
+
 /// Reference to an active provider.
-pub struct ProviderRef {
+struct ProviderRef {
   /// Sender channel for stopping the provider.
   stop_tx: oneshot::Sender<()>,
 
@@ -53,9 +56,6 @@ pub struct ProviderRef {
   /// Handle to the provider's task.
   task_handle: task::JoinHandle<()>,
 }
-
-/// A thread-safe `Result` type for provider outputs and errors.
-pub type ProviderEmission = Result<ProviderOutput, String>;
 
 /// Manages the creation and cleanup of providers.
 pub struct ProviderManager {
@@ -146,7 +146,7 @@ impl ProviderManager {
     config_hash: String,
     common: CommonProviderState,
   ) -> anyhow::Result<task::JoinHandle<()>> {
-    let provider: Box<dyn Provider> = match config {
+    let mut provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
         Box::new(BatteryProvider::new(config, common))
       }
@@ -229,10 +229,11 @@ impl ProviderManager {
       .remove(&config_hash)
       .context("No provider found with config.")?;
 
-    let (tx, rx) = oneshot::channel();
-    provider_ref.stop_tx.send(tx).await?;
+    // Send shutdown signal to the provider and wait for it to stop.
+    provider_ref.stop_tx.send(());
+    provider_ref.task_handle.await?;
 
-    Ok(rx.await?)
+    Ok(())
   }
 
   /// Updates the cache with the given provider emission.
