@@ -81,7 +81,9 @@ impl Provider for BatteryProvider {
 
     loop {
       interval.tick();
-      self.common.emit_output(self.run_interval());
+
+      let output = self.run_interval();
+      self.common.emitter.emit_output(output);
     }
   }
 }

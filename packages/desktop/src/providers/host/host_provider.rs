@@ -60,7 +60,7 @@ impl Provider for HostProvider {
       interval.tick();
 
       let output = self.run_interval();
-      self.common.emit_output(output);
+      self.common.emitter.emit_output(output);
     }
   }
 }

@@ -205,7 +205,7 @@ impl Provider for NetworkProvider {
       interval.tick();
 
       let output = self.run_interval();
-      self.common.emit_output(output);
+      self.common.emitter.emit_output(output);
     }
   }
 }

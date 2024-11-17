@@ -33,17 +33,24 @@ pub struct CommonProviderState {
     oneshot::Sender<ProviderFunctionResult>,
   )>,
 
-  /// Sender channel for outgoing provider emissions.
-  pub emit_tx: mpsc::UnboundedSender<ProviderEmission>,
-
-  /// Hash of the provider's config.
-  pub config_hash: String,
+  /// Wrapper for the sender channel for outgoing provider emissions.
+  pub emitter: ProviderEmitter,
 
   /// Shared `sysinfo` instance.
   pub sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
-impl CommonProviderState {
+/// A lightweight handle for emitting provider outputs from any thread.
+#[derive(Clone, Debug)]
+pub struct ProviderEmitter {
+  /// Sender channel for outgoing provider emissions.
+  emit_tx: mpsc::UnboundedSender<ProviderEmission>,
+
+  /// Hash of the provider's config.
+  config_hash: String,
+}
+
+impl ProviderEmitter {
   pub fn emit_output<T>(&self, output: anyhow::Result<T>)
   where
     T: Into<ProviderOutput>,
@@ -147,8 +154,10 @@ impl ProviderManager {
     let common = CommonProviderState {
       stop_rx,
       function_rx,
-      emit_tx: self.emit_tx.clone(),
-      config_hash: config_hash.clone(),
+      emitter: ProviderEmitter {
+        emit_tx: self.emit_tx.clone(),
+        config_hash: config_hash.clone(),
+      },
       sysinfo: self.sysinfo.clone(),
     };
 

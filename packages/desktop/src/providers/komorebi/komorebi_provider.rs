@@ -77,18 +77,14 @@ impl KomorebiProvider {
               &String::from_utf8(buffer).unwrap(),
             )
           {
-            self.common.emit_output(Ok(Self::transform_response(
+            self.common.emitter.emit_output(Ok(Self::transform_response(
               notification.state,
             )));
           }
         }
-        Err(_) => {
-          self
-            .common
-            .emit_output::<KomorebiOutput>(Err(anyhow::anyhow!(
-              "Failed to read Komorebi stream."
-            )))
-        }
+        Err(_) => self.common.emitter.emit_output::<KomorebiOutput>(Err(
+          anyhow::anyhow!("Failed to read Komorebi stream."),
+        )),
       }
     }
 
@@ -184,7 +180,7 @@ impl Provider for KomorebiProvider {
 
   fn start_sync(&mut self) {
     if let Err(err) = self.create_socket() {
-      self.common.emit_output::<KomorebiOutput>(Err(err));
+      self.common.emitter.emit_output::<KomorebiOutput>(Err(err));
     }
   }
 }

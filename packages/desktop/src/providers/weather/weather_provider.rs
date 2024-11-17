@@ -163,7 +163,7 @@ impl Provider for WeatherProvider {
       interval.tick().await;
 
       let output = self.run_interval().await;
-      self.common.emit_output(output);
+      self.common.emitter.emit_output(output);
     }
   }
 }
