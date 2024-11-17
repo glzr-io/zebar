@@ -43,6 +43,26 @@ pub struct CommonProviderState {
   pub sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
+impl CommonProviderState {
+  pub fn emit(&self, emission: ProviderEmission) {
+    self.emit_tx.send(emission);
+  }
+
+  pub async fn emit_provider_output<T>(&self, output: anyhow::Result<T>)
+  where
+    T: Into<ProviderOutput>,
+  {
+    let send_res = self.emit_tx.send(ProviderEmission {
+      config_hash: self.config_hash.clone(),
+      result: output.map(Into::into).map_err(|err| err.to_string()),
+    });
+
+    if let Err(err) = send_res {
+      tracing::error!("Error sending provider result: {:?}", err);
+    }
+  }
+}
+
 /// Emission from a provider.
 #[derive(Debug, Clone, Serialize)]
 pub struct ProviderEmission {

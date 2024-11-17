@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 
 use crate::{
   common::{to_iec_bytes, to_si_bytes},
-  impl_interval_provider,
+
   providers::{CommonProviderState, ProviderOutput},
 };
 
@@ -62,9 +62,7 @@ impl DiskProvider {
     }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
+
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
     let mut disks = self.disks.lock().await;

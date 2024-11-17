@@ -2,12 +2,9 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::open_meteo_res::OpenMeteoRes;
-use crate::{
-  impl_interval_provider,
-  providers::{
-    ip::{IpProvider, IpProviderConfig},
-    CommonProviderState, ProviderOutput,
-  },
+use crate::providers::{
+  ip::{IpProvider, IpProviderConfig},
+  CommonProviderState, ProviderOutput,
 };
 
 #[derive(Deserialize, Debug)]
@@ -61,10 +58,6 @@ impl WeatherProvider {
       common,
       http_client: Client::new(),
     }
-  }
-
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
   }
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {

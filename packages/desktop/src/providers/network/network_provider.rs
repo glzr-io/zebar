@@ -11,7 +11,7 @@ use super::{
 };
 use crate::{
   common::{to_iec_bytes, to_si_bytes},
-  impl_interval_provider,
+
   providers::{CommonProviderState, ProviderOutput},
 };
 
@@ -48,9 +48,7 @@ impl NetworkProvider {
     }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
+
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
     let mut netinfo = self.netinfo.lock().await;

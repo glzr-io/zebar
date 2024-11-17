@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
 use crate::{
-  impl_interval_provider,
+
   providers::{CommonProviderState, ProviderOutput},
 };
 
@@ -36,9 +36,7 @@ impl HostProvider {
     HostProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
+
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
     Ok(ProviderOutput::Host(HostOutput {

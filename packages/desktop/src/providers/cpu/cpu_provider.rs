@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  impl_interval_provider,
+
   providers::{CommonProviderState, ProviderOutput},
 };
 
@@ -34,9 +34,7 @@ impl CpuProvider {
     CpuProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
+
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
     let mut sysinfo = self.common.sysinfo.lock().await;

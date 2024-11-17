@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::ipinfo_res::IpinfoRes;
-use crate::{impl_interval_provider, providers::CommonProviderState};
+use crate::{ providers::CommonProviderState};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -39,9 +39,7 @@ impl IpProvider {
     }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
+
 
   async fn run_interval(&self) -> anyhow::Result<IpOutput> {
     Self::query_ip(&self.http_client).await

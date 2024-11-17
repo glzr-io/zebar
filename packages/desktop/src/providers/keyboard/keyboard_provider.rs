@@ -10,7 +10,7 @@ use windows::Win32::{
 };
 
 use crate::{
-  impl_interval_provider,
+
   providers::{CommonProviderState, ProviderOutput},
 };
 
@@ -39,9 +39,7 @@ impl KeyboardProvider {
     KeyboardProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
+
 
   async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
     let keyboard_layout = unsafe {

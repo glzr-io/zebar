@@ -9,8 +9,10 @@ use starship_battery::{
 };
 
 use crate::{
-  impl_interval_provider,
-  providers::{CommonProviderState, ProviderOutput},
+  common::SyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderOutput, RuntimeType,
+  },
 };
 
 #[derive(Deserialize, Debug)]
@@ -46,18 +48,14 @@ impl BatteryProvider {
     BatteryProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+  fn run_interval(&self) -> anyhow::Result<BatteryOutput> {
     let battery = Manager::new()?
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
       .unwrap_or(None)
       .context("No battery found.")?;
 
-    Ok(ProviderOutput::Battery(BatteryOutput {
+    Ok(BatteryOutput {
       charge_percent: battery.state_of_charge().get::<percent>(),
       health_percent: battery.state_of_health().get::<percent>(),
       state: battery.state().to_string(),
@@ -71,8 +69,25 @@ impl BatteryProvider {
       power_consumption: battery.energy_rate().get::<watt>(),
       voltage: battery.voltage().get::<volt>(),
       cycle_count: battery.cycle_count(),
-    }))
+    })
   }
 }
 
-impl_interval_provider!(BatteryProvider, true);
+impl Provider for BatteryProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick();
+
+      self
+        .common
+        .emit_tx
+        .send(ProviderOutput::Battery(self.run_interval()));
+    }
+  }
+}
