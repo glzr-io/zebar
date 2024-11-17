@@ -44,11 +44,7 @@ pub struct CommonProviderState {
 }
 
 impl CommonProviderState {
-  pub fn emit(&self, emission: ProviderEmission) {
-    self.emit_tx.send(emission);
-  }
-
-  pub async fn emit_provider_output<T>(&self, output: anyhow::Result<T>)
+  pub fn emit_output<T>(&self, output: anyhow::Result<T>)
   where
     T: Into<ProviderOutput>,
   {

@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-
-  providers::{CommonProviderState, ProviderOutput},
+  common::SyncInterval,
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -34,13 +34,11 @@ impl CpuProvider {
     CpuProvider { config, common }
   }
 
-
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut sysinfo = self.common.sysinfo.lock().await;
+  fn run_interval(&self) -> anyhow::Result<CpuOutput> {
+    let mut sysinfo = self.common.sysinfo.blocking_lock();
     sysinfo.refresh_cpu();
 
-    Ok(ProviderOutput::Cpu(CpuOutput {
+    Ok(CpuOutput {
       usage: sysinfo.global_cpu_info().cpu_usage(),
       frequency: sysinfo.global_cpu_info().frequency(),
       logical_core_count: sysinfo.cpus().len(),
@@ -48,8 +46,21 @@ impl CpuProvider {
         .physical_core_count()
         .unwrap_or(sysinfo.cpus().len()),
       vendor: sysinfo.global_cpu_info().vendor_id().into(),
-    }))
+    })
   }
 }
 
-impl_interval_provider!(CpuProvider, true);
+impl Provider for CpuProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick();
+      self.common.emit_output(self.run_interval());
+    }
+  }
+}

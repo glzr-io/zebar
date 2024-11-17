@@ -10,9 +10,7 @@ use starship_battery::{
 
 use crate::{
   common::SyncInterval,
-  providers::{
-    CommonProviderState, Provider, ProviderOutput, RuntimeType,
-  },
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -83,11 +81,7 @@ impl Provider for BatteryProvider {
 
     loop {
       interval.tick();
-
-      self
-        .common
-        .emit_tx
-        .send(ProviderOutput::Battery(self.run_interval()));
+      self.common.emit_output(self.run_interval());
     }
   }
 }

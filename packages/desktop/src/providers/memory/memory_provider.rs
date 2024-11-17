@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-
-  providers::{CommonProviderState, ProviderOutput},
+  common::SyncInterval,
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -36,17 +36,15 @@ impl MemoryProvider {
     MemoryProvider { config, common }
   }
 
-
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut sysinfo = self.common.sysinfo.lock().await;
+  fn run_interval(&mut self) -> anyhow::Result<MemoryOutput> {
+    let mut sysinfo = self.common.sysinfo.blocking_lock();
     sysinfo.refresh_memory();
 
     let usage = (sysinfo.used_memory() as f32
       / sysinfo.total_memory() as f32)
       * 100.0;
 
-    Ok(ProviderOutput::Memory(MemoryOutput {
+    Ok(MemoryOutput {
       usage,
       free_memory: sysinfo.free_memory(),
       used_memory: sysinfo.used_memory(),
@@ -54,8 +52,23 @@ impl MemoryProvider {
       free_swap: sysinfo.free_swap(),
       used_swap: sysinfo.used_swap(),
       total_swap: sysinfo.total_swap(),
-    }))
+    })
   }
 }
 
-impl_interval_provider!(MemoryProvider, true);
+impl Provider for MemoryProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick();
+
+      let output = self.run_interval();
+      self.common.emit_output(output);
+    }
+  }
+}

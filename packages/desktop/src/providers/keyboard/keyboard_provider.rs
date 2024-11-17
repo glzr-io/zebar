@@ -10,8 +10,8 @@ use windows::Win32::{
 };
 
 use crate::{
-
-  providers::{CommonProviderState, ProviderOutput},
+  common::SyncInterval,
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -39,9 +39,7 @@ impl KeyboardProvider {
     KeyboardProvider { config, common }
   }
 
-
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+  fn run_interval(&mut self) -> anyhow::Result<KeyboardOutput> {
     let keyboard_layout = unsafe {
       GetKeyboardLayout(GetWindowThreadProcessId(
         GetForegroundWindow(),
@@ -67,10 +65,25 @@ impl KeyboardProvider {
     let layout_name =
       String::from_utf16_lossy(&locale_name[..result as usize]);
 
-    Ok(ProviderOutput::Keyboard(KeyboardOutput {
+    Ok(KeyboardOutput {
       layout: layout_name,
-    }))
+    })
   }
 }
 
-impl_interval_provider!(KeyboardProvider, false);
+impl Provider for KeyboardProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick();
+
+      let output = self.run_interval();
+      self.common.emit_output(output);
+    }
+  }
+}

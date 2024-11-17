@@ -1,13 +1,9 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
 use sysinfo::Disks;
-use tokio::sync::Mutex;
 
 use crate::{
-  common::{to_iec_bytes, to_si_bytes},
-
-  providers::{CommonProviderState, ProviderOutput},
+  common::{to_iec_bytes, to_si_bytes, SyncInterval},
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -37,7 +33,7 @@ pub struct Disk {
 pub struct DiskProvider {
   config: DiskProviderConfig,
   common: CommonProviderState,
-  disks: Arc<Mutex<Disks>>,
+  disks: Disks,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -58,17 +54,15 @@ impl DiskProvider {
     DiskProvider {
       config,
       common,
-      disks: Arc::new(Mutex::new(Disks::new_with_refreshed_list())),
+      disks: Disks::new_with_refreshed_list(),
     }
   }
 
+  fn run_interval(&mut self) -> anyhow::Result<DiskOutput> {
+    self.disks.refresh();
 
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut disks = self.disks.lock().await;
-    disks.refresh();
-
-    let disks = disks
+    let disks = self
+      .disks
       .iter()
       .map(|disk| -> anyhow::Result<Disk> {
         let name = disk.name().to_string_lossy().to_string();
@@ -87,7 +81,7 @@ impl DiskProvider {
       })
       .collect::<anyhow::Result<Vec<Disk>>>()?;
 
-    Ok(ProviderOutput::Disk(DiskOutput { disks }))
+    Ok(DiskOutput { disks })
   }
 
   fn to_disk_size_measure(bytes: u64) -> anyhow::Result<DiskSizeMeasure> {
@@ -104,4 +98,18 @@ impl DiskProvider {
   }
 }
 
-impl_interval_provider!(DiskProvider, true);
+impl Provider for DiskProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick();
+      let output = self.run_interval();
+      self.common.emit_output(output);
+    }
+  }
+}

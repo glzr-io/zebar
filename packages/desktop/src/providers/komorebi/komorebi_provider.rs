@@ -15,9 +15,7 @@ use super::{
   KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
   KomorebiWindow, KomorebiWorkspace,
 };
-use crate::providers::{
-  CommonProviderState, Provider, ProviderOutput, RuntimeType,
-};
+use crate::providers::{CommonProviderState, Provider, RuntimeType};
 
 const SOCKET_NAME: &str = "zebar.sock";
 
@@ -79,17 +77,18 @@ impl KomorebiProvider {
               &String::from_utf8(buffer).unwrap(),
             )
           {
-            self.common.emit_tx.send(
-              Ok(ProviderOutput::Komorebi(Self::transform_response(
-                notification.state,
-              )))
-              .into(),
-            );
+            self.common.emit_output(Ok(Self::transform_response(
+              notification.state,
+            )));
           }
         }
-        Err(_) => self.common.emit_tx.send(
-          Err(anyhow::anyhow!("Failed to read Komorebi stream.")).into(),
-        ),
+        Err(_) => {
+          self
+            .common
+            .emit_output::<KomorebiOutput>(Err(anyhow::anyhow!(
+              "Failed to read Komorebi stream."
+            )))
+        }
       }
     }
 
@@ -185,7 +184,7 @@ impl Provider for KomorebiProvider {
 
   fn start_sync(&mut self) {
     if let Err(err) = self.create_socket() {
-      self.common.emit_tx.try_send(Err(err).into());
+      self.common.emit_output::<KomorebiOutput>(Err(err));
     }
   }
 }

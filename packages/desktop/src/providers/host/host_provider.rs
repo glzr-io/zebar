@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
 use crate::{
-
-  providers::{CommonProviderState, ProviderOutput},
+  common::SyncInterval,
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -36,18 +36,31 @@ impl HostProvider {
     HostProvider { config, common }
   }
 
-
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    Ok(ProviderOutput::Host(HostOutput {
+  fn run_interval(&mut self) -> anyhow::Result<HostOutput> {
+    Ok(HostOutput {
       hostname: System::host_name(),
       os_name: System::name(),
       os_version: System::os_version(),
       friendly_os_version: System::long_os_version(),
       boot_time: System::boot_time() * 1000,
       uptime: System::uptime() * 1000,
-    }))
+    })
   }
 }
 
-impl_interval_provider!(HostProvider, false);
+impl Provider for HostProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick();
+
+      let output = self.run_interval();
+      self.common.emit_output(output);
+    }
+  }
+}

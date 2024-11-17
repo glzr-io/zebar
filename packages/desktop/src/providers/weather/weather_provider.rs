@@ -2,9 +2,11 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::open_meteo_res::OpenMeteoRes;
-use crate::providers::{
-  ip::{IpProvider, IpProviderConfig},
-  CommonProviderState, ProviderOutput,
+use crate::{
+  common::AsyncInterval,
+  providers::{
+    ip::IpProvider, CommonProviderState, Provider, RuntimeType,
+  },
 };
 
 #[derive(Deserialize, Debug)]
@@ -60,7 +62,7 @@ impl WeatherProvider {
     }
   }
 
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+  async fn run_interval(&self) -> anyhow::Result<WeatherOutput> {
     let (latitude, longitude) = {
       match (self.config.latitude, self.config.longitude) {
         (Some(lat), Some(lon)) => (lat, lon),
@@ -90,7 +92,7 @@ impl WeatherProvider {
     let current_weather = res.current_weather;
     let is_daytime = current_weather.is_day == 1;
 
-    Ok(ProviderOutput::Weather(WeatherOutput {
+    Ok(WeatherOutput {
       is_daytime,
       status: Self::get_weather_status(
         current_weather.weather_code,
@@ -101,7 +103,7 @@ impl WeatherProvider {
         current_weather.temperature,
       ),
       wind_speed: current_weather.wind_speed,
-    }))
+    })
   }
 
   fn celsius_to_fahrenheit(celsius_temp: f32) -> f32 {
@@ -147,4 +149,19 @@ impl WeatherProvider {
   }
 }
 
-impl_interval_provider!(WeatherProvider, true);
+impl Provider for WeatherProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Async
+  }
+
+  async fn start_async(&mut self) {
+    let mut interval = AsyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick().await;
+
+      let output = self.run_interval().await;
+      self.common.emit_output(output);
+    }
+  }
+}

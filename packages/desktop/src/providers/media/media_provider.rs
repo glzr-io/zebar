@@ -155,8 +155,8 @@ impl MediaProvider {
     let event_tokens = Arc::new(Mutex::new(event_tokens));
 
     // Clean up & rebind listeners when session changes.
-    let session_changed_handler = TypedEventHandler::new(
-      move |session_manager: &Option<GsmtcManager>, _| {
+    let session_changed_handler =
+      TypedEventHandler::new(move |_: &Option<GsmtcManager>, _| {
         {
           let mut current_session = current_session.lock().unwrap();
           let mut event_tokens = event_tokens.lock().unwrap();
@@ -191,8 +191,7 @@ impl MediaProvider {
         }
 
         Ok(())
-      },
-    );
+      });
 
     session_manager.CurrentSessionChanged(&session_changed_handler)?;
 
@@ -286,7 +285,7 @@ impl Provider for MediaProvider {
 
   fn start_sync(&mut self) {
     if let Err(err) = self.create_session_manager() {
-      let _ = self.common.emit_tx.send(Err(err).into());
+      self.common.emit_output::<MediaOutput>(Err(err));
     }
   }
 }

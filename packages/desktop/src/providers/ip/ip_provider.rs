@@ -3,7 +3,10 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::ipinfo_res::IpinfoRes;
-use crate::{ providers::CommonProviderState};
+use crate::{
+  common::AsyncInterval,
+  providers::{CommonProviderState, Provider, RuntimeType},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -39,9 +42,7 @@ impl IpProvider {
     }
   }
 
-
-
-  async fn run_interval(&self) -> anyhow::Result<IpOutput> {
+  async fn run_interval(&mut self) -> anyhow::Result<IpOutput> {
     Self::query_ip(&self.http_client).await
   }
 
@@ -71,4 +72,19 @@ impl IpProvider {
   }
 }
 
-impl_interval_provider!(IpProvider, false);
+impl Provider for IpProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Async
+  }
+
+  async fn start_async(&mut self) {
+    let mut interval = AsyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick().await;
+
+      let output = self.run_interval().await;
+      self.common.emit_output(output);
+    }
+  }
+}

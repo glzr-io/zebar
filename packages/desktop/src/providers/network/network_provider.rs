@@ -1,8 +1,5 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
 use sysinfo::Networks;
-use tokio::sync::Mutex;
 
 use super::{
   wifi_hotspot::{default_gateway_wifi, WifiHotstop},
@@ -10,9 +7,8 @@ use super::{
   NetworkTrafficMeasure,
 };
 use crate::{
-  common::{to_iec_bytes, to_si_bytes},
-
-  providers::{CommonProviderState, ProviderOutput},
+  common::{to_iec_bytes, to_si_bytes, SyncInterval},
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -33,7 +29,7 @@ pub struct NetworkOutput {
 pub struct NetworkProvider {
   config: NetworkProviderConfig,
   common: CommonProviderState,
-  netinfo: Arc<Mutex<Networks>>,
+  netinfo: Networks,
 }
 
 impl NetworkProvider {
@@ -44,28 +40,25 @@ impl NetworkProvider {
     NetworkProvider {
       config,
       common,
-      netinfo: Arc::new(Mutex::new(Networks::new_with_refreshed_list())),
+      netinfo: Networks::new_with_refreshed_list(),
     }
   }
 
-
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut netinfo = self.netinfo.lock().await;
-    netinfo.refresh();
+  fn run_interval(&mut self) -> anyhow::Result<NetworkOutput> {
+    self.netinfo.refresh();
 
     let interfaces = netdev::get_interfaces();
     let default_interface = netdev::get_default_interface().ok();
 
-    let (received, total_received) = Self::bytes_received(&netinfo);
+    let (received, total_received) = Self::bytes_received(&self.netinfo);
     let received_per_sec = received / self.config.refresh_interval * 1000;
 
     let (transmitted, total_transmitted) =
-      Self::bytes_transmitted(&netinfo);
+      Self::bytes_transmitted(&self.netinfo);
     let transmitted_per_sec =
       transmitted / self.config.refresh_interval * 1000;
 
-    Ok(ProviderOutput::Network(NetworkOutput {
+    Ok(NetworkOutput {
       default_interface: default_interface
         .as_ref()
         .map(Self::transform_interface),
@@ -90,7 +83,7 @@ impl NetworkProvider {
           total_transmitted,
         )?,
       },
-    }))
+    })
   }
 
   fn to_network_traffic_measure(
@@ -200,4 +193,19 @@ impl NetworkProvider {
   }
 }
 
-impl_interval_provider!(NetworkProvider, true);
+impl Provider for NetworkProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      interval.tick();
+
+      let output = self.run_interval();
+      self.common.emit_output(output);
+    }
+  }
+}

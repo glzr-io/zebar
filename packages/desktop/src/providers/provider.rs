@@ -45,8 +45,9 @@ pub trait Provider: Send + Sync {
   /// Panics if wrong runtime type is used.
   fn call_function_sync(
     &self,
-    #[allow(unused_variables)] function: ProviderFunction,
+    function: ProviderFunction,
   ) -> anyhow::Result<ProviderFunctionResult> {
+    let _function = function;
     match self.runtime_type() {
       RuntimeType::Sync => {
         unreachable!("Sync providers must implement `call_function_sync`.")
@@ -64,8 +65,9 @@ pub trait Provider: Send + Sync {
   /// Panics if wrong runtime type is used.
   async fn call_function_async(
     &self,
-    #[allow(unused_variables)] function: ProviderFunction,
+    function: ProviderFunction,
   ) -> anyhow::Result<ProviderFunctionResult> {
+    let _function = function;
     match self.runtime_type() {
       RuntimeType::Async => {
         unreachable!(
