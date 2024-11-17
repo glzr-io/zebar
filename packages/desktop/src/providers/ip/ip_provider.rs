@@ -1,4 +1,5 @@
 use anyhow::Context;
+use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -72,6 +73,7 @@ impl IpProvider {
   }
 }
 
+#[async_trait]
 impl Provider for IpProvider {
   fn runtime_type(&self) -> RuntimeType {
     RuntimeType::Async

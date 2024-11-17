@@ -153,6 +153,7 @@ impl MediaProvider {
 
     let current_session = Arc::new(Mutex::new(current_session));
     let event_tokens = Arc::new(Mutex::new(event_tokens));
+    let emit_tx = self.common.emit_tx.clone();
 
     // Clean up & rebind listeners when session changes.
     let session_changed_handler =
@@ -176,15 +177,10 @@ impl MediaProvider {
           let new_session =
             GsmtcManager::RequestAsync()?.get()?.GetCurrentSession()?;
 
-          let tokens = Self::add_session_listeners(
-            &new_session,
-            self.common.emit_tx.clone(),
-          )?;
+          let tokens =
+            Self::add_session_listeners(&new_session, emit_tx.clone())?;
 
-          Self::emit_media_info(
-            Some(&new_session),
-            self.common.emit_tx.clone(),
-          );
+          Self::emit_media_info(Some(&new_session), emit_tx.clone());
 
           *current_session = Some(new_session);
           *event_tokens = Some(tokens);
