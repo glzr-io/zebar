@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 use super::ipinfo_res::IpinfoRes;
 use crate::{
   common::AsyncInterval,
-  providers::{CommonProviderState, Provider, RuntimeType},
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
 };
 
 #[derive(Deserialize, Debug)]
@@ -83,10 +85,17 @@ impl Provider for IpProvider {
     let mut interval = AsyncInterval::new(self.config.refresh_interval);
 
     loop {
-      interval.tick().await;
-
-      let output = self.run_interval().await;
-      self.common.emitter.emit_output(output);
+      tokio::select! {
+        _ = interval.tick() => {
+          let output = self.run_interval().await;
+          self.common.emitter.emit_output(output);
+        }
+        Some(message) = self.common.input.async_rx.recv() => {
+          if let ProviderInputMsg::Stop = message {
+            break;
+          }
+        }
+      }
     }
   }
 }
