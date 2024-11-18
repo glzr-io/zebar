@@ -27,24 +27,24 @@ pub struct CommonProviderState {
   /// Wrapper around the sender channel of provider emissions.
   pub emitter: ProviderEmitter,
 
-  /// Wrapper around the receiver channel for incoming messages to the
+  /// Wrapper around the receiver channel for incoming inputs to the
   /// provider.
-  pub consumer: ProviderConsumer,
+  pub input: ProviderInput,
 
   /// Shared `sysinfo` instance.
   pub sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
-/// Handle for receiving provider messages.
-pub struct ProviderConsumer {
-  /// Async receiver channel for incoming messages to the provider.
-  async_rx: mpsc::Receiver<ProviderConsumerMessage>,
+/// Handle for receiving provider inputs.
+pub struct ProviderInput {
+  /// Async receiver channel for incoming inputs to the provider.
+  async_rx: mpsc::Receiver<ProviderInputMsg>,
 
-  /// Sync receiver channel for incoming messages to the provider.
-  sync_rx: crossbeam::channel::Receiver<ProviderConsumerMessage>,
+  /// Sync receiver channel for incoming inputs to the provider.
+  sync_rx: crossbeam::channel::Receiver<ProviderInputMsg>,
 }
 
-pub enum ProviderConsumerMessage {
+pub enum ProviderInputMsg {
   Function(ProviderFunction, oneshot::Sender<ProviderFunctionResult>),
   Stop,
 }
@@ -90,11 +90,11 @@ pub struct ProviderEmission {
 
 /// Reference to an active provider.
 struct ProviderRef {
-  /// Sender channel for sending messages to the provider.
-  async_consumer_tx: mpsc::Sender<ProviderConsumerMessage>,
+  /// Sender channel for sending inputs to the provider.
+  async_input_tx: mpsc::Sender<ProviderInputMsg>,
 
-  /// Sender channel for sending messages to the provider.
-  sync_consumer_tx: crossbeam::channel::Sender<ProviderConsumerMessage>,
+  /// Sender channel for sending inputs to the provider.
+  sync_input_tx: crossbeam::channel::Sender<ProviderInputMsg>,
 
   /// Handle to the provider's task.
   task_handle: task::JoinHandle<()>,
@@ -157,14 +157,13 @@ impl ProviderManager {
       };
     }
 
-    let (async_consumer_tx, async_consumer_rx) = mpsc::channel(1);
-    let (sync_consumer_tx, sync_consumer_rx) =
-      crossbeam::channel::bounded(1);
+    let (async_input_tx, async_input_rx) = mpsc::channel(1);
+    let (sync_input_tx, sync_input_rx) = crossbeam::channel::bounded(1);
 
     let common = CommonProviderState {
-      consumer: ProviderConsumer {
-        async_rx: async_consumer_rx,
-        sync_rx: sync_consumer_rx,
+      input: ProviderInput {
+        async_rx: async_input_rx,
+        sync_rx: sync_input_rx,
       },
       emitter: ProviderEmitter {
         emit_tx: self.emit_tx.clone(),
@@ -177,8 +176,8 @@ impl ProviderManager {
       self.create_instance(config, config_hash.clone(), common)?;
 
     let provider_ref = ProviderRef {
-      async_consumer_tx,
-      sync_consumer_tx,
+      async_input_tx,
+      sync_input_tx,
       task_handle,
     };
 
@@ -267,8 +266,8 @@ impl ProviderManager {
 
     let (tx, rx) = oneshot::channel();
     provider_ref
-      .async_consumer_tx
-      .send(ProviderConsumerMessage::Function(function, tx))
+      .async_input_tx
+      .send(ProviderInputMsg::Function(function, tx))
       .await
       .context("Failed to send function call to provider.")?;
 
@@ -284,8 +283,8 @@ impl ProviderManager {
 
     // Send shutdown signal to the provider.
     provider_ref
-      .async_consumer_tx
-      .send(ProviderConsumerMessage::Stop)
+      .async_input_tx
+      .send(ProviderInputMsg::Stop)
       .await
       .context("Failed to send shutdown signal to provider.")?;
 

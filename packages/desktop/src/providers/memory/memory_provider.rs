@@ -98,7 +98,7 @@ impl Provider for MemoryProvider {
     //   }
     // });
 
-    while let Ok(message) = self.common.consumer.try_recv() {
+    while let Ok(message) = self.common.input.try_recv() {
       let output = self.run_interval();
       self.common.emitter.emit_output(output);
     }
