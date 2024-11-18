@@ -38,10 +38,10 @@ pub struct CommonProviderState {
 /// Handle for receiving provider inputs.
 pub struct ProviderInput {
   /// Async receiver channel for incoming inputs to the provider.
-  async_rx: mpsc::Receiver<ProviderInputMsg>,
+  pub async_rx: mpsc::Receiver<ProviderInputMsg>,
 
   /// Sync receiver channel for incoming inputs to the provider.
-  sync_rx: crossbeam::channel::Receiver<ProviderInputMsg>,
+  pub sync_rx: crossbeam::channel::Receiver<ProviderInputMsg>,
 }
 
 pub enum ProviderInputMsg {
@@ -98,6 +98,9 @@ struct ProviderRef {
 
   /// Handle to the provider's task.
   task_handle: task::JoinHandle<()>,
+
+  /// Runtime type of the provider.
+  runtime_type: RuntimeType,
 }
 
 /// Manages the creation and cleanup of providers.
@@ -172,13 +175,14 @@ impl ProviderManager {
       sysinfo: self.sysinfo.clone(),
     };
 
-    let task_handle =
+    let (task_handle, runtime_type) =
       self.create_instance(config, config_hash.clone(), common)?;
 
     let provider_ref = ProviderRef {
       async_input_tx,
       sync_input_tx,
       task_handle,
+      runtime_type,
     };
 
     let mut providers = self.provider_refs.lock().await;
@@ -193,7 +197,7 @@ impl ProviderManager {
     config: ProviderConfig,
     config_hash: String,
     common: CommonProviderState,
-  ) -> anyhow::Result<task::JoinHandle<()>> {
+  ) -> anyhow::Result<(task::JoinHandle<()>, RuntimeType)> {
     let mut provider: Box<dyn Provider> = match config {
       ProviderConfig::Battery(config) => {
         Box::new(BatteryProvider::new(config, common))
@@ -236,7 +240,8 @@ impl ProviderManager {
     };
 
     // Spawn the provider's task based on its runtime type.
-    let task_handle = match provider.runtime_type() {
+    let runtime_type = provider.runtime_type();
+    let task_handle = match &runtime_type {
       RuntimeType::Async => task::spawn(async move {
         provider.start_async().await;
         info!("Provider stopped: {}", config_hash);
@@ -247,7 +252,7 @@ impl ProviderManager {
       }),
     };
 
-    Ok(task_handle)
+    Ok((task_handle, runtime_type))
   }
 
   /// Sends a function call through a channel to be executed by the
@@ -265,11 +270,21 @@ impl ProviderManager {
       .context("No provider found with config.")?;
 
     let (tx, rx) = oneshot::channel();
-    provider_ref
-      .async_input_tx
-      .send(ProviderInputMsg::Function(function, tx))
-      .await
-      .context("Failed to send function call to provider.")?;
+    match provider_ref.runtime_type {
+      RuntimeType::Async => {
+        provider_ref
+          .async_input_tx
+          .send(ProviderInputMsg::Function(function, tx))
+          .await
+          .context("Failed to send function call to provider.")?;
+      }
+      RuntimeType::Sync => {
+        provider_ref
+          .sync_input_tx
+          .send(ProviderInputMsg::Function(function, tx))
+          .context("Failed to send function call to provider.")?;
+      }
+    }
 
     rx.await?.map_err(anyhow::Error::msg)
   }
@@ -282,11 +297,21 @@ impl ProviderManager {
       .context("No provider found with config.")?;
 
     // Send shutdown signal to the provider.
-    provider_ref
-      .async_input_tx
-      .send(ProviderInputMsg::Stop)
-      .await
-      .context("Failed to send shutdown signal to provider.")?;
+    match provider_ref.runtime_type {
+      RuntimeType::Async => {
+        provider_ref
+          .async_input_tx
+          .send(ProviderInputMsg::Stop)
+          .await
+          .context("Failed to send shutdown signal to provider.")?;
+      }
+      RuntimeType::Sync => {
+        provider_ref
+          .sync_input_tx
+          .send(ProviderInputMsg::Stop)
+          .context("Failed to send shutdown signal to provider.")?;
+      }
+    }
 
     // Wait for the provider to stop.
     provider_ref.task_handle.await?;
