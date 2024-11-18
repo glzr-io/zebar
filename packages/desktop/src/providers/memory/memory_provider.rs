@@ -62,13 +62,53 @@ impl Provider for MemoryProvider {
   }
 
   fn start_sync(&mut self) {
-    let mut interval = SyncInterval::new(self.config.refresh_interval);
+    let mut interval = tokio::time::interval(Duration::from_secs(1));
+    interval
+      .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
-      interval.tick();
+      crossbeam::select! {
+        recv(interval) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.message_rx) -> cmd => {
+          match cmd {
+            IncomingProviderMessage::Stop => break,
+            IncomingProviderMessage::Function(function, response_tx) => {
+              let result = self.call_function_sync(function);
+              let _ = response_tx.send(result);
+            }
+          }
+        }
+      }
+    }
 
+    // let mut interval = SyncInterval::new(self.config.refresh_interval);
+    // let (tick_tx, tick_rx) = mpsc::channel();
+
+    // Spawn timer thread
+    // std::thread::spawn(move || {
+    //   let interval =
+    // Duration::from_millis(self.config.refresh_interval);   loop {
+    //     std::thread::sleep(interval);
+    //     if tick_tx.send(()).is_err() {
+    //       break;
+    //     }
+    //   }
+    // });
+
+    while let Ok(message) = self.common.receiver.try_recv() {
       let output = self.run_interval();
       self.common.emitter.emit_output(output);
+    }
+
+    let (sender1, receiver1) = std::sync::mpsc::channel::<String>();
+    match receiver1.recv_timeout(std::time::Duration::from_millis(100)) {
+      Ok(message) => {
+        println!("Received from receiver1: {}", message);
+      }
+      Err(_) => {} // No message, continue
     }
   }
 }

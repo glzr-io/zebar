@@ -29,14 +29,37 @@ pub enum IncomingProviderMessage {
 
 /// Common fields for a provider.
 pub struct CommonProviderState {
-  /// Receiver channel for incoming messages to the provider.
-  pub message_rx: mpsc::Receiver<IncomingProviderMessage>,
-
   /// Wrapper around the sender channel of provider emissions.
   pub emitter: ProviderEmitter,
 
+  /// Wrapper around the receiver channel for incoming messages to the
+  /// provider.
+  pub receiver: ProviderReceiver,
+
   /// Shared `sysinfo` instance.
   pub sysinfo: Arc<Mutex<sysinfo::System>>,
+}
+
+/// Handle for receiving provider messages.
+pub enum ProviderReceiver {
+  /// Async receiver channel for incoming messages to the provider.
+  Async(mpsc::Receiver<IncomingProviderMessage>),
+
+  /// Sync receiver channel for incoming messages to the provider.
+  Sync(crossbeam::channel::Receiver<IncomingProviderMessage>),
+}
+
+impl ProviderReceiver {
+  /// Returns the sync receiver channel for incoming messages to the
+  /// provider.
+  pub fn sync(
+    &self,
+  ) -> &crossbeam::channel::Receiver<IncomingProviderMessage> {
+    match self {
+      ProviderReceiver::Sync(rx) => rx,
+      _ => unreachable!(),
+    }
+  }
 }
 
 /// Handle for sending provider emissions.
@@ -144,17 +167,6 @@ impl ProviderManager {
       };
     }
 
-    let (message_tx, message_rx) = mpsc::channel(1);
-
-    let common = CommonProviderState {
-      message_rx,
-      emitter: ProviderEmitter {
-        emit_tx: self.emit_tx.clone(),
-        config_hash: config_hash.clone(),
-      },
-      sysinfo: self.sysinfo.clone(),
-    };
-
     let task_handle =
       self.create_instance(config, config_hash.clone(), common)?;
 
@@ -215,6 +227,22 @@ impl ProviderManager {
       }
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),
+    };
+
+    let (async_message_tx, async_message_rx) = mpsc::channel(1);
+    let (sync_message_tx, sync_message_rx) =
+      crossbeam::channel::bounded(1);
+
+    let common = CommonProviderState {
+      receiver: match provider.runtime_type() {
+        RuntimeType::Async => ProviderReceiver::Async(async_message_rx),
+        RuntimeType::Sync => ProviderReceiver::Sync(sync_message_rx),
+      },
+      emitter: ProviderEmitter {
+        emit_tx: self.emit_tx.clone(),
+        config_hash: config_hash.clone(),
+      },
+      sysinfo: self.sysinfo.clone(),
     };
 
     // Spawn the provider's task based on its runtime type.
