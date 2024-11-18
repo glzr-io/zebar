@@ -1,8 +1,8 @@
 use std::time::{Duration, Instant};
 
-/// A synchronous timer for running intervals at a fixed rate.
+/// An interval timer for synchronous contexts using crossbeam.
 ///
-/// The timer sleeps the thread until the next tick.
+/// For use with crossbeam's `select!` macro.
 pub struct SyncInterval {
   interval: Duration,
   next_tick: Instant,
@@ -16,27 +16,27 @@ impl SyncInterval {
     }
   }
 
-  /// Sleeps until the next tick if needed, then updates the next tick
-  /// time.
+  /// Returns a receiver that will get a message at the next tick time.
   pub fn tick(&mut self) -> crossbeam::channel::Receiver<Instant> {
     if let Some(wait_duration) =
       self.next_tick.checked_duration_since(Instant::now())
     {
+      // Wait normally until the next tick.
       let timer = crossbeam::channel::after(wait_duration);
       self.next_tick += self.interval;
       timer
     } else {
+      // We're behind - skip missed ticks to catch up.
       while self.next_tick <= Instant::now() {
         self.next_tick += self.interval;
       }
+
       crossbeam::channel::after(self.next_tick - Instant::now())
     }
   }
 }
 
-/// An asynchronous timer for running intervals at a fixed rate.
-///
-/// The timer sleeps the Tokio task until the next tick.
+/// An interval timer for asynchronous contexts using tokio.
 pub struct AsyncInterval {
   interval: tokio::time::Interval,
 }
@@ -54,6 +54,7 @@ impl AsyncInterval {
     Self { interval }
   }
 
+  /// Returns a future that will complete at the next tick time.
   pub async fn tick(&mut self) {
     self.interval.tick().await;
   }
