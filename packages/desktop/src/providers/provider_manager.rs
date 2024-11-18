@@ -160,6 +160,18 @@ impl ProviderManager {
       };
     }
 
+    // Hold the lock for `provider_refs` to prevent duplicate providers
+    // from potentially being created.
+    let mut provider_refs = self.provider_refs.lock().await;
+
+    // No-op if the provider has already been created (but has not emitted
+    // yet). Multiple frontend clients can call `create` for the same
+    // provider, and all will receive the same output once the provider
+    // emits.
+    if provider_refs.contains_key(&config_hash) {
+      return Ok(());
+    }
+
     let (async_input_tx, async_input_rx) = mpsc::channel(1);
     let (sync_input_tx, sync_input_rx) = crossbeam::channel::bounded(1);
 
@@ -185,8 +197,7 @@ impl ProviderManager {
       runtime_type,
     };
 
-    let mut providers = self.provider_refs.lock().await;
-    providers.insert(config_hash, provider_ref);
+    provider_refs.insert(config_hash, provider_ref);
 
     Ok(())
   }
