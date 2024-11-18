@@ -22,11 +22,6 @@ use super::{
   media::MediaProvider,
 };
 
-pub enum IncomingProviderMessage {
-  Function(ProviderFunction, oneshot::Sender<ProviderFunctionResult>),
-  Stop,
-}
-
 /// Common fields for a provider.
 pub struct CommonProviderState {
   /// Wrapper around the sender channel of provider emissions.
@@ -34,32 +29,24 @@ pub struct CommonProviderState {
 
   /// Wrapper around the receiver channel for incoming messages to the
   /// provider.
-  pub receiver: ProviderReceiver,
+  pub consumer: ProviderConsumer,
 
   /// Shared `sysinfo` instance.
   pub sysinfo: Arc<Mutex<sysinfo::System>>,
 }
 
 /// Handle for receiving provider messages.
-pub enum ProviderReceiver {
+pub struct ProviderConsumer {
   /// Async receiver channel for incoming messages to the provider.
-  Async(mpsc::Receiver<IncomingProviderMessage>),
+  async_rx: mpsc::Receiver<ProviderConsumerMessage>,
 
   /// Sync receiver channel for incoming messages to the provider.
-  Sync(crossbeam::channel::Receiver<IncomingProviderMessage>),
+  sync_rx: crossbeam::channel::Receiver<ProviderConsumerMessage>,
 }
 
-impl ProviderReceiver {
-  /// Returns the sync receiver channel for incoming messages to the
-  /// provider.
-  pub fn sync(
-    &self,
-  ) -> &crossbeam::channel::Receiver<IncomingProviderMessage> {
-    match self {
-      ProviderReceiver::Sync(rx) => rx,
-      _ => unreachable!(),
-    }
-  }
+pub enum ProviderConsumerMessage {
+  Function(ProviderFunction, oneshot::Sender<ProviderFunctionResult>),
+  Stop,
 }
 
 /// Handle for sending provider emissions.
@@ -104,7 +91,10 @@ pub struct ProviderEmission {
 /// Reference to an active provider.
 struct ProviderRef {
   /// Sender channel for sending messages to the provider.
-  message_tx: mpsc::Sender<IncomingProviderMessage>,
+  async_consumer_tx: mpsc::Sender<ProviderConsumerMessage>,
+
+  /// Sender channel for sending messages to the provider.
+  sync_consumer_tx: crossbeam::channel::Sender<ProviderConsumerMessage>,
 
   /// Handle to the provider's task.
   task_handle: task::JoinHandle<()>,
@@ -167,11 +157,28 @@ impl ProviderManager {
       };
     }
 
+    let (async_consumer_tx, async_consumer_rx) = mpsc::channel(1);
+    let (sync_consumer_tx, sync_consumer_rx) =
+      crossbeam::channel::bounded(1);
+
+    let common = CommonProviderState {
+      consumer: ProviderConsumer {
+        async_rx: async_consumer_rx,
+        sync_rx: sync_consumer_rx,
+      },
+      emitter: ProviderEmitter {
+        emit_tx: self.emit_tx.clone(),
+        config_hash: config_hash.clone(),
+      },
+      sysinfo: self.sysinfo.clone(),
+    };
+
     let task_handle =
       self.create_instance(config, config_hash.clone(), common)?;
 
     let provider_ref = ProviderRef {
-      message_tx,
+      async_consumer_tx,
+      sync_consumer_tx,
       task_handle,
     };
 
@@ -229,22 +236,6 @@ impl ProviderManager {
       _ => bail!("Provider not supported on this operating system."),
     };
 
-    let (async_message_tx, async_message_rx) = mpsc::channel(1);
-    let (sync_message_tx, sync_message_rx) =
-      crossbeam::channel::bounded(1);
-
-    let common = CommonProviderState {
-      receiver: match provider.runtime_type() {
-        RuntimeType::Async => ProviderReceiver::Async(async_message_rx),
-        RuntimeType::Sync => ProviderReceiver::Sync(sync_message_rx),
-      },
-      emitter: ProviderEmitter {
-        emit_tx: self.emit_tx.clone(),
-        config_hash: config_hash.clone(),
-      },
-      sysinfo: self.sysinfo.clone(),
-    };
-
     // Spawn the provider's task based on its runtime type.
     let task_handle = match provider.runtime_type() {
       RuntimeType::Async => task::spawn(async move {
@@ -276,8 +267,8 @@ impl ProviderManager {
 
     let (tx, rx) = oneshot::channel();
     provider_ref
-      .message_tx
-      .send(IncomingProviderMessage::Function(function, tx))
+      .async_consumer_tx
+      .send(ProviderConsumerMessage::Function(function, tx))
       .await
       .context("Failed to send function call to provider.")?;
 
@@ -293,8 +284,8 @@ impl ProviderManager {
 
     // Send shutdown signal to the provider.
     provider_ref
-      .message_tx
-      .send(IncomingProviderMessage::Stop)
+      .async_consumer_tx
+      .send(ProviderConsumerMessage::Stop)
       .await
       .context("Failed to send shutdown signal to provider.")?;
 
