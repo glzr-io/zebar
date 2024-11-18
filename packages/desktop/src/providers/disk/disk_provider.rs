@@ -3,7 +3,9 @@ use sysinfo::Disks;
 
 use crate::{
   common::{to_iec_bytes, to_si_bytes, SyncInterval},
-  providers::{CommonProviderState, Provider, RuntimeType},
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
 };
 
 #[derive(Deserialize, Debug)]
@@ -107,10 +109,17 @@ impl Provider for DiskProvider {
     let mut interval = SyncInterval::new(self.config.refresh_interval);
 
     loop {
-      interval.tick();
-
-      let output = self.run_interval();
-      self.common.emitter.emit_output(output);
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
     }
   }
 }

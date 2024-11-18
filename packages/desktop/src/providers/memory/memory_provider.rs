@@ -1,10 +1,10 @@
-use std::time::Duration;
-
-use crossbeam::channel::tick;
 use serde::{Deserialize, Serialize};
 
-use crate::providers::{
-  CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+use crate::{
+  common::SyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
 };
 
 #[derive(Deserialize, Debug)]
@@ -64,18 +64,17 @@ impl Provider for MemoryProvider {
   }
 
   fn start_sync(&mut self) {
-    let ticker = tick(Duration::from_millis(self.config.refresh_interval));
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
 
     loop {
       crossbeam::select! {
-        recv(ticker) -> _ => {
+        recv(interval.tick()) -> _ => {
           let output = self.run_interval();
           self.common.emitter.emit_output(output);
         }
         recv(self.common.input.sync_rx) -> input => {
-          match input {
-            Ok(ProviderInputMsg::Stop) => break,
-            _ => {}
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
           }
         }
       }

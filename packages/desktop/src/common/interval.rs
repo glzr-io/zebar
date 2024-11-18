@@ -1,7 +1,4 @@
-use std::{
-  thread,
-  time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 /// A synchronous timer for running intervals at a fixed rate.
 ///
@@ -21,16 +18,19 @@ impl SyncInterval {
 
   /// Sleeps until the next tick if needed, then updates the next tick
   /// time.
-  pub fn tick(&mut self) {
-    // Sleep until next tick if needed.
+  pub fn tick(&mut self) -> crossbeam::channel::Receiver<Instant> {
     if let Some(wait_duration) =
       self.next_tick.checked_duration_since(Instant::now())
     {
-      thread::sleep(wait_duration);
+      let timer = crossbeam::channel::after(wait_duration);
+      self.next_tick += self.interval;
+      timer
+    } else {
+      while self.next_tick <= Instant::now() {
+        self.next_tick += self.interval;
+      }
+      crossbeam::channel::after(self.next_tick - Instant::now())
     }
-
-    // Calculate next tick time.
-    self.next_tick += self.interval;
   }
 }
 
