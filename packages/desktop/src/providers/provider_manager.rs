@@ -291,10 +291,19 @@ impl ProviderManager {
 
   /// Destroys and cleans up the provider with the given config.
   pub async fn stop(&self, config_hash: String) -> anyhow::Result<()> {
-    let mut provider_refs = self.provider_refs.lock().await;
-    let provider_ref = provider_refs
-      .remove(&config_hash)
-      .context("No provider found with config.")?;
+    let provider_ref = {
+      let mut provider_refs = self.provider_refs.lock().await;
+
+      // Evict the provider's emission from cache. Hold the lock for
+      // `provider_refs` to avoid a race condition with provider
+      // creation.
+      let mut provider_cache = self.emit_cache.lock().await;
+      let _ = provider_cache.remove(&config_hash);
+
+      provider_refs
+        .remove(&config_hash)
+        .context("No provider found with config.")?
+    };
 
     // Send shutdown signal to the provider.
     match provider_ref.runtime_type {
