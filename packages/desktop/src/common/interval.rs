@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 pub struct SyncInterval {
   interval: Duration,
   next_tick: Instant,
+  is_first: bool,
 }
 
 impl SyncInterval {
@@ -13,12 +14,17 @@ impl SyncInterval {
     Self {
       interval: Duration::from_millis(interval_ms),
       next_tick: Instant::now(),
+      is_first: true,
     }
   }
 
   /// Returns a receiver that will get a message at the next tick time.
   pub fn tick(&mut self) -> crossbeam::channel::Receiver<Instant> {
-    if let Some(wait_duration) =
+    if self.is_first {
+      // Emit immediately on the first tick.
+      self.is_first = false;
+      crossbeam::channel::after(Duration::from_secs(0))
+    } else if let Some(wait_duration) =
       self.next_tick.checked_duration_since(Instant::now())
     {
       // Wait normally until the next tick.
