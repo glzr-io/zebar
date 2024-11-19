@@ -155,6 +155,11 @@ impl ProviderManager {
       if let Some(found_emit) =
         self.emit_cache.lock().await.get(&config_hash)
       {
+        tracing::info!(
+          "Emitting cached provider emission for: {}",
+          config_hash
+        );
+
         self.app_handle.emit("provider-emit", found_emit)?;
         return Ok(());
       };
@@ -171,6 +176,8 @@ impl ProviderManager {
     if provider_refs.contains_key(&config_hash) {
       return Ok(());
     }
+
+    tracing::info!("Creating provider: {}", config_hash);
 
     let (async_input_tx, async_input_rx) = mpsc::channel(1);
     let (sync_input_tx, sync_input_rx) = crossbeam::channel::bounded(1);
