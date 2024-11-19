@@ -38,14 +38,6 @@ pub trait Provider: Send + Sync {
     }
   }
 
-  // fn handle_message(&mut self, message: IncomingProviderMessage) {
-  //   match message {
-  //     IncomingProviderMessage::Function(function, tx) => {
-  //       let res = self.call_function_sync(function);
-  //     }
-  //   }
-  // }
-
   /// Runs the given function.
   ///
   /// # Panics
