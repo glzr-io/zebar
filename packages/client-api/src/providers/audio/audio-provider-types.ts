@@ -7,8 +7,8 @@ export interface AudioProviderConfig {
 export type AudioProvider = Provider<AudioProviderConfig, AudioOutput>;
 
 export interface AudioOutput {
-  defaultDevice: AudioDevice;
-  devices: AudioDevice[];
+  defaultPlaybackDevice: AudioDevice;
+  playbackDevices: AudioDevice[];
 }
 
 export interface AudioDevice {

@@ -83,8 +83,8 @@ No config options.
 
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defaultDevice`         | Default audio output device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `devices`         | All devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `defaultPlaybackDevice`         | Default audio playback device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `playbackDevices`         | All audio playback devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 #### Return types
 
@@ -93,9 +93,9 @@ No config options.
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
 | `deviceId`         | Device ID. | `string` |
-| `name`      | Friendly display name. | `string` |
+| `name`      | Friendly display name of device. | `string` |
 | `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number` |
-| `isDefault` | `true` if the device is selected as the default output device.| `boolean` |
+| `isDefault` | `true` if the device is selected as the default playback device.| `boolean` |
 
 ### Battery
 

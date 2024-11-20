@@ -56,15 +56,15 @@ pub struct AudioDevice {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioOutput {
-  pub devices: Vec<AudioDevice>,
-  pub default_device: Option<AudioDevice>,
+  pub playback_devices: Vec<AudioDevice>,
+  pub default_playback_device: Option<AudioDevice>,
 }
 
 impl AudioOutput {
   fn new() -> Self {
     Self {
-      devices: Vec::new(),
-      default_device: None,
+      playback_devices: Vec::new(),
+      default_playback_device: None,
     }
   }
 }
@@ -196,8 +196,8 @@ impl MediaDeviceEventHandler {
 
       if let Some(state) = AUDIO_STATE.get() {
         let mut audio_state = state.lock().unwrap();
-        audio_state.devices = devices;
-        audio_state.default_device = default_device;
+        audio_state.playback_devices = devices;
+        audio_state.default_playback_device = default_device;
       }
 
       AudioProvider::emit_volume();
@@ -320,14 +320,18 @@ impl AudioProvider {
             );
 
             // Update device in the devices list.
-            if let Some(device) =
-              output.devices.iter_mut().find(|d| d.device_id == device_id)
+            if let Some(device) = output
+              .playback_devices
+              .iter_mut()
+              .find(|d| d.device_id == device_id)
             {
               device.volume = volume;
             }
 
             // Update default device if it matches.
-            if let Some(default_device) = &mut output.default_device {
+            if let Some(default_device) =
+              &mut output.default_playback_device
+            {
               if default_device.device_id == device_id {
                 default_device.volume = volume;
               }
