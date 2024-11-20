@@ -1,3 +1,8 @@
+import { createAudioProvider } from './audio/create-audio-provider';
+import type {
+  AudioProviderConfig,
+  AudioProvider,
+} from './audio/audio-provider-types';
 import { createBatteryProvider } from './battery/create-battery-provider';
 import type {
   BatteryProviderConfig,
@@ -42,6 +47,11 @@ import type {
   KomorebiProviderConfig,
   KomorebiProvider,
 } from './komorebi/komorebi-provider-types';
+import type {
+  MediaProviderConfig,
+  MediaProvider,
+} from './media/media-provider-types';
+import { createMediaProvider } from './media/create-media-provider';
 import { createMemoryProvider } from './memory/create-memory-provider';
 import type {
   MemoryProviderConfig,
@@ -57,8 +67,14 @@ import type {
   WeatherProviderConfig,
   WeatherProvider,
 } from './weather/weather-provider-types';
+import { createDiskProvider } from './disk/create-disk-provider';
+import type {
+  DiskProvider,
+  DiskProviderConfig,
+} from './disk/disk-provider-types';
 
 export interface ProviderConfigMap {
+  audio: AudioProviderConfig;
   battery: BatteryProviderConfig;
   cpu: CpuProviderConfig;
   date: DateProviderConfig;
@@ -67,13 +83,16 @@ export interface ProviderConfigMap {
   host: HostProviderConfig;
   ip: IpProviderConfig;
   komorebi: KomorebiProviderConfig;
+  media: MediaProviderConfig;
   memory: MemoryProviderConfig;
   network: NetworkProviderConfig;
   weather: WeatherProviderConfig;
   keyboard: KeyboardProviderConfig;
+  disk: DiskProviderConfig;
 }
 
 export interface ProviderMap {
+  audio: AudioProvider;
   battery: BatteryProvider;
   cpu: CpuProvider;
   date: DateProvider;
@@ -82,10 +101,12 @@ export interface ProviderMap {
   host: HostProvider;
   ip: IpProvider;
   komorebi: KomorebiProvider;
+  media: MediaProvider;
   memory: MemoryProvider;
   network: NetworkProvider;
   weather: WeatherProvider;
   keyboard: KeyboardProvider;
+  disk: DiskProvider;
 }
 
 export type ProviderType = keyof ProviderConfigMap;
@@ -109,6 +130,8 @@ export function createProvider<T extends ProviderConfig>(
   config: T,
 ): ProviderMap[T['type']] {
   switch (config.type) {
+    case 'audio':
+      return createAudioProvider(config) as any;
     case 'battery':
       return createBatteryProvider(config) as any;
     case 'cpu':
@@ -125,6 +148,8 @@ export function createProvider<T extends ProviderConfig>(
       return createIpProvider(config) as any;
     case 'komorebi':
       return createKomorebiProvider(config) as any;
+    case 'media':
+      return createMediaProvider(config) as any;
     case 'memory':
       return createMemoryProvider(config) as any;
     case 'network':
@@ -133,6 +158,8 @@ export function createProvider<T extends ProviderConfig>(
       return createWeatherProvider(config) as any;
     case 'keyboard':
       return createKeyboardProvider(config) as any;
+    case 'disk':
+      return createDiskProvider(config) as any;
     default:
       throw new Error('Not a supported provider type.');
   }

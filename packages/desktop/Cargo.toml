@@ -17,6 +17,7 @@ anyhow = "1"
 async-trait = "0.1"
 base64 = "0.22.1"
 clap = { version = "4", features = ["derive"] }
+crossbeam = "0.8"
 image = "0.24"
 reqwest = { version = "0.11", features = ["json"] }
 tauri = { version = "2.0", features = [
@@ -40,16 +41,25 @@ netdev = "0.24"
 regex = "1"
 [target.'cfg(target_os = "windows")'.dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
+windows-core = "0.58"
 windows = { version = "0.58", features = [
+  "Foundation",
+  "implement",
+  "Win32_Devices_FunctionDiscovery",
+  "Media_Control",
   "Win32_Globalization",
+  "Win32_Media",
+  "Win32_Media_Audio",
+  "Win32_Media_Audio_Endpoints",
   "Win32_Storage",
   "Win32_Storage_Packaging",
   "Win32_Storage_Packaging_Appx",
   "Win32_System_Console",
   "Win32_System_SystemServices",
-  "Win32_UI_WindowsAndMessaging",
   "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell_PropertiesSystem",
   "Win32_UI_TextServices",
+  "Win32_UI_WindowsAndMessaging",
   "Win32_NetworkManagement_WiFi",
 ] }
 

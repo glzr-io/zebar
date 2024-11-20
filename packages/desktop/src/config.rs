@@ -134,9 +134,15 @@ pub struct WidgetPlacement {
 
   /// Monitor(s) to place the widget on.
   pub monitor_selection: MonitorSelection,
+
+  /// How to reserve space for the widget.
+  #[serde(default)]
+  pub dock_to_edge: DockConfig,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, ValueEnum)]
+#[derive(
+  Clone, Copy, Debug, Deserialize, PartialEq, Serialize, ValueEnum,
+)]
 #[clap(rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum AnchorPoint {
@@ -159,6 +165,38 @@ pub enum MonitorSelection {
   Secondary,
   Index(usize),
   Name(String),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DockConfig {
+  /// Whether to dock the widget to the monitor edge and reserve screen
+  /// space for it.
+  #[serde(default = "default_bool::<false>")]
+  pub enabled: bool,
+
+  /// Edge to dock the widget to.
+  pub edge: Option<DockEdge>,
+
+  /// Margin to reserve after the widget window. Can be positive or
+  /// negative.
+  #[serde(default)]
+  pub window_margin: LengthValue,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum DockEdge {
+  Top,
+  Bottom,
+  Left,
+  Right,
+}
+
+impl DockEdge {
+  pub fn is_horizontal(&self) -> bool {
+    matches!(self, Self::Top | Self::Bottom)
+  }
 }
 
 #[derive(Debug)]
@@ -590,6 +628,11 @@ fn is_app_installed(app_name: &str) -> bool {
       .map(|output| output.status.success())
       .unwrap_or(false)
   }
+}
+
+/// Helper function for setting a default value for a boolean field.
+const fn default_bool<const V: bool>() -> bool {
+  V
 }
 
 /// Helper function for setting the default value for a

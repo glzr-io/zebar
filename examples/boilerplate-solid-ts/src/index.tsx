@@ -5,11 +5,13 @@ import * as zebar from 'zebar';
 import { createSignal, createEffect } from 'solid-js';
 
 const providers = zebar.createProviderGroup({
+  audio: { type: 'audio' },
   cpu: { type: 'cpu' },
   focusedWindow: { type: 'focusedWindow' },
   battery: { type: 'battery' },
   memory: { type: 'memory' },
   weather: { type: 'weather' },
+  media: { type: 'media' },
 });
 
 render(() => <App />, document.getElementById('root')!);
@@ -55,6 +57,14 @@ function App() {
 
   return (
     <div class="app">
+      <div class="chip">
+        {output.audio?.defaultPlaybackDevice?.name} -
+        {output.audio?.defaultPlaybackDevice?.volume}
+      </div>
+      <div class="chip">
+        Media: {output.media?.session?.title} -
+        {output.media?.session?.artist}
+      </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       {iconUrl() && (
         <img height="20" width="20" src={iconUrl()!} alt="icon" />

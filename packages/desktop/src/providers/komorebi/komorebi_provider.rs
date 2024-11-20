@@ -9,14 +9,13 @@ use komorebi_client::{
   Container, Monitor, SocketMessage, Window, Workspace,
 };
 use serde::{Deserialize, Serialize};
-use tokio::{sync::mpsc::Sender, time};
 use tracing::debug;
 
 use super::{
   KomorebiContainer, KomorebiLayout, KomorebiLayoutFlip, KomorebiMonitor,
   KomorebiWindow, KomorebiWorkspace,
 };
-use crate::providers::{Provider, ProviderOutput, ProviderResult};
+use crate::providers::{CommonProviderState, Provider, RuntimeType};
 
 const SOCKET_NAME: &str = "zebar.sock";
 
@@ -32,18 +31,18 @@ pub struct KomorebiOutput {
 }
 
 pub struct KomorebiProvider {
-  _config: KomorebiProviderConfig,
+  common: CommonProviderState,
 }
 
 impl KomorebiProvider {
-  pub fn new(config: KomorebiProviderConfig) -> KomorebiProvider {
-    KomorebiProvider { _config: config }
+  pub fn new(
+    _config: KomorebiProviderConfig,
+    common: CommonProviderState,
+  ) -> KomorebiProvider {
+    KomorebiProvider { common }
   }
 
-  async fn create_socket(
-    &self,
-    emit_result_tx: Sender<ProviderResult>,
-  ) -> anyhow::Result<()> {
+  fn create_socket(&mut self) -> anyhow::Result<()> {
     let socket = komorebi_client::subscribe(SOCKET_NAME)
       .context("Failed to initialize Komorebi socket.")?;
 
@@ -68,7 +67,7 @@ impl KomorebiProvider {
             .is_err()
             {
               debug!("Attempting to reconnect to Komorebi.");
-              time::sleep(Duration::from_secs(15)).await;
+              std::thread::sleep(Duration::from_secs(15));
             }
           }
 
@@ -78,24 +77,14 @@ impl KomorebiProvider {
               &String::from_utf8(buffer).unwrap(),
             )
           {
-            emit_result_tx
-              .send(
-                Ok(ProviderOutput::Komorebi(Self::transform_response(
-                  notification.state,
-                )))
-                .into(),
-              )
-              .await;
+            self.common.emitter.emit_output(Ok(Self::transform_response(
+              notification.state,
+            )));
           }
         }
-        Err(_) => {
-          emit_result_tx
-            .send(
-              Err(anyhow::anyhow!("Failed to read Komorebi stream."))
-                .into(),
-            )
-            .await;
-        }
+        Err(_) => self.common.emitter.emit_output::<KomorebiOutput>(Err(
+          anyhow::anyhow!("Failed to read Komorebi stream."),
+        )),
       }
     }
 
@@ -185,9 +174,13 @@ impl KomorebiProvider {
 
 #[async_trait]
 impl Provider for KomorebiProvider {
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    if let Err(err) = self.create_socket(emit_result_tx.clone()).await {
-      emit_result_tx.send(Err(err).into()).await;
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    if let Err(err) = self.create_socket() {
+      self.common.emitter.emit_output::<KomorebiOutput>(Err(err));
     }
   }
 }

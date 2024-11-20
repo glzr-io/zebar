@@ -58,18 +58,45 @@ In some cases, updating to the latest Microsoft Webview2 version is needed ([sta
 
 Through the `zebar` NPM package, Zebar exposes various system information via reactive "providers". Providers are a collection of functions and variables that can change over time.
 
+- [audio](#Audio)
 - [battery](#Battery)
 - [cpu](#CPU)
 - [date](#Date)
+- [disk](#Disk)
 - [focusedWindow](#focused-window)
 - [glazewm](#GlazeWM)
 - [host](#Host)
 - [ip](#IP)
 - [keyboard](#Keyboard)
 - [komorebi](#Komorebi)
+- [media](#Media)
 - [memory](#Memory)
 - [network](#Network)
 - [weather](#Weather)
+
+### Audio
+
+#### Config
+
+No config options.
+
+#### Outputs
+
+| Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultPlaybackDevice`         | Default audio playback device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `playbackDevices`         | All audio playback devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Return types
+
+#### `AudioDevice`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `deviceId`         | Device ID. | `string` |
+| `name`      | Friendly display name of device. | `string` |
+| `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number` |
+| `isDefault` | `true` if the device is selected as the default playback device.| `boolean` |
 
 ### Battery
 
@@ -131,6 +158,44 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 | `now`    | Current date/time as milliseconds since epoch. Uses `Date.now()` under the hood.                                         | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `iso`    | Current date/time as an ISO-8601 string (eg. `2017-04-22T20:47:05.335-04:00`). Uses `date.toISOString()` under the hood. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
+### Disk
+
+#### Config
+
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `60000`        |
+
+#### Outputs
+
+| Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `disks`         | Available disks on the system.        | `Disk[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+#### Return types
+
+#### `Disk`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `name`         | Disk name.    | `string \| null` |
+| `fileSystem`      | File system used on the disk (e.g. `EXT4`, `NTFS`). | `string` |
+| `mountPoint`    | Mount point of the disk (e.g. `/`, `C:\\`).         | `string` |
+| `totalSpace` | Total disk size.      | `DataSizeMeasure` |
+| `availableSpace` | Available disk size.      | `DataSizeMeasure` |
+| `isRemovable` | Whether the disk is removable.      | `boolean` |
+| `driveType` | Type of disk (e.g. `HDD`, `SSD`).      | `string` |
+
+#### `DataSizeMeasure`
+
+| Variable   | Description                                                                 | Return type |
+| ---------- | --------------------------------------------------------------------------- | ----------- |
+| `bytes`    | Raw byte value.                                                             | `number`    |
+| `siValue`  | Bytes converted in according to the SI standard. 1000 bytes in a kilobyte.  | `number`    |
+| `siUnit`   | Unit of the converted bytes in according to the SI standard. KB, MB, ...    | `string`    |
+| `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
+| `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
+
 
 
 ## Focused Window 
@@ -163,6 +228,7 @@ No config options.
 | `currentWorkspaces` | Workspaces on the current monitor.        | `Workspace[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `allWorkspaces` | Workspaces across all monitors.        | `Workspace[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `allMonitors` | All monitors.        | `Monitor[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allWindows` | All windows.        | `Window[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `focusedMonitor` | Monitor that currently has focus.        | `Monitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `currentMonitor` | Monitor that is nearest to this Zebar widget.        | `Monitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `focusedContainer` | Container that currently has focus (on any monitor).        | `Container` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
@@ -249,16 +315,16 @@ No config options.
 
 #### Return types
 
-### NetworkTraffic
+#### `NetworkTraffic`
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
-| `received`         | Received bytes per second.    | `NetworkTrafficMeasure` |
-| `transmitted`      | Transmitted bytes per second. | `NetworkTrafficMeasure` |
-| `totalReceived`    | Total received bytes.         | `NetworkTrafficMeasure` |
-| `totalTransmitted` | Total transmitted bytes.      | `NetworkTrafficMeasure` |
+| `received`         | Received bytes per second.    | `DataSizeMeasure` |
+| `transmitted`      | Transmitted bytes per second. | `DataSizeMeasure` |
+| `totalReceived`    | Total received bytes.         | `DataSizeMeasure` |
+| `totalTransmitted` | Total transmitted bytes.      | `DataSizeMeasure` |
 
-### NetworkTrafficMeasure
+#### `DataSizeMeasure`
 
 | Variable   | Description                                                                 | Return type |
 | ---------- | --------------------------------------------------------------------------- | ----------- |
@@ -299,6 +365,36 @@ No config options.
 | `allMonitors` | All monitors.        | `KomorebiMonitor[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `focusedMonitor` | Monitor that currently has focus.        | `KomorebiMonitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `currentMonitor` | Monitor that is nearest to this Zebar widget.        | `KomorebiMonitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+### Media
+
+#### Config
+
+No config options.
+
+#### Outputs
+
+| Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session`         | Currently playing media session.        | `MediaSession \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Return types
+
+#### `MediaSession`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `title`         | TODO    | `string` |
+| `artist`      | TODO | `string \| null` |
+| `albumTitle`    | TODO         | `string \| null` |
+| `albumArtist` | TODO      | `string \| null` |
+| `trackNumber` | TODO      | `number` |
+| `startTime` | TODO      | `number` |
+| `endTime` | TODO      | `number` |
+| `position` | TODO      | `number` |
+| `isPlaying` | TODO      | `boolean` |
+
+#### `DataSizeMeasure`
 
 
 ### Weather

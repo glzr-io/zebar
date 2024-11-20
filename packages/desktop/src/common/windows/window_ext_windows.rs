@@ -1,41 +1,26 @@
 use anyhow::Context;
-#[cfg(target_os = "macos")]
-use cocoa::{
-  appkit::{NSMainMenuWindowLevel, NSWindow},
-  base::id,
-};
-use tauri::{Runtime, Window};
-#[cfg(target_os = "windows")]
+use tauri::{PhysicalPosition, PhysicalSize, Runtime, Window};
 use windows::Win32::UI::WindowsAndMessaging::{
   SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
 };
 
-pub trait WindowExt {
-  #[cfg(target_os = "macos")]
-  fn set_above_menu_bar(&self) -> anyhow::Result<()>;
+use super::app_bar;
+use crate::config::DockEdge;
 
-  #[cfg(target_os = "windows")]
+pub trait WindowExtWindows {
   fn set_tool_window(&self, enable: bool) -> anyhow::Result<()>;
+
+  fn allocate_app_bar(
+    &self,
+    size: PhysicalSize<i32>,
+    position: PhysicalPosition<i32>,
+    edge: DockEdge,
+  ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)>;
+
+  fn deallocate_app_bar(&self) -> anyhow::Result<()>;
 }
 
-impl<R: Runtime> WindowExt for Window<R> {
-  #[cfg(target_os = "macos")]
-  fn set_above_menu_bar(&self) -> anyhow::Result<()> {
-    let ns_win =
-      self.ns_window().context("Failed to get window handle.")? as id;
-
-    unsafe {
-      ns_win.setLevel_(
-        ((NSMainMenuWindowLevel + 1) as u64)
-          .try_into()
-          .context("Failed to cast `NSMainMenuWindowLevel`.")?,
-      );
-    }
-
-    Ok(())
-  }
-
-  #[cfg(target_os = "windows")]
+impl<R: Runtime> WindowExtWindows for Window<R> {
   fn set_tool_window(&self, enable: bool) -> anyhow::Result<()> {
     let handle = self.hwnd().context("Failed to get window handle.")?;
 
@@ -59,5 +44,20 @@ impl<R: Runtime> WindowExt for Window<R> {
     };
 
     Ok(())
+  }
+
+  fn allocate_app_bar(
+    &self,
+    size: PhysicalSize<i32>,
+    position: PhysicalPosition<i32>,
+    edge: DockEdge,
+  ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
+    let handle = self.hwnd().context("Failed to get window handle.")?;
+    app_bar::create_app_bar(handle.0 as _, size, position, edge)
+  }
+
+  fn deallocate_app_bar(&self) -> anyhow::Result<()> {
+    let handle = self.hwnd().context("Failed to get window handle.")?;
+    app_bar::remove_app_bar(handle.0 as _)
   }
 }

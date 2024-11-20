@@ -1,3 +1,4 @@
+import type { DataSizeMeasure } from '~/utils';
 import type { Provider } from '../create-base-provider';
 
 export interface NetworkProviderConfig {
@@ -62,16 +63,8 @@ export type InterfaceType =
   | 'bridge';
 
 export interface NetworkTraffic {
-  received: NetworkTrafficMeasure;
-  totalReceived: NetworkTrafficMeasure;
-  transmitted: NetworkTrafficMeasure;
-  totalTransmitted: NetworkTrafficMeasure;
-}
-
-export interface NetworkTrafficMeasure {
-  bytes: number;
-  siValue: number;
-  siUnit: string;
-  iecValue: number;
-  iecUnit: string;
+  received: DataSizeMeasure;
+  totalReceived: DataSizeMeasure;
+  transmitted: DataSizeMeasure;
+  totalTransmitted: DataSizeMeasure;
 }

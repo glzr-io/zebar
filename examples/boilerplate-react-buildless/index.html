@@ -36,6 +36,7 @@
         battery: { type: 'battery' },
         memory: { type: 'memory' },
         weather: { type: 'weather' },
+        media: { type: 'media' },
       });
 
       createRoot(document.getElementById('root')).render(<App />);
@@ -49,6 +50,10 @@
 
         return (
           <div className="app">
+            <div class="chip">
+              Media: {output.media?.session?.title} -
+              {output.media?.session?.artist}
+            </div>
             <div className="chip">CPU usage: {output.cpu?.usage}</div>
             <div className="chip">
               Battery charge: {output.battery?.chargePercent}

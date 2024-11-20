@@ -1,10 +1,11 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
-use sysinfo::System;
-use tokio::sync::Mutex;
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  common::SyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -26,30 +27,26 @@ pub struct MemoryOutput {
 
 pub struct MemoryProvider {
   config: MemoryProviderConfig,
-  sysinfo: Arc<Mutex<System>>,
+  common: CommonProviderState,
 }
 
 impl MemoryProvider {
   pub fn new(
     config: MemoryProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
+    common: CommonProviderState,
   ) -> MemoryProvider {
-    MemoryProvider { config, sysinfo }
+    MemoryProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut sysinfo = self.sysinfo.lock().await;
+  fn run_interval(&mut self) -> anyhow::Result<MemoryOutput> {
+    let mut sysinfo = self.common.sysinfo.blocking_lock();
     sysinfo.refresh_memory();
 
     let usage = (sysinfo.used_memory() as f32
       / sysinfo.total_memory() as f32)
       * 100.0;
 
-    Ok(ProviderOutput::Memory(MemoryOutput {
+    Ok(MemoryOutput {
       usage,
       free_memory: sysinfo.free_memory(),
       used_memory: sysinfo.used_memory(),
@@ -57,8 +54,30 @@ impl MemoryProvider {
       free_swap: sysinfo.free_swap(),
       used_swap: sysinfo.used_swap(),
       total_swap: sysinfo.total_swap(),
-    }))
+    })
   }
 }
 
-impl_interval_provider!(MemoryProvider, true);
+impl Provider for MemoryProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

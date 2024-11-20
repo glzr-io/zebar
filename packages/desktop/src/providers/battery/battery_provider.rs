@@ -8,7 +8,12 @@ use starship_battery::{
   Manager, State,
 };
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  common::SyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -32,25 +37,25 @@ pub struct BatteryOutput {
 
 pub struct BatteryProvider {
   config: BatteryProviderConfig,
+  common: CommonProviderState,
 }
 
 impl BatteryProvider {
-  pub fn new(config: BatteryProviderConfig) -> BatteryProvider {
-    BatteryProvider { config }
+  pub fn new(
+    config: BatteryProviderConfig,
+    common: CommonProviderState,
+  ) -> BatteryProvider {
+    BatteryProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+  fn run_interval(&self) -> anyhow::Result<BatteryOutput> {
     let battery = Manager::new()?
       .batteries()
       .and_then(|mut batteries| batteries.nth(0).transpose())
       .unwrap_or(None)
       .context("No battery found.")?;
 
-    Ok(ProviderOutput::Battery(BatteryOutput {
+    Ok(BatteryOutput {
       charge_percent: battery.state_of_charge().get::<percent>(),
       health_percent: battery.state_of_health().get::<percent>(),
       state: battery.state().to_string(),
@@ -64,8 +69,30 @@ impl BatteryProvider {
       power_consumption: battery.energy_rate().get::<watt>(),
       voltage: battery.voltage().get::<volt>(),
       cycle_count: battery.cycle_count(),
-    }))
+    })
   }
 }
 
-impl_interval_provider!(BatteryProvider, true);
+impl Provider for BatteryProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

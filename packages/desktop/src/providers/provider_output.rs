@@ -1,16 +1,35 @@
 use serde::Serialize;
 
-use super::{
-  battery::BatteryOutput, cpu::CpuOutput,
-  focused_window::FocusedWindowOutput, host::HostOutput, ip::IpOutput,
-  memory::MemoryOutput, network::NetworkOutput, weather::WeatherOutput,
-};
 #[cfg(windows)]
-use super::{keyboard::KeyboardOutput, komorebi::KomorebiOutput};
+use super::{
+  audio::AudioOutput, keyboard::KeyboardOutput, komorebi::KomorebiOutput,
+  media::MediaOutput,
+};
+use super::{
+  battery::BatteryOutput, cpu::CpuOutput, disk::DiskOutput,
+ 
+  focused_window::FocusedWindowOutput, host::HostOutput, ip::IpOutput, memory::MemoryOutput,
+  network::NetworkOutput, weather::WeatherOutput,
+};
+
+/// Implements `From<T>` for `ProviderOutput` for each given variant.
+macro_rules! impl_provider_output {
+  ($($variant:ident($type:ty)),* $(,)?) => {
+    $(
+      impl From<$type> for ProviderOutput {
+        fn from(value: $type) -> Self {
+          Self::$variant(value)
+        }
+      }
+    )*
+  };
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum ProviderOutput {
+  #[cfg(windows)]
+  Audio(AudioOutput),
   Battery(BatteryOutput),
   Cpu(CpuOutput),
   FocusedWindow(FocusedWindowOutput),
@@ -18,9 +37,31 @@ pub enum ProviderOutput {
   Ip(IpOutput),
   #[cfg(windows)]
   Komorebi(KomorebiOutput),
+  #[cfg(windows)]
+  Media(MediaOutput),
   Memory(MemoryOutput),
+  Disk(DiskOutput),
   Network(NetworkOutput),
   Weather(WeatherOutput),
   #[cfg(windows)]
   Keyboard(KeyboardOutput),
+}
+
+impl_provider_output! {
+  Battery(BatteryOutput),
+  Cpu(CpuOutput),
+  Host(HostOutput),
+  Ip(IpOutput),
+  Memory(MemoryOutput),
+  Disk(DiskOutput),
+  Network(NetworkOutput),
+  Weather(WeatherOutput)
+}
+
+#[cfg(windows)]
+impl_provider_output! {
+  Audio(AudioOutput),
+  Komorebi(KomorebiOutput),
+  Media(MediaOutput),
+  Keyboard(KeyboardOutput)
 }

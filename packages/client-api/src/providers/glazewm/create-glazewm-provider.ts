@@ -134,6 +134,7 @@ export function createGlazeWmProvider(
         };
 
         const { monitors: glazeWmMonitors } = await client.queryMonitors();
+        const { windows: glazeWmWindows } = await client.queryWindows();
 
         // Get GlazeWM monitor that corresponds to the widget's monitor.
         const currentGlazeWmMonitor = glazeWmMonitors.reduce((a, b) =>
@@ -169,6 +170,7 @@ export function createGlazeWmProvider(
           focusedMonitor: focusedGlazeWmMonitor!,
           currentMonitor: currentGlazeWmMonitor,
           allMonitors: glazeWmMonitors,
+          allWindows: glazeWmWindows,
         };
       }
     });
