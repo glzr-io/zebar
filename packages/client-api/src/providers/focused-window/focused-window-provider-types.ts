@@ -1,12 +1,15 @@
 import type { Provider } from '../create-base-provider';
 
 export interface FocusedWindowProviderConfig {
-    type: 'focusedWindow';
+  type: 'focusedWindow';
 }
 
 export interface FocusedWindowOutput {
-    title: string;
-    icon: string;
+  title: string;
+  icon: string;
 }
 
-export type FocusedWindowProvider = Provider<FocusedWindowProviderConfig, FocusedWindowOutput>;
+export type FocusedWindowProvider = Provider<
+  FocusedWindowProviderConfig,
+  FocusedWindowOutput
+>;

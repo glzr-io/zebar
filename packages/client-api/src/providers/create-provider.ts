@@ -18,9 +18,7 @@ import type {
   DateProviderConfig,
   DateProvider,
 } from './date/date-provider-types';
-import { 
-  createFocusedWindowProvider 
-} from './focused-window/create-focused-window-provider';
+import { createFocusedWindowProvider } from './focused-window/create-focused-window-provider';
 import type {
   FocusedWindowProviderConfig,
   FocusedWindowProvider,
@@ -139,7 +137,7 @@ export function createProvider<T extends ProviderConfig>(
     case 'date':
       return createDateProvider(config) as any;
     case 'focusedWindow':
-      return createFocusedWindowProvider(config) as any; 
+      return createFocusedWindowProvider(config) as any;
     case 'glazewm':
       return createGlazeWmProvider(config) as any;
     case 'host':
