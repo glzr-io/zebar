@@ -9,7 +9,12 @@ use windows::Win32::{
   },
 };
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  common::SyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -25,18 +30,18 @@ pub struct KeyboardOutput {
 
 pub struct KeyboardProvider {
   config: KeyboardProviderConfig,
+  common: CommonProviderState,
 }
 
 impl KeyboardProvider {
-  pub fn new(config: KeyboardProviderConfig) -> KeyboardProvider {
-    KeyboardProvider { config }
+  pub fn new(
+    config: KeyboardProviderConfig,
+    common: CommonProviderState,
+  ) -> KeyboardProvider {
+    KeyboardProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+  fn run_interval(&mut self) -> anyhow::Result<KeyboardOutput> {
     let keyboard_layout = unsafe {
       GetKeyboardLayout(GetWindowThreadProcessId(
         GetForegroundWindow(),
@@ -62,10 +67,32 @@ impl KeyboardProvider {
     let layout_name =
       String::from_utf16_lossy(&locale_name[..result as usize]);
 
-    Ok(ProviderOutput::Keyboard(KeyboardOutput {
+    Ok(KeyboardOutput {
       layout: layout_name,
-    }))
+    })
   }
 }
 
-impl_interval_provider!(KeyboardProvider, false);
+impl Provider for KeyboardProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

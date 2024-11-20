@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
 use sysinfo::Disks;
-use tokio::sync::Mutex;
 
 use crate::{
-  common::{to_iec_bytes, to_si_bytes},
-  impl_interval_provider,
-  providers::ProviderOutput,
+  common::{to_iec_bytes, to_si_bytes, SyncInterval},
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
 };
 
 #[derive(Deserialize, Debug)]
@@ -36,7 +34,8 @@ pub struct Disk {
 
 pub struct DiskProvider {
   config: DiskProviderConfig,
-  system: Arc<Mutex<Disks>>,
+  common: CommonProviderState,
+  disks: Disks,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -52,20 +51,20 @@ pub struct DiskSizeMeasure {
 impl DiskProvider {
   pub fn new(
     config: DiskProviderConfig,
-    system: Arc<Mutex<Disks>>,
+    common: CommonProviderState,
   ) -> DiskProvider {
-    DiskProvider { config, system }
+    DiskProvider {
+      config,
+      common,
+      disks: Disks::new_with_refreshed_list(),
+    }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
+  fn run_interval(&mut self) -> anyhow::Result<DiskOutput> {
+    self.disks.refresh();
 
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut disks = self.system.lock().await;
-    disks.refresh();
-
-    let disks = disks
+    let disks = self
+      .disks
       .iter()
       .map(|disk| -> anyhow::Result<Disk> {
         let name = disk.name().to_string_lossy().to_string();
@@ -84,7 +83,7 @@ impl DiskProvider {
       })
       .collect::<anyhow::Result<Vec<Disk>>>()?;
 
-    Ok(ProviderOutput::Disk(DiskOutput { disks }))
+    Ok(DiskOutput { disks })
   }
 
   fn to_disk_size_measure(bytes: u64) -> anyhow::Result<DiskSizeMeasure> {
@@ -101,4 +100,26 @@ impl DiskProvider {
   }
 }
 
-impl_interval_provider!(DiskProvider, true);
+impl Provider for DiskProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,12 @@
 use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  common::SyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -22,27 +27,49 @@ pub struct HostOutput {
 
 pub struct HostProvider {
   config: HostProviderConfig,
+  common: CommonProviderState,
 }
 
 impl HostProvider {
-  pub fn new(config: HostProviderConfig) -> HostProvider {
-    HostProvider { config }
+  pub fn new(
+    config: HostProviderConfig,
+    common: CommonProviderState,
+  ) -> HostProvider {
+    HostProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    Ok(ProviderOutput::Host(HostOutput {
+  fn run_interval(&mut self) -> anyhow::Result<HostOutput> {
+    Ok(HostOutput {
       hostname: System::host_name(),
       os_name: System::name(),
       os_version: System::os_version(),
       friendly_os_version: System::long_os_version(),
       boot_time: System::boot_time() * 1000,
       uptime: System::uptime() * 1000,
-    }))
+    })
   }
 }
 
-impl_interval_provider!(HostProvider, false);
+impl Provider for HostProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

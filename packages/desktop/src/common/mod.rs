@@ -1,5 +1,6 @@
 mod format_bytes;
 mod fs_util;
+mod interval;
 mod length_value;
 #[cfg(target_os = "macos")]
 pub mod macos;
@@ -9,5 +10,6 @@ pub mod windows;
 
 pub use format_bytes::*;
 pub use fs_util::*;
+pub use interval::*;
 pub use length_value::*;
 pub use path_ext::*;

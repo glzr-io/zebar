@@ -1,9 +1,15 @@
 use anyhow::Context;
+use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::ipinfo_res::IpinfoRes;
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  common::AsyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -23,24 +29,28 @@ pub struct IpOutput {
 
 pub struct IpProvider {
   config: IpProviderConfig,
+  common: CommonProviderState,
   http_client: Client,
 }
 
 impl IpProvider {
-  pub fn new(config: IpProviderConfig) -> IpProvider {
+  pub fn new(
+    config: IpProviderConfig,
+    common: CommonProviderState,
+  ) -> IpProvider {
     IpProvider {
       config,
+      common,
       http_client: Client::new(),
     }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
+  async fn run_interval(&mut self) -> anyhow::Result<IpOutput> {
+    Self::query_ip(&self.http_client).await
   }
 
-  pub async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let res = self
-      .http_client
+  pub async fn query_ip(http_client: &Client) -> anyhow::Result<IpOutput> {
+    let res = http_client
       .get("https://ipinfo.io/json")
       .send()
       .await?
@@ -49,7 +59,7 @@ impl IpProvider {
 
     let mut loc_parts = res.loc.split(',');
 
-    Ok(ProviderOutput::Ip(IpOutput {
+    Ok(IpOutput {
       address: res.ip,
       approx_city: res.city,
       approx_country: res.country,
@@ -61,8 +71,31 @@ impl IpProvider {
         .next()
         .and_then(|long| long.parse::<f32>().ok())
         .context("Failed to parse longitude from IPinfo.")?,
-    }))
+    })
   }
 }
 
-impl_interval_provider!(IpProvider, false);
+#[async_trait]
+impl Provider for IpProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Async
+  }
+
+  async fn start_async(&mut self) {
+    let mut interval = AsyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      tokio::select! {
+        _ = interval.tick() => {
+          let output = self.run_interval().await;
+          self.common.emitter.emit_output(output);
+        }
+        Some(message) = self.common.input.async_rx.recv() => {
+          if let ProviderInputMsg::Stop = message {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

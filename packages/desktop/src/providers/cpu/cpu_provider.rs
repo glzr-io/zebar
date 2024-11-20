@@ -1,10 +1,11 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
-use sysinfo::System;
-use tokio::sync::Mutex;
 
-use crate::{impl_interval_provider, providers::ProviderOutput};
+use crate::{
+  common::SyncInterval,
+  providers::{
+    CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
+  },
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -24,26 +25,22 @@ pub struct CpuOutput {
 
 pub struct CpuProvider {
   config: CpuProviderConfig,
-  sysinfo: Arc<Mutex<System>>,
+  common: CommonProviderState,
 }
 
 impl CpuProvider {
   pub fn new(
     config: CpuProviderConfig,
-    sysinfo: Arc<Mutex<System>>,
+    common: CommonProviderState,
   ) -> CpuProvider {
-    CpuProvider { config, sysinfo }
+    CpuProvider { config, common }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
-    let mut sysinfo = self.sysinfo.lock().await;
+  fn run_interval(&self) -> anyhow::Result<CpuOutput> {
+    let mut sysinfo = self.common.sysinfo.blocking_lock();
     sysinfo.refresh_cpu();
 
-    Ok(ProviderOutput::Cpu(CpuOutput {
+    Ok(CpuOutput {
       usage: sysinfo.global_cpu_info().cpu_usage(),
       frequency: sysinfo.global_cpu_info().frequency(),
       logical_core_count: sysinfo.cpus().len(),
@@ -51,8 +48,30 @@ impl CpuProvider {
         .physical_core_count()
         .unwrap_or(sysinfo.cpus().len()),
       vendor: sysinfo.global_cpu_info().vendor_id().into(),
-    }))
+    })
   }
 }
 
-impl_interval_provider!(CpuProvider, true);
+impl Provider for CpuProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = self.run_interval();
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

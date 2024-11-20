@@ -8,10 +8,11 @@ use std::{env, sync::Arc};
 use clap::Parser;
 use cli::MonitorType;
 use config::{MonitorSelection, WidgetPlacement};
+use providers::ProviderEmission;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
-use tokio::task;
+use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 use widget_factory::WidgetOpenOptions;
@@ -88,6 +89,7 @@ async fn main() -> anyhow::Result<()> {
       commands::update_widget_config,
       commands::listen_provider,
       commands::unlisten_provider,
+      commands::call_provider_function,
       commands::set_always_on_top,
       commands::set_skip_taskbar
     ])
@@ -173,8 +175,8 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.handle().plugin(tauri_plugin_dialog::init())?;
 
   // Initialize `ProviderManager` in Tauri state.
-  let manager = Arc::new(ProviderManager::new(app.handle()));
-  app.manage(manager);
+  let (manager, emit_rx) = ProviderManager::new(app.handle());
+  app.manage(manager.clone());
 
   // Open widgets based on CLI command.
   open_widgets_by_cli_command(cli, widget_factory.clone()).await?;
@@ -184,7 +186,15 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     SysTray::new(app.handle(), config.clone(), widget_factory.clone())
       .await?;
 
-  listen_events(app.handle(), config, monitor_state, widget_factory, tray);
+  listen_events(
+    app.handle(),
+    config,
+    monitor_state,
+    widget_factory,
+    tray,
+    manager,
+    emit_rx,
+  );
 
   Ok(())
 }
@@ -194,7 +204,9 @@ fn listen_events(
   config: Arc<Config>,
   monitor_state: Arc<MonitorState>,
   widget_factory: Arc<WidgetFactory>,
-  tray: Arc<SysTray>,
+  tray: SysTray,
+  manager: Arc<ProviderManager>,
+  mut emit_rx: mpsc::UnboundedReceiver<ProviderEmission>,
 ) {
   let app_handle = app_handle.clone();
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
@@ -230,6 +242,12 @@ fn listen_events(
         Ok(changed_configs) = widget_configs_change_rx.recv() => {
           info!("Widget configs changed.");
           widget_factory.relaunch_by_paths(&changed_configs.keys().cloned().collect()).await
+        },
+        Some(provider_emission) = emit_rx.recv() => {
+          info!("Provider emission: {:?}", provider_emission);
+          app_handle.emit("provider-emit", provider_emission.clone());
+          manager.update_cache(provider_emission).await;
+          Ok(())
         },
       };
 

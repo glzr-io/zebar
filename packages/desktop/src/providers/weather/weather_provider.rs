@@ -1,12 +1,13 @@
+use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::open_meteo_res::OpenMeteoRes;
 use crate::{
-  impl_interval_provider,
+  common::AsyncInterval,
   providers::{
-    ip::{IpProvider, IpProviderConfig},
-    ProviderOutput,
+    ip::IpProvider, CommonProviderState, Provider, ProviderInputMsg,
+    RuntimeType,
   },
 };
 
@@ -47,38 +48,29 @@ pub enum WeatherStatus {
 
 pub struct WeatherProvider {
   config: WeatherProviderConfig,
+  common: CommonProviderState,
   http_client: Client,
 }
 
 impl WeatherProvider {
-  pub fn new(config: WeatherProviderConfig) -> WeatherProvider {
+  pub fn new(
+    config: WeatherProviderConfig,
+    common: CommonProviderState,
+  ) -> WeatherProvider {
     WeatherProvider {
       config,
+      common,
       http_client: Client::new(),
     }
   }
 
-  fn refresh_interval_ms(&self) -> u64 {
-    self.config.refresh_interval
-  }
-
-  async fn run_interval(&self) -> anyhow::Result<ProviderOutput> {
+  async fn run_interval(&self) -> anyhow::Result<WeatherOutput> {
     let (latitude, longitude) = {
       match (self.config.latitude, self.config.longitude) {
         (Some(lat), Some(lon)) => (lat, lon),
         _ => {
-          let ip_output = IpProvider::new(IpProviderConfig {
-            refresh_interval: 0,
-          })
-          .run_interval()
-          .await?;
-
-          match ip_output {
-            ProviderOutput::Ip(ip_output) => {
-              (ip_output.approx_latitude, ip_output.approx_longitude)
-            }
-            _ => anyhow::bail!("Unexpected output from IP provider."),
-          }
+          let ip_output = IpProvider::query_ip(&self.http_client).await?;
+          (ip_output.approx_latitude, ip_output.approx_longitude)
         }
       }
     };
@@ -102,7 +94,7 @@ impl WeatherProvider {
     let current_weather = res.current_weather;
     let is_daytime = current_weather.is_day == 1;
 
-    Ok(ProviderOutput::Weather(WeatherOutput {
+    Ok(WeatherOutput {
       is_daytime,
       status: Self::get_weather_status(
         current_weather.weather_code,
@@ -113,7 +105,7 @@ impl WeatherProvider {
         current_weather.temperature,
       ),
       wind_speed: current_weather.wind_speed,
-    }))
+    })
   }
 
   fn celsius_to_fahrenheit(celsius_temp: f32) -> f32 {
@@ -159,4 +151,27 @@ impl WeatherProvider {
   }
 }
 
-impl_interval_provider!(WeatherProvider, true);
+#[async_trait]
+impl Provider for WeatherProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Async
+  }
+
+  async fn start_async(&mut self) {
+    let mut interval = AsyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      tokio::select! {
+        _ = interval.tick() => {
+          let output = self.run_interval().await;
+          self.common.emitter.emit_output(output);
+        }
+        Some(message) = self.common.input.async_rx.recv() => {
+          if let ProviderInputMsg::Stop = message {
+            break;
+          }
+        }
+      }
+    }
+  }
+}

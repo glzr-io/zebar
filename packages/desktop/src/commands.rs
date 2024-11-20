@@ -8,7 +8,10 @@ use crate::common::macos::WindowExtMacOs;
 use crate::common::windows::WindowExtWindows;
 use crate::{
   config::{Config, WidgetConfig, WidgetPlacement},
-  providers::{ProviderConfig, ProviderManager},
+  providers::{
+    ProviderConfig, ProviderFunction, ProviderFunctionResponse,
+    ProviderManager,
+  },
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -98,7 +101,19 @@ pub async fn unlisten_provider(
   provider_manager: State<'_, Arc<ProviderManager>>,
 ) -> anyhow::Result<(), String> {
   provider_manager
-    .destroy(config_hash)
+    .stop(config_hash)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn call_provider_function(
+  config_hash: String,
+  function: ProviderFunction,
+  provider_manager: State<'_, Arc<ProviderManager>>,
+) -> anyhow::Result<ProviderFunctionResponse, String> {
+  provider_manager
+    .call_function(config_hash, function)
     .await
     .map_err(|err| err.to_string())
 }
