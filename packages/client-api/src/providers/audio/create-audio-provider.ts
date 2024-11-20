@@ -10,7 +10,6 @@ import type {
 
 const audioProviderConfigSchema = z.object({
   type: z.literal('audio'),
-  refreshInterval: z.coerce.number().default(60 * 1000),
 });
 
 export function createAudioProvider(

@@ -23,8 +23,8 @@ function App() {
   return (
     <div class="app">
       <div class="chip">
-        {output.audio?.devices[output.audio?.defaultDevice!].name} :
-        {output.audio?.devices[output.audio?.defaultDevice!].volume}
+        {output.audio?.defaultDevice?.name} -
+        {output.audio?.defaultDevice?.volume}
       </div>
       <div class="chip">
         Media: {output.media?.session?.title} -

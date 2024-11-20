@@ -73,7 +73,7 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 - [network](#Network)
 - [weather](#Weather)
 
-### Media
+### Audio
 
 #### Config
 
@@ -83,19 +83,19 @@ No config options.
 
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defaultDevice`         | ID of default audio output device.        | `string \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `devices`         | All devices.        | `Record<string, AudioDeviceInfo>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `defaultDevice`         | Default audio output device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `devices`         | All devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 #### Return types
 
-#### `AudioDeviceInfo`
+#### `AudioDevice`
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
 | `deviceId`         | Device ID. | `string` |
-| `name`      | Display name. | `string ` |
-| `volume`    | Volume as a % of maximum volume.  Returned value is between `0` and `100`. | `string ` |
-| `isDefault` | `True` if the device is selected as the default output device.| `string \| null` |
+| `name`      | Friendly display name. | `string` |
+| `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number` |
+| `isDefault` | `true` if the device is selected as the default output device.| `boolean` |
 
 ### Battery
 

@@ -1,5 +1,6 @@
 use std::{
   collections::HashMap,
+  ops::Mul,
   sync::{Arc, Mutex, OnceLock},
   time::Duration,
 };
@@ -11,6 +12,7 @@ use tokio::{
   task,
   time::sleep,
 };
+use tracing::debug;
 use windows::Win32::{
   Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
   Media::Audio::{
@@ -35,6 +37,7 @@ use crate::providers::{Provider, ProviderOutput, ProviderResult};
 
 static PROVIDER_TX: OnceLock<mpsc::Sender<ProviderResult>> =
   OnceLock::new();
+
 static AUDIO_STATE: OnceLock<Arc<Mutex<AudioOutput>>> = OnceLock::new();
 
 #[derive(Deserialize, Debug)]
@@ -43,23 +46,24 @@ pub struct AudioProviderConfig {}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AudioDeviceInfo {
+pub struct AudioDevice {
   pub name: String,
-  pub volume: f32,
+  pub device_id: String,
+  pub volume: u32,
   pub is_default: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioOutput {
-  pub devices: HashMap<String, AudioDeviceInfo>,
-  pub default_device: Option<String>,
+  pub devices: Vec<AudioDevice>,
+  pub default_device: Option<AudioDevice>,
 }
 
 impl AudioOutput {
   fn new() -> Self {
     Self {
-      devices: HashMap::new(),
+      devices: Vec::new(),
       default_device: None,
     }
   }
@@ -80,13 +84,13 @@ struct MediaDeviceEventHandler {
   enumerator: IMMDeviceEnumerator,
   device_state: Arc<Mutex<HashMap<String, DeviceInfo>>>,
   current_device: String,
-  update_tx: mpsc::Sender<(String, f32)>,
+  update_tx: mpsc::Sender<(String, u32)>,
 }
 
 impl MediaDeviceEventHandler {
   fn new(
     enumerator: IMMDeviceEnumerator,
-    update_tx: mpsc::Sender<(String, f32)>,
+    update_tx: mpsc::Sender<(String, u32)>,
   ) -> Self {
     Self {
       enumerator,
@@ -107,7 +111,7 @@ impl MediaDeviceEventHandler {
   fn get_device_info(
     &self,
     device: &IMMDevice,
-  ) -> windows::core::Result<(String, AudioDeviceInfo)> {
+  ) -> windows::core::Result<AudioDevice> {
     unsafe {
       let device_id = device.GetId()?.to_string()?;
       let mut device_state = self.device_state.lock().unwrap();
@@ -118,17 +122,20 @@ impl MediaDeviceEventHandler {
       }
 
       let device_info = device_state.get(&device_id).unwrap();
-      Ok((
-        device_id.clone(),
-        AudioDeviceInfo {
-          name: device_info.name.clone(),
-          volume: device_info
-            .endpoint_volume
-            .GetMasterVolumeLevelScalar()
-            .unwrap_or(0.0),
-          is_default: self.is_default_device(&device_id)?,
-        },
-      ))
+      let is_default = self.is_default_device(&device_id)?;
+      let volume = device_info
+        .endpoint_volume
+        .GetMasterVolumeLevelScalar()
+        .unwrap_or(0.0)
+        .mul(100.0)
+        .round() as u32;
+
+      Ok(AudioDevice {
+        device_id,
+        name: device_info.name.clone(),
+        volume,
+        is_default,
+      })
     }
   }
 
@@ -173,17 +180,17 @@ impl MediaDeviceEventHandler {
         .enumerator
         .EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
 
-      let mut devices = HashMap::new();
+      let mut devices = Vec::new();
       let mut default_device = None;
 
-      // Get info for all active devices
+      // Get info for all active devices.
       for i in 0..collection.GetCount()? {
         if let Ok(device) = collection.Item(i) {
-          let (id, info) = self.get_device_info(&device)?;
+          let info = self.get_device_info(&device)?;
           if info.is_default {
-            default_device = Some(id.clone());
+            default_device = Some(info.clone());
           }
-          devices.insert(id, info);
+          devices.push(info);
         }
       }
 
@@ -217,25 +224,24 @@ impl IAudioEndpointVolumeCallback_Impl for MediaDeviceEventHandler_Impl {
     &self,
     data: *mut windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA,
   ) -> windows::core::Result<()> {
-    unsafe {
-      if let Some(data) = data.as_ref() {
-        let device_id = self.current_device.clone();
-        let volume = data.fMasterVolume;
-        let _ = self.update_tx.blocking_send((device_id, volume));
-      }
-      Ok(())
+    if let Some(data) = unsafe { data.as_ref() } {
+      let device_id = self.current_device.clone();
+      let volume = data.fMasterVolume.mul(100.0).round() as u32;
+
+      let _ = self.update_tx.blocking_send((device_id, volume));
     }
+    Ok(())
   }
 }
 
 impl IMMNotificationClient_Impl for MediaDeviceEventHandler_Impl {
   fn OnDefaultDeviceChanged(
     &self,
-    flow: EDataFlow,
+    data_flow: EDataFlow,
     role: ERole,
-    _pwstrDefaultDeviceId: &PCWSTR,
+    _default_device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
-    if flow == eRender && role == eMultimedia {
+    if data_flow == eRender && role == eMultimedia {
       self.enumerate_devices()?;
     }
     Ok(())
@@ -243,29 +249,29 @@ impl IMMNotificationClient_Impl for MediaDeviceEventHandler_Impl {
 
   fn OnDeviceStateChanged(
     &self,
-    _pwstrDeviceId: &PCWSTR,
-    _dwNewState: DEVICE_STATE,
+    _device_id: &PCWSTR,
+    _new_state: DEVICE_STATE,
   ) -> windows::core::Result<()> {
     self.enumerate_devices()
   }
 
   fn OnDeviceAdded(
     &self,
-    _pwstrDeviceId: &PCWSTR,
+    _device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
     self.enumerate_devices()
   }
 
   fn OnDeviceRemoved(
     &self,
-    _pwstrDeviceId: &PCWSTR,
+    _device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
     self.enumerate_devices()
   }
 
   fn OnPropertyValueChanged(
     &self,
-    _pwstrDeviceId: &PCWSTR,
+    _device_id: &PCWSTR,
     _key: &PROPERTYKEY,
   ) -> windows::core::Result<()> {
     Ok(())
@@ -288,37 +294,54 @@ impl AudioProvider {
     }
   }
 
-  async fn handle_volume_updates(mut rx: mpsc::Receiver<(String, f32)>) {
+  async fn handle_volume_updates(mut rx: mpsc::Receiver<(String, u32)>) {
     const PROCESS_DELAY: Duration = Duration::from_millis(50);
-    let mut latest_updates: HashMap<String, f32> = HashMap::new();
+    let mut latest_updates = HashMap::new();
 
     while let Some((device_id, volume)) = rx.recv().await {
       latest_updates.insert(device_id, volume);
 
-      // Collect any additional pending updates without waiting
+      // Collect any additional pending updates without waiting.
       while let Ok((device_id, volume)) = rx.try_recv() {
         latest_updates.insert(device_id, volume);
       }
 
-      // Brief delay to collect more potential updates
+      // Brief delay to collect more potential updates.
       sleep(PROCESS_DELAY).await;
 
-      // Process all collected updates
+      // Process all collected updates.
       if let Some(state) = AUDIO_STATE.get() {
-        let mut output = state.lock().unwrap();
-        for (device_id, volume) in latest_updates.drain() {
-          if let Some(device) = output.devices.get_mut(&device_id) {
-            device.volume = volume;
+        {
+          let mut output = state.lock().unwrap();
+          for (device_id, volume) in latest_updates.drain() {
+            debug!(
+              "Updating volume to {} for device: {}",
+              volume, device_id
+            );
+
+            // Update device in the devices list.
+            if let Some(device) =
+              output.devices.iter_mut().find(|d| d.device_id == device_id)
+            {
+              device.volume = volume;
+            }
+
+            // Update default device if it matches.
+            if let Some(default_device) = &mut output.default_device {
+              if default_device.device_id == device_id {
+                default_device.volume = volume;
+              }
+            }
           }
         }
-        drop(output);
+
         Self::emit_volume();
       }
     }
   }
 
   fn create_audio_manager(
-    update_tx: mpsc::Sender<(String, f32)>,
+    update_tx: mpsc::Sender<(String, u32)>,
   ) -> anyhow::Result<()> {
     unsafe {
       let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
@@ -353,12 +376,13 @@ impl Provider for AudioProvider {
       .set(Arc::new(Mutex::new(AudioOutput::new())))
       .expect("Error setting initial audio state");
 
-    // Create a channel for volume updates
+    // Create a channel for volume updates.
     let (update_tx, update_rx) = mpsc::channel(100);
 
-    // Spawn both tasks
+    // Spawn both tasks.
     let update_handler =
       task::spawn(Self::handle_volume_updates(update_rx));
+
     let manager = task::spawn_blocking(move || {
       if let Err(err) = Self::create_audio_manager(update_tx) {
         emit_result_tx
@@ -367,10 +391,10 @@ impl Provider for AudioProvider {
       }
     });
 
-    // Wait for either task to complete (though they should run forever)
+    // Wait for either task to complete (though they should run forever).
     tokio::select! {
-        _ = manager => println!("Audio manager stopped unexpectedly"),
-        _ = update_handler => println!("Update handler stopped unexpectedly"),
+      _ = manager => debug!("Audio manager stopped unexpectedly"),
+      _ = update_handler => debug!("Update handler stopped unexpectedly"),
     }
   }
 }
