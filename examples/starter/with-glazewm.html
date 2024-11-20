@@ -155,7 +155,11 @@
                     <button
                       className="binding-mode"
                       key={bindingMode.name}
-                      onClick={() => output.glazewm.runCommand(`wm-disable-binding-mode --name ${bindingMode.name}`)}
+                      onClick={() =>
+                        output.glazewm.runCommand(
+                          `wm-disable-binding-mode --name ${bindingMode.name}`,
+                        )
+                      }
                     >
                       {bindingMode.displayName ?? bindingMode.name}
                     </button>
