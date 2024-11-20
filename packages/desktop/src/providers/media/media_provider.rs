@@ -1,23 +1,19 @@
-use std::{
-  sync::{Arc, Mutex},
-  time,
-};
-
 use async_trait::async_trait;
+use crossbeam::channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tracing::debug;
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
   Media::Control::{
     GlobalSystemMediaTransportControlsSession as GsmtcSession,
     GlobalSystemMediaTransportControlsSessionManager as GsmtcManager,
+    GlobalSystemMediaTransportControlsSessionMediaProperties as GsmtcMediaProperties,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as GsmtcPlaybackStatus,
+    GlobalSystemMediaTransportControlsSessionTimelineProperties as GsmtcTimelineProperties,
   },
 };
 
-use crate::providers::{
-  CommonProviderState, Provider, ProviderEmitter, RuntimeType,
-};
+use crate::providers::{CommonProviderState, Provider, RuntimeType};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -43,15 +39,31 @@ pub struct MediaSession {
   pub is_playing: bool,
 }
 
-#[derive(Clone, Debug)]
+/// Events that can be emitted from media session state changes.
+#[derive(Debug)]
+enum MediaSessionEvent {
+  PlaybackInfoChanged,
+  MediaPropertiesChanged,
+  TimelinePropertiesChanged,
+  SessionChanged,
+}
+
+/// Holds event registration tokens for media session callbacks.
+///
+/// These need to be cleaned up when the session changes.
+#[derive(Clone)]
 struct EventTokens {
-  playback_info_changed_token: EventRegistrationToken,
-  media_properties_changed_token: EventRegistrationToken,
-  timeline_properties_changed_token: EventRegistrationToken,
+  playback: EventRegistrationToken,
+  properties: EventRegistrationToken,
+  timeline: EventRegistrationToken,
 }
 
 pub struct MediaProvider {
   common: CommonProviderState,
+  session: Option<GsmtcSession>,
+  event_tokens: Option<EventTokens>,
+  event_sender: Sender<MediaSessionEvent>,
+  event_receiver: Receiver<MediaSessionEvent>,
 }
 
 impl MediaProvider {
@@ -59,204 +71,276 @@ impl MediaProvider {
     _config: MediaProviderConfig,
     common: CommonProviderState,
   ) -> MediaProvider {
-    MediaProvider { common }
-  }
+    let (event_sender, event_receiver) = unbounded();
 
-  fn emit_media_info(
-    session: Option<&GsmtcSession>,
-    emitter: &ProviderEmitter,
-  ) {
-    let media_output = Self::media_output(session);
-    emitter.emit_output(media_output);
-  }
-
-  fn media_output(
-    session: Option<&GsmtcSession>,
-  ) -> anyhow::Result<MediaOutput> {
-    Ok(MediaOutput {
-      session: match session {
-        Some(session) => Self::media_session(session)?,
-        None => None,
-      },
-    })
-  }
-
-  fn media_session(
-    session: &GsmtcSession,
-  ) -> anyhow::Result<Option<MediaSession>> {
-    let media_properties = session.TryGetMediaPropertiesAsync()?.get()?;
-    let timeline_properties = session.GetTimelineProperties()?;
-    let playback_info = session.GetPlaybackInfo()?;
-
-    let title = media_properties.Title()?.to_string();
-    let artist = media_properties.Artist()?.to_string();
-    let album_title = media_properties.AlbumTitle()?.to_string();
-    let album_artist = media_properties.AlbumArtist()?.to_string();
-
-    // GSMTC can have a valid session, but return empty string for all
-    // media properties. Check that we at least have a valid title.
-    if title.is_empty() {
-      return Ok(None);
+    Self {
+      common,
+      session: None,
+      event_tokens: None,
+      event_sender,
+      event_receiver,
     }
-
-    let is_playing =
-      playback_info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
-    let start_time =
-      timeline_properties.StartTime()?.Duration as u64 / 10_000_000;
-    let end_time =
-      timeline_properties.EndTime()?.Duration as u64 / 10_000_000;
-    let position =
-      timeline_properties.Position()?.Duration as u64 / 10_000_000;
-
-    Ok(Some(MediaSession {
-      title,
-      artist: (!artist.is_empty()).then_some(artist),
-      album_title: (!album_title.is_empty()).then_some(album_title),
-      album_artist: (!album_artist.is_empty()).then_some(album_artist),
-      track_number: media_properties.TrackNumber()? as u32,
-      start_time,
-      end_time,
-      position,
-      is_playing,
-    }))
   }
 
+  /// Main entry point that sets up the media session manager and runs the
+  /// event loop. This method:
+  /// 1. Creates the Windows media session manager
+  /// 2. Registers for session change notifications
+  /// 3. Sets up the initial session if one exists
+  /// 4. Runs the main event loop to handle media state changes
   fn create_session_manager(&mut self) -> anyhow::Result<()> {
     debug!("Creating media session manager.");
+    let manager = GsmtcManager::RequestAsync()?.get()?;
+    self.register_session_changed_handler(&manager)?;
+    self.create_session()?;
 
-    // Find the current GSMTC session & add listeners.
-    let session_manager = GsmtcManager::RequestAsync()?.get()?;
-    let current_session = session_manager.GetCurrentSession().ok();
-
-    let event_tokens = match &current_session {
-      Some(session) => {
-        Some(Self::add_session_listeners(session, &self.common.emitter)?)
-      }
-      None => None,
-    };
-
-    // Emit initial media info.
-    Self::emit_media_info(current_session.as_ref(), &self.common.emitter);
-
-    let current_session = Arc::new(Mutex::new(current_session));
-    let event_tokens = Arc::new(Mutex::new(event_tokens));
-    let emitter = self.common.emitter.clone();
-
-    // Clean up & rebind listeners when session changes.
-    let session_changed_handler =
-      TypedEventHandler::new(move |_: &Option<GsmtcManager>, _| {
-        {
-          let mut current_session = current_session.lock().unwrap();
-          let mut event_tokens = event_tokens.lock().unwrap();
-
-          // Remove listeners from the previous session.
-          if let (Some(session), Some(token)) =
-            (current_session.as_ref(), event_tokens.as_ref())
-          {
-            if let Err(err) =
-              Self::remove_session_listeners(session, token)
-            {
-              error!("Failed to remove session listeners: {}", err);
-            }
-          }
-
-          // Set up new session.
-          let new_session =
-            GsmtcManager::RequestAsync()?.get()?.GetCurrentSession()?;
-
-          let tokens =
-            Self::add_session_listeners(&new_session, &emitter)?;
-
-          Self::emit_media_info(Some(&new_session), &emitter);
-
-          *current_session = Some(new_session);
-          *event_tokens = Some(tokens);
-        }
-
-        Ok(())
-      });
-
-    session_manager.CurrentSessionChanged(&session_changed_handler)?;
-
-    loop {
-      std::thread::sleep(time::Duration::from_secs(1));
+    while let Ok(event) = self.event_receiver.recv() {
+      debug!("Got media session event: {:?}", event);
+      self.handle_event(event)?;
     }
-  }
-
-  fn remove_session_listeners(
-    session: &GsmtcSession,
-    tokens: &EventTokens,
-  ) -> anyhow::Result<()> {
-    session.RemoveMediaPropertiesChanged(
-      tokens.media_properties_changed_token,
-    )?;
-
-    session
-      .RemovePlaybackInfoChanged(tokens.playback_info_changed_token)?;
-
-    session.RemoveTimelinePropertiesChanged(
-      tokens.timeline_properties_changed_token,
-    )?;
 
     Ok(())
   }
 
-  fn add_session_listeners(
+  /// Registers a callback with the session manager to detect when the
+  /// active media session changes (e.g. when switching between media
+  /// players).
+  fn register_session_changed_handler(
+    &self,
+    manager: &GsmtcManager,
+  ) -> anyhow::Result<()> {
+    let handler = TypedEventHandler::new({
+      let sender = self.event_sender.clone();
+      move |_, _| {
+        sender.send(MediaSessionEvent::SessionChanged).unwrap();
+        Ok(())
+      }
+    });
+    manager.CurrentSessionChanged(&handler)?;
+    Ok(())
+  }
+
+  /// Central event handler that processes all media session events.
+  /// Routes events to appropriate update methods based on event type.
+  fn handle_event(
+    &mut self,
+    event: MediaSessionEvent,
+  ) -> anyhow::Result<()> {
+    match event {
+      MediaSessionEvent::SessionChanged => self.create_session()?,
+      _ => {
+        if let Some(session) = &self.session {
+          match event {
+            MediaSessionEvent::PlaybackInfoChanged => {
+              self.update_playback(session)?
+            }
+            MediaSessionEvent::MediaPropertiesChanged => {
+              self.update_properties(session)?
+            }
+            MediaSessionEvent::TimelinePropertiesChanged => {
+              self.update_timeline(session)?
+            }
+            _ => {}
+          }
+        }
+      }
+    }
+    Ok(())
+  }
+
+  /// Sets up a new media session when one becomes available.
+  /// This includes:
+  /// 1. Cleaning up any existing session listeners
+  /// 2. Getting the current session from Windows
+  /// 3. Setting up new event listeners
+  /// 4. Emitting initial state
+  fn create_session(&mut self) -> anyhow::Result<()> {
+    self.remove_session_listeners();
+    let manager = GsmtcManager::RequestAsync()?.get()?;
+    let session = manager.GetCurrentSession().ok();
+
+    if let Some(session) = &session {
+      self.event_tokens = Some(self.setup_session_listeners(session)?);
+      self.emit_full_state(session)?;
+    } else {
+      self.emit_empty_state();
+    }
+
+    self.session = session;
+    Ok(())
+  }
+
+  /// Creates event listeners for all media session state changes.
+  /// Returns tokens needed for cleanup when the session ends.
+  fn setup_session_listeners(
+    &self,
     session: &GsmtcSession,
-    emitter: &ProviderEmitter,
-  ) -> windows::core::Result<EventTokens> {
-    debug!("Adding session listeners.");
-
-    let media_properties_changed_handler = {
-      let emitter = emitter.clone();
-
-      TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
-        debug!("Media properties changed event triggered.");
-
-        if let Some(session) = session {
-          Self::emit_media_info(Some(session), &emitter);
-        }
-
-        Ok(())
-      })
-    };
-
-    let playback_info_changed_handler = {
-      let emitter = emitter.clone();
-
-      TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
-        debug!("Playback info changed event triggered.");
-
-        if let Some(session) = session {
-          Self::emit_media_info(Some(session), &emitter);
-        }
-
-        Ok(())
-      })
-    };
-
-    let timeline_properties_changed_handler = {
-      let emitter = emitter.clone();
-
-      TypedEventHandler::new(move |session: &Option<GsmtcSession>, _| {
-        debug!("Timeline properties changed event triggered.");
-
-        if let Some(session) = session {
-          Self::emit_media_info(Some(session), &emitter);
-        }
-
+  ) -> anyhow::Result<EventTokens> {
+    let create_handler = |event| {
+      let sender = self.event_sender.clone();
+      TypedEventHandler::new(move |_, _| {
+        sender.send(event).unwrap();
         Ok(())
       })
     };
 
     Ok(EventTokens {
-      playback_info_changed_token: session
-        .PlaybackInfoChanged(&playback_info_changed_handler)?,
-      media_properties_changed_token: session
-        .MediaPropertiesChanged(&media_properties_changed_handler)?,
-      timeline_properties_changed_token: session
-        .TimelinePropertiesChanged(&timeline_properties_changed_handler)?,
+      playback: session.PlaybackInfoChanged(&create_handler(
+        MediaSessionEvent::PlaybackInfoChanged,
+      ))?,
+      properties: session.MediaPropertiesChanged(&create_handler(
+        MediaSessionEvent::MediaPropertiesChanged,
+      ))?,
+      timeline: session.TimelinePropertiesChanged(&create_handler(
+        MediaSessionEvent::TimelinePropertiesChanged,
+      ))?,
     })
+  }
+
+  /// Cleans up event listeners from the current session.
+  fn remove_session_listeners(&mut self) {
+    if let (Some(session), Some(tokens)) =
+      (&self.session, &self.event_tokens)
+    {
+      let _ = session.RemovePlaybackInfoChanged(tokens.playback);
+      let _ = session.RemoveMediaPropertiesChanged(tokens.properties);
+      let _ = session.RemoveTimelinePropertiesChanged(tokens.timeline);
+    }
+    self.event_tokens = None;
+  }
+
+  /// Emits an empty state when no media session is active.
+  fn emit_empty_state(&self) {
+    self
+      .common
+      .emitter
+      .emit_output(Ok(MediaOutput { session: None }));
+  }
+
+  /// Emits a complete state update for all media session properties.
+  fn emit_full_state(&self, session: &GsmtcSession) -> anyhow::Result<()> {
+    let output = Self::create_media_output(session)?;
+    self.common.emitter.emit_output(Ok(output));
+    Ok(())
+  }
+
+  /// Updates and emits only playback state changes (playing/paused).
+  fn update_playback(&self, session: &GsmtcSession) -> anyhow::Result<()> {
+    if let Some(mut media_session) = Self::create_media_session(session)? {
+      let info = session.GetPlaybackInfo()?;
+      media_session.is_playing =
+        info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
+      self.emit_session(media_session);
+    }
+    Ok(())
+  }
+
+  /// Updates and emits only media property changes (title, artist, etc).
+  fn update_properties(
+    &self,
+    session: &GsmtcSession,
+  ) -> anyhow::Result<()> {
+    if let Some(mut media_session) = Self::create_media_session(session)? {
+      let props = session.TryGetMediaPropertiesAsync()?.get()?;
+      Self::update_media_properties(&mut media_session, &props)?;
+      self.emit_session(media_session);
+    }
+    Ok(())
+  }
+
+  /// Updates and emits only timeline property changes (position/duration).
+  fn update_timeline(&self, session: &GsmtcSession) -> anyhow::Result<()> {
+    if let Some(mut media_session) = Self::create_media_session(session)? {
+      let props = session.GetTimelineProperties()?;
+      Self::update_timeline_properties(&mut media_session, &props)?;
+      self.emit_session(media_session);
+    }
+    Ok(())
+  }
+
+  /// Helper to emit a media session update through the provider's emitter.
+  fn emit_session(&self, session: MediaSession) {
+    self.common.emitter.emit_output(Ok(MediaOutput {
+      session: Some(session),
+    }));
+  }
+
+  /// Creates a complete MediaOutput struct from a Windows media session.
+  fn create_media_output(
+    session: &GsmtcSession,
+  ) -> anyhow::Result<MediaOutput> {
+    Ok(MediaOutput {
+      session: Self::create_media_session(session)?,
+    })
+  }
+
+  /// Creates our MediaSession struct from a Windows media session.
+  /// Returns None if the session has no title (indicating invalid/empty
+  /// state).
+  fn create_media_session(
+    session: &GsmtcSession,
+  ) -> anyhow::Result<Option<MediaSession>> {
+    let props = session.TryGetMediaPropertiesAsync()?.get()?;
+    let title = props.Title()?.to_string();
+    if title.is_empty() {
+      return Ok(None);
+    }
+
+    // Create base session with title and default values
+    let mut media_session = MediaSession {
+      title,
+      artist: None,
+      album_title: None,
+      album_artist: None,
+      track_number: 0,
+      start_time: 0,
+      end_time: 0,
+      position: 0,
+      is_playing: false,
+    };
+
+    // Update with current state
+    Self::update_media_properties(&mut media_session, &props)?;
+    Self::update_timeline_properties(
+      &mut media_session,
+      &session.GetTimelineProperties()?,
+    )?;
+
+    let info = session.GetPlaybackInfo()?;
+    media_session.is_playing =
+      info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
+
+    Ok(Some(media_session))
+  }
+
+  /// Updates media metadata properties in a MediaSession struct.
+  fn update_media_properties(
+    session: &mut MediaSession,
+    props: &GsmtcMediaProperties,
+  ) -> anyhow::Result<()> {
+    let artist = props.Artist()?.to_string();
+    let album_title = props.AlbumTitle()?.to_string();
+    let album_artist = props.AlbumArtist()?.to_string();
+
+    session.artist = (!artist.is_empty()).then_some(artist);
+    session.album_title = (!album_title.is_empty()).then_some(album_title);
+    session.album_artist =
+      (!album_artist.is_empty()).then_some(album_artist);
+    session.track_number = props.TrackNumber()? as u32;
+
+    Ok(())
+  }
+
+  /// Updates timeline properties (position/duration) in a MediaSession
+  /// struct.
+  fn update_timeline_properties(
+    session: &mut MediaSession,
+    props: &GsmtcTimelineProperties,
+  ) -> anyhow::Result<()> {
+    session.start_time = props.StartTime()?.Duration as u64 / 10_000_000;
+    session.end_time = props.EndTime()?.Duration as u64 / 10_000_000;
+    session.position = props.Position()?.Duration as u64 / 10_000_000;
+    Ok(())
   }
 }
 
