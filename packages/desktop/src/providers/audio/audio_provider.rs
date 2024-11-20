@@ -5,12 +5,10 @@ use std::{
   time::Duration,
 };
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::{
-  sync::mpsc::{self, Sender},
+  sync::mpsc::{self},
   task,
-  time::sleep,
 };
 use tracing::debug;
 use windows::Win32::{
@@ -33,10 +31,11 @@ use windows::Win32::{
 };
 use windows_core::PCWSTR;
 
-use crate::providers::{Provider, ProviderOutput, ProviderResult};
+use crate::providers::{
+  CommonProviderState, Provider, ProviderEmitter, RuntimeType,
+};
 
-static PROVIDER_TX: OnceLock<mpsc::Sender<ProviderResult>> =
-  OnceLock::new();
+static PROVIDER_TX: OnceLock<ProviderEmitter> = OnceLock::new();
 
 static AUDIO_STATE: OnceLock<Arc<Mutex<AudioOutput>>> = OnceLock::new();
 
@@ -279,26 +278,29 @@ impl IMMNotificationClient_Impl for MediaDeviceEventHandler_Impl {
 }
 
 pub struct AudioProvider {
-  _config: AudioProviderConfig,
+  common: CommonProviderState,
 }
 
 impl AudioProvider {
-  pub fn new(config: AudioProviderConfig) -> Self {
-    Self { _config: config }
+  pub fn new(
+    _config: AudioProviderConfig,
+    common: CommonProviderState,
+  ) -> Self {
+    Self { common }
   }
 
   fn emit_volume() {
     if let Some(tx) = PROVIDER_TX.get() {
       let output = AUDIO_STATE.get().unwrap().lock().unwrap().clone();
-      let _ = tx.try_send(Ok(ProviderOutput::Audio(output)).into());
+      tx.emit_output(Ok(output));
     }
   }
 
-  async fn handle_volume_updates(mut rx: mpsc::Receiver<(String, u32)>) {
+  fn handle_volume_updates(mut rx: mpsc::Receiver<(String, u32)>) {
     const PROCESS_DELAY: Duration = Duration::from_millis(50);
     let mut latest_updates = HashMap::new();
 
-    while let Some((device_id, volume)) = rx.recv().await {
+    while let Some((device_id, volume)) = rx.blocking_recv() {
       latest_updates.insert(device_id, volume);
 
       // Collect any additional pending updates without waiting.
@@ -307,7 +309,7 @@ impl AudioProvider {
       }
 
       // Brief delay to collect more potential updates.
-      sleep(PROCESS_DELAY).await;
+      std::thread::sleep(PROCESS_DELAY);
 
       // Process all collected updates.
       if let Some(state) = AUDIO_STATE.get() {
@@ -369,11 +371,14 @@ impl AudioProvider {
   }
 }
 
-#[async_trait]
 impl Provider for AudioProvider {
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
     PROVIDER_TX
-      .set(emit_result_tx.clone())
+      .set(self.common.emitter.clone())
       .expect("Error setting provider tx in audio provider");
 
     AUDIO_STATE
@@ -383,22 +388,11 @@ impl Provider for AudioProvider {
     // Create a channel for volume updates.
     let (update_tx, update_rx) = mpsc::channel(100);
 
-    // Spawn both tasks.
-    let update_handler =
-      task::spawn(Self::handle_volume_updates(update_rx));
+    // Spawn task for handling volume updates.
+    task::spawn_blocking(move || Self::handle_volume_updates(update_rx));
 
-    let manager = task::spawn_blocking(move || {
-      if let Err(err) = Self::create_audio_manager(update_tx) {
-        emit_result_tx
-          .blocking_send(Err(err).into())
-          .expect("Error with media provider");
-      }
-    });
-
-    // Wait for either task to complete (though they should run forever).
-    tokio::select! {
-      _ = manager => debug!("Audio manager stopped unexpectedly"),
-      _ = update_handler => debug!("Update handler stopped unexpectedly"),
+    if let Err(err) = Self::create_audio_manager(update_tx) {
+      self.common.emitter.emit_output::<AudioOutput>(Err(err));
     }
   }
 }

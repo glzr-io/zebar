@@ -9,17 +9,17 @@ use tokio::{
 };
 use tracing::info;
 
+#[cfg(windows)]
+use super::{
+  audio::AudioProvider, keyboard::KeyboardProvider,
+  komorebi::KomorebiProvider, media::MediaProvider,
+};
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
   host::HostProvider, ip::IpProvider, memory::MemoryProvider,
   network::NetworkProvider, weather::WeatherProvider, Provider,
   ProviderConfig, ProviderFunction, ProviderFunctionResponse,
   ProviderFunctionResult, ProviderOutput, RuntimeType,
-};
-#[cfg(windows)]
-use super::{
-  keyboard::KeyboardProvider, komorebi::KomorebiProvider,
-  media::MediaProvider,
 };
 
 /// Common fields for a provider.
@@ -217,6 +217,10 @@ impl ProviderManager {
     common: CommonProviderState,
   ) -> anyhow::Result<(task::JoinHandle<()>, RuntimeType)> {
     let mut provider: Box<dyn Provider> = match config {
+      #[cfg(windows)]
+      ProviderConfig::Audio(config) => {
+        Box::new(AudioProvider::new(config, common))
+      }
       ProviderConfig::Battery(config) => {
         Box::new(BatteryProvider::new(config, common))
       }

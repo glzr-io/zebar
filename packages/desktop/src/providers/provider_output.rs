@@ -58,6 +58,7 @@ impl_provider_output! {
 
 #[cfg(windows)]
 impl_provider_output! {
+  Audio(AudioOutput),
   Komorebi(KomorebiOutput),
   Media(MediaOutput),
   Keyboard(KeyboardOutput)
