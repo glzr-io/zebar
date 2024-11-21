@@ -3,16 +3,13 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Context;
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, warn};
 use windows::{
   Foundation::{EventRegistrationToken, TypedEventHandler},
   Media::Control::{
     GlobalSystemMediaTransportControlsSession as GsmtcSession,
     GlobalSystemMediaTransportControlsSessionManager as GsmtcManager,
-    GlobalSystemMediaTransportControlsSessionMediaProperties as GsmtcMediaProperties,
-    GlobalSystemMediaTransportControlsSessionPlaybackInfo as GsmtcPlaybackInfo,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as GsmtcPlaybackStatus,
-    GlobalSystemMediaTransportControlsSessionTimelineProperties as GsmtcTimelineProperties,
   },
 };
 
@@ -70,7 +67,7 @@ impl Default for MediaSession {
 #[derive(Debug)]
 enum MediaSessionEvent {
   SessionAddOrRemove,
-  CurrentSessionChanged(Option<String>),
+  CurrentSessionChanged,
   PlaybackInfoChanged(String),
   MediaPropertiesChanged(String),
   TimelinePropertiesChanged(String),
@@ -98,7 +95,6 @@ pub struct MediaProvider {
   common: CommonProviderState,
   current_session_id: Option<String>,
   session_states: HashMap<String, SessionState>,
-  event_tokens: Option<EventTokens>,
   event_sender: Sender<MediaSessionEvent>,
   event_receiver: Receiver<MediaSessionEvent>,
 }
@@ -114,7 +110,6 @@ impl MediaProvider {
       common,
       current_session_id: None,
       session_states: HashMap::new(),
-      event_tokens: None,
       event_sender,
       event_receiver,
     }
@@ -128,6 +123,7 @@ impl MediaProvider {
 
     self.register_session_change_callbacks(&manager)?;
     self.update_session_states(&manager)?;
+    self.update_current_session(&manager)?;
 
     // Emit initial output.
     self.emit_output();
@@ -137,7 +133,10 @@ impl MediaProvider {
         recv(self.event_receiver) -> event => {
           if let Ok(event) = event {
             debug!("Got media session event: {:?}", event);
-            self.handle_event(event)?;
+
+            if let Err(err) = self.handle_event(event) {
+              warn!("Error handling media session event: {}", err);
+            }
           }
         }
         recv(self.common.input.sync_rx) -> input => {
@@ -167,9 +166,9 @@ impl MediaProvider {
     event: MediaSessionEvent,
   ) -> anyhow::Result<()> {
     match event {
-      MediaSessionEvent::CurrentSessionChanged(id) => {
-        // TODO: Update `is_current_session` for all sessions.
-        self.current_session_id = id;
+      MediaSessionEvent::CurrentSessionChanged => {
+        let manager = GsmtcManager::RequestAsync()?.get()?;
+        self.update_current_session(&manager)?;
       }
       MediaSessionEvent::SessionAddOrRemove => {
         let manager = GsmtcManager::RequestAsync()?.get()?;
@@ -252,15 +251,10 @@ impl MediaProvider {
     // Handler for current session changes.
     manager.CurrentSessionChanged(&TypedEventHandler::new({
       let sender = self.event_sender.clone();
-      move |manager: &Option<GsmtcManager>, _| {
-        let session_id = manager
-          .as_ref()
-          .and_then(|manager| Self::current_session_id(manager));
-
+      move |_, _| {
         sender
-          .send(MediaSessionEvent::CurrentSessionChanged(session_id))
+          .send(MediaSessionEvent::CurrentSessionChanged)
           .unwrap();
-
         Ok(())
       }
     }))?;
@@ -283,44 +277,64 @@ impl MediaProvider {
     manager: &GsmtcManager,
   ) -> anyhow::Result<()> {
     let sessions = manager.GetSessions()?;
-
-    // Track existing sessions to detect removals.
     let mut found_ids: HashSet<String> = HashSet::new();
 
+    // Handle new sessions and track existing sessions to detect removals.
     for session in sessions {
       let session_id = session.SourceAppUserModelId()?.to_string();
       found_ids.insert(session_id.clone());
 
-      // Handle new sessions.
       if !self.session_states.contains_key(&session_id) {
-        let tokens =
-          self.register_session_callbacks(&session, &session_id)?;
+        debug!("New media session detected: {}", session_id);
 
-        let output = Self::to_media_session_output(&session)?;
+        let session_state = SessionState {
+          tokens: self
+            .register_session_callbacks(&session, &session_id)?,
+          output: Self::to_media_session_output(&session, &session_id)?,
+          session,
+        };
 
-        self.session_states.insert(
-          session_id,
-          SessionState {
-            session,
-            tokens,
-            output,
-          },
+        self.session_states.insert(session_id, session_state);
+      }
+    }
+
+    let removed_ids = self
+      .session_states
+      .keys()
+      .filter(|id| !found_ids.contains(*id))
+      .cloned()
+      .collect::<Vec<String>>();
+
+    // Remove sessions that no longer exist.
+    for session_id in &removed_ids {
+      if let Some(session_state) = self.session_states.remove(session_id) {
+        debug!("Media session ended: {}", session_id);
+        Self::remove_session_listeners(
+          &session_state.session,
+          &session_state.tokens,
         );
       }
     }
 
-    // Remove sessions that no longer exist.
-    self.session_states.retain(|id, state| {
-      if !found_ids.contains(id) {
-        Self::remove_session_listeners(&state.session, &state.tokens);
-        false
-      } else {
-        true
-      }
-    });
+    Ok(())
+  }
 
-    // Update active session.
-    self.current_session_id = Self::current_session_id(manager);
+  /// Updates the current media session ID and marks the correct session as
+  /// the current one.
+  fn update_current_session(
+    &mut self,
+    manager: &GsmtcManager,
+  ) -> anyhow::Result<()> {
+    self.current_session_id = manager
+      .GetCurrentSession()
+      .ok()
+      .and_then(|session| session.SourceAppUserModelId().ok())
+      .map(|session_id| session_id.to_string());
+
+    for (session_id, state) in self.session_states.iter_mut() {
+      state.output.is_current_session =
+        Some(session_id) == self.current_session_id.as_ref();
+    }
 
     Ok(())
   }
@@ -343,6 +357,7 @@ impl MediaProvider {
               session_id.clone(),
             ))
             .unwrap();
+
           Ok(())
         }
       }))?,
@@ -356,6 +371,7 @@ impl MediaProvider {
                 session_id.clone(),
               ))
               .unwrap();
+
             Ok(())
           }
         }),
@@ -370,20 +386,12 @@ impl MediaProvider {
                 session_id.clone(),
               ))
               .unwrap();
+
             Ok(())
           }
         }),
       )?,
     })
-  }
-
-  /// Gets the ID of the current media session.
-  fn current_session_id(manager: &GsmtcManager) -> Option<String> {
-    manager
-      .GetCurrentSession()
-      .ok()
-      .and_then(|session| session.SourceAppUserModelId().ok())
-      .map(|id| id.to_string())
   }
 
   /// Cleans up event listeners from the given session.
@@ -398,6 +406,7 @@ impl MediaProvider {
 
   /// Emits a `MediaOutput` update through the provider's emitter.
   fn emit_output(&self) {
+    println!("Emitting output {:?}", self.session_states);
     // At times, GSMTC can have a valid session, but return empty string
     // for all media properties. Check that we at least have a valid
     // title, otherwise, return `None`.
@@ -428,9 +437,11 @@ impl MediaProvider {
   /// Creates a `MediaSession` from a Windows media session.
   fn to_media_session_output(
     session: &GsmtcSession,
+    session_id: &str,
   ) -> anyhow::Result<MediaSession> {
     let mut session_output = MediaSession::default();
 
+    session_output.session_id = session_id.to_string();
     Self::update_media_properties(&mut session_output, &session)?;
     Self::update_timeline_properties(&mut session_output, &session)?;
     Self::update_playback_info(&mut session_output, &session)?;
@@ -445,10 +456,12 @@ impl MediaProvider {
   ) -> anyhow::Result<()> {
     let properties = session.TryGetMediaPropertiesAsync()?.get()?;
 
+    let title = properties.Title()?.to_string();
     let artist = properties.Artist()?.to_string();
     let album_title = properties.AlbumTitle()?.to_string();
     let album_artist = properties.AlbumArtist()?.to_string();
 
+    session_output.title = title;
     session_output.artist = (!artist.is_empty()).then_some(artist);
     session_output.album_title =
       (!album_title.is_empty()).then_some(album_title);
