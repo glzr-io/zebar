@@ -12,7 +12,11 @@ use windows::{
   },
 };
 
-use crate::providers::{CommonProviderState, Provider, RuntimeType};
+use crate::providers::{
+  CommonProviderState, MediaFunction, Provider, ProviderFunction,
+  ProviderFunctionResponse, ProviderFunctionResult, ProviderInputMsg,
+  RuntimeType,
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -93,9 +97,53 @@ impl MediaProvider {
     self.register_session_changed_handler(&manager)?;
     self.create_session()?;
 
-    while let Ok(event) = self.event_receiver.recv() {
-      debug!("Got media session event: {:?}", event);
-      self.handle_event(event)?;
+    loop {
+      crossbeam::select! {
+        recv(self.event_receiver) -> event => {
+          if let Ok(event) = event {
+            debug!("Got media session event: {:?}", event);
+            self.handle_event(event)?;
+          }
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          match input {
+            Ok(ProviderInputMsg::Stop) => {
+              break;
+            }
+            Ok(ProviderInputMsg::Function(
+              ProviderFunction::Media(media_function),
+              sender,
+            )) => {
+              if let Some(session) = &self.session {
+                let result = match media_function {
+                  MediaFunction::Play => {
+                    session.TryPlayAsync()?.get()?;
+                    Ok(ProviderFunctionResponse::Null)
+                  }
+                  MediaFunction::Pause => {
+                    session.TryPauseAsync()?.get()?;
+                    Ok(ProviderFunctionResponse::Null)
+                  }
+                  MediaFunction::TogglePlayPause => {
+                    session.TryTogglePlayPauseAsync()?.get()?;
+                    Ok(ProviderFunctionResponse::Null)
+                  }
+                  MediaFunction::Next => {
+                    session.TrySkipNextAsync()?.get()?;
+                    Ok(ProviderFunctionResponse::Null)
+                  }
+                  MediaFunction::Previous => {
+                    session.TrySkipPreviousAsync()?.get()?;
+                    Ok(ProviderFunctionResponse::Null)
+                  }
+                };
+                sender.send(result).unwrap();
+              }
+            }
+            _ => {}
+          }
+        }
+      }
     }
 
     Ok(())

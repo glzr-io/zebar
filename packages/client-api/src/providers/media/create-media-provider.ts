@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createBaseProvider } from '../create-base-provider';
-import { onProviderEmit } from '~/desktop';
+import { desktopCommands, onProviderEmit } from '~/desktop';
 import type {
   MediaOutput,
   MediaProvider,
@@ -17,12 +17,47 @@ export function createMediaProvider(
   const mergedConfig = mediaProviderConfigSchema.parse(config);
 
   return createBaseProvider(mergedConfig, async queue => {
-    return onProviderEmit<MediaOutput>(mergedConfig, ({ result }) => {
-      if ('error' in result) {
-        queue.error(result.error);
-      } else {
-        queue.output(result.output);
-      }
-    });
+    return onProviderEmit<MediaOutput>(
+      mergedConfig,
+      ({ result, configHash }) => {
+        if ('error' in result) {
+          queue.error(result.error);
+        } else {
+          queue.output({
+            ...result.output,
+            play: () => {
+              desktopCommands.callProviderFunction({
+                configHash,
+                function: { type: 'media', function: 'play' },
+              });
+            },
+            pause: () => {
+              desktopCommands.callProviderFunction({
+                configHash,
+                function: { type: 'media', function: 'pause' },
+              });
+            },
+            togglePlayPause: () => {
+              desktopCommands.callProviderFunction({
+                configHash,
+                function: { type: 'media', function: 'toggle_play_pause' },
+              });
+            },
+            next: () => {
+              desktopCommands.callProviderFunction({
+                configHash,
+                function: { type: 'media', function: 'next' },
+              });
+            },
+            previous: () => {
+              desktopCommands.callProviderFunction({
+                configHash,
+                function: { type: 'media', function: 'previous' },
+              });
+            },
+          });
+        }
+      },
+    );
   });
 }

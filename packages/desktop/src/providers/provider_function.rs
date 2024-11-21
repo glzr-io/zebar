@@ -1,13 +1,17 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "function", rename_all = "snake_case")]
 pub enum ProviderFunction {
   Media(MediaFunction),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MediaFunction {
-  PlayPause,
+  Play,
+  Pause,
+  TogglePlayPause,
   Next,
   Previous,
 }

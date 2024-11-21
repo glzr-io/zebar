@@ -6,6 +6,11 @@ export interface MediaProviderConfig {
 
 export interface MediaOutput {
   session: MediaSession | null;
+  play(): void;
+  pause(): void;
+  togglePlayPause(): void;
+  next(): void;
+  previous(): void;
 }
 
 export interface MediaSession {
