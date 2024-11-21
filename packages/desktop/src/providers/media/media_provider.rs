@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Context;
 use crossbeam::channel::{unbounded, Receiver, Sender};
@@ -126,8 +126,8 @@ impl MediaProvider {
     debug!("Getting media session manager.");
     let manager = GsmtcManager::RequestAsync()?.get()?;
 
-    self.register_session_changed_handler(&manager)?;
-    self.create_session(&manager)?;
+    self.register_session_change_callbacks(&manager)?;
+    self.update_session_states(&manager)?;
 
     loop {
       crossbeam::select! {
@@ -158,13 +158,13 @@ impl MediaProvider {
     Ok(())
   }
 
-  /// Registers callbacks with the session manager.
+  /// Registers event callbacks with the session manager.
   ///
   /// - `CurrentSessionChanged`: for when the active media session changes
   ///   (e.g. when switching between media players).
   /// - `SessionAddOrRemove`: for when the list of available media sessions
   ///   changes (e.g. when a media player is opened or closed).
-  fn register_session_changed_handler(
+  fn register_session_change_callbacks(
     &self,
     manager: &GsmtcManager,
   ) -> anyhow::Result<()> {
@@ -210,21 +210,30 @@ impl MediaProvider {
       }
       MediaSessionEvent::SessionAddOrRemove => {
         let manager = GsmtcManager::RequestAsync()?.get()?;
-        self.update_all_sessions(&manager)?;
+        self.update_session_states(&manager)?;
       }
       MediaSessionEvent::PlaybackInfoChanged(id) => {
-        if let Some((session, _)) = self.session_states.get(&id) {
-          self.update_session_playback(session, &id)?;
+        if let Some(session_state) = self.session_states.get_mut(&id) {
+          Self::update_playback_info(
+            &mut session_state.output,
+            &session_state.session,
+          )?;
         }
       }
       MediaSessionEvent::MediaPropertiesChanged(id) => {
-        if let Some((session, _)) = self.session_states.get(&id) {
-          self.update_session_properties(session, &id)?;
+        if let Some(session_state) = self.session_states.get_mut(&id) {
+          Self::update_media_properties(
+            &mut session_state.output,
+            &session_state.session,
+          )?;
         }
       }
       MediaSessionEvent::TimelinePropertiesChanged(id) => {
-        if let Some((session, _)) = self.session_states.get(&id) {
-          self.update_session_timeline(session, &id)?;
+        if let Some(session_state) = self.session_states.get_mut(&id) {
+          Self::update_timeline_properties(
+            &mut session_state.output,
+            &session_state.session,
+          )?;
         }
       }
     }
@@ -266,32 +275,59 @@ impl MediaProvider {
     Ok(ProviderFunctionResponse::Null)
   }
 
-  /// Sets up a new media session when one becomes available.
-  fn create_session(
+  /// Updates the state of all media sessions.
+  fn update_session_states(
     &mut self,
     manager: &GsmtcManager,
   ) -> anyhow::Result<()> {
-    // Remove any existing session listeners.
-    self.remove_session_listeners();
+    let sessions = manager.GetSessions()?;
+    let active_session = manager.GetCurrentSession();
 
-    // Get the updated session.
-    let session = manager.GetCurrentSession().ok();
+    // Track existing sessions to detect removals.
+    let mut existing_ids: HashSet<String> = HashSet::new();
 
-    if let Some(session) = &session {
-      self.event_tokens = Some(self.setup_session_listeners(session)?);
-      self.emit_full_state(session)?;
-    } else {
-      self.emit_empty_state();
+    for session in sessions {
+      let id = session.SourceAppUserModelId()?.to_string();
+      existing_ids.insert(id.clone());
+
+      // Handle new sessions.
+      if !self.session_states.contains_key(&id) {
+        let tokens = self.register_session_callbacks(&session, &id)?;
+        let output = Self::to_media_session_output(&session)?;
+        self.session_states.insert(
+          id.clone(),
+          SessionState {
+            session,
+            tokens,
+            output,
+          },
+        );
+      }
     }
 
-    self.session = session;
+    // Remove sessions that no longer exist.
+    self.session_states.retain(|id, state| {
+      if !existing_ids.contains(id) {
+        Self::remove_session_listeners(&state.session, &state.tokens);
+        false
+      } else {
+        true
+      }
+    });
+
+    // Update active session.
+    self.current_session_id = active_session
+      .as_ref()
+      .and_then(|session| session.SourceAppUserModelId().ok())
+      .map(|id| id.to_string());
+
     Ok(())
   }
 
-  /// Creates event listeners for all media session state changes.
+  /// Registers event callbacks for media session state changes.
   ///
   /// Returns tokens needed for cleanup when the session ends.
-  fn setup_session_listeners(
+  fn register_session_callbacks(
     &self,
     session: &GsmtcSession,
     session_id: &str,
@@ -387,18 +423,9 @@ impl MediaProvider {
   ) -> anyhow::Result<MediaSession> {
     let mut session_output = MediaSession::default();
 
-    Self::update_media_properties(
-      &mut session_output,
-      &session.TryGetMediaPropertiesAsync()?.get()?,
-    )?;
-    Self::update_timeline_properties(
-      &mut session_output,
-      &session.GetTimelineProperties()?,
-    )?;
-    Self::update_playback_info(
-      &mut session_output,
-      &session.GetPlaybackInfo()?,
-    )?;
+    Self::update_media_properties(&mut session_output, &session)?;
+    Self::update_timeline_properties(&mut session_output, &session)?;
+    Self::update_playback_info(&mut session_output, &session)?;
 
     Ok(session_output)
   }
@@ -406,8 +433,10 @@ impl MediaProvider {
   /// Updates media metadata properties in a `MediaSession`.
   fn update_media_properties(
     session_output: &mut MediaSession,
-    properties: &GsmtcMediaProperties,
+    session: &GsmtcSession,
   ) -> anyhow::Result<()> {
+    let properties = session.TryGetMediaPropertiesAsync()?.get()?;
+
     let artist = properties.Artist()?.to_string();
     let album_title = properties.AlbumTitle()?.to_string();
     let album_artist = properties.AlbumArtist()?.to_string();
@@ -425,8 +454,10 @@ impl MediaProvider {
   /// Updates timeline properties (position/duration) in a `MediaSession`.
   fn update_timeline_properties(
     session_output: &mut MediaSession,
-    properties: &GsmtcTimelineProperties,
+    session: &GsmtcSession,
   ) -> anyhow::Result<()> {
+    let properties = session.GetTimelineProperties()?;
+
     session_output.start_time =
       properties.StartTime()?.Duration as u64 / 10_000_000;
     session_output.end_time =
@@ -440,10 +471,12 @@ impl MediaProvider {
   /// Updates playback info in a `MediaSession`.
   fn update_playback_info(
     session_output: &mut MediaSession,
-    playback_info: &GsmtcPlaybackInfo,
+    session: &GsmtcSession,
   ) -> anyhow::Result<()> {
+    let info = session.GetPlaybackInfo()?;
+
     session_output.is_playing =
-      playback_info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
+      info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
 
     Ok(())
   }
