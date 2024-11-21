@@ -43,9 +43,10 @@ komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" 
 windows-core = "0.58"
 windows = { version = "0.58", features = [
   "Foundation",
+  "Foundation_Collections",
   "implement",
-  "Win32_Devices_FunctionDiscovery",
   "Media_Control",
+  "Win32_Devices_FunctionDiscovery",
   "Win32_Globalization",
   "Win32_Media",
   "Win32_Media_Audio",

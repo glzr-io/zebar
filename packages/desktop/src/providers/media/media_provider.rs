@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Context;
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
@@ -25,12 +27,14 @@ pub struct MediaProviderConfig {}
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaOutput {
-  pub session: Option<MediaSession>,
+  pub current_session: Option<MediaSession>,
+  pub all_sessions: Vec<MediaSession>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaSession {
+  pub session_id: String,
   pub title: String,
   pub artist: Option<String>,
   pub album_title: Option<String>,
@@ -40,15 +44,18 @@ pub struct MediaSession {
   pub end_time: u64,
   pub position: u64,
   pub is_playing: bool,
+  // TODO
+  // pub is_current_session: bool,
 }
 
 /// Events that can be emitted from media session state changes.
 #[derive(Debug)]
 enum MediaSessionEvent {
-  PlaybackInfoChanged,
-  MediaPropertiesChanged,
-  TimelinePropertiesChanged,
-  SessionChanged,
+  CurrentSessionChanged,
+  SessionListChanged,
+  PlaybackInfoChanged(String),
+  MediaPropertiesChanged(String),
+  TimelinePropertiesChanged(String),
 }
 
 /// Holds event registration tokens for media session callbacks.
@@ -63,7 +70,8 @@ struct EventTokens {
 
 pub struct MediaProvider {
   common: CommonProviderState,
-  session: Option<GsmtcSession>,
+  current_session_id: Option<String>,
+  sessions: HashMap<String, (GsmtcSession, EventTokens)>,
   session_output: Option<MediaSession>,
   event_tokens: Option<EventTokens>,
   event_sender: Sender<MediaSessionEvent>,
@@ -79,7 +87,8 @@ impl MediaProvider {
 
     Self {
       common,
-      session: None,
+      current_session_id: None,
+      sessions: HashMap::new(),
       session_output: None,
       event_tokens: None,
       event_sender,
@@ -125,20 +134,35 @@ impl MediaProvider {
     Ok(())
   }
 
-  /// Registers a callback with the session manager for when the active
-  /// media session changes (e.g. when switching between media players).
+  /// Registers callbacks with the session manager.
+  ///
+  /// - `CurrentSessionChanged`: for when the active media session changes
+  ///   (e.g. when switching between media players).
+  /// - `SessionListChanged`: for when the list of available media sessions
+  ///   changes (e.g. when a media player is opened or closed).
   fn register_session_changed_handler(
     &self,
     manager: &GsmtcManager,
   ) -> anyhow::Result<()> {
-    let sender = self.event_sender.clone();
-
-    manager.CurrentSessionChanged(&TypedEventHandler::new(
+    // Handler for current session changes.
+    manager.CurrentSessionChanged(&TypedEventHandler::new({
+      let sender = self.event_sender.clone();
       move |_, _| {
-        sender.send(MediaSessionEvent::SessionChanged).unwrap();
+        sender
+          .send(MediaSessionEvent::CurrentSessionChanged)
+          .unwrap();
         Ok(())
-      },
-    ))?;
+      }
+    }))?;
+
+    // Handler for session list changes.
+    manager.SessionsChanged(&TypedEventHandler::new({
+      let sender = self.event_sender.clone();
+      move |_, _| {
+        sender.send(MediaSessionEvent::SessionListChanged).unwrap();
+        Ok(())
+      }
+    }))?;
 
     Ok(())
   }
@@ -149,7 +173,7 @@ impl MediaProvider {
     event: MediaSessionEvent,
   ) -> anyhow::Result<()> {
     match event {
-      MediaSessionEvent::SessionChanged => self.create_session()?,
+      MediaSessionEvent::CurrentSessionChanged => self.create_session()?,
       _ => {
         if let Some(session) = &self.session {
           match event {
@@ -277,10 +301,9 @@ impl MediaProvider {
 
   /// Emits an empty state when no media session is active.
   fn emit_empty_state(&self) {
-    self
-      .common
-      .emitter
-      .emit_output(Ok(MediaOutput { session: None }));
+    self.common.emitter.emit_output(Ok(MediaOutput {
+      current_session: None,
+    }));
   }
 
   /// Emits a complete state update for all media session properties.
@@ -333,7 +356,7 @@ impl MediaProvider {
   /// Emits a `MediaSession` update through the provider's emitter.
   fn emit_session(&self, session: MediaSession) {
     self.common.emitter.emit_output(Ok(MediaOutput {
-      session: Some(session),
+      current_session: Some(session),
     }));
   }
 
@@ -342,7 +365,7 @@ impl MediaProvider {
     session: &GsmtcSession,
   ) -> anyhow::Result<MediaOutput> {
     Ok(MediaOutput {
-      session: Self::to_media_session_output(session)?,
+      current_session: Self::to_media_session_output(session)?,
     })
   }
 
