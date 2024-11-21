@@ -20,6 +20,7 @@ pub enum ProviderConfig {
   Audio(AudioProviderConfig),
   Battery(BatteryProviderConfig),
   Cpu(CpuProviderConfig),
+  #[cfg(windows)]
   FocusedWindow(FocusedWindowProviderConfig),
   Host(HostProviderConfig),
   Ip(IpProviderConfig),
