@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -176,24 +175,36 @@ impl MediaProvider {
     &self,
     session: &GsmtcSession,
   ) -> anyhow::Result<EventTokens> {
-    let create_handler = |event| {
-      let sender = self.event_sender.clone();
-      TypedEventHandler::new(move |_, _| {
-        sender.send(event).unwrap();
-        Ok(())
-      })
-    };
-
     Ok(EventTokens {
-      playback: session.PlaybackInfoChanged(&create_handler(
-        MediaSessionEvent::PlaybackInfoChanged,
-      ))?,
-      properties: session.MediaPropertiesChanged(&create_handler(
-        MediaSessionEvent::MediaPropertiesChanged,
-      ))?,
-      timeline: session.TimelinePropertiesChanged(&create_handler(
-        MediaSessionEvent::TimelinePropertiesChanged,
-      ))?,
+      playback: session.PlaybackInfoChanged(&TypedEventHandler::new({
+        let sender = self.event_sender.clone();
+        move |_, _| {
+          sender.send(MediaSessionEvent::PlaybackInfoChanged).unwrap();
+          Ok(())
+        }
+      }))?,
+      properties: session.MediaPropertiesChanged(
+        &TypedEventHandler::new({
+          let sender = self.event_sender.clone();
+          move |_, _| {
+            sender
+              .send(MediaSessionEvent::MediaPropertiesChanged)
+              .unwrap();
+            Ok(())
+          }
+        }),
+      )?,
+      timeline: session.TimelinePropertiesChanged(
+        &TypedEventHandler::new({
+          let sender = self.event_sender.clone();
+          move |_, _| {
+            sender
+              .send(MediaSessionEvent::TimelinePropertiesChanged)
+              .unwrap();
+            Ok(())
+          }
+        }),
+      )?,
     })
   }
 
@@ -219,14 +230,16 @@ impl MediaProvider {
 
   /// Emits a complete state update for all media session properties.
   fn emit_full_state(&self, session: &GsmtcSession) -> anyhow::Result<()> {
-    let output = Self::create_media_output(session)?;
+    let output = Self::to_media_output(session)?;
     self.common.emitter.emit_output(Ok(output));
     Ok(())
   }
 
   /// Updates and emits only playback state changes (playing/paused).
   fn update_playback(&self, session: &GsmtcSession) -> anyhow::Result<()> {
-    if let Some(mut media_session) = Self::create_media_session(session)? {
+    if let Some(mut media_session) =
+      Self::to_media_session_output(session)?
+    {
       let info = session.GetPlaybackInfo()?;
       media_session.is_playing =
         info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
@@ -240,7 +253,9 @@ impl MediaProvider {
     &self,
     session: &GsmtcSession,
   ) -> anyhow::Result<()> {
-    if let Some(mut media_session) = Self::create_media_session(session)? {
+    if let Some(mut media_session) =
+      Self::to_media_session_output(session)?
+    {
       let props = session.TryGetMediaPropertiesAsync()?.get()?;
       Self::update_media_properties(&mut media_session, &props)?;
       self.emit_session(media_session);
@@ -250,7 +265,9 @@ impl MediaProvider {
 
   /// Updates and emits only timeline property changes (position/duration).
   fn update_timeline(&self, session: &GsmtcSession) -> anyhow::Result<()> {
-    if let Some(mut media_session) = Self::create_media_session(session)? {
+    if let Some(mut media_session) =
+      Self::to_media_session_output(session)?
+    {
       let props = session.GetTimelineProperties()?;
       Self::update_timeline_properties(&mut media_session, &props)?;
       self.emit_session(media_session);
@@ -266,18 +283,18 @@ impl MediaProvider {
   }
 
   /// Creates a complete MediaOutput struct from a Windows media session.
-  fn create_media_output(
+  fn to_media_output(
     session: &GsmtcSession,
   ) -> anyhow::Result<MediaOutput> {
     Ok(MediaOutput {
-      session: Self::create_media_session(session)?,
+      session: Self::to_media_session_output(session)?,
     })
   }
 
   /// Creates our MediaSession struct from a Windows media session.
   /// Returns None if the session has no title (indicating invalid/empty
   /// state).
-  fn create_media_session(
+  fn to_media_session_output(
     session: &GsmtcSession,
   ) -> anyhow::Result<Option<MediaSession>> {
     let props = session.TryGetMediaPropertiesAsync()?.get()?;
@@ -344,7 +361,6 @@ impl MediaProvider {
   }
 }
 
-#[async_trait]
 impl Provider for MediaProvider {
   fn runtime_type(&self) -> RuntimeType {
     RuntimeType::Sync
