@@ -9,14 +9,19 @@ export interface MediaOutput {
   session: MediaSession | null;
   currentSession: MediaSession | null;
   allSessions: MediaSession[];
-  play(): void;
-  pause(): void;
-  togglePlayPause(): void;
-  next(): void;
-  previous(): void;
+  play(args?: MediaControlArgs): void;
+  pause(args?: MediaControlArgs): void;
+  togglePlayPause(args?: MediaControlArgs): void;
+  next(args?: MediaControlArgs): void;
+  previous(args?: MediaControlArgs): void;
+}
+
+export interface MediaControlArgs {
+  sessionId: string;
 }
 
 export interface MediaSession {
+  sessionId: string;
   title: string;
   artist: string | null;
   albumTitle: string | null;

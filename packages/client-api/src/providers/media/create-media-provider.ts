@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { createBaseProvider } from '../create-base-provider';
 import { desktopCommands, onProviderEmit } from '~/desktop';
 import type {
+  MediaControlArgs,
   MediaOutput,
   MediaProvider,
   MediaProviderConfig,
@@ -26,48 +27,48 @@ export function createMediaProvider(
           queue.output({
             ...result.output,
             session: result.output.currentSession,
-            play: () => {
+            play: (args?: MediaControlArgs) => {
               desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'play',
-                  args: { sessionId: null },
+                  args: args ?? { sessionId: null },
                 },
               });
             },
-            pause: () => {
+            pause: (args?: MediaControlArgs) => {
               desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'pause',
-                  args: { sessionId: null },
+                  args: args ?? { sessionId: null },
                 },
               });
             },
-            togglePlayPause: () => {
+            togglePlayPause: (args?: MediaControlArgs) => {
               desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'toggle_play_pause',
-                  args: { sessionId: null },
+                  args: args ?? { sessionId: null },
                 },
               });
             },
-            next: () => {
+            next: (args?: MediaControlArgs) => {
               desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'next',
-                  args: { sessionId: null },
+                  args: args ?? { sessionId: null },
                 },
               });
             },
-            previous: () => {
+            previous: (args?: MediaControlArgs) => {
               desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'previous',
-                  args: { sessionId: null },
+                  args: args ?? { sessionId: null },
                 },
               });
             },
