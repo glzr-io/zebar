@@ -1,3 +1,4 @@
+use anyhow::Context;
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -14,8 +15,7 @@ use windows::{
 
 use crate::providers::{
   CommonProviderState, MediaFunction, Provider, ProviderFunction,
-  ProviderFunctionResponse, ProviderFunctionResult, ProviderInputMsg,
-  RuntimeType,
+  ProviderFunctionResponse, ProviderInputMsg, RuntimeType,
 };
 
 #[derive(Deserialize, Debug)]
@@ -92,8 +92,9 @@ impl MediaProvider {
   /// 3. Sets up the initial session if one exists
   /// 4. Runs the main event loop to handle media state changes
   fn create_session_manager(&mut self) -> anyhow::Result<()> {
-    debug!("Creating media session manager.");
+    debug!("Getting media session manager.");
     let manager = GsmtcManager::RequestAsync()?.get()?;
+
     self.register_session_changed_handler(&manager)?;
     self.create_session()?;
 
@@ -114,31 +115,8 @@ impl MediaProvider {
               ProviderFunction::Media(media_function),
               sender,
             )) => {
-              if let Some(session) = &self.session {
-                let result = match media_function {
-                  MediaFunction::Play => {
-                    session.TryPlayAsync()?.get()?;
-                    Ok(ProviderFunctionResponse::Null)
-                  }
-                  MediaFunction::Pause => {
-                    session.TryPauseAsync()?.get()?;
-                    Ok(ProviderFunctionResponse::Null)
-                  }
-                  MediaFunction::TogglePlayPause => {
-                    session.TryTogglePlayPauseAsync()?.get()?;
-                    Ok(ProviderFunctionResponse::Null)
-                  }
-                  MediaFunction::Next => {
-                    session.TrySkipNextAsync()?.get()?;
-                    Ok(ProviderFunctionResponse::Null)
-                  }
-                  MediaFunction::Previous => {
-                    session.TrySkipPreviousAsync()?.get()?;
-                    Ok(ProviderFunctionResponse::Null)
-                  }
-                };
-                sender.send(result).unwrap();
-              }
+              let function_res = self.handle_function(media_function).map_err(|err| err.to_string());
+              sender.send(function_res).unwrap();
             }
             _ => {}
           }
@@ -167,8 +145,7 @@ impl MediaProvider {
     Ok(())
   }
 
-  /// Central event handler that processes all media session events.
-  /// Routes events to appropriate update methods based on event type.
+  /// Handles a media session event.
   fn handle_event(
     &mut self,
     event: MediaSessionEvent,
@@ -193,6 +170,35 @@ impl MediaProvider {
       }
     }
     Ok(())
+  }
+
+  /// Handles an incoming media provider function call.
+  fn handle_function(
+    &mut self,
+    function: MediaFunction,
+  ) -> anyhow::Result<ProviderFunctionResponse> {
+    let session =
+      self.session.as_ref().context("No active media session.")?;
+
+    match function {
+      MediaFunction::Play => {
+        session.TryPlayAsync()?.get()?;
+      }
+      MediaFunction::Pause => {
+        session.TryPauseAsync()?.get()?;
+      }
+      MediaFunction::TogglePlayPause => {
+        session.TryTogglePlayPauseAsync()?.get()?;
+      }
+      MediaFunction::Next => {
+        session.TrySkipNextAsync()?.get()?;
+      }
+      MediaFunction::Previous => {
+        session.TrySkipPreviousAsync()?.get()?;
+      }
+    };
+
+    Ok(ProviderFunctionResponse::Null)
   }
 
   /// Sets up a new media session when one becomes available.
