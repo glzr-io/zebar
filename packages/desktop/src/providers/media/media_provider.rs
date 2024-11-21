@@ -44,15 +44,14 @@ pub struct MediaSession {
   pub end_time: u64,
   pub position: u64,
   pub is_playing: bool,
-  // TODO
-  // pub is_current_session: bool,
+  pub is_current_session: bool,
 }
 
 /// Events that can be emitted from media session state changes.
 #[derive(Debug)]
 enum MediaSessionEvent {
-  CurrentSessionChanged,
   SessionListChanged,
+  CurrentSessionChanged(Option<String>),
   PlaybackInfoChanged(String),
   MediaPropertiesChanged(String),
   TimelinePropertiesChanged(String),
@@ -72,7 +71,7 @@ pub struct MediaProvider {
   common: CommonProviderState,
   current_session_id: Option<String>,
   sessions: HashMap<String, (GsmtcSession, EventTokens)>,
-  session_output: Option<MediaSession>,
+  session_outputs: HashMap<String, MediaSession>,
   event_tokens: Option<EventTokens>,
   event_sender: Sender<MediaSessionEvent>,
   event_receiver: Receiver<MediaSessionEvent>,
@@ -89,7 +88,7 @@ impl MediaProvider {
       common,
       current_session_id: None,
       sessions: HashMap::new(),
-      session_output: None,
+      session_outputs: HashMap::new(),
       event_tokens: None,
       event_sender,
       event_receiver,
@@ -147,10 +146,17 @@ impl MediaProvider {
     // Handler for current session changes.
     manager.CurrentSessionChanged(&TypedEventHandler::new({
       let sender = self.event_sender.clone();
-      move |_, _| {
+      move |manager: &Option<GsmtcManager>, _| {
+        let session_id = manager
+          .as_ref()
+          .and_then(|manager| manager.GetCurrentSession().ok())
+          .and_then(|session| session.SourceAppUserModelId().ok())
+          .map(|id| id.to_string());
+
         sender
-          .send(MediaSessionEvent::CurrentSessionChanged)
+          .send(MediaSessionEvent::CurrentSessionChanged(session_id))
           .unwrap();
+
         Ok(())
       }
     }))?;
@@ -173,26 +179,33 @@ impl MediaProvider {
     event: MediaSessionEvent,
   ) -> anyhow::Result<()> {
     match event {
-      MediaSessionEvent::CurrentSessionChanged => self.create_session()?,
-      _ => {
-        if let Some(session) = &self.session {
-          match event {
-            MediaSessionEvent::PlaybackInfoChanged => {
-              self.update_playback(session)?
-            }
-            MediaSessionEvent::MediaPropertiesChanged => {
-              self.update_properties(session)?
-            }
-            MediaSessionEvent::TimelinePropertiesChanged => {
-              self.update_timeline(session)?
-            }
-            _ => {}
-          }
+      MediaSessionEvent::CurrentSessionChanged(id) => {
+        // TODO: Update `is_current_session` for all sessions.
+        self.current_session_id = id;
+      }
+      MediaSessionEvent::SessionListChanged => {
+        let manager = GsmtcManager::RequestAsync()?.get()?;
+        self.update_all_sessions(&manager)?;
+      }
+      MediaSessionEvent::PlaybackInfoChanged(id) => {
+        if let Some((session, _)) = self.sessions.get(&id) {
+          self.update_session_playback(session, &id)?;
+        }
+      }
+      MediaSessionEvent::MediaPropertiesChanged(id) => {
+        if let Some((session, _)) = self.sessions.get(&id) {
+          self.update_session_properties(session, &id)?;
+        }
+      }
+      MediaSessionEvent::TimelinePropertiesChanged(id) => {
+        if let Some((session, _)) = self.sessions.get(&id) {
+          self.update_session_timeline(session, &id)?;
         }
       }
     }
 
-    self.emit_session(media_session);
+    self.emit_output();
+
     Ok(())
   }
 
@@ -321,7 +334,7 @@ impl MediaProvider {
       let info = session.GetPlaybackInfo()?;
       media_session.is_playing =
         info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
-      self.emit_session(media_session);
+      self.emit_output(media_session);
     }
     Ok(())
   }
@@ -336,7 +349,7 @@ impl MediaProvider {
     {
       let props = session.TryGetMediaPropertiesAsync()?.get()?;
       Self::update_media_properties(&mut media_session, &props)?;
-      self.emit_session(media_session);
+      self.emit_output(media_session);
     }
     Ok(())
   }
@@ -348,13 +361,13 @@ impl MediaProvider {
     {
       let props = session.GetTimelineProperties()?;
       Self::update_timeline_properties(&mut media_session, &props)?;
-      self.emit_session(media_session);
+      self.emit_output(media_session);
     }
     Ok(())
   }
 
   /// Emits a `MediaSession` update through the provider's emitter.
-  fn emit_session(&self, session: MediaSession) {
+  fn emit_output(&self, session: MediaSession) {
     self.common.emitter.emit_output(Ok(MediaOutput {
       current_session: Some(session),
     }));
