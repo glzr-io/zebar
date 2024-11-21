@@ -5,7 +5,10 @@ export interface MediaProviderConfig {
 }
 
 export interface MediaOutput {
+  /** @deprecated Use {@link currentSession} instead */
   session: MediaSession | null;
+  currentSession: MediaSession | null;
+  allSessions: MediaSession[];
   play(): void;
   pause(): void;
   togglePlayPause(): void;
@@ -23,6 +26,7 @@ export interface MediaSession {
   endTime: number;
   position: number;
   isPlaying: boolean;
+  isCurrentSession: boolean;
 }
 
 export type MediaProvider = Provider<MediaProviderConfig, MediaOutput>;

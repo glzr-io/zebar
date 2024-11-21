@@ -23,7 +23,14 @@ export type ProviderFunction = MediaFunction;
 
 export interface MediaFunction {
   type: 'media';
-  function: 'play' | 'pause' | 'toggle_play_pause' | 'next' | 'previous';
+  function: {
+    name: 'play' | 'pause' | 'toggle_play_pause' | 'next' | 'previous';
+    args: MediaControlArgs;
+  };
+}
+
+export interface MediaControlArgs {
+  sessionId: string | null;
 }
 
 function startWidget(
@@ -51,11 +58,14 @@ function unlistenProvider(configHash: string): Promise<void> {
   return invoke<void>('unlisten_provider', { configHash });
 }
 
-function callProviderFunction(args: {
-  configHash: string;
-  function: ProviderFunction;
-}): Promise<void> {
-  return invoke<void>('call_provider_function', args);
+function callProviderFunction(
+  configHash: string,
+  fn: ProviderFunction,
+): Promise<void> {
+  return invoke<void>('call_provider_function', {
+    configHash,
+    function: fn,
+  });
 }
 
 function setAlwaysOnTop(): Promise<void> {

@@ -25,34 +25,50 @@ export function createMediaProvider(
         } else {
           queue.output({
             ...result.output,
+            session: result.output.currentSession,
             play: () => {
-              desktopCommands.callProviderFunction({
-                configHash,
-                function: { type: 'media', function: 'play' },
+              desktopCommands.callProviderFunction(configHash, {
+                type: 'media',
+                function: {
+                  name: 'play',
+                  args: { sessionId: null },
+                },
               });
             },
             pause: () => {
-              desktopCommands.callProviderFunction({
-                configHash,
-                function: { type: 'media', function: 'pause' },
+              desktopCommands.callProviderFunction(configHash, {
+                type: 'media',
+                function: {
+                  name: 'pause',
+                  args: { sessionId: null },
+                },
               });
             },
             togglePlayPause: () => {
-              desktopCommands.callProviderFunction({
-                configHash,
-                function: { type: 'media', function: 'toggle_play_pause' },
+              desktopCommands.callProviderFunction(configHash, {
+                type: 'media',
+                function: {
+                  name: 'toggle_play_pause',
+                  args: { sessionId: null },
+                },
               });
             },
             next: () => {
-              desktopCommands.callProviderFunction({
-                configHash,
-                function: { type: 'media', function: 'next' },
+              desktopCommands.callProviderFunction(configHash, {
+                type: 'media',
+                function: {
+                  name: 'next',
+                  args: { sessionId: null },
+                },
               });
             },
             previous: () => {
-              desktopCommands.callProviderFunction({
-                configHash,
-                function: { type: 'media', function: 'previous' },
+              desktopCommands.callProviderFunction(configHash, {
+                type: 'media',
+                function: {
+                  name: 'previous',
+                  args: { sessionId: null },
+                },
               });
             },
           });

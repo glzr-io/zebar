@@ -7,13 +7,18 @@ pub enum ProviderFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "name", content = "args", rename_all = "snake_case")]
 pub enum MediaFunction {
-  Play,
-  Pause,
-  TogglePlayPause,
-  Next,
-  Previous,
+  Play(MediaControlArgs),
+  Pause(MediaControlArgs),
+  TogglePlayPause(MediaControlArgs),
+  Next(MediaControlArgs),
+  Previous(MediaControlArgs),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MediaControlArgs {
+  pub session_id: Option<String>,
 }
 
 pub type ProviderFunctionResult = Result<ProviderFunctionResponse, String>;

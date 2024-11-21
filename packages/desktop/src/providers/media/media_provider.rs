@@ -70,8 +70,7 @@ struct EventTokens {
 pub struct MediaProvider {
   common: CommonProviderState,
   current_session_id: Option<String>,
-  sessions: HashMap<String, (GsmtcSession, EventTokens)>,
-  session_outputs: HashMap<String, MediaSession>,
+  sessions: HashMap<String, (GsmtcSession, EventTokens, MediaSession)>,
   event_tokens: Option<EventTokens>,
   event_sender: Sender<MediaSessionEvent>,
   event_receiver: Receiver<MediaSessionEvent>,
@@ -88,7 +87,6 @@ impl MediaProvider {
       common,
       current_session_id: None,
       sessions: HashMap::new(),
-      session_outputs: HashMap::new(),
       event_tokens: None,
       event_sender,
       event_receiver,
@@ -214,8 +212,11 @@ impl MediaProvider {
     &mut self,
     function: MediaFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
-    let session =
-      self.session.as_ref().context("No active media session.")?;
+    let session = self
+      .current_session_id
+      .as_ref()
+      .and_then(|id| self.sessions.get(id))
+      .context("No active media session.")?;
 
     match function {
       MediaFunction::Play => {
@@ -266,21 +267,32 @@ impl MediaProvider {
   fn setup_session_listeners(
     &self,
     session: &GsmtcSession,
+    session_id: &str,
   ) -> anyhow::Result<EventTokens> {
+    let session_id = session_id.to_string();
+
     Ok(EventTokens {
       playback: session.PlaybackInfoChanged(&TypedEventHandler::new({
         let sender = self.event_sender.clone();
+        let session_id = session_id.clone();
         move |_, _| {
-          sender.send(MediaSessionEvent::PlaybackInfoChanged).unwrap();
+          sender
+            .send(MediaSessionEvent::PlaybackInfoChanged(
+              session_id.clone(),
+            ))
+            .unwrap();
           Ok(())
         }
       }))?,
       properties: session.MediaPropertiesChanged(
         &TypedEventHandler::new({
           let sender = self.event_sender.clone();
+          let session_id = session_id.clone();
           move |_, _| {
             sender
-              .send(MediaSessionEvent::MediaPropertiesChanged)
+              .send(MediaSessionEvent::MediaPropertiesChanged(
+                session_id.clone(),
+              ))
               .unwrap();
             Ok(())
           }
@@ -289,9 +301,12 @@ impl MediaProvider {
       timeline: session.TimelinePropertiesChanged(
         &TypedEventHandler::new({
           let sender = self.event_sender.clone();
+          let session_id = session_id.clone();
           move |_, _| {
             sender
-              .send(MediaSessionEvent::TimelinePropertiesChanged)
+              .send(MediaSessionEvent::TimelinePropertiesChanged(
+                session_id.clone(),
+              ))
               .unwrap();
             Ok(())
           }
