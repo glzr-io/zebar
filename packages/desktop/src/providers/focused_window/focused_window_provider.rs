@@ -1,13 +1,9 @@
-use std::{ffi::c_void, io::Cursor, sync::OnceLock};
+use std::{ffi::c_void, io::Cursor};
 
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use image::{ImageBuffer, ImageFormat, Rgba};
 use serde::{Deserialize, Serialize};
-use tokio::{
-  sync::mpsc::{self, Sender},
-  task,
-};
 use windows::{
   core::{Error, Interface, HSTRING, PWSTR},
   Win32::{
@@ -40,12 +36,11 @@ use windows::{
   },
 };
 
-use crate::providers::{Provider, ProviderOutput, ProviderResult};
+use crate::providers::{
+  CommonProviderState, Provider, ProviderEmitter, RuntimeType,
+};
 
-static PROVIDER_TX: OnceLock<mpsc::Sender<ProviderResult>> =
-  OnceLock::new();
-
-// This doesn't always work.. 
+// This doesn't always work..
 const ICON_SIZE: i32 = 32;
 
 #[derive(Deserialize, Debug)]
@@ -60,31 +55,15 @@ pub struct FocusedWindowOutput {
 }
 
 pub struct FocusedWindowProvider {
-  _config: FocusedWindowProviderConfig,
-}
-
-#[async_trait]
-impl Provider for FocusedWindowProvider {
-  async fn run(&self, emit_result_tx: Sender<ProviderResult>) {
-    PROVIDER_TX
-      .set(emit_result_tx.clone())
-      .expect("Error setting provider tx in focused window provider");
-
-    task::spawn_blocking(move || {
-      if let Err(err) = Self::create_focused_window_hook() {
-        emit_result_tx
-          .blocking_send(Err(err).into())
-          .expect("Error with focused window provider");
-      }
-    });
-  }
+  common: CommonProviderState,
 }
 
 impl FocusedWindowProvider {
   pub fn new(
-    config: FocusedWindowProviderConfig,
+    _config: FocusedWindowProviderConfig,
+    common: CommonProviderState,
   ) -> FocusedWindowProvider {
-    FocusedWindowProvider { _config: config }
+    FocusedWindowProvider { common }
   }
 
   unsafe fn get_foreground_window_icon(
@@ -287,30 +266,34 @@ impl FocusedWindowProvider {
     Some(BASE64_STANDARD.encode(&png_data))
   }
 
-  unsafe fn emit_window_info(hwnd: HWND) {
+  unsafe fn emit_window_info(hwnd: HWND, emitter: &ProviderEmitter) {
+    println!("Emitting window info");
     if !IsWindow(hwnd).as_bool() {
       return;
     }
+    let output = Self::focused_window_output(hwnd);
+    emitter.emit_output(output);
+  }
 
+  unsafe fn focused_window_output(
+    hwnd: HWND,
+  ) -> anyhow::Result<FocusedWindowOutput> {
     if let Some(title) = Self::get_foreground_window_title(hwnd) {
       if title.trim().is_empty() {
-        return;
+        return Err(anyhow::Error::msg("Empty title"));
       }
 
       if let Ok(icon) = Self::get_foreground_window_icon(hwnd) {
-        if let Some(tx) = PROVIDER_TX.get() {
-          let output = FocusedWindowOutput { title, icon };
-          if let Err(err) = tx.blocking_send(
-            Ok(ProviderOutput::FocusedWindow(output)).into(),
-          ) {
-            println!("Error sending result: {:?}", err);
-          }
-        }
+        Ok(FocusedWindowOutput { title, icon })
+      } else {
+        Err(anyhow::Error::msg("Failed to extract icon"))
       }
+    } else {
+      Err(anyhow::Error::msg("Failed to get window title"))
     }
   }
 
-  fn create_focused_window_hook() -> anyhow::Result<()> {
+  fn create_focused_window_hook(&self) -> anyhow::Result<()> {
     unsafe {
       let focus_hook = SetWinEventHook(
         EVENT_SYSTEM_FOREGROUND,
@@ -352,20 +335,14 @@ impl FocusedWindowProvider {
         WINEVENT_OUTOFCONTEXT,
       );
 
-      if focus_hook.is_invalid()
-        || title_hook.is_invalid()
-        || create_hook.is_invalid()
-        || switch_hook.is_invalid()
-      {
+      if focus_hook.is_invalid() || title_hook.is_invalid() {
         return Err(anyhow::Error::msg("Failed to set event hooks"));
       }
 
       // Initialize with current foreground window
       if let Some(current_hwnd) = Some(GetForegroundWindow()) {
-        Self::emit_window_info(current_hwnd);
+        Self::emit_window_info(current_hwnd, &self.common.emitter);
       }
-
-      println!("Monitoring window focus, creation, and title changes...");
 
       let mut msg = MSG::default();
       while GetMessageW(&mut msg, HWND::default(), 0, 0).as_bool() {
@@ -390,26 +367,25 @@ unsafe extern "system" fn win_event_proc(
   if !IsWindow(hwnd).as_bool() {
     return;
   }
-
   match event {
     EVENT_SYSTEM_FOREGROUND => {
-      FocusedWindowProvider::emit_window_info(hwnd);
+      FocusedWindowProvider::emit_window_info(hwnd, emitter);
     }
     EVENT_OBJECT_CREATE => {
       let foreground = GetForegroundWindow();
       if hwnd == foreground {
-        FocusedWindowProvider::emit_window_info(hwnd);
+        FocusedWindowProvider::emit_window_info(hwnd, emitter);
       }
     }
     EVENT_OBJECT_NAMECHANGE => {
       if id_object == 0 && hwnd == GetForegroundWindow() {
-        FocusedWindowProvider::emit_window_info(hwnd);
+        FocusedWindowProvider::emit_window_info(hwnd, emitter);
       }
     }
     EVENT_SYSTEM_SWITCHSTART => {
-      let foreground = GetForegroundWindow();
-      if !foreground.is_invalid() {
-        FocusedWindowProvider::emit_window_info(foreground);
+      let hwnd = GetForegroundWindow();
+      if !hwnd.is_invalid() {
+        FocusedWindowProvider::emit_window_info(hwnd, emitter);
       }
     }
     _ => {}
@@ -447,4 +423,20 @@ unsafe extern "system" fn enum_child_proc(
     }
   }
   BOOL(1)
+}
+
+#[async_trait]
+impl Provider for FocusedWindowProvider {
+  fn runtime_type(&self) -> RuntimeType {
+    RuntimeType::Sync
+  }
+
+  fn start_sync(&mut self) {
+    if let Err(err) = self.create_focused_window_hook() {
+      self
+        .common
+        .emitter
+        .emit_output::<FocusedWindowOutput>(Err(err));
+    }
+  }
 }

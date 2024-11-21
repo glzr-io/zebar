@@ -2,13 +2,12 @@ use serde::Serialize;
 
 #[cfg(windows)]
 use super::{
-  audio::AudioOutput, keyboard::KeyboardOutput, komorebi::KomorebiOutput,
-  media::MediaOutput,
+  audio::AudioOutput, focused_window::FocusedWindowOutput,
+  keyboard::KeyboardOutput, komorebi::KomorebiOutput, media::MediaOutput,
 };
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, disk::DiskOutput,
- 
-  focused_window::FocusedWindowOutput, host::HostOutput, ip::IpOutput, memory::MemoryOutput,
+  host::HostOutput, ip::IpOutput, memory::MemoryOutput,
   network::NetworkOutput, weather::WeatherOutput,
 };
 
@@ -32,6 +31,7 @@ pub enum ProviderOutput {
   Audio(AudioOutput),
   Battery(BatteryOutput),
   Cpu(CpuOutput),
+  #[cfg(windows)]
   FocusedWindow(FocusedWindowOutput),
   Host(HostOutput),
   Ip(IpOutput),
@@ -61,6 +61,7 @@ impl_provider_output! {
 #[cfg(windows)]
 impl_provider_output! {
   Audio(AudioOutput),
+  FocusedWindow(FocusedWindowOutput),
   Komorebi(KomorebiOutput),
   Media(MediaOutput),
   Keyboard(KeyboardOutput)
