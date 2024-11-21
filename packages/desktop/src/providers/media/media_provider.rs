@@ -129,6 +129,9 @@ impl MediaProvider {
     self.register_session_change_callbacks(&manager)?;
     self.update_session_states(&manager)?;
 
+    // Emit initial output.
+    self.emit_output();
+
     loop {
       crossbeam::select! {
         recv(self.event_receiver) -> event => {
@@ -146,54 +149,14 @@ impl MediaProvider {
               ProviderFunction::Media(media_function),
               sender,
             )) => {
-              let function_res = self.handle_function(media_function).map_err(|err| err.to_string());
-              sender.send(function_res).unwrap();
+              let res = self.handle_function(media_function).map_err(|err| err.to_string());
+              sender.send(res).unwrap();
             }
             _ => {}
           }
         }
       }
     }
-
-    Ok(())
-  }
-
-  /// Registers event callbacks with the session manager.
-  ///
-  /// - `CurrentSessionChanged`: for when the active media session changes
-  ///   (e.g. when switching between media players).
-  /// - `SessionAddOrRemove`: for when the list of available media sessions
-  ///   changes (e.g. when a media player is opened or closed).
-  fn register_session_change_callbacks(
-    &self,
-    manager: &GsmtcManager,
-  ) -> anyhow::Result<()> {
-    // Handler for current session changes.
-    manager.CurrentSessionChanged(&TypedEventHandler::new({
-      let sender = self.event_sender.clone();
-      move |manager: &Option<GsmtcManager>, _| {
-        let session_id = manager
-          .as_ref()
-          .and_then(|manager| manager.GetCurrentSession().ok())
-          .and_then(|session| session.SourceAppUserModelId().ok())
-          .map(|id| id.to_string());
-
-        sender
-          .send(MediaSessionEvent::CurrentSessionChanged(session_id))
-          .unwrap();
-
-        Ok(())
-      }
-    }))?;
-
-    // Handler for a session is added or removed.
-    manager.SessionsChanged(&TypedEventHandler::new({
-      let sender = self.event_sender.clone();
-      move |_, _| {
-        sender.send(MediaSessionEvent::SessionAddOrRemove).unwrap();
-        Ok(())
-      }
-    }))?;
 
     Ok(())
   }
@@ -238,6 +201,7 @@ impl MediaProvider {
       }
     }
 
+    // Emit new output after handling the event.
     self.emit_output();
 
     Ok(())
@@ -275,27 +239,67 @@ impl MediaProvider {
     Ok(ProviderFunctionResponse::Null)
   }
 
+  /// Registers event callbacks with the session manager.
+  ///
+  /// - `CurrentSessionChanged`: for when the active media session changes
+  ///   (e.g. when switching between media players).
+  /// - `SessionAddOrRemove`: for when the list of available media sessions
+  ///   changes (e.g. when a media player is opened or closed).
+  fn register_session_change_callbacks(
+    &self,
+    manager: &GsmtcManager,
+  ) -> anyhow::Result<()> {
+    // Handler for current session changes.
+    manager.CurrentSessionChanged(&TypedEventHandler::new({
+      let sender = self.event_sender.clone();
+      move |manager: &Option<GsmtcManager>, _| {
+        let session_id = manager
+          .as_ref()
+          .and_then(|manager| Self::current_session_id(manager));
+
+        sender
+          .send(MediaSessionEvent::CurrentSessionChanged(session_id))
+          .unwrap();
+
+        Ok(())
+      }
+    }))?;
+
+    // Handler for a session is added or removed.
+    manager.SessionsChanged(&TypedEventHandler::new({
+      let sender = self.event_sender.clone();
+      move |_, _| {
+        sender.send(MediaSessionEvent::SessionAddOrRemove).unwrap();
+        Ok(())
+      }
+    }))?;
+
+    Ok(())
+  }
+
   /// Updates the state of all media sessions.
   fn update_session_states(
     &mut self,
     manager: &GsmtcManager,
   ) -> anyhow::Result<()> {
     let sessions = manager.GetSessions()?;
-    let active_session = manager.GetCurrentSession();
 
     // Track existing sessions to detect removals.
-    let mut existing_ids: HashSet<String> = HashSet::new();
+    let mut found_ids: HashSet<String> = HashSet::new();
 
     for session in sessions {
-      let id = session.SourceAppUserModelId()?.to_string();
-      existing_ids.insert(id.clone());
+      let session_id = session.SourceAppUserModelId()?.to_string();
+      found_ids.insert(session_id.clone());
 
       // Handle new sessions.
-      if !self.session_states.contains_key(&id) {
-        let tokens = self.register_session_callbacks(&session, &id)?;
+      if !self.session_states.contains_key(&session_id) {
+        let tokens =
+          self.register_session_callbacks(&session, &session_id)?;
+
         let output = Self::to_media_session_output(&session)?;
+
         self.session_states.insert(
-          id.clone(),
+          session_id,
           SessionState {
             session,
             tokens,
@@ -307,7 +311,7 @@ impl MediaProvider {
 
     // Remove sessions that no longer exist.
     self.session_states.retain(|id, state| {
-      if !existing_ids.contains(id) {
+      if !found_ids.contains(id) {
         Self::remove_session_listeners(&state.session, &state.tokens);
         false
       } else {
@@ -316,10 +320,7 @@ impl MediaProvider {
     });
 
     // Update active session.
-    self.current_session_id = active_session
-      .as_ref()
-      .and_then(|session| session.SourceAppUserModelId().ok())
-      .map(|id| id.to_string());
+    self.current_session_id = Self::current_session_id(manager);
 
     Ok(())
   }
@@ -332,12 +333,10 @@ impl MediaProvider {
     session: &GsmtcSession,
     session_id: &str,
   ) -> anyhow::Result<EventTokens> {
-    let session_id = session_id.to_string();
-
     Ok(EventTokens {
       playback: session.PlaybackInfoChanged(&TypedEventHandler::new({
         let sender = self.event_sender.clone();
-        let session_id = session_id.clone();
+        let session_id = session_id.to_string();
         move |_, _| {
           sender
             .send(MediaSessionEvent::PlaybackInfoChanged(
@@ -350,7 +349,7 @@ impl MediaProvider {
       properties: session.MediaPropertiesChanged(
         &TypedEventHandler::new({
           let sender = self.event_sender.clone();
-          let session_id = session_id.clone();
+          let session_id = session_id.to_string();
           move |_, _| {
             sender
               .send(MediaSessionEvent::MediaPropertiesChanged(
@@ -364,7 +363,7 @@ impl MediaProvider {
       timeline: session.TimelinePropertiesChanged(
         &TypedEventHandler::new({
           let sender = self.event_sender.clone();
-          let session_id = session_id.clone();
+          let session_id = session_id.to_string();
           move |_, _| {
             sender
               .send(MediaSessionEvent::TimelinePropertiesChanged(
@@ -376,6 +375,15 @@ impl MediaProvider {
         }),
       )?,
     })
+  }
+
+  /// Gets the ID of the current media session.
+  fn current_session_id(manager: &GsmtcManager) -> Option<String> {
+    manager
+      .GetCurrentSession()
+      .ok()
+      .and_then(|session| session.SourceAppUserModelId().ok())
+      .map(|id| id.to_string())
   }
 
   /// Cleans up event listeners from the given session.
