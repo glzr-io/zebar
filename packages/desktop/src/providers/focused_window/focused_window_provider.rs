@@ -1,4 +1,4 @@
-use std::{ffi::c_void, io::Cursor};
+use std::{ffi::c_void, io::Cursor, sync::OnceLock};
 
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
@@ -39,6 +39,8 @@ use windows::{
 use crate::providers::{
   CommonProviderState, Provider, ProviderEmitter, RuntimeType,
 };
+
+static PROVIDER_TX: OnceLock<ProviderEmitter> = OnceLock::new();
 
 // This doesn't always work..
 const ICON_SIZE: i32 = 32;
@@ -294,6 +296,10 @@ impl FocusedWindowProvider {
   }
 
   fn create_focused_window_hook(&self) -> anyhow::Result<()> {
+    PROVIDER_TX
+      .set(self.common.emitter.clone())
+      .expect("Error setting provider tx in focused window provider");
+
     unsafe {
       let focus_hook = SetWinEventHook(
         EVENT_SYSTEM_FOREGROUND,
@@ -367,28 +373,30 @@ unsafe extern "system" fn win_event_proc(
   if !IsWindow(hwnd).as_bool() {
     return;
   }
-  match event {
-    EVENT_SYSTEM_FOREGROUND => {
-      FocusedWindowProvider::emit_window_info(hwnd, emitter);
-    }
-    EVENT_OBJECT_CREATE => {
-      let foreground = GetForegroundWindow();
-      if hwnd == foreground {
+  if let Some(emitter) = PROVIDER_TX.get() {
+    match event {
+      EVENT_SYSTEM_FOREGROUND => {
         FocusedWindowProvider::emit_window_info(hwnd, emitter);
       }
-    }
-    EVENT_OBJECT_NAMECHANGE => {
-      if id_object == 0 && hwnd == GetForegroundWindow() {
-        FocusedWindowProvider::emit_window_info(hwnd, emitter);
+      EVENT_OBJECT_CREATE => {
+        let foreground = GetForegroundWindow();
+        if hwnd == foreground {
+          FocusedWindowProvider::emit_window_info(hwnd, emitter);
+        }
       }
-    }
-    EVENT_SYSTEM_SWITCHSTART => {
-      let hwnd = GetForegroundWindow();
-      if !hwnd.is_invalid() {
-        FocusedWindowProvider::emit_window_info(hwnd, emitter);
+      EVENT_OBJECT_NAMECHANGE => {
+        if id_object == 0 && hwnd == GetForegroundWindow() {
+          FocusedWindowProvider::emit_window_info(hwnd, emitter);
+        }
       }
+      EVENT_SYSTEM_SWITCHSTART => {
+        let hwnd = GetForegroundWindow();
+        if !hwnd.is_invalid() {
+          FocusedWindowProvider::emit_window_info(hwnd, emitter);
+        }
+      }
+      _ => {}
     }
-    _ => {}
   }
 }
 
