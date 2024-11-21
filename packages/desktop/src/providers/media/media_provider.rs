@@ -503,6 +503,17 @@ impl MediaProvider {
   }
 }
 
+impl Drop for MediaProvider {
+  fn drop(&mut self) {
+    for (_, session_state) in &self.session_states {
+      Self::remove_session_listeners(
+        &session_state.session,
+        &session_state.tokens,
+      );
+    }
+  }
+}
+
 impl Provider for MediaProvider {
   fn runtime_type(&self) -> RuntimeType {
     RuntimeType::Sync
