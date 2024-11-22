@@ -211,26 +211,42 @@ impl MediaProvider {
     &mut self,
     function: MediaFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
-    let session_state = self
-      .current_session_id
-      .as_ref()
-      .and_then(|id| self.session_states.get(id))
-      .context("No active media session.")?;
+    let args = match &function {
+      MediaFunction::Play(args)
+      | MediaFunction::Pause(args)
+      | MediaFunction::TogglePlayPause(args)
+      | MediaFunction::Next(args)
+      | MediaFunction::Previous(args) => args,
+    };
+
+    // Get target session - use specified ID or current session.
+    let session_state = if let Some(id) = &args.session_id {
+      self
+        .session_states
+        .get(id)
+        .context("Specified session not found.")?
+    } else {
+      self
+        .current_session_id
+        .as_ref()
+        .and_then(|id| self.session_states.get(id))
+        .context("No active session.")?
+    };
 
     match function {
-      MediaFunction::Play(args) => {
+      MediaFunction::Play(_) => {
         session_state.session.TryPlayAsync()?.get()?;
       }
-      MediaFunction::Pause(args) => {
+      MediaFunction::Pause(_) => {
         session_state.session.TryPauseAsync()?.get()?;
       }
-      MediaFunction::TogglePlayPause(args) => {
+      MediaFunction::TogglePlayPause(_) => {
         session_state.session.TryTogglePlayPauseAsync()?.get()?;
       }
-      MediaFunction::Next(args) => {
+      MediaFunction::Next(_) => {
         session_state.session.TrySkipNextAsync()?.get()?;
       }
-      MediaFunction::Previous(args) => {
+      MediaFunction::Previous(_) => {
         session_state.session.TrySkipPreviousAsync()?.get()?;
       }
     };
