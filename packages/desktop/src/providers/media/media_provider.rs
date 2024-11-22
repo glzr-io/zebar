@@ -33,7 +33,7 @@ pub struct MediaOutput {
 #[serde(rename_all = "camelCase")]
 pub struct MediaSession {
   pub session_id: String,
-  pub title: String,
+  pub title: Option<String>,
   pub artist: Option<String>,
   pub album_title: Option<String>,
   pub album_artist: Option<String>,
@@ -49,7 +49,7 @@ impl Default for MediaSession {
   fn default() -> Self {
     Self {
       session_id: "".to_string(),
-      title: "".to_string(),
+      title: None,
       artist: None,
       album_title: None,
       album_artist: None,
@@ -421,26 +421,19 @@ impl MediaProvider {
   }
 
   /// Emits a `MediaOutput` update through the provider's emitter.
+  ///
+  /// Note that at times, GSMTC can have a valid session, but return empty
+  /// string for all media properties.
   fn emit_output(&self) {
-    println!("Emitting output {:?}", self.session_states);
-    // At times, GSMTC can have a valid session, but return empty string
-    // for all media properties. Check that we at least have a valid
-    // title, otherwise, return `None`.
     let current_session = self
       .current_session_id
       .as_ref()
-      .and_then(|id| {
-        self
-          .session_states
-          .get(id)
-          .filter(|state| !state.output.title.is_empty())
-      })
+      .and_then(|id| self.session_states.get(id))
       .map(|state| state.output.clone());
 
     let all_sessions = self
       .session_states
       .values()
-      .filter(|state| !state.output.title.is_empty())
       .map(|state| state.output.clone())
       .collect();
 
@@ -477,7 +470,7 @@ impl MediaProvider {
     let album_title = properties.AlbumTitle()?.to_string();
     let album_artist = properties.AlbumArtist()?.to_string();
 
-    session_output.title = title;
+    session_output.title = (!title.is_empty()).then_some(title);
     session_output.artist = (!artist.is_empty()).then_some(artist);
     session_output.album_title =
       (!album_title.is_empty()).then_some(album_title);

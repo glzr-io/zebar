@@ -22,7 +22,7 @@ export interface MediaControlArgs {
 
 export interface MediaSession {
   sessionId: string;
-  title: string;
+  title: string | null;
   artist: string | null;
   albumTitle: string | null;
   albumArtist: string | null;
