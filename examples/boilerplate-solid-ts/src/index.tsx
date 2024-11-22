@@ -27,8 +27,9 @@ function App() {
         {output.audio?.defaultPlaybackDevice?.volume}
       </div>
       <div class="chip">
-        Media: {output.media?.session?.title} -
-        {output.media?.session?.artist}
+        Media: {output.media?.currentSession?.title} -
+        {output.media?.currentSession?.artist}
+        <button onClick={() => output.media?.togglePlayPause()}>⏯</button>
       </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">

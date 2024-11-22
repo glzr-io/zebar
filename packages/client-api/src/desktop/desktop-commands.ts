@@ -14,9 +14,24 @@ export const desktopCommands = {
   startPreset,
   listenProvider,
   unlistenProvider,
+  callProviderFunction,
   setAlwaysOnTop,
   setSkipTaskbar,
 };
+
+export type ProviderFunction = MediaFunction;
+
+export interface MediaFunction {
+  type: 'media';
+  function: {
+    name: 'play' | 'pause' | 'toggle_play_pause' | 'next' | 'previous';
+    args: MediaControlArgs;
+  };
+}
+
+export interface MediaControlArgs {
+  sessionId?: string;
+}
 
 function startWidget(
   configPath: string,
@@ -41,6 +56,16 @@ function listenProvider(args: {
 
 function unlistenProvider(configHash: string): Promise<void> {
   return invoke<void>('unlisten_provider', { configHash });
+}
+
+function callProviderFunction(
+  configHash: string,
+  fn: ProviderFunction,
+): Promise<void> {
+  return invoke<void>('call_provider_function', {
+    configHash,
+    function: fn,
+  });
 }
 
 function setAlwaysOnTop(): Promise<void> {

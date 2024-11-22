@@ -51,8 +51,11 @@
         return (
           <div className="app">
             <div class="chip">
-              Media: {output.media?.session?.title} -
-              {output.media?.session?.artist}
+              Media: {output.media?.currentSession?.title} -
+              {output.media?.currentSession?.artist}
+              <button onClick={() => output.media?.togglePlayPause()}>
+                ⏯
+              </button>
             </div>
             <div className="chip">CPU usage: {output.cpu?.usage}</div>
             <div className="chip">

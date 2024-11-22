@@ -286,6 +286,11 @@ impl ProviderManager {
     config_hash: String,
     function: ProviderFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
+    info!(
+      "Calling provider function: {:?} for: {}",
+      function, config_hash
+    );
+
     let provider_refs = self.provider_refs.lock().await;
     let provider_ref = provider_refs
       .get(&config_hash)

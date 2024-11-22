@@ -358,7 +358,8 @@ No config options.
 
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `session`         | Currently playing media session.        | `MediaSession \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `currentSession`         | Currently playing media session.        | `MediaSession \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allSessions`         | All active media sessions.        | `MediaSession[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 #### Return types
 
@@ -366,15 +367,17 @@ No config options.
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
-| `title`         | TODO    | `string` |
-| `artist`      | TODO | `string \| null` |
-| `albumTitle`    | TODO         | `string \| null` |
-| `albumArtist` | TODO      | `string \| null` |
-| `trackNumber` | TODO      | `number` |
-| `startTime` | TODO      | `number` |
-| `endTime` | TODO      | `number` |
-| `position` | TODO      | `number` |
-| `isPlaying` | TODO      | `boolean` |
+| `sessionId`         | ID of the media session.    | `string` |
+| `title`         | Title of the media session.    | `string` |
+| `artist`      | Artist of the media session. | `string \| null` |
+| `albumTitle`    | Album title of the media session.         | `string \| null` |
+| `albumArtist` | Album artist of the media session. | `string \| null` |
+| `trackNumber` | Track number of the media session.      | `number` |
+| `startTime` | Start time of the media session.      | `number` |
+| `endTime` | End time of the media session.      | `number` |
+| `position` | Position of the media session.      | `number` |
+| `isPlaying` | Whether the media session is playing.      | `boolean` |
+| `isCurrentSession` | Whether this is the currently active session (i.e. `currentSession`).      | `boolean` |
 
 #### `DataSizeMeasure`
 

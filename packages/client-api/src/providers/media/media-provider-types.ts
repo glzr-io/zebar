@@ -5,11 +5,24 @@ export interface MediaProviderConfig {
 }
 
 export interface MediaOutput {
+  /** @deprecated Use {@link currentSession} instead */
   session: MediaSession | null;
+  currentSession: MediaSession | null;
+  allSessions: MediaSession[];
+  play(args?: MediaControlArgs): void;
+  pause(args?: MediaControlArgs): void;
+  togglePlayPause(args?: MediaControlArgs): void;
+  next(args?: MediaControlArgs): void;
+  previous(args?: MediaControlArgs): void;
+}
+
+export interface MediaControlArgs {
+  sessionId?: string;
 }
 
 export interface MediaSession {
-  title: string;
+  sessionId: string;
+  title: string | null;
   artist: string | null;
   albumTitle: string | null;
   albumArtist: string | null;
@@ -18,6 +31,7 @@ export interface MediaSession {
   endTime: number;
   position: number;
   isPlaying: boolean;
+  isCurrentSession: boolean;
 }
 
 export type MediaProvider = Provider<MediaProviderConfig, MediaOutput>;
