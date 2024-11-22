@@ -32,7 +32,7 @@ export function createMediaProvider(
                 type: 'media',
                 function: {
                   name: 'play',
-                  args: args ?? { sessionId: null },
+                  args: args ?? {},
                 },
               });
             },
@@ -41,7 +41,7 @@ export function createMediaProvider(
                 type: 'media',
                 function: {
                   name: 'pause',
-                  args: args ?? { sessionId: null },
+                  args: args ?? {},
                 },
               });
             },
@@ -50,7 +50,7 @@ export function createMediaProvider(
                 type: 'media',
                 function: {
                   name: 'toggle_play_pause',
-                  args: args ?? { sessionId: null },
+                  args: args ?? {},
                 },
               });
             },
@@ -59,7 +59,7 @@ export function createMediaProvider(
                 type: 'media',
                 function: {
                   name: 'next',
-                  args: args ?? { sessionId: null },
+                  args: args ?? {},
                 },
               });
             },
@@ -68,7 +68,7 @@ export function createMediaProvider(
                 type: 'media',
                 function: {
                   name: 'previous',
-                  args: args ?? { sessionId: null },
+                  args: args ?? {},
                 },
               });
             },

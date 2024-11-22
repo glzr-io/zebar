@@ -27,15 +27,11 @@ function App() {
         {output.audio?.defaultPlaybackDevice?.volume}
       </div>
       <div class="chip">
-        Media: {output.media?.session?.title} -
-        {output.media?.session?.artist}
-        <button onClick={() => output.media?.play()}>Play</button>
-        <button onClick={() => output.media?.pause()}>Pause</button>
+        Media: {output.media?.currentSession?.title} -
+        {output.media?.currentSession?.artist}
         <button onClick={() => output.media?.togglePlayPause()}>
-          Toggle Play Pause
+          ⏯
         </button>
-        <button onClick={() => output.media?.next()}>Next</button>
-        <button onClick={() => output.media?.previous()}>Previous</button>
       </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">

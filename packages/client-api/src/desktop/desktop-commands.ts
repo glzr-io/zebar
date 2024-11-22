@@ -30,7 +30,7 @@ export interface MediaFunction {
 }
 
 export interface MediaControlArgs {
-  sessionId: string | null;
+  sessionId?: string;
 }
 
 function startWidget(

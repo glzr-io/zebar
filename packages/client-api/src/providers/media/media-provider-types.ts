@@ -17,7 +17,7 @@ export interface MediaOutput {
 }
 
 export interface MediaControlArgs {
-  sessionId: string;
+  sessionId?: string;
 }
 
 export interface MediaSession {
