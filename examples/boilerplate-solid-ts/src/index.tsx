@@ -29,9 +29,7 @@ function App() {
       <div class="chip">
         Media: {output.media?.currentSession?.title} -
         {output.media?.currentSession?.artist}
-        <button onClick={() => output.media?.togglePlayPause()}>
-          ⏯
-        </button>
+        <button onClick={() => output.media?.togglePlayPause()}>⏯</button>
       </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       <div class="chip">
