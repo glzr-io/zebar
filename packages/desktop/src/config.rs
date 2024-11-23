@@ -95,6 +95,7 @@ pub struct WidgetConfig {
   pub caching: WidgetCaching,
 
   /// Privileges for the widget.
+  #[serde(default)]
   pub privileges: WidgetPrivileges,
 
   /// Where to place the widget. Add alias for `defaultPlacements` for
