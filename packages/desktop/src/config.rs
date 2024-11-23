@@ -94,6 +94,9 @@ pub struct WidgetConfig {
   #[serde(default)]
   pub caching: WidgetCaching,
 
+  /// Privileges for the widget.
+  pub privileges: WidgetPrivileges,
+
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -198,6 +201,23 @@ pub enum MonitorSelection {
   Secondary,
   Index(usize),
   Name(String),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetPrivileges {
+  /// Shell commands that the widget is allowed to run.
+  pub shell: Vec<ShellPrivilege>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellPrivilege {
+  /// Program name (if in PATH) or full path to the program.
+  pub program: String,
+
+  /// Arguments to pass to the program.
+  pub args_regex: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
