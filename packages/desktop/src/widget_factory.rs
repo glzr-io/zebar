@@ -32,7 +32,6 @@ use crate::{
     WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
-  privilege_store::PrivilegeStore,
 };
 
 /// Manages the creation of Zebar widgets.
@@ -53,9 +52,6 @@ pub struct WidgetFactory {
 
   /// Reference to `MonitorState`.
   monitor_state: Arc<MonitorState>,
-
-  /// Reference to `PrivilegeStore`.
-  privilege_store: Arc<PrivilegeStore>,
 
   /// Running total of widgets created.
   ///
@@ -157,7 +153,6 @@ impl WidgetFactory {
     app_handle: &AppHandle,
     config: Arc<Config>,
     monitor_state: Arc<MonitorState>,
-    privilege_store: Arc<PrivilegeStore>,
   ) -> Self {
     let (open_tx, _open_rx) = broadcast::channel(16);
     let (close_tx, _close_rx) = broadcast::channel(16);
@@ -170,7 +165,6 @@ impl WidgetFactory {
       _open_rx,
       open_tx,
       monitor_state,
-      privilege_store,
       widget_count: Arc::new(AtomicU32::new(0)),
       widget_states: Arc::new(Mutex::new(HashMap::new())),
     }
@@ -210,15 +204,6 @@ impl WidgetFactory {
       if is_preset_open {
         return Ok(());
       }
-    }
-
-    // Check if we have the necessary privileges for this widget.
-    if !(self
-      .privilege_store
-      .validate_or_prompt(&config_path, &widget_config.privileges)
-      .await?)
-    {
-      return Ok(());
     }
 
     // Extract placement from widget preset (if applicable).
