@@ -30,5 +30,20 @@
     "core:window:allow-set-position",
     "core:window:allow-set-size",
     "core:window:allow-set-title"
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "echo",
+          "cmd": "echo",
+          "args": [
+            {
+              "validator": ".*"
+            }
+          ],
+          "sidecar": false
+        }
+      ]
+    }
   ]
 }
