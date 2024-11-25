@@ -3,7 +3,8 @@ export {
   currentWidget,
   startWidget,
   startWidgetPreset,
-  shell,
+  shellExec,
+  shellSpawn,
   type Widget,
   type WidgetWindow,
 } from './desktop';
