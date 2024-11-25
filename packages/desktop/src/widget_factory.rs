@@ -12,8 +12,7 @@ use base64::prelude::*;
 use serde::Serialize;
 use serde_json::json;
 use tauri::{
-  ipc::CapabilityBuilder, path::BaseDirectory,
-  utils::acl::capability::Capability, AppHandle, Manager,
+  self, ipc::CapabilityBuilder, path::BaseDirectory, AppHandle, Manager,
   PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder,
   WindowEvent,
 };
@@ -526,19 +525,6 @@ impl WidgetFactory {
     widget_id: &str,
     privileges: &WidgetPrivileges,
   ) -> anyhow::Result<()> {
-    #[derive(Serialize)]
-    struct ShellAllowedCmd {
-      name: String,
-      cmd: String,
-      args: Vec<ShellAllowedArg>,
-      sidecar: bool,
-    }
-
-    #[derive(Serialize)]
-    struct ShellAllowedArg {
-      validator: String,
-    }
-
     let capability = CapabilityBuilder::new(widget_id)
       .window(widget_id)
       .remote("http://asset.localhost".to_string())
@@ -548,15 +534,15 @@ impl WidgetFactory {
         privileges
           .shell
           .iter()
-          .map(|cmd| ShellAllowedCmd {
-            name: cmd.program.clone(),
-            cmd: cmd.program.clone(),
-            args: vec![ShellAllowedArg {
-              validator: cmd.args_regex.clone(),
-            }],
-            sidecar: false,
+          .map(|shell| {
+            json!({
+              "name": shell.program,
+              "cmd": shell.program,
+              "args": [{ "validator": shell.args_regex }],
+              "sidecar": false
+            })
           })
-          .collect(),
+          .collect::<Vec<serde_json::Value>>(),
         vec![],
       );
 
