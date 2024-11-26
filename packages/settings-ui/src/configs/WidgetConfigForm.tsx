@@ -219,18 +219,17 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
           </small>
 
           {configForm.value.privileges.shellCommands.map((_, index) => (
-            <div class="flex justify-between items-start gap-2">
-              <div class="flex flex-1 gap-2">
+            <div class="flex gap-2 items-end">
+              <div class="grid grid-cols-2 flex-1 gap-2">
                 <Field
                   of={configForm}
                   path={`privileges.shellCommands.${index}.program`}
                 >
                   {inputProps => (
                     <TextField
-                      id={`program-${index}`}
+                      id={`privilege-program-${index}`}
                       label="Program"
                       placeholder="Program name or full path"
-                      description="Enter the program name (if in PATH) or the full path to the program"
                       {...inputProps()}
                     />
                   )}
@@ -242,10 +241,9 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 >
                   {inputProps => (
                     <TextField
-                      id={`args-regex-${index}`}
+                      id={`privilege-args-${index}`}
                       label="Arguments regex"
                       placeholder="Regular expression for allowed arguments"
-                      description="Regular expression pattern that matches allowed argument combinations"
                       {...inputProps()}
                     />
                   )}
@@ -265,9 +263,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                     </Button>
                   )}
                 />
-                <TooltipContent>
-                  Delete shell command privilege
-                </TooltipContent>
+                <TooltipContent>Delete shell command</TooltipContent>
               </Tooltip>
             </div>
           ))}
