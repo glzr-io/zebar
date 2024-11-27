@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::{bail, Context};
+use base64::prelude::*;
 use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
@@ -8,7 +9,7 @@ use tauri::{
     MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder,
     TrayIconEvent,
   },
-  AppHandle, Manager, Url, WebviewUrl, WebviewWindowBuilder, Wry,
+  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Wry,
 };
 use tokio::task;
 use tracing::{error, info};
@@ -332,39 +333,38 @@ impl SysTray {
     // Get existing settings window if it's already open.
     let settings_window = app_handle.get_webview_window("settings");
 
-    // let route = match config_path {
-    //   None => WebviewUrl::default(),
-    //   Some(path) => WebviewUrl::App(PathBuf::from(format!(
-    //     "index.html#/widget/{}",
-    //     path.to_unicode_string()
-    //   ))),
-    // };
-
-    // let route = format!("index.html#/widget/{}",
-    // path.to_unicode_string());
-
     let route = match config_path {
-      None => "index.html".to_string(),
+      None => "/index.html".to_string(),
       Some(path) => {
-        format!("index.html#/widget/{}", path.to_unicode_string())
+        format!(
+          "/index.html#/widget/{}",
+          BASE64_STANDARD.encode(path.to_unicode_string())
+        )
       }
     };
 
     match &settings_window {
       None => {
-        WebviewWindowBuilder::new(app_handle, "settings", route)
-          .title("Settings - Zebar")
-          .focused(true)
-          .visible(true)
-          .inner_size(900., 600.)
-          .build()
-          .context("Failed to build the settings window.")?;
+        WebviewWindowBuilder::new(
+          app_handle,
+          "settings",
+          WebviewUrl::App(route.into()),
+        )
+        .title("Settings - Zebar")
+        .focused(true)
+        .visible(true)
+        .inner_size(900., 600.)
+        .build()
+        .context("Failed to build the settings window.")?;
 
         Ok(())
       }
       Some(window) => {
         window
-          .navigate(Url::parse(&route)?)
+          .eval(&format!(
+            "location.replace('{}'); location.reload();",
+            route
+          ))
           .context("Failed to navigate to widget edit page.")?;
 
         window

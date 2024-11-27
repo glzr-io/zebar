@@ -9,6 +9,7 @@ render(
   () => (
     <HashRouter>
       <Route path="/" component={WidgetConfigs} />
+      <Route path="/widget/:path" component={WidgetConfigs} />
     </HashRouter>
   ),
   document.getElementById('root')!,
