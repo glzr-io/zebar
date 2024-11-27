@@ -172,6 +172,7 @@ export function WidgetConfigs() {
       {/* Sidebar. */}
       <WidgetConfigSidebar
         configs={configs()}
+        widgetStates={widgetStates()}
         selectedConfig={selectedConfig()}
         selectedConfigPath={selectedConfigPath()}
         onSelect={setSelectedConfigPath}
