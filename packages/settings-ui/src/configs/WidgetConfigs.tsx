@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@glzr/components';
+import { useParams } from '@solidjs/router';
 import { IconChevronDown } from '@tabler/icons-solidjs';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event } from '@tauri-apps/api/event';
@@ -24,6 +25,8 @@ import { WidgetConfigSidebar } from './WidgetConfigSidebar';
 import { WidgetConfigForm } from './WidgetConfigForm';
 
 export function WidgetConfigs() {
+  const params = useParams();
+
   const [configs, { mutate: mutateWidgetConfigs }] = createResource(
     async () => invoke<Record<string, WidgetConfig>>('widget_configs'),
     { initialValue: {} },
@@ -34,11 +37,9 @@ export function WidgetConfigs() {
     { initialValue: {} },
   );
 
-  createEffect(() => console.log('widgetStates', widgetStates()));
-
   const [selectedConfigPath, setSelectedConfigPath] = createSignal<
     string | null
-  >(null);
+  >(params.path ? atob(params.path) : null);
 
   const [selectedPreset, setSelectedPreset] = createSignal<string | null>(
     null,
@@ -83,6 +84,17 @@ export function WidgetConfigs() {
       return newStates;
     });
   });
+
+  // Update selected config path when params change. This occurs when
+  // "Edit" is selected from the system tray menu.
+  createEffect(
+    on(
+      () => params.path,
+      () => {
+        setSelectedConfigPath(params.path ? atob(params.path) : null);
+      },
+    ),
+  );
 
   // Select the first config alphabetically on initial load.
   createEffect(

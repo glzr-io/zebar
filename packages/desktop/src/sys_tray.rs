@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
 use anyhow::{bail, Context};
+use base64::prelude::*;
 use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
@@ -25,6 +26,9 @@ enum MenuEvent {
   ReloadConfigs,
   OpenSettings,
   Exit,
+  EditWidget {
+    path: PathBuf,
+  },
   ToggleWidgetPreset {
     enable: bool,
     preset: String,
@@ -44,6 +48,9 @@ impl ToString for MenuEvent {
       MenuEvent::ReloadConfigs => "reload_configs".to_string(),
       MenuEvent::OpenSettings => "open_settings".to_string(),
       MenuEvent::Exit => "exit".to_string(),
+      MenuEvent::EditWidget { path } => {
+        format!("edit_widget_{}", path.to_unicode_string())
+      }
       MenuEvent::ToggleWidgetPreset {
         enable,
         preset,
@@ -83,6 +90,9 @@ impl FromStr for MenuEvent {
       ["reload", "configs"] => Ok(Self::ReloadConfigs),
       ["open", "settings"] => Ok(Self::OpenSettings),
       ["exit"] => Ok(Self::Exit),
+      ["edit", "widget", path @ ..] => Ok(Self::EditWidget {
+        path: PathBuf::from(path.join("_")),
+      }),
       ["toggle", "widget", "config", enable @ ("true" | "false"), preset, path @ ..] => {
         Ok(Self::ToggleWidgetPreset {
           enable: *enable == "true",
@@ -278,10 +288,15 @@ impl SysTray {
           .open_config_dir()
           .context("Failed to open config folder."),
         MenuEvent::ReloadConfigs => config.reload().await,
-        MenuEvent::OpenSettings => Self::open_settings_window(&app_handle),
+        MenuEvent::OpenSettings => {
+          Self::open_settings_window(&app_handle, None)
+        }
         MenuEvent::Exit => {
           app_handle.exit(0);
           Ok(())
+        }
+        MenuEvent::EditWidget { path } => {
+          Self::open_settings_window(&app_handle, Some(&path))
         }
         MenuEvent::ToggleWidgetPreset {
           enable,
@@ -311,28 +326,50 @@ impl SysTray {
     });
   }
 
-  fn open_settings_window(app_handle: &AppHandle) -> anyhow::Result<()> {
+  fn open_settings_window(
+    app_handle: &AppHandle,
+    config_path: Option<&PathBuf>,
+  ) -> anyhow::Result<()> {
     // Get existing settings window if it's already open.
     let settings_window = app_handle.get_webview_window("settings");
+
+    let route = match config_path {
+      None => "/index.html".to_string(),
+      Some(path) => {
+        format!(
+          "/index.html#/widget/{}",
+          BASE64_STANDARD.encode(path.to_unicode_string())
+        )
+      }
+    };
 
     match &settings_window {
       None => {
         WebviewWindowBuilder::new(
           app_handle,
           "settings",
-          WebviewUrl::default(),
+          WebviewUrl::App(route.into()),
         )
         .title("Settings - Zebar")
         .focused(true)
+        .visible(true)
         .inner_size(900., 600.)
         .build()
         .context("Failed to build the settings window.")?;
 
         Ok(())
       }
-      Some(window) => window
-        .set_focus()
-        .context("Failed to focus the settings window."),
+      Some(window) => {
+        window
+          .eval(&format!("location.replace('{}')", route))
+          .context("Failed to navigate to widget edit page.")?;
+
+        window
+          .set_focus()
+          .context("Failed to focus the settings window.")?;
+
+        Ok(())
+      }
     }
   }
 
@@ -379,7 +416,13 @@ impl SysTray {
       }
     };
 
-    let mut presets_menu = SubmenuBuilder::new(&self.app_handle, label);
+    let mut presets_menu = SubmenuBuilder::new(&self.app_handle, label)
+      .text(
+        MenuEvent::EditWidget {
+          path: config_path.clone(),
+        },
+        "Edit",
+      );
 
     // Add each widget config to the menu.
     for preset in &widget_config.presets {
