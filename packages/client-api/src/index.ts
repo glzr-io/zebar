@@ -1,9 +1,8 @@
 export * from './config';
 export {
   currentWidget,
-  currentWindow,
   startPreset,
   type Widget,
-  type Window,
+  type WidgetWindow,
 } from './desktop';
 export * from './providers';
