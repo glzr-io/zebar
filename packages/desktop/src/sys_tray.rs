@@ -406,13 +406,14 @@ impl SysTray {
     widget_states: &HashMap<PathBuf, Vec<WidgetState>>,
     startup_configs: &HashMap<PathBuf, StartupConfig>,
   ) -> anyhow::Result<Submenu<Wry>> {
-    let formatted_config_path =
-      Self::format_config_path(&self.config, config_path);
-
     let label = match widget_states.get(config_path) {
-      None => formatted_config_path,
+      None => self.config.formatted_widget_path(config_path),
       Some(states) => {
-        format!("({}) {}", states.len(), formatted_config_path)
+        format!(
+          "({}) {}",
+          states.len(),
+          self.config.formatted_widget_path(config_path)
+        )
       }
     };
 
@@ -494,15 +495,5 @@ impl SysTray {
       .item(&startup_item);
 
     Ok(config_menu.build()?)
-  }
-
-  /// Formats the config path for display in the system tray.
-  fn format_config_path(
-    config: &Arc<Config>,
-    config_path: &PathBuf,
-  ) -> String {
-    let path = config.to_relative_path(config_path).to_unicode_string();
-
-    path.strip_suffix(".zebar.json").unwrap_or(&path).into()
   }
 }

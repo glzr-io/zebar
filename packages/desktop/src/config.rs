@@ -564,6 +564,20 @@ impl Config {
       .into()
   }
 
+  /// Formats a widget's config path for display.
+  ///
+  /// Returns relative path without the `.zebar.json` suffix (e.g.
+  /// `starter/vanilla`).
+  pub fn formatted_widget_path(&self, config_path: &PathBuf) -> String {
+    let path = self.to_relative_path(config_path).to_unicode_string();
+
+    // Ensure path delimiters are forward slashes on Windows.
+    #[cfg(windows)]
+    let path = path.replace('\\', "/");
+
+    path.strip_suffix(".zebar.json").unwrap_or(&path).into()
+  }
+
   /// Returns the widget config at the given path.
   ///
   /// Config path can be either absolute or relative.

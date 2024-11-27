@@ -261,7 +261,10 @@ impl WidgetFactory {
         widget_id.clone(),
         webview_url,
       )
-      .title("Zebar")
+      .title(format!(
+        "Zebar - {}",
+        self.config.formatted_widget_path(&config_path)
+      ))
       .focused(widget_config.focused)
       .skip_taskbar(!widget_config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
