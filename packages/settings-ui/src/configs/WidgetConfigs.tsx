@@ -85,6 +85,17 @@ export function WidgetConfigs() {
     });
   });
 
+  // Update selected config path when params change. This occurs when
+  // "Edit" is selected from the system tray menu.
+  createEffect(
+    on(
+      () => params.path,
+      () => {
+        setSelectedConfigPath(params.path ? atob(params.path) : null);
+      },
+    ),
+  );
+
   // Select the first config alphabetically on initial load.
   createEffect(
     on(

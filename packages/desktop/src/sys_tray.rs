@@ -361,10 +361,7 @@ impl SysTray {
       }
       Some(window) => {
         window
-          .eval(&format!(
-            "location.replace('{}'); location.reload();",
-            route
-          ))
+          .eval(&format!("location.replace('{}')", route))
           .context("Failed to navigate to widget edit page.")?;
 
         window
