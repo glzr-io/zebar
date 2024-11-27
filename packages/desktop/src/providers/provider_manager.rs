@@ -57,27 +57,54 @@ pub struct ProviderEmitter {
 
   /// Hash of the provider's config.
   config_hash: String,
+
+  /// Previous emission from the provider.
+  prev_emission: Option<ProviderEmission>,
 }
 
 impl ProviderEmitter {
-  /// Emits an output from a provider.
-  pub fn emit_output<T>(&self, output: anyhow::Result<T>)
-  where
-    T: Into<ProviderOutput>,
-  {
-    let send_res = self.emit_tx.send(ProviderEmission {
-      config_hash: self.config_hash.clone(),
-      result: output.map(Into::into).map_err(|err| err.to_string()),
-    });
+  fn emit(&self, emission: ProviderEmission) {
+    let send_res = self.emit_tx.send(emission);
 
     if let Err(err) = send_res {
       tracing::error!("Error sending provider result: {:?}", err);
     }
   }
+
+  /// Emits an output from a provider.
+  pub fn emit_output<T>(&self, output: anyhow::Result<T>)
+  where
+    T: Into<ProviderOutput>,
+  {
+    self.emit(ProviderEmission {
+      config_hash: self.config_hash.clone(),
+      result: output.map(Into::into).map_err(|err| err.to_string()),
+    });
+  }
+
+  /// Emits an output from a provider and prevents duplicate emissions by
+  /// caching the previous emission.
+  ///
+  /// Note that this won't share the same cache if the `ProviderEmitter`
+  /// is cloned.
+  pub fn emit_output_cached<T>(&mut self, output: anyhow::Result<T>)
+  where
+    T: Into<ProviderOutput>,
+  {
+    let emission = ProviderEmission {
+      config_hash: self.config_hash.clone(),
+      result: output.map(Into::into).map_err(|err| err.to_string()),
+    };
+
+    if self.prev_emission.as_ref() != Some(&emission) {
+      self.prev_emission = Some(emission.clone());
+      self.emit(emission);
+    }
+  }
 }
 
 /// Emission from a provider.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderEmission {
   /// Hash of the provider's config.
@@ -190,6 +217,7 @@ impl ProviderManager {
       emitter: ProviderEmitter {
         emit_tx: self.emit_tx.clone(),
         config_hash: config_hash.clone(),
+        prev_emission: None,
       },
       sysinfo: self.sysinfo.clone(),
     };

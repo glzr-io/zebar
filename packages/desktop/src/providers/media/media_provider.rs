@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+  collections::{HashMap, HashSet},
+  time::Duration,
+};
 
 use anyhow::Context;
 use crossbeam::channel::{unbounded, Receiver, Sender};
@@ -68,6 +71,7 @@ impl Default for MediaSession {
 enum MediaSessionEvent {
   SessionAddOrRemove,
   CurrentSessionChanged,
+  TimelineRefresh,
   PlaybackInfoChanged(String),
   MediaPropertiesChanged(String),
   TimelinePropertiesChanged(String),
@@ -128,6 +132,13 @@ impl MediaProvider {
     // Emit initial output.
     self.emit_output();
 
+    // Create a ticker that fires every 5 seconds. GSMTC timeline
+    // properties normally only update when the end or start position
+    // changes, so we manually re-fetch them periodically to update the
+    // current position.
+    let timeline_interval =
+      crossbeam::channel::tick(Duration::from_secs(5));
+
     loop {
       crossbeam::select! {
         recv(self.event_receiver) -> event => {
@@ -137,6 +148,11 @@ impl MediaProvider {
             if let Err(err) = self.handle_event(event) {
               warn!("Error handling media session event: {}", err);
             }
+          }
+        }
+        recv(timeline_interval) -> _ => {
+          if let Err(err) = self.handle_event(MediaSessionEvent::TimelineRefresh) {
+            warn!("Error handling timeline refresh: {}", err);
           }
         }
         recv(self.common.input.sync_rx) -> input => {
@@ -173,6 +189,17 @@ impl MediaProvider {
       MediaSessionEvent::SessionAddOrRemove => {
         let manager = GsmtcManager::RequestAsync()?.get()?;
         self.update_session_states(&manager)?;
+      }
+      MediaSessionEvent::TimelineRefresh => {
+        // Update timeline properties for all playing sessions.
+        for session_state in self.session_states.values_mut() {
+          if session_state.output.is_playing {
+            Self::update_timeline_properties(
+              &mut session_state.output,
+              &session_state.session,
+            )?;
+          }
+        }
       }
       MediaSessionEvent::PlaybackInfoChanged(id) => {
         if let Some(session_state) = self.session_states.get_mut(&id) {
@@ -424,7 +451,7 @@ impl MediaProvider {
   ///
   /// Note that at times, GSMTC can have a valid session, but return empty
   /// string for all media properties.
-  fn emit_output(&self) {
+  fn emit_output(&mut self) {
     let current_session = self
       .current_session_id
       .as_ref()
@@ -437,7 +464,7 @@ impl MediaProvider {
       .map(|state| state.output.clone())
       .collect();
 
-    self.common.emitter.emit_output(Ok(MediaOutput {
+    self.common.emitter.emit_output_cached(Ok(MediaOutput {
       current_session,
       all_sessions,
     }));

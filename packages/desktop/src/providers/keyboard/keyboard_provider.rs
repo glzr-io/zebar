@@ -85,7 +85,7 @@ impl Provider for KeyboardProvider {
       crossbeam::select! {
         recv(interval.tick()) -> _ => {
           let output = self.run_interval();
-          self.common.emitter.emit_output(output);
+          self.common.emitter.emit_output_cached(output);
         }
         recv(self.common.input.sync_rx) -> input => {
           if let Ok(ProviderInputMsg::Stop) = input {
