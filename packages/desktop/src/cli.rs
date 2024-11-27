@@ -23,19 +23,19 @@ impl Cli {
 pub enum CliCommand {
   /// Opens a widget by its config path and chosen placement.
   ///
-  /// Config path is relative within the Zebar config directory (e.g.
-  /// `zebar start-widget --path starter/vanilla`).
+  /// Config path is relative within the Zebar config directory, e.g.
+  /// `zebar start-widget --path starter/vanilla`.
   ///
   /// Starts Zebar if it is not already running.
   StartWidget(StartWidgetArgs),
 
   /// Opens a widget by its config path and a preset name.
   ///
-  /// Config path is relative within the Zebar config directory (e.g.
-  /// `zebar start-preset --path start/vanilla --preset default`).
+  /// Config path is relative within the Zebar config directory, e.g.
+  /// `zebar start-widget-preset --path starter/vanilla --preset default`.
   ///
   /// Starts Zebar if it is not already running.
-  StartPreset(StartPresetArgs),
+  StartWidgetPreset(StartWidgetPresetArgs),
 
   /// Opens all widgets that are set to launch on startup.
   ///
@@ -98,7 +98,7 @@ pub enum MonitorType {
 }
 
 #[derive(Args, Clone, Debug, PartialEq)]
-pub struct StartPresetArgs {
+pub struct StartWidgetPresetArgs {
   /// Relative file path to widget config within the Zebar config
   /// directory.
   #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]

@@ -79,7 +79,10 @@ export async function startWidget(
  *
  * Config path is relative within the Zebar config directory.
  */
-export async function startPreset(configPath: string, presetName: string) {
+export async function startWidgetPreset(
+  configPath: string,
+  presetName: string,
+) {
   // Ensure the config path ends with '.zebar.json'.
   const filePath = configPath.endsWith('.zebar.json')
     ? configPath

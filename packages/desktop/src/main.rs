@@ -316,7 +316,7 @@ async fn open_widgets_by_cli_command(
         )
         .await
     }
-    CliCommand::StartPreset(args) => {
+    CliCommand::StartWidgetPreset(args) => {
       widget_factory
         .start_widget(
           &args.config_path,
