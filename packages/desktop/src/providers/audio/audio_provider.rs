@@ -35,13 +35,16 @@ use crate::providers::{
   CommonProviderState, Provider, ProviderEmitter, RuntimeType,
 };
 
-static PROVIDER_TX: OnceLock<ProviderEmitter> = OnceLock::new();
-
-static AUDIO_STATE: OnceLock<Arc<Mutex<AudioOutput>>> = OnceLock::new();
-
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioProviderConfig {}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioOutput {
+  pub playback_devices: Vec<AudioDevice>,
+  pub default_playback_device: Option<AudioDevice>,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -52,26 +55,86 @@ pub struct AudioDevice {
   pub is_default: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AudioOutput {
-  pub playback_devices: Vec<AudioDevice>,
-  pub default_playback_device: Option<AudioDevice>,
-}
-
-impl AudioOutput {
-  fn new() -> Self {
-    Self {
-      playback_devices: Vec::new(),
-      default_playback_device: None,
-    }
-  }
+/// Events that can be emitted from audio state changes.
+#[derive(Debug)]
+enum AudioEvent {
+  DeviceStateChanged,
+  VolumeChanged(String, u32),
 }
 
 #[derive(Clone)]
 struct DeviceInfo {
   name: String,
   endpoint_volume: IAudioEndpointVolume,
+}
+
+impl AudioProvider {
+  pub fn new(
+    _config: AudioProviderConfig,
+    common: CommonProviderState,
+  ) -> Self {
+    let (event_sender, event_receiver) = unbounded();
+
+    Self {
+      common,
+      event_sender,
+      event_receiver,
+    }
+  }
+
+  fn create_audio_manager(&mut self) -> anyhow::Result<()> {
+    unsafe {
+      let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+      let enumerator: IMMDeviceEnumerator =
+        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+
+      let mut device_manager =
+        DeviceManager::new(enumerator.clone(), self.event_sender.clone());
+
+      // Initial device enumeration and output emission
+      let output = device_manager.enumerate_devices()?;
+      self.common.emitter.emit_output(Ok(output));
+
+      // Register for device notifications
+      let notification_handler =
+        DeviceNotificationHandler::new(self.event_sender.clone());
+      enumerator.RegisterEndpointNotificationCallback(
+        &IMMNotificationClient::from(notification_handler),
+      )?;
+
+      // Process events
+      while let Ok(event) = self.event_receiver.recv() {
+        match event {
+          AudioEvent::DeviceStateChanged => {
+            if let Ok(output) = device_manager.enumerate_devices() {
+              self.common.emitter.emit_output(Ok(output));
+            }
+          }
+          AudioEvent::VolumeChanged(device_id, volume) => {
+            if let Ok(mut output) = device_manager.enumerate_devices() {
+              if let Some(device) = output
+                .playback_devices
+                .iter_mut()
+                .find(|d| d.device_id == device_id)
+              {
+                device.volume = volume;
+              }
+              if let Some(default_device) =
+                &mut output.default_playback_device
+              {
+                if default_device.device_id == device_id {
+                  default_device.volume = volume;
+                }
+              }
+              self.common.emitter.emit_output(Ok(output));
+            }
+          }
+        }
+      }
+
+      Ok(())
+    }
+  }
 }
 
 #[derive(Clone)]
@@ -377,21 +440,7 @@ impl Provider for AudioProvider {
   }
 
   fn start_sync(&mut self) {
-    PROVIDER_TX
-      .set(self.common.emitter.clone())
-      .expect("Error setting provider tx in audio provider");
-
-    AUDIO_STATE
-      .set(Arc::new(Mutex::new(AudioOutput::new())))
-      .expect("Error setting initial audio state");
-
-    // Create a channel for volume updates.
-    let (update_tx, update_rx) = mpsc::channel(100);
-
-    // Spawn task for handling volume updates.
-    task::spawn_blocking(move || Self::handle_volume_updates(update_rx));
-
-    if let Err(err) = Self::create_audio_manager(update_tx) {
+    if let Err(err) = self.create_audio_manager() {
       self.common.emitter.emit_output::<AudioOutput>(Err(err));
     }
   }
