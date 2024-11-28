@@ -1,22 +1,13 @@
-use std::{
-  collections::{HashMap, HashSet},
-  ops::Mul,
-  sync::{Arc, Mutex, OnceLock},
-  time::Duration,
-};
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Context;
 use crossbeam::channel;
 use serde::{Deserialize, Serialize};
-use tokio::{
-  sync::mpsc::{self},
-  task,
-};
 use tracing::debug;
 use windows::Win32::{
   Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
   Media::Audio::{
-    eCapture, eMultimedia, eRender, EDataFlow, ERole,
+    eCapture, eRender, EDataFlow, ERole,
     Endpoints::{
       IAudioEndpointVolume, IAudioEndpointVolumeCallback,
       IAudioEndpointVolumeCallback_Impl,
@@ -25,19 +16,14 @@ use windows::Win32::{
     IMMNotificationClient_Impl, MMDeviceEnumerator,
     AUDIO_VOLUME_NOTIFICATION_DATA, DEVICE_STATE, DEVICE_STATE_ACTIVE,
   },
-  System::Com::{
-    CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
-    STGM_READ,
-  },
+  System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ},
   UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY},
 };
 use windows_core::PCWSTR;
 
 use crate::{
   common::windows::COM_INIT,
-  providers::{
-    CommonProviderState, Provider, ProviderEmitter, RuntimeType,
-  },
+  providers::{CommonProviderState, Provider, RuntimeType},
 };
 
 #[derive(Deserialize, Debug)]
@@ -49,6 +35,7 @@ pub struct AudioProviderConfig {}
 pub struct AudioOutput {
   pub playback_devices: Vec<AudioDevice>,
   pub recording_devices: Vec<AudioDevice>,
+  pub all_devices: Vec<AudioDevice>,
   pub default_playback_device: Option<AudioDevice>,
   pub default_recording_device: Option<AudioDevice>,
 }
@@ -63,13 +50,12 @@ pub struct AudioDevice {
   pub is_default: bool,
 }
 
-// TODO: Should there be handling for devices that can be both playback and
-// recording?
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DeviceType {
   Playback,
   Recording,
+  Hybrid,
 }
 
 impl From<EDataFlow> for DeviceType {
@@ -77,7 +63,7 @@ impl From<EDataFlow> for DeviceType {
     match flow {
       e if e == eRender => Self::Playback,
       e if e == eCapture => Self::Recording,
-      _ => Self::Playback,
+      _ => Self::Hybrid,
     }
   }
 }
@@ -95,19 +81,19 @@ enum AudioEvent {
 /// Holds the state of an audio device.
 #[derive(Clone)]
 struct DeviceState {
-  imm_device: IMMDevice,
+  device: IMMDevice,
   output: AudioDevice,
   volume_callback: IAudioEndpointVolume,
 }
 
 pub struct AudioProvider {
   common: CommonProviderState,
-  enumerator: Option<IMMDeviceEnumerator>,
+  device_enumerator: Option<IMMDeviceEnumerator>,
   default_playback_id: Option<String>,
   default_recording_id: Option<String>,
   devices: HashMap<String, DeviceState>,
-  event_sender: channel::Sender<AudioEvent>,
-  event_receiver: channel::Receiver<AudioEvent>,
+  event_tx: channel::Sender<AudioEvent>,
+  event_rx: channel::Receiver<AudioEvent>,
 }
 
 impl AudioProvider {
@@ -115,39 +101,39 @@ impl AudioProvider {
     _config: AudioProviderConfig,
     common: CommonProviderState,
   ) -> Self {
-    let (event_sender, event_receiver) = channel::unbounded();
+    let (event_tx, event_rx) = channel::unbounded();
 
     Self {
       common,
-      enumerator: None,
+      device_enumerator: None,
       default_playback_id: None,
       default_recording_id: None,
       devices: HashMap::new(),
-      event_sender,
-      event_receiver,
+      event_tx,
+      event_rx,
     }
   }
 
   /// Main entry point.
-  fn start_listening(&mut self) -> anyhow::Result<()> {
+  fn start(&mut self) -> anyhow::Result<()> {
     COM_INIT.with(|_| unsafe {
       let device_enumerator: IMMDeviceEnumerator =
         CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
 
-      // Register device callback.
+      // Register device add/remove callback.
       device_enumerator.RegisterEndpointNotificationCallback(
         &IMMNotificationClient::from(DeviceCallback {
-          event_sender: self.event_sender.clone(),
+          event_sender: self.event_tx.clone(),
         }),
       )?;
 
-      self.enumerator = Some(device_enumerator);
+      self.device_enumerator = Some(device_enumerator);
 
       // Emit initial state.
       self.update_device_state()?;
 
       // Listen to audio-related events.
-      while let Ok(event) = self.event_receiver.recv() {
+      while let Ok(event) = self.event_rx.recv() {
         if let Err(err) = self.handle_event(event) {
           debug!("Error handling audio event: {}", err);
         }
@@ -157,29 +143,25 @@ impl AudioProvider {
     })
   }
 
-  /// Enumerates active devices of a specific type
+  /// Enumerates active devices of a specific type.
   fn enumerate_devices(
     &self,
     flow: EDataFlow,
   ) -> anyhow::Result<Vec<IMMDevice>> {
-    let enumerator = self
-      .enumerator
-      .as_ref()
-      .context("Enumerator not initialized.")?;
+    let collection = unsafe {
+      self
+        .device_enumerator
+        .as_ref()
+        .context("Device enumerator not initialized.")?
+        .EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE)
+    }?;
 
-    unsafe {
-      let collection =
-        enumerator.EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE)?;
-      let count = collection.GetCount()?;
+    let count = unsafe { collection.GetCount() }?;
+    let devices = (0..count)
+      .filter_map(|i| unsafe { collection.Item(i).ok() })
+      .collect::<Vec<_>>();
 
-      let mut devices = Vec::with_capacity(count as usize);
-      for i in 0..count {
-        if let Ok(device) = collection.Item(i) {
-          device.devices.push(device);
-        }
-      }
-      Ok(devices)
-    }
+    Ok(devices)
   }
 
   fn get_device_properties(
@@ -206,7 +188,7 @@ impl AudioProvider {
 
     let callback = VolumeCallback {
       device_id,
-      event_sender: self.event_sender.clone(),
+      event_sender: self.event_tx.clone(),
     };
 
     unsafe {
@@ -218,39 +200,47 @@ impl AudioProvider {
     Ok(endpoint_volume)
   }
 
-  fn build_output(&self) -> AudioOutput {
-    let mut playback_devices = Vec::new();
-    let mut recording_devices = Vec::new();
-    let mut default_playback_device = None;
-    let mut default_recording_device = None;
+  /// Emits an `AudioOutput` update through the provider's emitter.
+  fn emit_output(&mut self) {
+    let default_playback_device = self
+      .default_playback_id
+      .as_ref()
+      .and_then(|id| self.devices.get(id))
+      .map(|state| state.output.clone());
 
-    for (id, state) in &self.devices {
-      match &state.output.device_type {
-        DeviceType::Playback => {
-          if Some(id) == self.default_playback_id.as_ref() {
-            default_playback_device = Some(state.output.clone());
-          }
-          playback_devices.push(state.output.clone());
-        }
-        DeviceType::Recording => {
-          if Some(id) == self.default_recording_id.as_ref() {
-            default_recording_device = Some(state.output.clone());
-          }
-          recording_devices.push(state.output.clone());
-        }
-      }
-    }
+    let default_recording_device = self
+      .default_recording_id
+      .as_ref()
+      .and_then(|id| self.devices.get(id))
+      .map(|state| state.output.clone());
 
-    // Sort devices by name for consistent ordering.
-    playback_devices.sort_by(|a, b| a.name.cmp(&b.name));
-    recording_devices.sort_by(|a, b| a.name.cmp(&b.name));
+    let playback_devices = self
+      .devices
+      .values()
+      .filter(|state| state.output.device_type == DeviceType::Playback)
+      .map(|state| state.output.clone())
+      .collect();
 
-    AudioOutput {
+    let recording_devices = self
+      .devices
+      .values()
+      .filter(|state| state.output.device_type == DeviceType::Recording)
+      .map(|state| state.output.clone())
+      .collect();
+
+    let all_devices = self
+      .devices
+      .values()
+      .map(|state| state.output.clone())
+      .collect();
+
+    self.common.emitter.emit_output_cached(Ok(AudioOutput {
       playback_devices,
       recording_devices,
+      all_devices,
       default_playback_device,
       default_recording_device,
-    }
+    }));
   }
 
   fn update_device_state(&mut self) -> anyhow::Result<()> {
@@ -320,10 +310,10 @@ impl AudioProvider {
 
   fn handle_event(&mut self, event: AudioEvent) -> anyhow::Result<()> {
     match event {
-      AudioEvent::DeviceAdded(_, _)
-      | AudioEvent::DeviceRemoved(_, _)
-      | AudioEvent::DeviceStateChanged(_, _, _)
-      | AudioEvent::DefaultDeviceChanged(_, _) => {
+      AudioEvent::DeviceAdded(..)
+      | AudioEvent::DeviceRemoved(..)
+      | AudioEvent::DeviceStateChanged(..)
+      | AudioEvent::DefaultDeviceChanged(..) => {
         self.update_device_state()?;
       }
       AudioEvent::VolumeChanged(device_id, new_volume) => {
@@ -340,23 +330,23 @@ impl AudioProvider {
 
 impl Drop for AudioProvider {
   fn drop(&mut self) {
-    // Deregister volume callbacks.
-    for state in self.devices.values() {
-      unsafe {
-        let _ = state
-          .volume_callback
-          .UnregisterControlChangeNotify(&state.volume_callback);
-      }
-    }
+    // // Deregister volume callbacks.
+    // for state in self.devices.values() {
+    //   unsafe {
+    //     let _ = state
+    //       .volume_callback
+    //       .UnregisterControlChangeNotify(&state.volume_callback);
+    //   }
+    // }
 
-    // Deregister device notification callback.
-    if let Some(enumerator) = &self.enumerator {
-      unsafe {
-        let _ = enumerator.UnregisterEndpointNotificationCallback(
-          &IMMNotificationClient::null(),
-        );
-      }
-    }
+    // // Deregister device notification callback.
+    // if let Some(enumerator) = &self.device_enumerator {
+    //   unsafe {
+    //     let _ = enumerator.UnregisterEndpointNotificationCallback(
+    //       &IMMNotificationClient::null(),
+    //     );
+    //   }
+    // }
   }
 }
 
@@ -366,7 +356,7 @@ impl Provider for AudioProvider {
   }
 
   fn start_sync(&mut self) {
-    if let Err(err) = self.start_listening() {
+    if let Err(err) = self.start() {
       self.common.emitter.emit_output::<AudioOutput>(Err(err));
     }
   }
@@ -399,7 +389,7 @@ impl IAudioEndpointVolumeCallback_Impl for VolumeCallback_Impl {
   }
 }
 
-/// Callback handler for device notifications.
+/// Callback handler for device change notifications.
 ///
 /// This is used to detect when new devices are added or removed, and when
 /// the default device changes.
