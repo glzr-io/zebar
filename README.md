@@ -92,10 +92,13 @@ No config options.
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
-| `deviceId`         | Device ID. | `string` |
+| `id`         | Device ID. | `string` |
 | `name`      | Friendly display name of device. | `string` |
-| `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number` |
-| `isDefault` | `true` if the device is selected as the default playback device.| `boolean` |
+| `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number \| null` |
+| `roles` | Roles the device is assigned to. | `('multimedia' \| 'communications' \| 'console')[]` |
+| `type` | Type of the device. | `'playback' \| 'recording' \| 'hybrid'` |
+| `isDefaultPlayback` | `true` if the device is selected as the default playback device.| `boolean` |
+| `isDefaultRecording` | `true` if the device is selected as the default recording device.| `boolean` |
 
 ### Battery
 

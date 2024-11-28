@@ -7,13 +7,21 @@ export interface AudioProviderConfig {
 export type AudioProvider = Provider<AudioProviderConfig, AudioOutput>;
 
 export interface AudioOutput {
-  defaultPlaybackDevice: AudioDevice;
+  defaultPlaybackDevice: AudioDevice | null;
+  defaultRecordingDevice: AudioDevice | null;
   playbackDevices: AudioDevice[];
+  recordingDevices: AudioDevice[];
 }
 
 export interface AudioDevice {
-  deviceId: string;
+  id: string;
   name: string;
-  volume: number;
-  isDefault: boolean;
+  volume: number | null;
+  roles: AudioDeviceRole[];
+  type: AudioDeviceType;
+  isDefaultPlayback: boolean;
+  isDefaultRecording: boolean;
 }
+
+export type AudioDeviceRole = 'multimedia' | 'communications' | 'console';
+export type AudioDeviceType = 'playback' | 'recording' | 'hybrid';
