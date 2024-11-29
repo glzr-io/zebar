@@ -95,6 +95,7 @@ enum AudioEvent {
 struct DeviceState {
   com_device: IMMDevice,
   com_volume: IAudioEndpointVolume,
+  com_volume_callback: VolumeCallback,
   output: AudioDevice,
 }
 
@@ -169,20 +170,14 @@ impl AudioProvider {
     Ok(())
   }
 
-  /// Enumerates active devices of a specific type.
-  fn devices_of_type(
-    &self,
-    device_type: &DeviceType,
-  ) -> anyhow::Result<Vec<IMMDevice>> {
+  /// Enumerates active devices of all types.
+  fn enumerate_devices(&self) -> anyhow::Result<Vec<IMMDevice>> {
     let collection = unsafe {
       self
         .com_enumerator
         .as_ref()
         .context("Device enumerator not initialized.")?
-        .EnumAudioEndpoints(
-          EDataFlow::from(device_type.clone()),
-          DEVICE_STATE_ACTIVE,
-        )
+        .EnumAudioEndpoints(eAll, DEVICE_STATE_ACTIVE)
     }?;
 
     let count = unsafe { collection.GetCount() }?;
@@ -211,7 +206,7 @@ impl AudioProvider {
     &self,
     com_device: &IMMDevice,
     device_id: String,
-  ) -> anyhow::Result<IAudioEndpointVolume> {
+  ) -> anyhow::Result<(IAudioEndpointVolume, VolumeCallback)> {
     let endpoint_volume = unsafe {
       com_device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
     }?;
@@ -223,11 +218,11 @@ impl AudioProvider {
 
     unsafe {
       endpoint_volume.RegisterControlChangeNotify(
-        &IAudioEndpointVolumeCallback::from(callback),
+        &IAudioEndpointVolumeCallback::from(callback.clone()),
       )
     }?;
 
-    Ok(endpoint_volume)
+    Ok((endpoint_volume, callback))
   }
 
   /// Emits an `AudioOutput` update through the provider's emitter.
@@ -310,45 +305,65 @@ impl AudioProvider {
     let mut found_ids = HashSet::new();
 
     // Process both playback and recording devices.
-    for device_type in [DeviceType::Playback, DeviceType::Recording] {
-      for com_device in self.devices_of_type(&device_type)? {
-        let device_id = unsafe { com_device.GetId()?.to_string() }?;
-        found_ids.insert(device_id.clone());
+    for com_device in self.enumerate_devices()? {
+      let device_id = unsafe { com_device.GetId()?.to_string() }?;
+      found_ids.insert(device_id.clone());
 
-        if !self.device_states.contains_key(&device_id) {
-          debug!("New audio device detected: {}", device_id);
+      if !self.device_states.contains_key(&device_id) {
+        debug!("New audio device detected: {}", device_id);
 
-          let is_default =
-            self.is_default_device(&device_id, &device_type);
+        let device_type = DeviceType::from(unsafe {
+          com_device.cast::<IMMEndpoint>()?.GetDataFlow()
+        }?);
 
-          let com_volume = self
-            .register_volume_callback(&com_device, device_id.clone())?;
+        let is_default = self.is_default_device(&device_id, &device_type);
 
-          let volume = unsafe { com_volume.GetMasterVolumeLevelScalar() }?;
+        let (com_volume, com_volume_callback) =
+          self.register_volume_callback(&com_device, device_id.clone())?;
 
-          let output = AudioDevice {
-            name: self.device_name(&com_device)?,
-            device_id: device_id.clone(),
-            device_type: device_type.clone(),
-            volume: (volume * 100.0).round() as u32,
-            is_default,
-          };
+        let volume = unsafe { com_volume.GetMasterVolumeLevelScalar() }?;
 
-          self.device_states.insert(
-            device_id,
-            DeviceState {
-              com_device,
-              output,
-              com_volume,
-            },
-          );
-        }
+        let output = AudioDevice {
+          name: self.device_name(&com_device)?,
+          device_id: device_id.clone(),
+          device_type: device_type.clone(),
+          volume: (volume * 100.0).round() as u32,
+          is_default,
+        };
+
+        self.device_states.insert(
+          device_id,
+          DeviceState {
+            com_device,
+            output,
+            com_volume,
+            com_volume_callback,
+          },
+        );
       }
     }
 
+    let removed_ids = self
+      .device_states
+      .keys()
+      .filter(|id| !found_ids.contains(*id))
+      .cloned()
+      .collect::<Vec<String>>();
+
     // Remove devices that are no longer active.
-    // TODO: Remove volume callbacks.
-    self.device_states.retain(|id, _| found_ids.contains(id));
+    for device_id in &removed_ids {
+      if let Some(state) = self.device_states.remove(device_id) {
+        debug!("Audio device removed: {}", device_id);
+
+        unsafe {
+          state.com_volume.UnregisterControlChangeNotify(
+            &state
+              .com_volume_callback
+              .cast::<IAudioEndpointVolumeCallback>()?,
+          )
+        }?;
+      }
+    }
 
     Ok(())
   }
