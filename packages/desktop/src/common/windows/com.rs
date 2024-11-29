@@ -1,6 +1,5 @@
 use windows::Win32::System::Com::{
-  CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED,
-  COINIT_MULTITHREADED,
+  CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED,
 };
 
 thread_local! {
@@ -13,8 +12,8 @@ thread_local! {
 pub struct ComInit();
 
 impl ComInit {
-  /// Initializes COM on the current thread with apartment threading model.
-  /// `COINIT_APARTMENTTHREADED` is required for shell COM objects.
+  /// Initializes COM on the current thread with multithreaded object
+  /// concurrency.
   ///
   /// # Panics
   ///

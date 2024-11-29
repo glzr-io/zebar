@@ -128,48 +128,49 @@ impl AudioProvider {
 
   /// Main entry point.
   fn start(&mut self) -> anyhow::Result<()> {
-    let _com = ComInit::new();
+    COM_INIT.with(|_| {
+      let com_enumerator: IMMDeviceEnumerator = unsafe {
+        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+      }?;
 
-    let com_enumerator: IMMDeviceEnumerator =
-      unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }?;
-
-    // Note that this would sporadically segfault if we didn't keep a
-    // separate variable for `IMMNotificationClient` when registering the
-    // callback. Something funky with lifetimes and the COM API's.
-    let com_device_callback: IMMNotificationClient = DeviceCallback {
-      event_tx: self.event_tx.clone(),
-    }
-    .into();
-
-    // Register device add/remove callback.
-    unsafe {
-      com_enumerator
-        .RegisterEndpointNotificationCallback(&com_device_callback)
-    }?;
-
-    self.com_enumerator = Some(com_enumerator);
-
-    // Update device list and default device IDs.
-    for com_device in self.active_devices()? {
-      self.add_device(com_device)?;
-    }
-
-    self.default_playback_id =
-      self.default_device_id(&DeviceType::Playback)?;
-    self.default_recording_id =
-      self.default_device_id(&DeviceType::Recording)?;
-
-    // Emit initial output.
-    self.emit_output();
-
-    // Listen to audio-related events.
-    while let Ok(event) = self.event_rx.recv() {
-      if let Err(err) = self.handle_event(event) {
-        info!("Error handling audio event: {}", err);
+      // Note that this would sporadically segfault if we didn't keep a
+      // separate variable for `IMMNotificationClient` when registering the
+      // callback. Something funky with lifetimes and the COM API's.
+      let com_device_callback: IMMNotificationClient = DeviceCallback {
+        event_tx: self.event_tx.clone(),
       }
-    }
+      .into();
 
-    Ok(())
+      // Register device add/remove callback.
+      unsafe {
+        com_enumerator
+          .RegisterEndpointNotificationCallback(&com_device_callback)
+      }?;
+
+      self.com_enumerator = Some(com_enumerator);
+
+      // Update device list and default device IDs.
+      for com_device in self.active_devices()? {
+        self.add_device(com_device)?;
+      }
+
+      self.default_playback_id =
+        self.default_device_id(&DeviceType::Playback)?;
+      self.default_recording_id =
+        self.default_device_id(&DeviceType::Recording)?;
+
+      // Emit initial output.
+      self.emit_output();
+
+      // Listen to audio-related events.
+      while let Ok(event) = self.event_rx.recv() {
+        if let Err(err) = self.handle_event(event) {
+          info!("Error handling audio event: {}", err);
+        }
+      }
+
+      Ok(())
+    })
   }
 
   /// Enumerates active devices of all device types.
