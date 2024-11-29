@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use super::{ProviderFunction, ProviderFunctionResponse};
 
 #[async_trait]
-pub trait Provider: Send + Sync {
+pub trait Provider {
   fn runtime_type(&self) -> RuntimeType;
 
   /// Callback for when the provider is started.

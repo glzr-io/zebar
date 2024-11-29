@@ -244,59 +244,77 @@ impl ProviderManager {
     config_hash: String,
     common: CommonProviderState,
   ) -> anyhow::Result<(task::JoinHandle<()>, RuntimeType)> {
-    let mut provider: Box<dyn Provider> = match config {
+    type CreateProviderFn = (
+      RuntimeType,
+      Box<dyn FnOnce() -> Box<dyn Provider> + Send + 'static>,
+    );
+
+    let (runtime_type, create_provider): CreateProviderFn = match config {
       #[cfg(windows)]
-      ProviderConfig::Audio(config) => {
-        Box::new(AudioProvider::new(config, common))
-      }
-      ProviderConfig::Battery(config) => {
-        Box::new(BatteryProvider::new(config, common))
-      }
-      ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, common))
-      }
-      ProviderConfig::Host(config) => {
-        Box::new(HostProvider::new(config, common))
-      }
-      ProviderConfig::Ip(config) => {
-        Box::new(IpProvider::new(config, common))
-      }
+      ProviderConfig::Audio(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(AudioProvider::new(config, common))),
+      ),
+      ProviderConfig::Battery(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(BatteryProvider::new(config, common))),
+      ),
+      ProviderConfig::Cpu(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(CpuProvider::new(config, common))),
+      ),
+      ProviderConfig::Host(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(HostProvider::new(config, common))),
+      ),
+      ProviderConfig::Ip(config) => (
+        RuntimeType::Async,
+        Box::new(|| Box::new(IpProvider::new(config, common))),
+      ),
       #[cfg(windows)]
-      ProviderConfig::Komorebi(config) => {
-        Box::new(KomorebiProvider::new(config, common))
-      }
+      ProviderConfig::Komorebi(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(KomorebiProvider::new(config, common))),
+      ),
       #[cfg(windows)]
-      ProviderConfig::Media(config) => {
-        Box::new(MediaProvider::new(config, common))
-      }
-      ProviderConfig::Memory(config) => {
-        Box::new(MemoryProvider::new(config, common))
-      }
-      ProviderConfig::Disk(config) => {
-        Box::new(DiskProvider::new(config, common))
-      }
-      ProviderConfig::Network(config) => {
-        Box::new(NetworkProvider::new(config, common))
-      }
-      ProviderConfig::Weather(config) => {
-        Box::new(WeatherProvider::new(config, common))
-      }
+      ProviderConfig::Media(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(MediaProvider::new(config, common))),
+      ),
+      ProviderConfig::Memory(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(MemoryProvider::new(config, common))),
+      ),
+      ProviderConfig::Disk(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(DiskProvider::new(config, common))),
+      ),
+      ProviderConfig::Network(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(NetworkProvider::new(config, common))),
+      ),
+      ProviderConfig::Weather(config) => (
+        RuntimeType::Async,
+        Box::new(|| Box::new(WeatherProvider::new(config, common))),
+      ),
       #[cfg(windows)]
-      ProviderConfig::Keyboard(config) => {
-        Box::new(KeyboardProvider::new(config, common))
-      }
+      ProviderConfig::Keyboard(config) => (
+        RuntimeType::Sync,
+        Box::new(|| Box::new(KeyboardProvider::new(config, common))),
+      ),
       #[allow(unreachable_patterns)]
       _ => bail!("Provider not supported on this operating system."),
     };
 
     // Spawn the provider's task based on its runtime type.
-    let runtime_type = provider.runtime_type();
     let task_handle = match &runtime_type {
       RuntimeType::Async => task::spawn(async move {
-        provider.start_async().await;
+        // let mut provider = create_provider();
+        // provider.start_async().await;
         info!("Provider stopped: {}", config_hash);
       }),
       RuntimeType::Sync => task::spawn_blocking(move || {
+        let mut provider = create_provider();
         provider.start_sync();
         info!("Provider stopped: {}", config_hash);
       }),

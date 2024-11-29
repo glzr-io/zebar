@@ -164,17 +164,17 @@ impl AudioProvider {
     Ok(devices)
   }
 
-  fn get_device_properties(
-    &self,
-    device: &IMMDevice,
-  ) -> anyhow::Result<(String, String)> {
-    unsafe {
-      let device_id = device.GetId()?.to_string()?;
-      let store: IPropertyStore = device.OpenPropertyStore(STGM_READ)?;
-      let friendly_name =
-        store.GetValue(&PKEY_Device_FriendlyName)?.to_string();
-      Ok((device_id, friendly_name))
-    }
+  /// Gets the friendly name of a device.
+  ///
+  /// Returns a string. For example, "Headphones (WH-1000XM3 Stereo)".
+  fn device_name(&self, device: &IMMDevice) -> anyhow::Result<String> {
+    let store: IPropertyStore =
+      unsafe { device.OpenPropertyStore(STGM_READ) }?;
+
+    let friendly_name =
+      unsafe { store.GetValue(&PKEY_Device_FriendlyName)?.to_string() };
+
+    Ok(friendly_name)
   }
 
   /// Registers volume callbacks for a device.
@@ -183,17 +183,16 @@ impl AudioProvider {
     device: &IMMDevice,
     device_id: String,
   ) -> anyhow::Result<IAudioEndpointVolume> {
-    let endpoint_volume: IAudioEndpointVolume =
-      unsafe { device.Activate(CLSCTX_ALL, None) }?;
-
-    let callback = VolumeCallback {
-      device_id,
-      event_sender: self.event_tx.clone(),
-    };
+    let endpoint_volume = unsafe {
+      device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
+    }?;
 
     unsafe {
       endpoint_volume.RegisterControlChangeNotify(
-        &IAudioEndpointVolumeCallback::from(callback),
+        &IAudioEndpointVolumeCallback::from(VolumeCallback {
+          device_id,
+          event_sender: self.event_tx.clone(),
+        }),
       )
     }?;
 
@@ -202,45 +201,41 @@ impl AudioProvider {
 
   /// Emits an `AudioOutput` update through the provider's emitter.
   fn emit_output(&mut self) {
-    let default_playback_device = self
-      .default_playback_id
-      .as_ref()
-      .and_then(|id| self.devices.get(id))
-      .map(|state| state.output.clone());
+    let mut output = AudioOutput {
+      playback_devices: Vec::new(),
+      recording_devices: Vec::new(),
+      all_devices: Vec::new(),
+      default_playback_device: None,
+      default_recording_device: None,
+    };
 
-    let default_recording_device = self
-      .default_recording_id
-      .as_ref()
-      .and_then(|id| self.devices.get(id))
-      .map(|state| state.output.clone());
+    for (id, state) in &self.devices {
+      let device = &state.output;
+      output.all_devices.push(device.clone());
 
-    let playback_devices = self
-      .devices
-      .values()
-      .filter(|state| state.output.device_type == DeviceType::Playback)
-      .map(|state| state.output.clone())
-      .collect();
+      match device.device_type {
+        DeviceType::Playback => {
+          output.playback_devices.push(device.clone());
+        }
+        DeviceType::Recording => {
+          output.recording_devices.push(device.clone());
+        }
+        _ => {
+          output.playback_devices.push(device.clone());
+          output.recording_devices.push(device.clone());
+        }
+      }
 
-    let recording_devices = self
-      .devices
-      .values()
-      .filter(|state| state.output.device_type == DeviceType::Recording)
-      .map(|state| state.output.clone())
-      .collect();
+      if self.default_playback_id.as_ref() == Some(id) {
+        output.default_playback_device = Some(device.clone());
+      }
 
-    let all_devices = self
-      .devices
-      .values()
-      .map(|state| state.output.clone())
-      .collect();
+      if self.default_recording_id.as_ref() == Some(id) {
+        output.default_recording_device = Some(device.clone());
+      }
+    }
 
-    self.common.emitter.emit_output_cached(Ok(AudioOutput {
-      playback_devices,
-      recording_devices,
-      all_devices,
-      default_playback_device,
-      default_recording_device,
-    }));
+    self.common.emitter.emit_output(Ok(output));
   }
 
   fn update_device_state(&mut self) -> anyhow::Result<()> {
@@ -300,14 +295,13 @@ impl AudioProvider {
       }
     }
 
-    // Remove devices that are no longer active
+    // Remove devices that are no longer active.
     self.devices.retain(|id, _| active_devices.contains(id));
 
-    // Emit updated state
-    self.common.emitter.emit_output(Ok(self.build_output()));
     Ok(())
   }
 
+  /// Handles an audio event.
   fn handle_event(&mut self, event: AudioEvent) -> anyhow::Result<()> {
     match event {
       AudioEvent::DeviceAdded(..)
@@ -319,10 +313,12 @@ impl AudioProvider {
       AudioEvent::VolumeChanged(device_id, new_volume) => {
         if let Some(state) = self.devices.get_mut(&device_id) {
           state.output.volume = (new_volume * 100.0).round() as u32;
-          self.common.emitter.emit_output(Ok(self.build_output()));
         }
       }
     }
+
+    // Emit new output after handling the event.
+    self.emit_output();
 
     Ok(())
   }
