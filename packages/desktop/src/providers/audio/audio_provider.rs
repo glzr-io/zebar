@@ -3,23 +3,28 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Context;
 use crossbeam::channel;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, info};
 use windows::Win32::{
-  Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
+  Devices::FunctionDiscovery::{
+    PKEY_Device_DeviceDesc, PKEY_Device_FriendlyName,
+  },
   Media::Audio::{
-    eCapture, eRender, EDataFlow, ERole,
+    eAll, eCapture, eRender, EDataFlow, ERole,
     Endpoints::{
       IAudioEndpointVolume, IAudioEndpointVolumeCallback,
       IAudioEndpointVolumeCallback_Impl,
     },
-    IMMDevice, IMMDeviceEnumerator, IMMNotificationClient,
+    IMMDevice, IMMDeviceEnumerator, IMMEndpoint, IMMNotificationClient,
     IMMNotificationClient_Impl, MMDeviceEnumerator,
     AUDIO_VOLUME_NOTIFICATION_DATA, DEVICE_STATE, DEVICE_STATE_ACTIVE,
   },
-  System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ},
+  System::Com::{
+    CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
+    STGM_READ,
+  },
   UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY},
 };
-use windows_core::PCWSTR;
+use windows_core::{Interface, PCWSTR};
 
 use crate::{
   common::windows::COM_INIT,
@@ -116,31 +121,66 @@ impl AudioProvider {
 
   /// Main entry point.
   fn start(&mut self) -> anyhow::Result<()> {
-    COM_INIT.with(|_| unsafe {
-      let device_enumerator: IMMDeviceEnumerator =
-        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+    let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
 
-      // Register device add/remove callback.
+    let device_enumerator: IMMDeviceEnumerator =
+      unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }?;
+
+    // Note that this would sporadically segfault if we didn't keep a
+    // separate variable for `DeviceCallback` when registering the
+    // callback. Something funky with lifetimes and the COM API's.
+    let callback = DeviceCallback {
+      event_sender: self.event_tx.clone(),
+    };
+
+    // Register device add/remove callback.
+    unsafe {
       device_enumerator.RegisterEndpointNotificationCallback(
-        &IMMNotificationClient::from(DeviceCallback {
-          event_sender: self.event_tx.clone(),
-        }),
-      )?;
+        &IMMNotificationClient::from(callback),
+      )
+    }?;
 
-      self.device_enumerator = Some(device_enumerator);
+    self.device_enumerator = Some(device_enumerator);
 
-      // Emit initial state.
-      self.update_device_state()?;
+    // Emit initial state.
 
-      // Listen to audio-related events.
-      while let Ok(event) = self.event_rx.recv() {
-        if let Err(err) = self.handle_event(event) {
-          debug!("Error handling audio event: {}", err);
-        }
+    let devices = self.enumerate_devices(eRender)?;
+
+    for (i, device) in devices.iter().enumerate() {
+      println!("Device: {:?}", device);
+      println!("Device ID: {:?}", unsafe { device.GetId()?.to_string() });
+      let endpoint = unsafe { device.cast::<IMMEndpoint>() }?;
+
+      println!("Device State: {:?}", unsafe {
+        device.GetState().unwrap()
+      });
+      println!("Endpoint: {:?}", unsafe { endpoint.GetDataFlow() });
+      // Get device properties for debugging
+      if let Ok(properties) =
+        unsafe { device.OpenPropertyStore(STGM_READ) }
+      {
+        let friendly_name = unsafe {
+          properties.GetValue(&PKEY_Device_FriendlyName)?.to_string()
+        };
+        info!("Friendly Name: {}", friendly_name);
+        let device_desc = unsafe {
+          properties.GetValue(&PKEY_Device_DeviceDesc)?.to_string()
+        };
+        info!("Description: {}", device_desc);
+      } else {
+        tracing::error!("Failed to get properties for device {}", i);
       }
+    }
+    // self.update_device_state()?;
 
-      Ok(())
-    })
+    // Listen to audio-related events.
+    while let Ok(event) = self.event_rx.recv() {
+      if let Err(err) = self.handle_event(event) {
+        info!("Error handling audio event: {}", err);
+      }
+    }
+
+    Ok(())
   }
 
   /// Enumerates active devices of a specific type.
@@ -153,7 +193,7 @@ impl AudioProvider {
         .device_enumerator
         .as_ref()
         .context("Device enumerator not initialized.")?
-        .EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE)
+        .EnumAudioEndpoints(eAll, DEVICE_STATE_ACTIVE)
     }?;
 
     let count = unsafe { collection.GetCount() }?;
@@ -187,12 +227,14 @@ impl AudioProvider {
       device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
     }?;
 
+    let callback = VolumeCallback {
+      device_id,
+      event_sender: self.event_tx.clone(),
+    };
+
     unsafe {
       endpoint_volume.RegisterControlChangeNotify(
-        &IAudioEndpointVolumeCallback::from(VolumeCallback {
-          device_id,
-          event_sender: self.event_tx.clone(),
-        }),
+        &IAudioEndpointVolumeCallback::from(callback),
       )
     }?;
 
@@ -239,66 +281,67 @@ impl AudioProvider {
   }
 
   fn update_device_state(&mut self) -> anyhow::Result<()> {
-    let mut active_devices = HashSet::new();
-
-    // Process both playback and recording devices
-    for flow in [eRender, eCapture] {
-      let devices = self.enumerate_devices(flow)?;
-      let default_device = self.get_default_device(flow).ok();
-      let default_id = default_device
-        .as_ref()
-        .and_then(|d| unsafe { d.GetId().ok() })
-        .and_then(|id| unsafe { id.to_string().ok() });
-
-      // Update default device IDs
-      match flow {
-        e if e == eRender => self.default_playback_id = default_id.clone(),
-        e if e == eCapture => self.default_recording_id = default_id,
-        _ => {}
-      }
-
-      for device in devices {
-        let (device_id, _) = self.get_device_info(&device, flow)?;
-        active_devices.insert(device_id.clone());
-
-        let endpoint_volume =
-          if let Some(state) = self.devices.get(&device_id) {
-            state.volume_callback.clone()
-          } else {
-            self.register_volume_callback(&device, device_id.clone())?
-          };
-
-        let is_default = match flow {
-          e if e == eRender => {
-            Some(&device_id) == self.default_playback_id.as_ref()
-          }
-          e if e == eCapture => {
-            Some(&device_id) == self.default_recording_id.as_ref()
-          }
-          _ => false,
-        };
-
-        let device_info = self.create_audio_device(
-          &device,
-          flow,
-          is_default,
-          &endpoint_volume,
-        )?;
-
-        self.devices.insert(
-          device_id,
-          DeviceState {
-            output: device_info,
-            volume_callback: endpoint_volume,
-          },
-        );
-      }
-    }
-
-    // Remove devices that are no longer active.
-    self.devices.retain(|id, _| active_devices.contains(id));
-
     Ok(())
+    // let mut active_devices = HashSet::new();
+
+    // // Process both playback and recording devices
+    // for flow in [eRender, eCapture] {
+    //   let devices = self.enumerate_devices(flow)?;
+    //   let default_device = self.get_default_device(flow).ok();
+    //   let default_id = default_device
+    //     .as_ref()
+    //     .and_then(|d| unsafe { d.GetId().ok() })
+    //     .and_then(|id| unsafe { id.to_string().ok() });
+
+    //   // Update default device IDs
+    //   match flow {
+    //     e if e == eRender => self.default_playback_id =
+    // default_id.clone(),     e if e == eCapture =>
+    // self.default_recording_id = default_id,     _ => {}
+    //   }
+
+    //   for device in devices {
+    //     let (device_id, _) = self.get_device_info(&device, flow)?;
+    //     active_devices.insert(device_id.clone());
+
+    //     let endpoint_volume =
+    //       if let Some(state) = self.devices.get(&device_id) {
+    //         state.volume_callback.clone()
+    //       } else {
+    //         self.register_volume_callback(&device, device_id.clone())?
+    //       };
+
+    //     let is_default = match flow {
+    //       e if e == eRender => {
+    //         Some(&device_id) == self.default_playback_id.as_ref()
+    //       }
+    //       e if e == eCapture => {
+    //         Some(&device_id) == self.default_recording_id.as_ref()
+    //       }
+    //       _ => false,
+    //     };
+
+    //     let device_info = self.create_audio_device(
+    //       &device,
+    //       flow,
+    //       is_default,
+    //       &endpoint_volume,
+    //     )?;
+
+    //     self.devices.insert(
+    //       device_id,
+    //       DeviceState {
+    //         output: device_info,
+    //         volume_callback: endpoint_volume,
+    //       },
+    //     );
+    //   }
+    // }
+
+    // // Remove devices that are no longer active.
+    // self.devices.retain(|id, _| active_devices.contains(id));
+
+    // Ok(())
   }
 
   /// Handles an audio event.
@@ -353,6 +396,7 @@ impl Provider for AudioProvider {
 
   fn start_sync(&mut self) {
     if let Err(err) = self.start() {
+      tracing::error!("Error starting audio provider: {}", err);
       self.common.emitter.emit_output::<AudioOutput>(Err(err));
     }
   }
