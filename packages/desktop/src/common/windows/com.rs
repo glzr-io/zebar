@@ -1,5 +1,6 @@
 use windows::Win32::System::Com::{
   CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED,
+  COINIT_MULTITHREADED,
 };
 
 thread_local! {
@@ -20,7 +21,7 @@ impl ComInit {
   /// Panics if COM initialization fails. This is typically only possible
   /// if COM is already initialized with an incompatible threading model.
   pub fn new() -> Self {
-    unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }
+    unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }
       .ok()
       .expect("Unable to initialize COM.");
 

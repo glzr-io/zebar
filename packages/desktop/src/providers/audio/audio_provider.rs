@@ -27,7 +27,7 @@ use windows::Win32::{
 use windows_core::{Interface, HSTRING, PCWSTR};
 
 use crate::{
-  common::windows::COM_INIT,
+  common::windows::{ComInit, COM_INIT},
   providers::{CommonProviderState, Provider, RuntimeType},
 };
 
@@ -94,7 +94,7 @@ enum AudioEvent {
 struct DeviceState {
   com_device: IMMDevice,
   com_volume: IAudioEndpointVolume,
-  com_volume_callback: VolumeCallback,
+  com_volume_callback: IAudioEndpointVolumeCallback,
   output: AudioDevice,
 }
 
@@ -128,23 +128,23 @@ impl AudioProvider {
 
   /// Main entry point.
   fn start(&mut self) -> anyhow::Result<()> {
-    let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
+    let _com = ComInit::new();
 
     let com_enumerator: IMMDeviceEnumerator =
       unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }?;
 
     // Note that this would sporadically segfault if we didn't keep a
-    // separate variable for `DeviceCallback` when registering the
+    // separate variable for `IMMNotificationClient` when registering the
     // callback. Something funky with lifetimes and the COM API's.
-    let callback = DeviceCallback {
+    let com_device_callback: IMMNotificationClient = DeviceCallback {
       event_tx: self.event_tx.clone(),
-    };
+    }
+    .into();
 
     // Register device add/remove callback.
     unsafe {
-      com_enumerator.RegisterEndpointNotificationCallback(
-        &IMMNotificationClient::from(callback),
-      )
+      com_enumerator
+        .RegisterEndpointNotificationCallback(&com_device_callback)
     }?;
 
     self.com_enumerator = Some(com_enumerator);
@@ -208,23 +208,24 @@ impl AudioProvider {
     &self,
     com_device: &IMMDevice,
     device_id: String,
-  ) -> anyhow::Result<(IAudioEndpointVolume, VolumeCallback)> {
-    let endpoint_volume = unsafe {
+  ) -> anyhow::Result<(IAudioEndpointVolume, IAudioEndpointVolumeCallback)>
+  {
+    let com_volume = unsafe {
       com_device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
     }?;
 
-    let callback = VolumeCallback {
-      device_id,
-      event_tx: self.event_tx.clone(),
-    };
+    let com_volume_callback: IAudioEndpointVolumeCallback =
+      VolumeCallback {
+        device_id,
+        event_tx: self.event_tx.clone(),
+      }
+      .into();
 
     unsafe {
-      endpoint_volume.RegisterControlChangeNotify(
-        &IAudioEndpointVolumeCallback::from(callback.clone()),
-      )
+      com_volume.RegisterControlChangeNotify(&com_volume_callback)
     }?;
 
-    Ok((endpoint_volume, callback))
+    Ok((com_volume, com_volume_callback))
   }
 
   /// Emits an `AudioOutput` update through the provider's emitter.
@@ -454,10 +455,15 @@ impl IAudioEndpointVolumeCallback_Impl for VolumeCallback_Impl {
     data: *mut AUDIO_VOLUME_NOTIFICATION_DATA,
   ) -> windows::core::Result<()> {
     if let Some(data) = unsafe { data.as_ref() } {
+      tracing::info!("Volume changed: {:?}", data.fMasterVolume);
       let _ = self.event_tx.send(AudioEvent::VolumeChanged(
         self.device_id.clone(),
         data.fMasterVolume,
       ));
+      tracing::info!(
+        "Sent volume changed event: {:?}",
+        data.fMasterVolume
+      );
     }
 
     Ok(())
@@ -479,7 +485,9 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
     if let Ok(id) = unsafe { device_id.to_string() } {
-      let _ = self.event_tx.send(AudioEvent::DeviceAdded(id));
+      tracing::info!("Device added: {:?}", id);
+      let _ = self.event_tx.send(AudioEvent::DeviceAdded(id.clone()));
+      tracing::info!("Sent device added event: {:?}", id);
     }
 
     Ok(())
@@ -490,7 +498,9 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
     if let Ok(id) = unsafe { device_id.to_string() } {
-      let _ = self.event_tx.send(AudioEvent::DeviceRemoved(id));
+      tracing::info!("Device removed: {:?}", id);
+      let _ = self.event_tx.send(AudioEvent::DeviceRemoved(id.clone()));
+      tracing::info!("Sent device removed event: {:?}", id);
     }
 
     Ok(())
@@ -502,12 +512,14 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     new_state: DEVICE_STATE,
   ) -> windows::core::Result<()> {
     if let Ok(id) = unsafe { device_id.to_string() } {
+      tracing::info!("Device state changed: {:?}", new_state);
       let event = match new_state {
-        DEVICE_STATE_ACTIVE => AudioEvent::DeviceAdded(id),
+        DEVICE_STATE_ACTIVE => AudioEvent::DeviceAdded(id.clone()),
         _ => AudioEvent::DeviceRemoved(id),
       };
 
       let _ = self.event_tx.send(event);
+      tracing::info!("Sent device state changed event");
     }
 
     Ok(())
@@ -519,12 +531,14 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     role: ERole,
     default_device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
+    tracing::info!("Default device changed: {:?}", default_device_id);
     if role == eMultimedia {
       if let Ok(id) = unsafe { default_device_id.to_string() } {
         let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
-          id,
+          id.clone(),
           DeviceType::from(flow),
         ));
+        tracing::info!("Sent default device changed event: {:?}", id);
       }
     }
 
