@@ -65,7 +65,7 @@ pub enum DeviceType {
 impl From<EDataFlow> for DeviceType {
   fn from(flow: EDataFlow) -> Self {
     match flow {
-      eCapture => Self::Recording,
+      flow if flow == eCapture => Self::Recording,
       _ => Self::Playback,
     }
   }
@@ -86,7 +86,7 @@ enum AudioEvent {
   DeviceAdded(String),
   DeviceRemoved(String),
   DeviceStateChanged(String, DEVICE_STATE),
-  DefaultDeviceChanged(String, EDataFlow),
+  DefaultDeviceChanged(String, DeviceType),
   VolumeChanged(String, f32),
 }
 
@@ -148,7 +148,15 @@ impl AudioProvider {
     }?;
 
     self.com_enumerator = Some(com_enumerator);
+
+    // Update device list and default device IDs.
+    self.default_playback_id =
+      self.default_device_id(&DeviceType::Playback)?;
+    self.default_recording_id =
+      self.default_device_id(&DeviceType::Recording)?;
     self.update_device_states()?;
+
+    // Emit initial output.
     self.emit_output();
 
     // Listen to audio-related events.
@@ -162,9 +170,9 @@ impl AudioProvider {
   }
 
   /// Enumerates active devices of a specific type.
-  fn enumerate_devices(
+  fn devices_of_type(
     &self,
-    device_type: DeviceType,
+    device_type: &DeviceType,
   ) -> anyhow::Result<Vec<IMMDevice>> {
     let collection = unsafe {
       self
@@ -172,7 +180,7 @@ impl AudioProvider {
         .as_ref()
         .context("Device enumerator not initialized.")?
         .EnumAudioEndpoints(
-          EDataFlow::from(device_type),
+          EDataFlow::from(device_type.clone()),
           DEVICE_STATE_ACTIVE,
         )
     }?;
@@ -187,10 +195,10 @@ impl AudioProvider {
 
   /// Gets the friendly name of a device.
   ///
-  /// Returns a string. For example, "Headphones (WH-1000XM3 Stereo)".
-  fn device_name(&self, device: &IMMDevice) -> anyhow::Result<String> {
+  /// Returns a string (e.g. `Headphones (WH-1000XM3 Stereo)`).
+  fn device_name(&self, com_device: &IMMDevice) -> anyhow::Result<String> {
     let store: IPropertyStore =
-      unsafe { device.OpenPropertyStore(STGM_READ) }?;
+      unsafe { com_device.OpenPropertyStore(STGM_READ) }?;
 
     let friendly_name =
       unsafe { store.GetValue(&PKEY_Device_FriendlyName)?.to_string() };
@@ -201,11 +209,11 @@ impl AudioProvider {
   /// Registers volume callbacks for a device.
   fn register_volume_callback(
     &self,
-    device: &IMMDevice,
+    com_device: &IMMDevice,
     device_id: String,
   ) -> anyhow::Result<IAudioEndpointVolume> {
     let endpoint_volume = unsafe {
-      device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
+      com_device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
     }?;
 
     let callback = VolumeCallback {
@@ -243,10 +251,6 @@ impl AudioProvider {
         DeviceType::Recording => {
           output.recording_devices.push(device.clone());
         }
-        _ => {
-          output.playback_devices.push(device.clone());
-          output.recording_devices.push(device.clone());
-        }
       }
 
       if self.default_playback_id.as_ref() == Some(id) {
@@ -261,82 +265,90 @@ impl AudioProvider {
     self.common.emitter.emit_output(Ok(output));
   }
 
-  /// Gets the default device for the given device type.
-  fn default_device_for_type(
+  /// Gets the default device ID for the given device type.
+  fn default_device_id(
     &self,
-    device_type: DeviceType,
-  ) -> anyhow::Result<Option<IMMDevice>> {
-    let device = unsafe {
+    device_type: &DeviceType,
+  ) -> anyhow::Result<Option<String>> {
+    let default_device = unsafe {
       self
         .com_enumerator
         .as_ref()
-        .context("No enumerator")?
-        .GetDefaultAudioEndpoint(EDataFlow::from(device_type), eMultimedia)
+        .context("Device enumerator not initialized.")?
+        .GetDefaultAudioEndpoint(
+          EDataFlow::from(device_type.clone()),
+          eMultimedia,
+        )
     }
     .ok();
 
-    Ok(device)
+    let device_id = default_device
+      .and_then(|device| unsafe { device.GetId().ok() })
+      .and_then(|id| unsafe { id.to_string().ok() });
+
+    Ok(device_id)
   }
 
-  fn update_device_states(&mut self) -> anyhow::Result<()> {
-    let mut active_devices = HashSet::new();
-
-    // Process both playback and recording devices
-    for device_type in [DeviceType::Playback, DeviceType::Recording] {
-      let devices = self.enumerate_devices(device_type)?;
-      let default_device = self.default_device_for_type(device_type)?;
-      let default_id = default_device
-        .as_ref()
-        .and_then(|d| unsafe { d.GetId().ok() })
-        .and_then(|id| unsafe { id.to_string().ok() });
-
-      // Update default device IDs.
-      if device_type == DeviceType::Recording {
-        self.default_recording_id = default_id;
-      } else {
-        self.default_playback_id = default_id.clone();
+  /// Whether a device is the default for the given type.
+  fn is_default_device(
+    &self,
+    device_id: &str,
+    device_type: &DeviceType,
+  ) -> bool {
+    match device_type {
+      DeviceType::Playback => {
+        self.default_playback_id == Some(device_id.to_string())
       }
+      DeviceType::Recording => {
+        self.default_recording_id == Some(device_id.to_string())
+      }
+    }
+  }
 
-      for device in devices {
-        let device_id = unsafe { device.GetId()?.to_string() }?;
-        active_devices.insert(device_id);
+  /// Updates the list of active devices and default device IDs.
+  fn update_device_states(&mut self) -> anyhow::Result<()> {
+    let mut found_ids = HashSet::new();
 
-        let endpoint_volume =
-          if let Some(state) = self.device_states.get(&device_id) {
-            state.com_volume.clone()
-          } else {
-            self.register_volume_callback(&device, device_id.clone())?
+    // Process both playback and recording devices.
+    for device_type in [DeviceType::Playback, DeviceType::Recording] {
+      for com_device in self.devices_of_type(&device_type)? {
+        let device_id = unsafe { com_device.GetId()?.to_string() }?;
+        found_ids.insert(device_id.clone());
+
+        if !self.device_states.contains_key(&device_id) {
+          debug!("New audio device detected: {}", device_id);
+
+          let is_default =
+            self.is_default_device(&device_id, &device_type);
+
+          let com_volume = self
+            .register_volume_callback(&com_device, device_id.clone())?;
+
+          let volume = unsafe { com_volume.GetMasterVolumeLevelScalar() }?;
+
+          let output = AudioDevice {
+            name: self.device_name(&com_device)?,
+            device_id: device_id.clone(),
+            device_type: device_type.clone(),
+            volume: (volume * 100.0).round() as u32,
+            is_default,
           };
 
-        let is_default = match flow {
-          e if e == eRender => {
-            Some(&device_id) == self.default_playback_id.as_ref()
-          }
-          e if e == eCapture => {
-            Some(&device_id) == self.default_recording_id.as_ref()
-          }
-          _ => false,
-        };
-
-        let device_info = self.create_audio_device(
-          &device,
-          flow,
-          is_default,
-          &endpoint_volume,
-        )?;
-
-        self.devices.insert(
-          device_id,
-          DeviceState {
-            output: device_info,
-            com_volume: endpoint_volume,
-          },
-        );
+          self.device_states.insert(
+            device_id,
+            DeviceState {
+              com_device,
+              output,
+              com_volume,
+            },
+          );
+        }
       }
     }
 
     // Remove devices that are no longer active.
-    self.devices.retain(|id, _| active_devices.contains(id));
+    // TODO: Remove volume callbacks.
+    self.device_states.retain(|id, _| found_ids.contains(id));
 
     Ok(())
   }
@@ -346,9 +358,18 @@ impl AudioProvider {
     match event {
       AudioEvent::DeviceAdded(..)
       | AudioEvent::DeviceRemoved(..)
-      | AudioEvent::DeviceStateChanged(..)
-      | AudioEvent::DefaultDeviceChanged(..) => {
+      | AudioEvent::DeviceStateChanged(..) => {
         self.update_device_states()?;
+      }
+      AudioEvent::DefaultDeviceChanged(device_id, device_type) => {
+        match device_type {
+          DeviceType::Playback => {
+            self.default_playback_id = Some(device_id);
+          }
+          DeviceType::Recording => {
+            self.default_recording_id = Some(device_id);
+          }
+        }
       }
       AudioEvent::VolumeChanged(device_id, new_volume) => {
         if let Some(state) = self.device_states.get_mut(&device_id) {
@@ -475,13 +496,16 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
   fn OnDefaultDeviceChanged(
     &self,
     flow: EDataFlow,
-    _role: ERole,
+    role: ERole,
     default_device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
-    if let Ok(id) = unsafe { default_device_id.to_string() } {
-      let _ = self
-        .event_sender
-        .send(AudioEvent::DefaultDeviceChanged(id, flow));
+    if role == eMultimedia {
+      if let Ok(id) = unsafe { default_device_id.to_string() } {
+        let _ = self.event_sender.send(AudioEvent::DefaultDeviceChanged(
+          id,
+          DeviceType::from(flow),
+        ));
+      }
     }
 
     Ok(())
