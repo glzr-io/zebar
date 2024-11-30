@@ -19,14 +19,12 @@ export interface SetVolumeOptions {
 }
 
 export interface AudioDevice {
-  id: string;
+  deviceId: string;
   name: string;
-  volume: number | null;
-  roles: AudioDeviceRole[];
+  volume: number;
   type: AudioDeviceType;
   isDefaultPlayback: boolean;
   isDefaultRecording: boolean;
 }
 
-export type AudioDeviceRole = 'multimedia' | 'communications' | 'console';
-export type AudioDeviceType = 'playback' | 'recording' | 'hybrid';
+export type AudioDeviceType = 'playback' | 'recording';

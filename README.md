@@ -84,21 +84,33 @@ No config options.
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `defaultPlaybackDevice`         | Default audio playback device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `defaultRecordingDevice`         | Default audio recording device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `playbackDevices`         | All audio playback devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `recordingDevices`         | All audio recording devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allDevices`         | All audio devices (both playback and recording).        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
-#### Return types
+| Function   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setVolume` | Sets the volume of an audio device. Changes the volume of the default playback device, unless `SetVolumeOptions.deviceId` is specified. <br><br> **Parameters:**<br> <br> - `volume`: _`number`_ Volume as a % of maximum volume. Returned value is between `0` and `100`. <br> - `options`: _`SetVolumeOptions \| undefined`_ Additional options.<br>  | `Promise<void>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Related types
 
 #### `AudioDevice`
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
-| `id`         | Device ID. | `string` |
+| `deviceId`         | Device ID. | `string` |
 | `name`      | Friendly display name of device. | `string` |
-| `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number \| null` |
-| `roles` | Roles the device is assigned to. | `('multimedia' \| 'communications' \| 'console')[]` |
-| `type` | Type of the device. | `'playback' \| 'recording' \| 'hybrid'` |
+| `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number` |
+| `type` | Type of the device. | `'playback' \| 'recording'` |
 | `isDefaultPlayback` | `true` if the device is selected as the default playback device.| `boolean` |
 | `isDefaultRecording` | `true` if the device is selected as the default recording device.| `boolean` |
+
+#### `SetVolumeOptions`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `deviceId`         | Device ID to set the volume of. | `string \| undefined` |
 
 ### Battery
 
@@ -174,7 +186,7 @@ No config options.
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `disks`         | Available disks on the system.        | `Disk[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
-#### Return types
+#### Related types
 
 #### `Disk`
 
