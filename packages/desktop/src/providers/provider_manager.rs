@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use serde::{ser::SerializeStruct, Serialize};
 use tauri::{AppHandle, Emitter};
 use tokio::{

@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+  collections::HashMap,
+  time::{Duration, Instant},
+};
 
 use anyhow::Context;
 use crossbeam::channel;
@@ -95,7 +98,6 @@ struct DeviceState {
   device_id: String,
   device_type: DeviceType,
   volume: u32,
-  com_device: IMMDevice,
   com_volume: IAudioEndpointVolume,
   com_volume_callback: IAudioEndpointVolumeCallback,
 }
@@ -103,6 +105,8 @@ struct DeviceState {
 pub struct AudioProvider {
   common: CommonProviderState,
   com_enumerator: Option<IMMDeviceEnumerator>,
+  last_emit: Instant,
+  pending_emission: bool,
   default_playback_id: Option<String>,
   default_recording_id: Option<String>,
   device_states: HashMap<String, DeviceState>,
@@ -120,6 +124,8 @@ impl AudioProvider {
     Self {
       common,
       com_enumerator: None,
+      last_emit: Instant::now(),
+      pending_emission: false,
       default_playback_id: None,
       default_recording_id: None,
       device_states: HashMap::new(),
@@ -189,6 +195,13 @@ impl AudioProvider {
                 sender.send(res).unwrap();
               }
               _ => {}
+            }
+          }
+          default(Duration::from_millis(20)) => {
+            // Batch emissions to reduce overhead.
+            if self.pending_emission {
+              self.emit_output();
+              self.pending_emission = false;
             }
           }
         }
@@ -296,6 +309,8 @@ impl AudioProvider {
     }
 
     self.common.emitter.emit_output(Ok(output));
+    self.last_emit = Instant::now();
+    self.pending_emission = true;
   }
 
   /// Gets the default device ID for the given device type.
@@ -358,7 +373,6 @@ impl AudioProvider {
       device_id: device_id.clone(),
       device_type: device_type.clone(),
       volume: (volume * 100.0).round() as u32,
-      com_device,
       com_volume,
       com_volume_callback,
     };
