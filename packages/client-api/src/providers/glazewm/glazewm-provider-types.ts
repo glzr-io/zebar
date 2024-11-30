@@ -5,6 +5,7 @@ import {
   type Monitor,
   type RunCommandResponse,
   type Workspace,
+  type Window,
 } from 'glazewm';
 
 import type { Provider } from '../create-base-provider';

@@ -105,7 +105,7 @@ export function createGlazeWmProvider(
             break;
           }
           case WmEventType.PAUSE_CHANGED: {
-            state = { ...state, paused: e.paused };
+            state = { ...state, isPaused: e.isPaused };
             break;
           }
         }
@@ -124,14 +124,14 @@ export function createGlazeWmProvider(
         const { focused: focusedContainer } = await client.queryFocused();
         const { bindingModes } = await client.queryBindingModes();
         const { tilingDirection } = await client.queryTilingDirection();
-        const { paused } = await client.queryPaused();
+        const { paused: isPaused } = await client.queryPaused();
 
         return {
           ...(await getMonitorState()),
           focusedContainer,
           tilingDirection,
           bindingModes,
-          paused,
+          isPaused,
           runCommand,
         };
       }
