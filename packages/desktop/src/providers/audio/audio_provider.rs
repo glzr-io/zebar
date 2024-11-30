@@ -91,10 +91,13 @@ enum AudioEvent {
 /// Holds the state of an audio device.
 #[derive(Clone)]
 struct DeviceState {
+  name: String,
+  device_id: String,
+  device_type: DeviceType,
+  volume: u32,
   com_device: IMMDevice,
   com_volume: IAudioEndpointVolume,
   com_volume_callback: IAudioEndpointVolumeCallback,
-  output: AudioDevice,
 }
 
 pub struct AudioProvider {
@@ -262,24 +265,33 @@ impl AudioProvider {
     };
 
     for (id, state) in &self.device_states {
-      let device = &state.output;
+      let device = AudioDevice {
+        name: state.name.clone(),
+        device_id: state.device_id.clone(),
+        device_type: state.device_type.clone(),
+        volume: state.volume,
+        is_default_playback: self.default_playback_id.as_ref() == Some(id),
+        is_default_recording: self.default_recording_id.as_ref()
+          == Some(id),
+      };
+
       output.all_devices.push(device.clone());
 
       match device.device_type {
         DeviceType::Playback => {
           output.playback_devices.push(device.clone());
+
+          if self.default_playback_id.as_ref() == Some(id) {
+            output.default_playback_device = Some(device.clone());
+          }
         }
         DeviceType::Recording => {
           output.recording_devices.push(device.clone());
+
+          if self.default_recording_id.as_ref() == Some(id) {
+            output.default_recording_device = Some(device.clone());
+          }
         }
-      }
-
-      if self.default_playback_id.as_ref() == Some(id) {
-        output.default_playback_device = Some(device.clone());
-      }
-
-      if self.default_recording_id.as_ref() == Some(id) {
-        output.default_recording_device = Some(device.clone());
       }
     }
 
@@ -336,34 +348,22 @@ impl AudioProvider {
       com_device.cast::<IMMEndpoint>()?.GetDataFlow()
     }?);
 
-    let is_default_playback =
-      self.default_playback_id.as_ref() == Some(&device_id);
-    let is_default_recording =
-      self.default_recording_id.as_ref() == Some(&device_id);
-
     let (com_volume, com_volume_callback) =
       self.register_volume_callback(&com_device, device_id.clone())?;
 
     let volume = unsafe { com_volume.GetMasterVolumeLevelScalar() }?;
 
-    let output = AudioDevice {
+    let device_state = DeviceState {
       name: self.device_name(&com_device)?,
       device_id: device_id.clone(),
       device_type: device_type.clone(),
       volume: (volume * 100.0).round() as u32,
-      is_default_playback,
-      is_default_recording,
+      com_device,
+      com_volume,
+      com_volume_callback,
     };
 
-    self.device_states.insert(
-      device_id,
-      DeviceState {
-        com_device,
-        output,
-        com_volume,
-        com_volume_callback,
-      },
-    );
+    self.device_states.insert(device_id, device_state);
 
     Ok(())
   }
@@ -406,7 +406,7 @@ impl AudioProvider {
       }
       AudioEvent::VolumeChanged(device_id, new_volume) => {
         if let Some(state) = self.device_states.get_mut(&device_id) {
-          state.output.volume = (new_volume * 100.0).round() as u32;
+          state.volume = (new_volume * 100.0).round() as u32;
         }
       }
     }
@@ -530,7 +530,7 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
     if let Ok(id) = unsafe { device_id.to_string() } {
-      let _ = self.event_tx.send(AudioEvent::DeviceRemoved(id.clone()));
+      let _ = self.event_tx.send(AudioEvent::DeviceRemoved(id));
     }
 
     Ok(())
@@ -543,7 +543,7 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
   ) -> windows::core::Result<()> {
     if let Ok(id) = unsafe { device_id.to_string() } {
       let event = match new_state {
-        DEVICE_STATE_ACTIVE => AudioEvent::DeviceAdded(id.clone()),
+        DEVICE_STATE_ACTIVE => AudioEvent::DeviceAdded(id),
         _ => AudioEvent::DeviceRemoved(id),
       };
 
@@ -562,7 +562,7 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     if role == eMultimedia {
       if let Ok(id) = unsafe { default_device_id.to_string() } {
         let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
-          id.clone(),
+          id,
           DeviceType::from(flow),
         ));
       }
