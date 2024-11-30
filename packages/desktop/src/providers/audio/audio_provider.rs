@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Context;
-use crossbeam::channel;
+use crossbeam::channel::{self, at, never};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 use windows::Win32::{
@@ -105,8 +105,6 @@ struct DeviceState {
 pub struct AudioProvider {
   common: CommonProviderState,
   com_enumerator: Option<IMMDeviceEnumerator>,
-  last_emit: Instant,
-  pending_emission: bool,
   default_playback_id: Option<String>,
   default_recording_id: Option<String>,
   device_states: HashMap<String, DeviceState>,
@@ -124,8 +122,6 @@ impl AudioProvider {
     Self {
       common,
       com_enumerator: None,
-      last_emit: Instant::now(),
-      pending_emission: false,
       default_playback_id: None,
       default_recording_id: None,
       device_states: HashMap::new(),
@@ -170,8 +166,19 @@ impl AudioProvider {
       // Emit initial output.
       self.emit_output();
 
+      // Audio events (especially volume changes) can be frequent, so we
+      // batch the emissions together.
+      let mut last_emit = Instant::now();
+      let mut pending_emission = false;
+      const BATCH_DELAY: Duration = Duration::from_millis(25);
+
       // Listen to audio-related events.
       loop {
+        let batch_timer = match pending_emission {
+          true => at(last_emit + BATCH_DELAY),
+          false => never(),
+        };
+
         crossbeam::select! {
           recv(self.event_rx) -> event => {
             if let Ok(event) = event {
@@ -179,6 +186,14 @@ impl AudioProvider {
 
               if let Err(err) = self.handle_event(event) {
                 tracing::warn!("Error handling audio event: {}", err);
+              }
+
+              // Check whether we should emit immediately or mark as pending.
+              if last_emit.elapsed() >= BATCH_DELAY {
+                self.emit_output();
+                last_emit = Instant::now();
+              } else {
+                pending_emission = true;
               }
             }
           }
@@ -197,11 +212,11 @@ impl AudioProvider {
               _ => {}
             }
           }
-          default(Duration::from_millis(20)) => {
-            // Batch emissions to reduce overhead.
-            if self.pending_emission {
+          recv(batch_timer) -> _ => {
+            if pending_emission {
               self.emit_output();
-              self.pending_emission = false;
+              last_emit = Instant::now();
+              pending_emission = false;
             }
           }
         }
@@ -309,8 +324,6 @@ impl AudioProvider {
     }
 
     self.common.emitter.emit_output(Ok(output));
-    self.last_emit = Instant::now();
-    self.pending_emission = true;
   }
 
   /// Gets the default device ID for the given device type.
@@ -424,9 +437,6 @@ impl AudioProvider {
         }
       }
     }
-
-    // Emit new output after handling the event.
-    self.emit_output();
 
     Ok(())
   }
