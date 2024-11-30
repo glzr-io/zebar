@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use serde::{ser::SerializeStruct, Serialize};
 use tauri::{AppHandle, Emitter};
 use tokio::{
@@ -244,60 +244,79 @@ impl ProviderManager {
     config_hash: String,
     common: CommonProviderState,
   ) -> anyhow::Result<(task::JoinHandle<()>, RuntimeType)> {
-    let mut provider: Box<dyn Provider> = match config {
-      #[cfg(windows)]
-      ProviderConfig::Audio(config) => {
-        Box::new(AudioProvider::new(config, common))
+    let runtime_type = match config {
+      ProviderConfig::Ip(..) | ProviderConfig::Weather(..) => {
+        RuntimeType::Async
       }
-      ProviderConfig::Battery(config) => {
-        Box::new(BatteryProvider::new(config, common))
-      }
-      ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, common))
-      }
-      ProviderConfig::Host(config) => {
-        Box::new(HostProvider::new(config, common))
-      }
-      ProviderConfig::Ip(config) => {
-        Box::new(IpProvider::new(config, common))
-      }
-      #[cfg(windows)]
-      ProviderConfig::Komorebi(config) => {
-        Box::new(KomorebiProvider::new(config, common))
-      }
-      #[cfg(windows)]
-      ProviderConfig::Media(config) => {
-        Box::new(MediaProvider::new(config, common))
-      }
-      ProviderConfig::Memory(config) => {
-        Box::new(MemoryProvider::new(config, common))
-      }
-      ProviderConfig::Disk(config) => {
-        Box::new(DiskProvider::new(config, common))
-      }
-      ProviderConfig::Network(config) => {
-        Box::new(NetworkProvider::new(config, common))
-      }
-      ProviderConfig::Weather(config) => {
-        Box::new(WeatherProvider::new(config, common))
-      }
-      #[cfg(windows)]
-      ProviderConfig::Keyboard(config) => {
-        Box::new(KeyboardProvider::new(config, common))
-      }
-      #[allow(unreachable_patterns)]
-      _ => bail!("Provider not supported on this operating system."),
+      _ => RuntimeType::Sync,
     };
 
     // Spawn the provider's task based on its runtime type.
-    let runtime_type = provider.runtime_type();
     let task_handle = match &runtime_type {
       RuntimeType::Async => task::spawn(async move {
-        provider.start_async().await;
+        match config {
+          ProviderConfig::Ip(config) => {
+            let mut provider = IpProvider::new(config, common);
+            provider.start_async().await;
+          }
+          ProviderConfig::Weather(config) => {
+            let mut provider = WeatherProvider::new(config, common);
+            provider.start_async().await;
+          }
+          _ => unreachable!(),
+        }
+
         info!("Provider stopped: {}", config_hash);
       }),
       RuntimeType::Sync => task::spawn_blocking(move || {
-        provider.start_sync();
+        match config {
+          #[cfg(windows)]
+          ProviderConfig::Audio(config) => {
+            let mut provider = AudioProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Battery(config) => {
+            let mut provider = BatteryProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Cpu(config) => {
+            let mut provider = CpuProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Host(config) => {
+            let mut provider = HostProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Komorebi(config) => {
+            let mut provider = KomorebiProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Media(config) => {
+            let mut provider = MediaProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Memory(config) => {
+            let mut provider = MemoryProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Disk(config) => {
+            let mut provider = DiskProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Network(config) => {
+            let mut provider = NetworkProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Keyboard(config) => {
+            let mut provider = KeyboardProvider::new(config, common);
+            provider.start_sync();
+          }
+          _ => unreachable!(),
+        }
+
         info!("Provider stopped: {}", config_hash);
       }),
     };

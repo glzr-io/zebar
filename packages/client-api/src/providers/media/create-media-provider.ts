@@ -28,7 +28,7 @@ export function createMediaProvider(
             ...result.output,
             session: result.output.currentSession,
             play: (args?: MediaControlArgs) => {
-              desktopCommands.callProviderFunction(configHash, {
+              return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'play',
@@ -37,7 +37,7 @@ export function createMediaProvider(
               });
             },
             pause: (args?: MediaControlArgs) => {
-              desktopCommands.callProviderFunction(configHash, {
+              return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'pause',
@@ -46,7 +46,7 @@ export function createMediaProvider(
               });
             },
             togglePlayPause: (args?: MediaControlArgs) => {
-              desktopCommands.callProviderFunction(configHash, {
+              return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'toggle_play_pause',
@@ -55,7 +55,7 @@ export function createMediaProvider(
               });
             },
             next: (args?: MediaControlArgs) => {
-              desktopCommands.callProviderFunction(configHash, {
+              return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'next',
@@ -64,7 +64,7 @@ export function createMediaProvider(
               });
             },
             previous: (args?: MediaControlArgs) => {
-              desktopCommands.callProviderFunction(configHash, {
+              return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'previous',
