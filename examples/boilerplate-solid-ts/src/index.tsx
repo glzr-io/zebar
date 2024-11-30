@@ -37,7 +37,7 @@ function App() {
         </div>
       )}
       <div class="chip">
-        Media: {output.media?.currentSession?.title} -
+        Media: {output.media?.currentSession?.title}-
         {output.media?.currentSession?.artist}
         <button onClick={() => output.media?.togglePlayPause()}>⏯</button>
       </div>
