@@ -19,7 +19,28 @@ export const desktopCommands = {
   setSkipTaskbar,
 };
 
-export type ProviderFunction = MediaFunction;
+export type ProviderFunction = AudioFunction | MediaFunction;
+
+export interface AudioFunction {
+  type: 'audio';
+  function: {
+    name: 'set_volume';
+    args: SetVolumeArgs;
+  };
+}
+
+export interface SetVolumeArgs {
+  volume: number;
+  deviceId?: string;
+}
+
+export interface MediaFunction {
+  type: 'media';
+  function: {
+    name: 'play' | 'pause' | 'toggle_play_pause' | 'next' | 'previous';
+    args: MediaControlArgs;
+  };
+}
 
 export interface MediaFunction {
   type: 'media';

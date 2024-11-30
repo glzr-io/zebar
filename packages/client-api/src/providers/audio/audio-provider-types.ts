@@ -11,6 +11,11 @@ export interface AudioOutput {
   defaultRecordingDevice: AudioDevice | null;
   playbackDevices: AudioDevice[];
   recordingDevices: AudioDevice[];
+  setVolume(volume: number, options?: SetVolumeOptions): Promise<void>;
+}
+
+export interface SetVolumeOptions {
+  deviceId?: string;
 }
 
 export interface AudioDevice {

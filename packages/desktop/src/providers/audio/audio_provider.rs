@@ -24,11 +24,14 @@ use windows::Win32::{
   },
   UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY},
 };
-use windows_core::{Interface, HSTRING, PCWSTR};
+use windows_core::{Interface, GUID, HSTRING, PCWSTR};
 
 use crate::{
   common::windows::{ComInit, COM_INIT},
-  providers::{CommonProviderState, Provider, RuntimeType},
+  providers::{
+    AudioFunction, CommonProviderState, Provider, ProviderFunction,
+    ProviderFunctionResponse, ProviderInputMsg, RuntimeType,
+  },
 };
 
 #[derive(Deserialize, Debug)]
@@ -163,9 +166,32 @@ impl AudioProvider {
       self.emit_output();
 
       // Listen to audio-related events.
-      while let Ok(event) = self.event_rx.recv() {
-        if let Err(err) = self.handle_event(event) {
-          info!("Error handling audio event: {}", err);
+      loop {
+        crossbeam::select! {
+          recv(self.event_rx) -> event => {
+            if let Ok(event) = event {
+              debug!("Got audio event: {:?}", event);
+
+              if let Err(err) = self.handle_event(event) {
+                tracing::warn!("Error handling audio event: {}", err);
+              }
+            }
+          }
+          recv(self.common.input.sync_rx) -> input => {
+            match input {
+              Ok(ProviderInputMsg::Stop) => {
+                break;
+              }
+              Ok(ProviderInputMsg::Function(
+                ProviderFunction::Audio(audio_function),
+                sender,
+              )) => {
+                let res = self.handle_function(audio_function).map_err(|err| err.to_string());
+                sender.send(res).unwrap();
+              }
+              _ => {}
+            }
+          }
         }
       }
 
@@ -401,6 +427,40 @@ impl AudioProvider {
     self.emit_output();
 
     Ok(())
+  }
+
+  /// Handles an incoming audio provider function call.
+  fn handle_function(
+    &mut self,
+    function: AudioFunction,
+  ) -> anyhow::Result<ProviderFunctionResponse> {
+    match function {
+      AudioFunction::SetVolume(args) => {
+        // Get target device - use specified ID or default playback
+        // device.
+        let device_state = if let Some(id) = &args.device_id {
+          self
+            .device_states
+            .get(id)
+            .context("Specified device not found.")?
+        } else {
+          self
+            .default_playback_id
+            .as_ref()
+            .and_then(|id| self.device_states.get(id))
+            .context("No active playback device.")?
+        };
+
+        unsafe {
+          device_state.com_volume.SetMasterVolumeLevelScalar(
+            args.volume / 100.,
+            &GUID::zeroed(),
+          )
+        }?;
+
+        Ok(ProviderFunctionResponse::Null)
+      }
+    }
   }
 }
 

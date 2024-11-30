@@ -3,7 +3,20 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "function", rename_all = "snake_case")]
 pub enum ProviderFunction {
+  Audio(AudioFunction),
   Media(MediaFunction),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "name", content = "args", rename_all = "snake_case")]
+pub enum AudioFunction {
+  SetVolume(SetVolumeArgs),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetVolumeArgs {
+  pub volume: f32,
+  pub device_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
