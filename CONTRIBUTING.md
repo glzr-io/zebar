@@ -20,7 +20,6 @@ pnpm i
 # Start in development mode. (config: /zebar/examples/)
 pnpm dev
 
-
 # Start in development mode. (config: ~/.glz/zebar/)
 pnpm dev:local
 ```
