@@ -10,6 +10,7 @@ import {
   type WorkspaceActivatedEvent,
   type WorkspaceDeactivatedEvent,
   type WorkspaceUpdatedEvent,
+  type PauseChangedEvent,
 } from 'glazewm';
 import { z } from 'zod';
 
@@ -52,6 +53,7 @@ export function createGlazeWmProvider(
           WmEventType.WORKSPACE_ACTIVATED,
           WmEventType.WORKSPACE_DEACTIVATED,
           WmEventType.WORKSPACE_UPDATED,
+          WmEventType.PAUSE_CHANGED,
         ],
         onEvent,
       );
@@ -70,7 +72,8 @@ export function createGlazeWmProvider(
           | TilingDirectionChangedEvent
           | WorkspaceActivatedEvent
           | WorkspaceDeactivatedEvent
-          | WorkspaceUpdatedEvent,
+          | WorkspaceUpdatedEvent
+          | PauseChangedEvent,
       ) {
         switch (e.eventType) {
           case WmEventType.BINDING_MODES_CHANGED: {
@@ -101,6 +104,10 @@ export function createGlazeWmProvider(
             state = { ...state, ...(await getMonitorState()) };
             break;
           }
+          case WmEventType.PAUSE_CHANGED: {
+            state = { ...state, isPaused: e.isPaused };
+            break;
+          }
         }
 
         queue.output(state);
@@ -117,12 +124,14 @@ export function createGlazeWmProvider(
         const { focused: focusedContainer } = await client.queryFocused();
         const { bindingModes } = await client.queryBindingModes();
         const { tilingDirection } = await client.queryTilingDirection();
+        const { paused: isPaused } = await client.queryPaused();
 
         return {
           ...(await getMonitorState()),
           focusedContainer,
           tilingDirection,
           bindingModes,
+          isPaused,
           runCommand,
         };
       }

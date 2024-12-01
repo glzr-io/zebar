@@ -46,8 +46,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       glazewm:
-        specifier: 1.6.0
-        version: 1.6.0
+        specifier: 1.7.0
+        version: 1.7.0
       luxon:
         specifier: 3.4.4
         version: 3.4.4
@@ -1410,8 +1410,8 @@ packages:
   git-hooks-list@3.1.0:
     resolution: {integrity: sha512-LF8VeHeR7v+wAbXqfgRlTSX/1BJR9Q1vEMR8JAz1cEg6GX07+zyj3sAdDvYjj/xnlIfVuGgj4qBei1K3hKH+PA==}
 
-  glazewm@1.6.0:
-    resolution: {integrity: sha512-JHDuL0Fda9NQVm0mJap8XsBNAatWhAOJj6HBy7nzrXvj4wUkKdbytI0LLGDUm/aLOYeT+XqdLJpH7HImggr5ig==}
+  glazewm@1.7.0:
+    resolution: {integrity: sha512-UWwtO4OZMOytA3KS70xihxJLqGJxtLE3XUnhLxrAgbXhIhy/0B4yF4RX3dEETozeB0sUbCnWc0a5KY8saErm2A==}
     engines: {node: '>=12'}
     peerDependencies:
       ws: '*'
@@ -3311,7 +3311,7 @@ snapshots:
 
   git-hooks-list@3.1.0: {}
 
-  glazewm@1.6.0:
+  glazewm@1.7.0:
     dependencies:
       tslib: 2.6.1
 
