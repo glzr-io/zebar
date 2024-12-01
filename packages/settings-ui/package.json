@@ -4,7 +4,8 @@
   "description": "",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "dev:local": "vite"
   },
   "dependencies": {
     "@glzr/components": "1.0.2",
