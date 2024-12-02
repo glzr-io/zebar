@@ -9,14 +9,14 @@ export interface MediaOutput {
   session: MediaSession | null;
   currentSession: MediaSession | null;
   allSessions: MediaSession[];
-  play(args?: MediaControlArgs): void;
-  pause(args?: MediaControlArgs): void;
-  togglePlayPause(args?: MediaControlArgs): void;
-  next(args?: MediaControlArgs): void;
-  previous(args?: MediaControlArgs): void;
+  play(options?: MediaControlOptions): void;
+  pause(options?: MediaControlOptions): void;
+  togglePlayPause(options?: MediaControlOptions): void;
+  next(options?: MediaControlOptions): void;
+  previous(options?: MediaControlOptions): void;
 }
 
-export interface MediaControlArgs {
+export interface MediaControlOptions {
   sessionId?: string;
 }
 

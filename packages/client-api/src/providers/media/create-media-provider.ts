@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { createBaseProvider } from '../create-base-provider';
 import { desktopCommands, onProviderEmit } from '~/desktop';
 import type {
-  MediaControlArgs,
+  MediaControlOptions,
   MediaOutput,
   MediaProvider,
   MediaProviderConfig,
@@ -27,48 +27,48 @@ export function createMediaProvider(
           queue.output({
             ...result.output,
             session: result.output.currentSession,
-            play: (args?: MediaControlArgs) => {
+            play: (options?: MediaControlOptions) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'play',
-                  args: args ?? {},
+                  args: options ?? {},
                 },
               });
             },
-            pause: (args?: MediaControlArgs) => {
+            pause: (options?: MediaControlOptions) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'pause',
-                  args: args ?? {},
+                  args: options ?? {},
                 },
               });
             },
-            togglePlayPause: (args?: MediaControlArgs) => {
+            togglePlayPause: (options?: MediaControlOptions) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'toggle_play_pause',
-                  args: args ?? {},
+                  args: options ?? {},
                 },
               });
             },
-            next: (args?: MediaControlArgs) => {
+            next: (options?: MediaControlOptions) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'next',
-                  args: args ?? {},
+                  args: options ?? {},
                 },
               });
             },
-            previous: (args?: MediaControlArgs) => {
+            previous: (options?: MediaControlOptions) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'media',
                 function: {
                   name: 'previous',
-                  args: args ?? {},
+                  args: options ?? {},
                 },
               });
             },
