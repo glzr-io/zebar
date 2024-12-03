@@ -11,6 +11,7 @@ import {
   type WorkspaceDeactivatedEvent,
   type WorkspaceUpdatedEvent,
   type PauseChangedEvent,
+  type WmEvent,
 } from 'glazewm';
 import { z } from 'zod';
 
@@ -44,19 +45,7 @@ export function createGlazeWmProvider(
       let state = await getInitialState();
       queue.output(state);
 
-      unlistenEvents ??= await client.subscribeMany(
-        [
-          WmEventType.BINDING_MODES_CHANGED,
-          WmEventType.FOCUS_CHANGED,
-          WmEventType.FOCUSED_CONTAINER_MOVED,
-          WmEventType.TILING_DIRECTION_CHANGED,
-          WmEventType.WORKSPACE_ACTIVATED,
-          WmEventType.WORKSPACE_DEACTIVATED,
-          WmEventType.WORKSPACE_UPDATED,
-          WmEventType.PAUSE_CHANGED,
-        ],
-        onEvent,
-      );
+      unlistenEvents ??= await client.subscribe(WmEventType.ALL, onEvent);
 
       // TODO: Update state when monitors change.
       // monitors.onChange(async () => {
@@ -64,17 +53,7 @@ export function createGlazeWmProvider(
       //   queue.value(state);
       // });
 
-      async function onEvent(
-        e:
-          | BindingModesChangedEvent
-          | FocusChangedEvent
-          | FocusedContainerMovedEvent
-          | TilingDirectionChangedEvent
-          | WorkspaceActivatedEvent
-          | WorkspaceDeactivatedEvent
-          | WorkspaceUpdatedEvent
-          | PauseChangedEvent,
-      ) {
+      async function onEvent(e: WmEvent) {
         switch (e.eventType) {
           case WmEventType.BINDING_MODES_CHANGED: {
             state = { ...state, bindingModes: e.newBindingModes };
@@ -124,7 +103,7 @@ export function createGlazeWmProvider(
         const { focused: focusedContainer } = await client.queryFocused();
         const { bindingModes } = await client.queryBindingModes();
         const { tilingDirection } = await client.queryTilingDirection();
-        const { paused: isPaused } = await client.queryPaused();
+        const isPaused = await getIsPaused();
 
         return {
           ...(await getMonitorState()),
@@ -134,6 +113,16 @@ export function createGlazeWmProvider(
           isPaused,
           runCommand,
         };
+      }
+
+      // Paused state is only available on v3.7.0+ of GlazeWM.
+      async function getIsPaused() {
+        try {
+          const { paused } = await client.queryPaused();
+          return paused;
+        } catch {
+          return false;
+        }
       }
 
       async function getMonitorState() {
