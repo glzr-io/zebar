@@ -1,4 +1,4 @@
-console.log('Service worker loaded');
+console.log('Service worker loaded2');
 self.addEventListener('install', event => {
   self.skipWaiting();
 });
@@ -26,14 +26,7 @@ self.addEventListener('fetch', event => {
 
       try {
         // Otherwise, fetch the resource from the network.
-        const networkResponse = new Request(event.request, {
-          headers: {
-            ...Object.fromEntries(event.request.headers.entries()),
-            'X-Zebar-Token': new URL(location).searchParams.get(
-              'widget-token',
-            ),
-          },
-        });
+        const networkResponse = await fetch(event.request);
 
         if (
           networkResponse &&

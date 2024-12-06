@@ -301,22 +301,10 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
-      .initialization_script(&format!(
-        "window.__ZEBAR_STATE={}",
-        serde_json::to_string(&state)?
-      ))
-      .on_page_load(move |window, payload| {
-        tracing::info!("Adding service worker {:?}", payload.event());
-        _ = window.eval(
-          r#"
-            navigator.serviceWorker.register('/__zebar/sw.js')
-              .then(function(reg) console.log('Service Worker registered!', reg))
-              .catch(function(err) console.error('Service Worker failed to register:', err));
-          "#,
-        );
-      })
+      .initialization_script(&self.initialization_script(&state)?)
       .data_directory(
-        self.app_handle
+        self
+          .app_handle
           .path()
           .resolve(
             format!(".glzr/zebar/tmp-{}", asset_id),
@@ -537,6 +525,18 @@ impl WidgetFactory {
     } else {
       format!("asset://localhost/{}", file_path)
     }
+  }
+
+  fn initialization_script(
+    &self,
+    state: &WidgetState,
+  ) -> anyhow::Result<String> {
+    let state_script =
+      format!("window.__ZEBAR_STATE={};", serde_json::to_string(state)?);
+
+    let sw_script = include_str!("../resources/initialization-script.js");
+
+    Ok(format!("{state_script}\n{sw_script}"))
   }
 
   /// Registers window events for a given widget.

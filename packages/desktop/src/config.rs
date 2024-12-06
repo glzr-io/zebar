@@ -255,7 +255,7 @@ impl Config {
 
     let service_worker_path = app_handle
       .path()
-      .resolve("resources/__zebar-sw.js", BaseDirectory::Resource)
+      .resolve("resources/sw.js", BaseDirectory::Resource)
       .ok();
 
     Ok(Self {
