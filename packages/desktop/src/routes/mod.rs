@@ -1,6 +1,6 @@
 pub mod index;
 pub mod service_worker;
-pub mod user_agent;
+pub mod widget_token;
 
 use rocket::Route;
 

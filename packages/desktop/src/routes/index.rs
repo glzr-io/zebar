@@ -1,36 +1,24 @@
 use std::{path::PathBuf, sync::Arc};
 
-use rocket::{
-  fs::NamedFile,
-  http::{ContentType, Status},
-  request::{FromRequest, Outcome, Request},
-  State,
-};
-use tokio::fs;
+use rocket::{fs::NamedFile, http::Status, State};
 
-use super::user_agent::UserAgent;
-use crate::widget_factory::WidgetFactory;
+use crate::{
+  routes::widget_token::WidgetToken, widget_factory::WidgetFactory,
+};
 
 #[rocket::get("/<path..>", rank = 100)]
 pub async fn serve(
-  path: Option<PathBuf>, // Optional path from the route.
-  user_agent: UserAgent<'_>,
+  path: Option<PathBuf>,
+  widget_token: WidgetToken,
   widget_factory: &State<Arc<WidgetFactory>>,
 ) -> Result<NamedFile, Status> {
-  // Validate the User-Agent header.
-  if user_agent.value.is_none() {
-    println!("Bad User-Agent: {:?}", user_agent.value);
-    return Err(Status::NotFound);
-  }
-
+  println!("====Serving index {:?}", path);
   // Retrieve the widget state using the User-Agent.
-  let widget = match widget_factory
-    .widget_state_by_id(&user_agent.value.unwrap())
-    .await
-  {
-    Some(widget) => widget,
-    None => return Err(Status::NotFound),
-  };
+  let widget =
+    match widget_factory.widget_state_by_id(&widget_token.0).await {
+      Some(widget) => widget,
+      None => return Err(Status::NotFound),
+    };
 
   // Prevent directory traversal with "..".
   if let Some(ref p) = path {

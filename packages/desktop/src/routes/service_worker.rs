@@ -12,6 +12,7 @@ use crate::config::Config;
 pub async fn serve(
   config: &State<Arc<Config>>,
 ) -> Result<(ContentType, Vec<u8>), Status> {
+  println!("====Serving service worker");
   let sw_path = match &config.service_worker_path {
     Some(path) => path,
     None => {

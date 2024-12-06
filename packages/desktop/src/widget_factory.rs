@@ -13,8 +13,8 @@ use std::{
 use anyhow::Context;
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
-  WebviewWindowBuilder, WindowEvent,
+  path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
+  WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -264,6 +264,7 @@ impl WidgetFactory {
         .into(),
       );
 
+      let widget_id_clone = widget_id.clone();
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
@@ -280,20 +281,26 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
-      .on_page_load(move |window, _| {
+      .on_page_load(move |window, payload| {
+        tracing::info!("Adding service worker {:?}", payload.event());
         _ = window.eval(
-          r#"
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/__zebar-sw.js')
-              .then(function(reg) {
-                console.log('Service Worker registered!', reg);
-              }).catch(function(err) {
-                console.error('Service Worker failed to register:', err);
-              });
-          }
+          &format!(r#"
+            navigator.serviceWorker.register('/__zebar-sw.js?widget-token={}')
+              .then(function(reg) console.log('Service Worker registered!', reg))
+              .catch(function(err) console.error('Service Worker failed to register:', err));
           "#,
-        );
+          &widget_id_clone
+        ));
       })
+    .data_directory(                self.app_handle
+                  .path()
+                  .resolve(
+                    format!(".glzr/zebar/tmp-{}", widget_id),
+                    BaseDirectory::Home,
+                  )
+                  .context("Unable to get home directory.")
+                  .unwrap(),
+)
       .build()?;
 
       let mut size = coordinates.size;
@@ -332,7 +339,7 @@ impl WidgetFactory {
         None
       };
 
-      let state = WidgetState {
+      let state: WidgetState = WidgetState {
         id: widget_id.clone(),
         window_handle,
         config: widget_config.clone(),

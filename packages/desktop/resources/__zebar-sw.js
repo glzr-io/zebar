@@ -1,13 +1,3 @@
-const encodeUserAgent = userAgent => {
-  if (userAgent.includes('zebar')) {
-    return userAgent;
-  }
-  return btoa(userAgent)
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-};
-
 self.addEventListener('install', event => {
   self.skipWaiting();
 });
@@ -17,34 +7,39 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
+  console.log('fetch', event.request);
+  // Only cache GET requests.
+  if (event.request.method !== 'GET') {
+    return;
+  }
 
   event.respondWith(
     (async () => {
-      const userAgent =
-        event.request.headers.get('User-Agent') || '__zebar-service-worker';
+      // First try to get the resource from the cache.
+      const cache = await caches.open('v1');
+      const cachedResponse = await cache.match(event.request);
 
-      const encodedUserAgent = encodeUserAgent(userAgent);
-      const CACHE_NAME = encodedUserAgent;
+      if (cachedResponse) {
+        return cachedResponse;
+      }
 
       try {
-        const cache = await caches.open(CACHE_NAME);
-
-        const cachedResponse = await cache.match(event.request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        const networkResponse = await fetch(event.request);
+        // Otherwise, fetch the resource from the network.
+        const networkResponse = new Request(event.request, {
+          headers: {
+            ...Object.fromEntries(event.request.headers.entries()),
+            'X-Zebar-Token': new URL(location).searchParams.get(
+              'widget-token',
+            ),
+          },
+        });
 
         if (
           networkResponse &&
           networkResponse.status === 200 &&
           networkResponse.type !== 'opaque'
         ) {
-          const responseToCache = networkResponse.clone();
-
-          await cache.put(event.request, responseToCache);
+          await cache.put(event.request, networkResponse.clone());
         }
 
         return networkResponse;
