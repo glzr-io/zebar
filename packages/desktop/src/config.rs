@@ -666,7 +666,3 @@ const fn default_bool<const V: bool>() -> bool {
 fn default_preset_name() -> String {
   "default".into()
 }
-
-const fn default_bool<const V: bool>() -> bool {
-  V
-}

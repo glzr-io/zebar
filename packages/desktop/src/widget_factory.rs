@@ -253,24 +253,21 @@ impl WidgetFactory {
         config_path.display()
       );
 
-      let state = WidgetState {
-        id: widget_id.clone(),
-        config: widget_config.clone(),
-        config_path: config_path.clone(),
-        html_path: html_path.clone(),
-        open_options: open_options.clone(),
-      };
+      let webview_url = WebviewUrl::App(
+        format!(
+          "http://127.0.0.1:3030/{}",
+          html_path
+            .file_name()
+            .and_then(|file_name| file_name.to_str())
+            .context("Not a valid HTML file path.")?
+        )
+        .into(),
+      );
 
-      let cloned_state = state.clone();
-
-      let user_agent = format!("zebar-widget={}", widget_id.clone());
-
-      // Take them to about:blank first (can return blank html file not
-      // fussed)
-      let mut window = WebviewWindowBuilder::new(
+      let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
-        WebviewUrl::External(tauri::Url::from_str("about:blank").unwrap()).into()
+        webview_url,
       )
       .title(format!(
         "Zebar - {}",
@@ -283,81 +280,21 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
-        .on_page_load(move |window, _| {
-          _ = window.eval(&format!(
-            "window.__ZEBAR_STATE={0}; sessionStorage.setItem('ZEBAR_STATE', JSON.stringify({0}))",
-            serde_json::to_string(&cloned_state).unwrap()
-          ));
-
-          if widget_config.cache_assets {
-            _ = window.eval(
-              r#"
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/__zebar-sw.js')
-                  .then(function(reg) {
-                    console.log('Service Worker registered!', reg);
-                  }).catch(function(err) {
-                    console.error('Service Worker failed to register:', err);
-                  });
-              }
-              "#,
-            );
-          } else {
-            // NOTE: The below sometimes would cause things to not load
-            // let _ = window.clear_all_browsing_data();
+      .on_page_load(move |window, _| {
+        _ = window.eval(
+          r#"
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/__zebar-sw.js')
+              .then(function(reg) {
+                console.log('Service Worker registered!', reg);
+              }).catch(function(err) {
+                console.error('Service Worker failed to register:', err);
+              });
           }
+          "#,
+        );
       })
-      .user_agent(&user_agent.to_owned())
       .build()?;
-
-      window
-        .with_webview(move |webview| {
-          #[cfg(target_os = "windows")]
-          unsafe {
-            use webview2_com::Microsoft::Web::WebView2::Win32::{
-              ICoreWebView2Settings2, ICoreWebView2_10,
-            };
-            use windows::core::Interface;
-            use windows::core::PWSTR;
-
-            let core_webview2_10: ICoreWebView2_10 =
-              webview.controller().CoreWebView2().unwrap().cast().unwrap();
-
-            let mut user_agent_wide: Vec<u16> = user_agent
-              .encode_utf16()
-              .chain(std::iter::once(0))
-              .collect();
-
-            let settings: ICoreWebView2Settings2 =
-              core_webview2_10.Settings().unwrap().cast().unwrap();
-            let _ = settings
-              .SetUserAgent(PWSTR(user_agent_wide.as_mut_ptr()))
-              .unwrap();
-          };
-
-          #[cfg(target_os = "macos")]
-          unsafe {
-            use objc::{msg_send, sel, sel_impl, runtime::Object};
-            use objc_foundation::{NSString, INSString};
-            let agent = NSString::from_str(&user_agent);
-            let () = msg_send![webview.inner() as *mut Object, setCustomUserAgent: agent];
-          };
-
-          #[cfg(target_os = "linux")]
-          {
-            use webkit2gtk::{WebViewExt, SettingsExt};
-            let webview = webview.inner();
-            let settings = webview.settings().unwrap();
-            settings.set_user_agent(Some(&user_agent));
-          }
-          // TODO: Linux
-        })
-        .unwrap();
-
-      // We then redirect them to the server so the user-agent can take
-      // effect
-      let _ = window
-        .navigate(tauri::Url::from_str("http://127.0.0.1:3030").unwrap());
 
       let mut size = coordinates.size;
       let mut position = coordinates.position;
@@ -382,18 +319,32 @@ impl WidgetFactory {
         let _ = window.set_position(position);
       }
 
-      // let window_handle = {
-      //   #[cfg(target_os = "windows")]
-      //   {
-      //     let handle =
-      //       window.hwnd().context("Failed to get window handle.")?;
+      let window_handle = {
+        #[cfg(target_os = "windows")]
+        {
+          let handle =
+            window.hwnd().context("Failed to get window handle.")?;
 
-      //     Some(handle.0 as isize)
-      //   }
+          Some(handle.0 as isize)
+        }
 
-      //   #[cfg(not(target_os = "windows"))]
-      //   None
-      // };
+        #[cfg(not(target_os = "windows"))]
+        None
+      };
+
+      let state = WidgetState {
+        id: widget_id.clone(),
+        window_handle,
+        config: widget_config.clone(),
+        config_path: config_path.clone(),
+        html_path: html_path.clone(),
+        open_options: open_options.clone(),
+      };
+
+      _ = window.eval(&format!(
+        "window.__ZEBAR_STATE={0}; sessionStorage.setItem('ZEBAR_STATE', JSON.stringify({0}))",
+        serde_json::to_string(&state)?
+      ));
 
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
       // so we also set the window as a tool window.
