@@ -516,17 +516,6 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Converts a file path to a Tauri asset URL.
-  ///
-  /// Returns a string that can be used as a webview URL.
-  fn to_asset_url(file_path: &str) -> String {
-    if cfg!(target_os = "windows") {
-      format!("http://asset.localhost/{}", file_path)
-    } else {
-      format!("asset://localhost/{}", file_path)
-    }
-  }
-
   fn initialization_script(
     &self,
     state: &WidgetState,

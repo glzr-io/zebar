@@ -20,7 +20,7 @@ pub fn setup_asset_server(
       .configure(rocket::Config::figment().merge(("port", 3030)))
       .manage(config)
       .manage(widget_factory)
-      .mount("/", routes![service_worker, init, serve]);
+      .mount("/", routes![sw_js, normalize_css, init, serve]);
 
     if let Err(err) = rocket.launch().await {
       error!("Asset server crashed: {:?}", err);
@@ -47,21 +47,15 @@ pub fn init(
 }
 
 #[get("/__zebar/sw.js")]
-pub async fn service_worker(
-  config: &State<Arc<Config>>,
-) -> Result<(ContentType, Vec<u8>), Status> {
-  println!("====Serving service worker");
-  let sw_path = match &config.service_worker_path {
-    Some(path) => path,
-    None => {
-      return Err(Status::NotFound);
-    }
-  };
+pub fn sw_js() -> (ContentType, String) {
+  let sw_path = include_str!("../resources/sw.js");
+  (ContentType::JavaScript, sw_path.to_string())
+}
 
-  match tokio::fs::read(&sw_path).await {
-    Ok(content) => Ok((ContentType::JavaScript, content)),
-    Err(_) => Err(Status::NotFound),
-  }
+#[get("/__zebar/normalize.css")]
+pub fn normalize_css() -> (ContentType, String) {
+  let normalize_css = include_str!("../resources/normalize.css");
+  (ContentType::CSS, normalize_css.to_string())
 }
 
 #[rocket::get("/<path..>", rank = 100)]

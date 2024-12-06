@@ -210,9 +210,6 @@ pub struct Config {
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
-  /// Where the service worker lives.
-  pub service_worker_path: Option<PathBuf>,
-
   /// Global settings.
   pub settings: Arc<Mutex<SettingsConfig>>,
 
@@ -253,15 +250,9 @@ impl Config {
     let (widget_configs_change_tx, _widget_configs_change_rx) =
       broadcast::channel(16);
 
-    let service_worker_path = app_handle
-      .path()
-      .resolve("resources/sw.js", BaseDirectory::Resource)
-      .ok();
-
     Ok(Self {
       app_handle: app_handle.clone(),
       config_dir: config_dir.to_absolute()?,
-      service_worker_path,
       settings: Arc::new(Mutex::new(settings)),
       widget_configs: Arc::new(Mutex::new(widget_configs)),
       _settings_change_rx,
