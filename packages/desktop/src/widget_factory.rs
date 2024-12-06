@@ -2,6 +2,8 @@ use std::{
   collections::HashMap,
   i32,
   path::PathBuf,
+  ptr::null_mut,
+  str::FromStr,
   sync::{
     atomic::{AtomicU32, Ordering},
     Arc,
@@ -11,14 +13,15 @@ use std::{
 use anyhow::Context;
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
-  WebviewWindowBuilder, WindowEvent,
+  path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
+  WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
   task,
 };
 use tracing::{error, info};
+use uuid::Uuid;
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -88,6 +91,9 @@ pub struct WidgetState {
 
   /// How the widget was opened.
   pub open_options: WidgetOpenOptions,
+
+  #[serde(skip_serializing)]
+  pub asset_id: Uuid,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -233,6 +239,15 @@ impl WidgetFactory {
       // Use running widget count as a unique label for the Tauri window.
       let widget_id = format!("widget-{}", new_count);
 
+      info!(
+        "Creating window for {} from {}",
+        widget_id,
+        config_path.display()
+      );
+
+      // Generate a unique asset ID for the widget.
+      let asset_id = Uuid::new_v4();
+
       let html_path = config_path
         .parent()
         .map(|dir| dir.join(&widget_config.html_path))
@@ -245,17 +260,31 @@ impl WidgetFactory {
           )
         })?;
 
-      info!(
-        "Creating window for widget #{} from {}",
-        new_count,
-        config_path.display()
-      );
+      let html_filename = html_path
+        .file_name()
+        .and_then(|file_name| file_name.to_str())
+        .context("Not a valid HTML file path.")?;
 
       let webview_url = WebviewUrl::App(
-        Self::to_asset_url(&html_path.to_unicode_string()).into(),
+        format!(
+          // todo: url encode this using Tauri's Url struct.
+          // todo: use asset_id instead of widget_id.
+          "http://127.0.0.1:3030/__zebar/init?asset_id={}&redirect=/{}",
+          widget_id, html_filename
+        )
+        .into(),
       );
 
-      // Note that window label needs to be globally unique.
+      let mut state = WidgetState {
+        id: widget_id.clone(),
+        window_handle: None,
+        asset_id,
+        config: widget_config.clone(),
+        config_path: config_path.clone(),
+        html_path: html_path.clone(),
+        open_options: open_options.clone(),
+      };
+
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
@@ -272,18 +301,41 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
+      .initialization_script(&format!(
+        "window.__ZEBAR_STATE={}",
+        serde_json::to_string(&state)?
+      ))
+      .on_page_load(move |window, payload| {
+        tracing::info!("Adding service worker {:?}", payload.event());
+        _ = window.eval(
+          r#"
+            navigator.serviceWorker.register('/__zebar/sw.js')
+              .then(function(reg) console.log('Service Worker registered!', reg))
+              .catch(function(err) console.error('Service Worker failed to register:', err));
+          "#,
+        );
+      })
+      .data_directory(
+        self.app_handle
+          .path()
+          .resolve(
+            format!(".glzr/zebar/tmp-{}", asset_id),
+            BaseDirectory::Home,
+          )
+          .context("Unable to get home directory.")
+          .unwrap(),
+      )
       .build()?;
 
-      let mut size = coordinates.size;
-      let mut position = coordinates.position;
-
-      if placement.dock_to_edge.enabled {
-        (size, position) = self.dock_to_edge(
+      // Widget coordinates might be modified when docked to an edge.
+      let (size, position) = match placement.dock_to_edge.enabled {
+        false => (coordinates.size, coordinates.position),
+        true => self.dock_to_edge(
           &window,
           &placement.dock_to_edge,
           &coordinates,
-        )?;
-      }
+        )?,
+      };
 
       info!("Positioning widget to {:?} {:?}", size, position);
       let _ = window.set_size(size);
@@ -296,33 +348,6 @@ impl WidgetFactory {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
       }
-
-      let window_handle = {
-        #[cfg(target_os = "windows")]
-        {
-          let handle =
-            window.hwnd().context("Failed to get window handle.")?;
-
-          Some(handle.0 as isize)
-        }
-
-        #[cfg(not(target_os = "windows"))]
-        None
-      };
-
-      let state = WidgetState {
-        id: widget_id.clone(),
-        window_handle,
-        config: widget_config.clone(),
-        config_path: config_path.clone(),
-        html_path: html_path.clone(),
-        open_options: open_options.clone(),
-      };
-
-      _ = window.eval(&format!(
-        "window.__ZEBAR_STATE={0}; sessionStorage.setItem('ZEBAR_STATE', JSON.stringify({0}))",
-        serde_json::to_string(&state)?
-      ));
 
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
       // so we also set the window as a tool window.
@@ -339,6 +364,16 @@ impl WidgetFactory {
         if widget_config.z_order == crate::config::ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
+      }
+
+      #[cfg(target_os = "windows")]
+      {
+        state.window_handle = {
+          let handle =
+            window.hwnd().context("Failed to get window handle.")?;
+
+          Some(handle.0 as isize)
+        };
       }
 
       {
@@ -779,5 +814,12 @@ impl WidgetFactory {
         acc
       },
     )
+  }
+
+  pub async fn widget_state_by_id(
+    &self,
+    widget_id: &str,
+  ) -> Option<WidgetState> {
+    self.widget_states.lock().await.get(widget_id).cloned()
   }
 }
