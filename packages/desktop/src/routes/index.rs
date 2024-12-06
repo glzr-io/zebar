@@ -3,22 +3,21 @@ use std::{path::PathBuf, sync::Arc};
 use rocket::{fs::NamedFile, http::Status, State};
 
 use crate::{
-  routes::widget_token::WidgetToken, widget_factory::WidgetFactory,
+  routes::asset_id::WidgetAssetId, widget_factory::WidgetFactory,
 };
 
 #[rocket::get("/<path..>", rank = 100)]
 pub async fn serve(
   path: Option<PathBuf>,
-  widget_token: WidgetToken,
+  asset_id: WidgetAssetId,
   widget_factory: &State<Arc<WidgetFactory>>,
 ) -> Result<NamedFile, Status> {
   println!("====Serving index {:?}", path);
   // Retrieve the widget state using the User-Agent.
-  let widget =
-    match widget_factory.widget_state_by_id(&widget_token.0).await {
-      Some(widget) => widget,
-      None => return Err(Status::NotFound),
-    };
+  let widget = match widget_factory.widget_state_by_id(&asset_id.0).await {
+    Some(widget) => widget,
+    None => return Err(Status::NotFound),
+  };
 
   // Prevent directory traversal with "..".
   if let Some(ref p) = path {

@@ -21,6 +21,7 @@ use tokio::{
   task,
 };
 use tracing::{error, info};
+use uuid::Uuid;
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -90,6 +91,9 @@ pub struct WidgetState {
 
   /// How the widget was opened.
   pub open_options: WidgetOpenOptions,
+
+  #[serde(skip_serializing)]
+  pub asset_id: Uuid,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -253,11 +257,17 @@ impl WidgetFactory {
         config_path.display()
       );
 
+      // Generate a unique asset ID for the widget.
+      let asset_id = Uuid::new_v4();
+
       let webview_url = WebviewUrl::App(
-        format!("http://127.0.0.1:3030/init/{}", widget_id).into(),
+        format!(
+          "http://127.0.0.1:3030/__zebar/init?asset-id={}",
+          asset_id
+        )
+        .into(),
       );
 
-      let widget_id_clone = widget_id.clone();
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
@@ -277,23 +287,23 @@ impl WidgetFactory {
       .on_page_load(move |window, payload| {
         tracing::info!("Adding service worker {:?}", payload.event());
         _ = window.eval(
-          &format!(r#"
-            navigator.serviceWorker.register('/__zebar-sw.js?widget-token={}')
+          r#"
+            navigator.serviceWorker.register('/__zebar/sw.js')
               .then(function(reg) console.log('Service Worker registered!', reg))
               .catch(function(err) console.error('Service Worker failed to register:', err));
           "#,
-          &widget_id_clone
-        ));
+        );
       })
-    .data_directory(                self.app_handle
-                  .path()
-                  .resolve(
-                    format!(".glzr/zebar/tmp-{}", widget_id),
-                    BaseDirectory::Home,
-                  )
-                  .context("Unable to get home directory.")
-                  .unwrap(),
-)
+      .data_directory(
+        self.app_handle
+          .path()
+          .resolve(
+            format!(".glzr/zebar/tmp-{}", asset_id),
+            BaseDirectory::Home,
+          )
+          .context("Unable to get home directory.")
+          .unwrap(),
+      )
       .build()?;
 
       let mut size = coordinates.size;
@@ -332,9 +342,10 @@ impl WidgetFactory {
         None
       };
 
-      let state: WidgetState = WidgetState {
+      let state = WidgetState {
         id: widget_id.clone(),
         window_handle,
+        asset_id,
         config: widget_config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),

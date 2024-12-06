@@ -9,23 +9,21 @@ use tokio::fs;
 
 use crate::config::Config;
 
-#[get("/init/<widget_token>")]
-pub fn init(widget_token: String, cookies: &CookieJar<'_>) -> Redirect {
+#[get("/__zebar/init?<asset_id>")]
+pub fn init(asset_id: String, cookies: &CookieJar<'_>) -> Redirect {
   println!("====Serving init route");
 
-  // Create a secure, HttpOnly cookie with the widget token
-  let cookie = Cookie::build(("widget_token", widget_token))
-    .http_only(true)
-    .secure(false)
-    .path("/")
-    .finish();
-
-  cookies.add(cookie);
+  // Create a http-only cookie with the asset ID.
+  cookies.add(
+    Cookie::build(("ZEBAR_ASSET_ID", asset_id))
+      .http_only(true)
+      .path("/"),
+  );
 
   Redirect::to("/vanilla.html")
 }
 
-#[get("/__zebar-sw.js")]
+#[get("/__zebar/sw.js")]
 pub async fn serve(
   config: &State<Arc<Config>>,
 ) -> Result<(ContentType, Vec<u8>), Status> {

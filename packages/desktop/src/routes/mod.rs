@@ -1,6 +1,6 @@
+pub mod asset_id;
 pub mod index;
 pub mod service_worker;
-pub mod widget_token;
 
 use rocket::Route;
 
