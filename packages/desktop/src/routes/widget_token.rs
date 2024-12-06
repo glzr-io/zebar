@@ -14,13 +14,15 @@ impl<'r> FromRequest<'r> for WidgetToken {
   async fn from_request(
     request: &'r Request<'_>,
   ) -> Outcome<Self, Self::Error> {
-    let token = request.headers().get_one("X-ZEBAR-TOKEN");
+    let token = request.cookies().get("widget_token");
 
     match token {
-      Some(token) => Outcome::Success(WidgetToken(token.to_string())),
+      Some(token) => {
+        Outcome::Success(WidgetToken(token.value_trimmed().to_string()))
+      }
       None => Outcome::Error((
         Status::Unauthorized,
-        anyhow::anyhow!("Missing X-ZEBAR-TOKEN header."),
+        anyhow::anyhow!("Missing widget token."),
       )),
     }
   }

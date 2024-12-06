@@ -1,3 +1,4 @@
+console.log('Service worker loaded');
 self.addEventListener('install', event => {
   self.skipWaiting();
 });

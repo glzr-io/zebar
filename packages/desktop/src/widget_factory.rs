@@ -254,14 +254,7 @@ impl WidgetFactory {
       );
 
       let webview_url = WebviewUrl::App(
-        format!(
-          "http://127.0.0.1:3030/{}",
-          html_path
-            .file_name()
-            .and_then(|file_name| file_name.to_str())
-            .context("Not a valid HTML file path.")?
-        )
-        .into(),
+        format!("http://127.0.0.1:3030/init/{}", widget_id).into(),
       );
 
       let widget_id_clone = widget_id.clone();
