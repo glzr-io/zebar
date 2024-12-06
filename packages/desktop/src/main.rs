@@ -6,42 +6,37 @@
 use std::{env, sync::Arc};
 
 use clap::Parser;
-use cli::MonitorType;
-use config::{MonitorSelection, WidgetPlacement};
-use providers::ProviderEmission;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
 use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
-use widget_factory::WidgetOpenOptions;
 
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
-  cli::{Cli, CliCommand, QueryArgs},
-  config::Config,
+  asset_server::setup_asset_server,
+  cli::{Cli, CliCommand, MonitorType, QueryArgs},
+  config::{Config, MonitorSelection, WidgetPlacement},
   monitor_state::MonitorState,
-  providers::ProviderManager,
+  providers::{ProviderEmission, ProviderManager},
   sys_tray::SysTray,
-  widget_factory::WidgetFactory,
+  widget_factory::{WidgetFactory, WidgetOpenOptions},
 };
 
+mod asset_server;
 mod cli;
 mod commands;
 mod common;
 mod config;
 mod monitor_state;
 mod providers;
-mod routes;
 mod sys_tray;
 mod widget_factory;
 
 #[macro_use]
 extern crate rocket;
-
-use routes::get_routes;
 
 /// Main entry point for the application.
 ///
@@ -165,7 +160,9 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   // If this is not the first instance of the app, this will emit within
   // the original instance and exit immediately. The CLI command is
   // guaranteed to be one of the open commands here.
-  setup_single_instance(app, widget_factory.clone(), config.clone())?;
+  setup_single_instance(app, widget_factory.clone())?;
+
+  setup_asset_server(config.clone(), widget_factory.clone());
 
   // Prevent windows from showing up in the dock on MacOS.
   #[cfg(target_os = "macos")]
@@ -268,10 +265,7 @@ fn listen_events(
 fn setup_single_instance(
   app: &tauri::App,
   widget_factory: Arc<WidgetFactory>,
-  config: Arc<Config>,
 ) -> anyhow::Result<()> {
-  setup_server(config.clone(), widget_factory.clone());
-
   app.handle().plugin(tauri_plugin_single_instance::init(
     move |_, args, _| {
       let widget_factory = widget_factory.clone();
@@ -299,19 +293,6 @@ fn setup_single_instance(
   Ok(())
 }
 
-fn setup_server(config: Arc<Config>, widget_factory: Arc<WidgetFactory>) {
-  task::spawn(async move {
-    let rocket = rocket::build()
-      .configure(rocket::Config::figment().merge(("port", 3030)))
-      .manage(config)
-      .manage(widget_factory)
-      .mount("/", get_routes());
-
-    if let Err(e) = rocket.launch().await {
-      error!("Rocket server crashed: {:?}", e);
-    }
-  });
-}
 /// Opens widgets based on CLI command.
 async fn open_widgets_by_cli_command(
   cli: Cli,

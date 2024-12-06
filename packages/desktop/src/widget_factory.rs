@@ -239,6 +239,15 @@ impl WidgetFactory {
       // Use running widget count as a unique label for the Tauri window.
       let widget_id = format!("widget-{}", new_count);
 
+      info!(
+        "Creating window for {} from {}",
+        widget_id,
+        config_path.display()
+      );
+
+      // Generate a unique asset ID for the widget.
+      let asset_id = Uuid::new_v4();
+
       let html_path = config_path
         .parent()
         .map(|dir| dir.join(&widget_config.html_path))
@@ -251,22 +260,30 @@ impl WidgetFactory {
           )
         })?;
 
-      info!(
-        "Creating window for widget #{} from {}",
-        new_count,
-        config_path.display()
-      );
-
-      // Generate a unique asset ID for the widget.
-      let asset_id = Uuid::new_v4();
+      let html_filename = html_path
+        .file_name()
+        .and_then(|file_name| file_name.to_str())
+        .context("Not a valid HTML file path.")?;
 
       let webview_url = WebviewUrl::App(
         format!(
-          "http://127.0.0.1:3030/__zebar/init?asset-id={}",
-          asset_id
+          // todo: url encode this using Tauri's Url struct.
+          // todo: use asset_id instead of widget_id.
+          "http://127.0.0.1:3030/__zebar/init?asset_id={}&redirect=/{}",
+          widget_id, html_filename
         )
         .into(),
       );
+
+      let mut state = WidgetState {
+        id: widget_id.clone(),
+        window_handle: None,
+        asset_id,
+        config: widget_config.clone(),
+        config_path: config_path.clone(),
+        html_path: html_path.clone(),
+        open_options: open_options.clone(),
+      };
 
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
@@ -284,6 +301,10 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
+      .initialization_script(&format!(
+        "window.__ZEBAR_STATE={}",
+        serde_json::to_string(&state)?
+      ))
       .on_page_load(move |window, payload| {
         tracing::info!("Adding service worker {:?}", payload.event());
         _ = window.eval(
@@ -306,16 +327,15 @@ impl WidgetFactory {
       )
       .build()?;
 
-      let mut size = coordinates.size;
-      let mut position = coordinates.position;
-
-      if placement.dock_to_edge.enabled {
-        (size, position) = self.dock_to_edge(
+      // Widget coordinates might be modified when docked to an edge.
+      let (size, position) = match placement.dock_to_edge.enabled {
+        false => (coordinates.size, coordinates.position),
+        true => self.dock_to_edge(
           &window,
           &placement.dock_to_edge,
           &coordinates,
-        )?;
-      }
+        )?,
+      };
 
       info!("Positioning widget to {:?} {:?}", size, position);
       let _ = window.set_size(size);
@@ -328,34 +348,6 @@ impl WidgetFactory {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
       }
-
-      let window_handle = {
-        #[cfg(target_os = "windows")]
-        {
-          let handle =
-            window.hwnd().context("Failed to get window handle.")?;
-
-          Some(handle.0 as isize)
-        }
-
-        #[cfg(not(target_os = "windows"))]
-        None
-      };
-
-      let state = WidgetState {
-        id: widget_id.clone(),
-        window_handle,
-        asset_id,
-        config: widget_config.clone(),
-        config_path: config_path.clone(),
-        html_path: html_path.clone(),
-        open_options: open_options.clone(),
-      };
-
-      _ = window.eval(&format!(
-        "window.__ZEBAR_STATE={0}; sessionStorage.setItem('ZEBAR_STATE', JSON.stringify({0}))",
-        serde_json::to_string(&state)?
-      ));
 
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
       // so we also set the window as a tool window.
@@ -372,6 +364,16 @@ impl WidgetFactory {
         if widget_config.z_order == crate::config::ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
+      }
+
+      #[cfg(target_os = "windows")]
+      {
+        state.window_handle = {
+          let handle =
+            window.hwnd().context("Failed to get window handle.")?;
+
+          Some(handle.0 as isize)
+        };
       }
 
       {
