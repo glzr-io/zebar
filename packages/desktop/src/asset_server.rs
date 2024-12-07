@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use rocket::{
   fs::NamedFile,
-  http::{ContentType, Cookie, CookieJar, Status},
+  http::{ContentType, Cookie, CookieJar, SameSite, Status},
   request::{FromRequest, Outcome},
   response::Redirect,
   tokio::task,
@@ -38,6 +38,7 @@ pub fn init(
   cookies.add(
     Cookie::build(("ZEBAR_ASSET_ID", asset_id))
       .http_only(true)
+      .same_site(SameSite::Strict)
       .path("/"),
   );
 

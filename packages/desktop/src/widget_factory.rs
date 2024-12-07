@@ -14,7 +14,7 @@ use anyhow::Context;
 use serde::Serialize;
 use tauri::{
   path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
-  WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  Url, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -265,15 +265,16 @@ impl WidgetFactory {
         .and_then(|file_name| file_name.to_str())
         .context("Not a valid HTML file path.")?;
 
-      let webview_url = WebviewUrl::App(
-        format!(
-          // todo: url encode this using Tauri's Url struct.
-          // todo: use asset_id instead of widget_id.
-          "http://127.0.0.1:6124/__zebar/init?asset_id={}&redirect=/{}",
-          widget_id, html_filename
-        )
-        .into(),
-      );
+      let url = Url::parse_with_params(
+        "http://127.0.0.1:6124/__zebar/init",
+        &[
+          ("asset_id", widget_id.to_string()),
+          ("redirect", html_filename.to_string()),
+        ],
+      )?;
+
+      // todo: use asset_id instead of widget_id.
+      let webview_url = WebviewUrl::External(url);
 
       let mut state = WidgetState {
         id: widget_id.clone(),
