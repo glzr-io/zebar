@@ -268,8 +268,8 @@ impl WidgetFactory {
       let url = Url::parse_with_params(
         "http://127.0.0.1:6124/__zebar/init",
         &[
-          ("token", asset_server_token.to_string()),
-          ("redirect", html_filename.to_string()),
+          ("token", &asset_server_token),
+          ("redirect", &format!("/{}", html_filename)),
         ],
       )?;
 
@@ -811,16 +811,13 @@ impl WidgetFactory {
     )
   }
 
-  pub async fn widget_state_by_token(
-    &self,
-    token: &str,
-  ) -> Option<WidgetState> {
+  pub async fn state_by_token(&self, token: &str) -> Option<WidgetState> {
     self
       .widget_states
       .lock()
       .await
-      .iter()
-      .find(|(_, state)| state.asset_server_token == token)
-      .map(|(_, state)| state.clone())
+      .values()
+      .find(|state| state.asset_server_token == token)
+      .cloned()
   }
 }
