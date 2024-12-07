@@ -1,10 +1,10 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{io::Cursor, path::PathBuf, sync::Arc};
 
 use rocket::{
   fs::NamedFile,
-  http::{ContentType, Cookie, CookieJar, SameSite, Status},
+  http::{ContentType, Cookie, CookieJar, Header, SameSite, Status},
   request::{FromRequest, Outcome},
-  response::Redirect,
+  response::{self, Redirect, Responder, Response},
   tokio::task,
   Request, State,
 };
@@ -46,15 +46,27 @@ pub fn init(
 }
 
 #[get("/__zebar/sw.js")]
-pub fn sw_js() -> (ContentType, String) {
-  let sw_path = include_str!("../resources/sw.js");
-  (ContentType::JavaScript, sw_path.to_string())
+pub fn sw_js() -> SwResponse {
+  SwResponse(include_str!("../resources/sw.js"))
+}
+
+#[derive(Debug)]
+pub struct SwResponse(&'static str);
+
+#[rocket::async_trait]
+impl<'r> Responder<'r, 'static> for SwResponse {
+  fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    Response::build()
+      .header(Header::new("Content-Type", "text/javascript"))
+      .header(Header::new("Service-Worker-Allowed", "/"))
+      .sized_body(self.0.len(), Cursor::new(self.0))
+      .ok()
+  }
 }
 
 #[get("/__zebar/normalize.css")]
-pub fn normalize_css() -> (ContentType, String) {
-  let normalize_css = include_str!("../resources/normalize.css");
-  (ContentType::CSS, normalize_css.to_string())
+pub fn normalize_css() -> (ContentType, &'static str) {
+  (ContentType::CSS, include_str!("../resources/normalize.css"))
 }
 
 #[rocket::get("/<path..>", rank = 100)]
