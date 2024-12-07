@@ -23,7 +23,7 @@ pub fn setup_asset_server(
       .mount("/", routes![sw_js, normalize_css, init, serve]);
 
     if let Err(err) = rocket.launch().await {
-      error!("Asset server crashed: {:?}", err);
+      error!("Asset server failed to start: {:?}", err);
     }
   });
 }
@@ -34,8 +34,6 @@ pub fn init(
   redirect: String,
   cookies: &CookieJar<'_>,
 ) -> Redirect {
-  println!("====Serving init route");
-
   // Create a http-only cookie with the asset ID.
   cookies.add(
     Cookie::build(("ZEBAR_ASSET_ID", asset_id))
