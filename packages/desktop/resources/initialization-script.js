@@ -1,4 +1,4 @@
-if (window.location.host === '127.0.0.1:3030') {
+if (window.location.host === '127.0.0.1:6124') {
   document.addEventListener('DOMContentLoaded', () => {
     addFavicon();
     loadCss('/__zebar/normalize.css');

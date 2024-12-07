@@ -17,7 +17,7 @@ pub fn setup_asset_server(
 ) {
   task::spawn(async move {
     let rocket = rocket::build()
-      .configure(rocket::Config::figment().merge(("port", 3030)))
+      .configure(rocket::Config::figment().merge(("port", 6124)))
       .manage(config)
       .manage(widget_factory)
       .mount("/", routes![sw_js, normalize_css, init, serve]);

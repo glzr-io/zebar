@@ -269,7 +269,7 @@ impl WidgetFactory {
         format!(
           // todo: url encode this using Tauri's Url struct.
           // todo: use asset_id instead of widget_id.
-          "http://127.0.0.1:3030/__zebar/init?asset_id={}&redirect=/{}",
+          "http://127.0.0.1:6124/__zebar/init?asset_id={}&redirect=/{}",
           widget_id, html_filename
         )
         .into(),

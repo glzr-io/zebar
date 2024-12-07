@@ -7,7 +7,7 @@
     "urls": [
       "http://asset.localhost",
       "asset://localhost",
-      "http://127.0.0.1:3030"
+      "http://127.0.0.1:6124"
     ]
   },
   "permissions": [
