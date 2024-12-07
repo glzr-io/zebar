@@ -1,17 +1,17 @@
 if (window.location.host === '127.0.0.1:6124') {
-  document.addEventListener('DOMContentLoaded', () => {
-    addFavicon();
-    loadCss('/__zebar/normalize.css');
-  });
-
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
-      .register('/__zebar/sw.js')
+      .register('/__zebar/sw.js', { scope: '/' })
       .then(() => console.log('[Zebar] Service Worker registered.'))
       .catch(err =>
         console.error('[Zebar] Service Worker failed to register:', err),
       );
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    addFavicon();
+    loadCss('/__zebar/normalize.css');
+  });
 }
 
 /**
@@ -46,8 +46,11 @@ function addFavicon() {
  */
 function insertIntoHead(element) {
   const resources = document.head.querySelectorAll('link, script, style');
-  document.head.insertBefore(
-    element,
-    resources[resources.length - 1] ?? null,
-  );
+  const target = resources[0]?.previousElementSibling;
+
+  if (target) {
+    target.after(element);
+  } else {
+    document.head.appendChild(element);
+  }
 }

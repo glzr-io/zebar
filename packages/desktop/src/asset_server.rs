@@ -62,28 +62,19 @@ pub async fn serve(
   path: Option<PathBuf>,
   token: WidgetToken,
   widget_factory: &State<Arc<WidgetFactory>>,
-) -> Result<NamedFile, Status> {
+) -> Option<NamedFile> {
   // Retrieve the widget state for the corresponding token.
-  let widget_state = match widget_factory.state_by_token(&token.0).await {
-    Some(widget) => widget,
-    None => return Err(Status::NotFound),
-  };
-
-  let base_url = match widget_state.html_path.parent().map(PathBuf::from) {
-    Some(base_url) => base_url,
-    None => return Err(Status::NotFound),
-  };
+  let widget_state = widget_factory.state_by_token(&token.0).await?;
 
   // Determine the final path to serve.
+  let base_url = widget_state.html_path.parent().map(PathBuf::from)?;
   let asset_path = base_url.join(path.unwrap_or("index.html".into()));
 
   println!("Root: {:?} ---- Final path: {:?}", base_url, asset_path);
 
-  // Attempt to open and serve the requested file, currently returns html
-  // `Content-Type` if not found
-  NamedFile::open(asset_path)
-    .await
-    .map_err(|_| Status::NotFound)
+  // Attempt to open and serve the requested file. Currently returns HTML
+  // `Content-Type` if not found.
+  NamedFile::open(asset_path).await.ok()
 }
 
 /// Token for identifying which widget is being accessed.
