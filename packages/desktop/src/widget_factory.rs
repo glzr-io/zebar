@@ -1,16 +1,14 @@
 use std::{
   collections::HashMap,
-  i32,
   path::PathBuf,
-  ptr::null_mut,
-  str::FromStr,
   sync::{
     atomic::{AtomicU32, Ordering},
     Arc,
   },
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
+use base64::prelude::*;
 use serde::Serialize;
 use tauri::{
   path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
@@ -93,7 +91,7 @@ pub struct WidgetState {
   pub open_options: WidgetOpenOptions,
 
   #[serde(skip_serializing)]
-  pub asset_id: Uuid,
+  pub asset_server_token: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -245,46 +243,52 @@ impl WidgetFactory {
         config_path.display()
       );
 
-      // Generate a unique asset ID for the widget.
-      let asset_id = Uuid::new_v4();
+      let parent_dir =
+        config_path.parent().context("No parent directory.")?;
 
-      let html_path = config_path
-        .parent()
-        .map(|dir| dir.join(&widget_config.html_path))
-        .filter(|path| path.exists())
-        .with_context(|| {
-          format!(
-            "HTML file not found at '{}' for config '{}'.",
-            widget_config.html_path.display(),
-            config_path.display()
-          )
-        })?;
+      let html_path = parent_dir.join(&widget_config.html_path);
+
+      if !html_path.exists() {
+        bail!(
+          "HTML file not found at '{}' for config '{}'.",
+          widget_config.html_path.display(),
+          config_path.display()
+        )
+      }
 
       let html_filename = html_path
         .file_name()
         .and_then(|file_name| file_name.to_str())
         .context("Not a valid HTML file path.")?;
 
+      // Generate a unique token to identify requests from the widget to
+      // the asset server.
+      let asset_server_token = Uuid::new_v4().to_string();
+
       let url = Url::parse_with_params(
         "http://127.0.0.1:6124/__zebar/init",
         &[
-          ("asset_id", widget_id.to_string()),
+          ("token", asset_server_token.to_string()),
           ("redirect", html_filename.to_string()),
         ],
       )?;
 
-      // todo: use asset_id instead of widget_id.
       let webview_url = WebviewUrl::External(url);
 
       let mut state = WidgetState {
         id: widget_id.clone(),
         window_handle: None,
-        asset_id,
+        asset_server_token,
         config: widget_config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
         open_options: open_options.clone(),
       };
+
+      // Widgets from the same top-level directory share their browser
+      // cache (i.e. `localStorage`, `sessionStorage`, SW cache, etc.).
+      let cache_id = BASE64_STANDARD
+        .encode(parent_dir.to_path_buf().to_unicode_string());
 
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
@@ -304,11 +308,12 @@ impl WidgetFactory {
       .resizable(widget_config.resizable)
       .initialization_script(&self.initialization_script(&state)?)
       .data_directory(
+        // TODO: Add this as an ext method on the Tauri window.
         self
           .app_handle
           .path()
           .resolve(
-            format!(".glzr/zebar/tmp-{}", asset_id),
+            format!(".glzr/zebar/tmp-{}", cache_id),
             BaseDirectory::Home,
           )
           .context("Unable to get home directory.")
@@ -806,10 +811,16 @@ impl WidgetFactory {
     )
   }
 
-  pub async fn widget_state_by_id(
+  pub async fn widget_state_by_token(
     &self,
-    widget_id: &str,
+    token: &str,
   ) -> Option<WidgetState> {
-    self.widget_states.lock().await.get(widget_id).cloned()
+    self
+      .widget_states
+      .lock()
+      .await
+      .iter()
+      .find(|(_, state)| state.asset_server_token == token)
+      .map(|(_, state)| state.clone())
   }
 }

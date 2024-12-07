@@ -28,15 +28,15 @@ pub fn setup_asset_server(
   });
 }
 
-#[get("/__zebar/init?<asset_id>&<redirect>")]
+#[get("/__zebar/init?<token>&<redirect>")]
 pub fn init(
-  asset_id: String,
+  token: String,
   redirect: String,
   cookies: &CookieJar<'_>,
 ) -> Redirect {
-  // Create a http-only cookie with the asset ID.
+  // Create a http-only cookie with the widget's token.
   cookies.add(
-    Cookie::build(("ZEBAR_ASSET_ID", asset_id))
+    Cookie::build(("ZEBAR_TOKEN", token))
       .http_only(true)
       .same_site(SameSite::Strict)
       .path("/"),
@@ -60,12 +60,11 @@ pub fn normalize_css() -> (ContentType, String) {
 #[rocket::get("/<path..>", rank = 100)]
 pub async fn serve(
   path: Option<PathBuf>,
-  asset_id: WidgetAssetId,
+  token: WidgetToken,
   widget_factory: &State<Arc<WidgetFactory>>,
 ) -> Result<NamedFile, Status> {
-  println!("====Serving index {:?}", path);
-  // Retrieve the widget state using the User-Agent.
-  let widget = match widget_factory.widget_state_by_id(&asset_id.0).await {
+  // Retrieve the widget state for the corresponding token.
+  let widget = match widget_factory.widget_state_by_token(&token.0).await {
     Some(widget) => widget,
     None => return Err(Status::NotFound),
   };
@@ -120,26 +119,26 @@ pub async fn serve(
     .map_err(|_| Status::NotFound)
 }
 
-/// Asset ID for identifying which widget is being accessed.
+/// Token for identifying which widget is being accessed.
 #[derive(Debug)]
-pub struct WidgetAssetId(pub String);
+pub struct WidgetToken(pub String);
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for WidgetAssetId {
+impl<'r> FromRequest<'r> for WidgetToken {
   type Error = anyhow::Error;
 
   async fn from_request(
     request: &'r Request<'_>,
   ) -> Outcome<Self, Self::Error> {
-    let asset_id = request.cookies().get("ZEBAR_ASSET_ID");
+    let token = request.cookies().get("ZEBAR_TOKEN");
 
-    match asset_id {
-      Some(asset_id) => Outcome::Success(WidgetAssetId(
-        asset_id.value_trimmed().to_string(),
-      )),
+    match token {
+      Some(token) => {
+        Outcome::Success(WidgetToken(token.value_trimmed().to_string()))
+      }
       None => Outcome::Error((
         Status::Unauthorized,
-        anyhow::anyhow!("Missing asset ID for widget."),
+        anyhow::anyhow!("Missing token for widget."),
       )),
     }
   }
