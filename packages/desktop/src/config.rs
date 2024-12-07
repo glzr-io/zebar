@@ -90,9 +90,6 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
-  #[serde(default = "default_bool::<true>")]
-  pub cache_assets: bool,
-
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]

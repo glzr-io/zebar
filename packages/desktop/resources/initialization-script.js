@@ -15,7 +15,7 @@ if (window.location.host === '127.0.0.1:3030') {
 }
 
 /**
- * Adds a CSS file with the given path to the head.
+ * Adds a CSS file with the given path to the head element.
  */
 function loadCss(path) {
   const link = document.createElement('link');
@@ -27,7 +27,7 @@ function loadCss(path) {
 }
 
 /**
- * Adds a favicon to the head if one is not already present.
+ * Adds a favicon to the head element if one is not already present.
  */
 function addFavicon() {
   if (!document.querySelector('link[rel="icon"]')) {
@@ -40,10 +40,14 @@ function addFavicon() {
 }
 
 /**
- * Inserts the element after the last meta tag. Appends to the end of the
- * head if no meta tags are present.
+ * Inserts the element before any other resource tags in the head element.
+ * Ensures that user-defined stylesheets or favicons are prioritized over
+ * Zebar's defaults.
  */
 function insertIntoHead(element) {
-  const lastMeta = document.head.querySelector('meta:last-of-type');
-  document.head.insertBefore(element, lastMeta?.nextSibling ?? null);
+  const resources = document.head.querySelectorAll('link, script, style');
+  document.head.insertBefore(
+    element,
+    resources[resources.length - 1] ?? null,
+  );
 }
