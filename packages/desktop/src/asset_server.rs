@@ -9,7 +9,9 @@ use rocket::{
   Request, State,
 };
 
-use crate::{config::Config, widget_factory::WidgetFactory};
+use crate::{
+  common::PathExt, config::Config, widget_factory::WidgetFactory,
+};
 
 pub fn setup_asset_server(
   config: Arc<Config>,
@@ -80,9 +82,15 @@ pub async fn serve(
 
   // Determine the final path to serve.
   let base_url = widget_state.html_path.parent().map(PathBuf::from)?;
-  let asset_path = base_url.join(path.unwrap_or("index.html".into()));
+  let asset_path = base_url
+    .join(path.unwrap_or("index.html".into()))
+    .to_absolute()
+    .ok()?;
 
-  println!("Root: {:?} ---- Final path: {:?}", base_url, asset_path);
+  // Prevent directory traversal outside of the base URL.
+  if !asset_path.starts_with(&base_url) {
+    return None;
+  }
 
   // Attempt to open and serve the requested file. Currently returns HTML
   // `Content-Type` if not found.
