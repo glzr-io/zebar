@@ -46,7 +46,7 @@
         return (
           <div className="app">
             {output.audio?.defaultPlaybackDevice && (
-              <div class="chip">
+              <div className="chip">
                 {output.audio.defaultPlaybackDevice.name}-
                 {output.audio.defaultPlaybackDevice.volume}
                 <input
@@ -61,7 +61,7 @@
                 />
               </div>
             )}
-            <div class="chip">
+            <div className="chip">
               Media: {output.media?.currentSession?.title}-
               {output.media?.currentSession?.artist}
               <button onClick={() => output.media?.togglePlayPause()}>
