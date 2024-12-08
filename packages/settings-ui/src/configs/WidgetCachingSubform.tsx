@@ -1,12 +1,7 @@
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   TextField,
   SelectField,
-  CardDescription,
   NumberField,
 } from '@glzr/components';
 import { IconX } from '@tabler/icons-solidjs';
@@ -22,6 +17,7 @@ export interface WidgetCachingSubformProps {
 export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
   const cachingForm = createForm<WidgetCaching>(
     props.value ?? {
+      // Default to one week (in seconds).
       defaultDuration: 7 * 24 * 60 * 60,
       rules: [],
     },
@@ -46,84 +42,80 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
   );
 
   return (
-    <Card class="w-full max-w-3xl">
-      <CardHeader>
-        <CardTitle>Cache Settings</CardTitle>
-        <CardDescription>
-          Configure your caching preferences and rules
-        </CardDescription>
-      </CardHeader>
+    <div>
+      <h3 class="text-lg font-semibold">Cache settings</h3>
+      <p class="text-sm text-muted-foreground mb-3">
+        Control how long any web requests are stored for offline
+        availability & faster loading.
+      </p>
 
-      <CardContent class="space-y-6">
-        <div class="space-y-2">
-          <Field of={cachingForm} path="defaultDuration">
-            {inputProps => (
-              <CacheDurationField
-                id="default-duration"
-                {...inputProps()}
-              />
-            )}
-          </Field>
-        </div>
+      <div class="space-y-2 mb-3">
+        <Field of={cachingForm} path="defaultDuration">
+          {inputProps => (
+            <CacheDurationField
+              id="default-duration"
+              label="Default cache duration"
+              {...inputProps()}
+            />
+          )}
+        </Field>
+      </div>
 
-        <div class="space-y-2">
-          <h3 class="text-sm font-medium">Cache rules</h3>
-          <div class="space-y-2">
-            {cachingForm.value.rules.map((_, index) => (
-              <div class="flex items-center space-x-2">
-                <Field of={cachingForm} path={`rules.${index}.urlRegex`}>
-                  {inputProps => (
-                    <TextField
-                      id="rule-url"
-                      placeholder="URL pattern"
-                      class="flex-grow"
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
+      <h3 class="text-sm font-medium">Cache rules</h3>
+      <div class="space-y-2">
+        {cachingForm.value.rules.map((_, index) => (
+          <div class="flex items-center space-x-2">
+            <Field of={cachingForm} path={`rules.${index}.urlRegex`}>
+              {inputProps => (
+                <TextField
+                  id="rule-url"
+                  placeholder="URL regex"
+                  class="flex-grow"
+                  {...inputProps()}
+                />
+              )}
+            </Field>
 
-                <Field of={cachingForm} path={`rules.${index}.duration`}>
-                  {inputProps => (
-                    <CacheDurationField
-                      id={`rule-duration-${index}`}
-                      {...inputProps()}
-                    />
-                  )}
-                </Field>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() =>
-                    cachingForm.setFieldValue('rules', rules =>
-                      rules.filter((_, i) => i !== index),
-                    )
-                  }
-                  aria-label="Remove rule"
-                >
-                  <IconX class="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+            <Field of={cachingForm} path={`rules.${index}.duration`}>
+              {inputProps => (
+                <CacheDurationField
+                  id={`rule-duration-${index}`}
+                  {...inputProps()}
+                />
+              )}
+            </Field>
 
             <Button
               type="button"
               variant="outline"
+              size="icon"
               onClick={() =>
-                cachingForm.setFieldValue('rules', rules => [
-                  ...rules,
-                  { urlRegex: '', duration: 0 },
-                ])
+                cachingForm.setFieldValue('rules', rules =>
+                  rules.filter((_, i) => i !== index),
+                )
               }
-              class="w-full"
+              aria-label="Remove rule"
             >
-              Add cache rule +
+              <IconX class="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            cachingForm.setFieldValue('rules', rules => [
+              ...rules,
+              { urlRegex: '', duration: 0 },
+            ])
+          }
+          class="w-full"
+        >
+          Add cache rule +
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -231,7 +223,10 @@ function CacheDurationField(props: CacheDurationFieldProps) {
           id={props.id}
           placeholder="Cache duration (seconds)"
           value={customValue()}
-          onChange={value => props.onChange(value)}
+          onChange={value => {
+            setCustomValue(value);
+            props.onChange(value);
+          }}
           onBlur={props.onBlur}
         />
       </Show>
