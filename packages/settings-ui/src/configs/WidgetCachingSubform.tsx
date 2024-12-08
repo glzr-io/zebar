@@ -11,7 +11,7 @@ import {
 } from '@glzr/components';
 import { IconX } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
-import { createEffect, on, Show } from 'solid-js';
+import { createEffect, createSignal, on, Show } from 'solid-js';
 import type { WidgetCaching } from 'zebar';
 
 export interface WidgetCachingSubformProps {
@@ -58,53 +58,10 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
         <div class="space-y-2">
           <Field of={cachingForm} path="defaultDuration">
             {inputProps => (
-              <>
-                <SelectField
-                  id="default-duration-select"
-                  label="Default cache duration"
-                  placeholder="Select default cache duration"
-                  options={[
-                    {
-                      value: 60 * 60,
-                      label: '1 hour',
-                    },
-                    {
-                      value: 24 * 60 * 60,
-                      label: '1 day',
-                    },
-                    {
-                      value: 7 * 24 * 60 * 60,
-                      label: '1 week',
-                    },
-                    {
-                      value: 1,
-                      label: 'Custom',
-                    },
-                    {
-                      value: 0,
-                      label: 'No cache (network-only)',
-                    },
-                  ]}
-                  {...inputProps()}
-                />
-
-                <Show
-                  when={
-                    inputProps().value !== 0 &&
-                    inputProps().value !== 60 * 60 &&
-                    inputProps().value !== 24 * 60 * 60 &&
-                    inputProps().value !== 7 * 24 * 60 * 60
-                  }
-                >
-                  <NumberField
-                    id="default-duration-number"
-                    label="Default cache duration"
-                    placeholder="Enter default cache duration (in seconds)"
-                    class="mt-2"
-                    {...inputProps()}
-                  />
-                </Show>
-              </>
+              <CacheDurationField
+                id="default-duration"
+                {...inputProps()}
+              />
             )}
           </Field>
         </div>
@@ -127,27 +84,8 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
 
                 <Field of={cachingForm} path={`rules.${index}.duration`}>
                   {inputProps => (
-                    <SelectField
-                      id="default-duration-select"
-                      placeholder="Select default cache duration"
-                      options={[
-                        {
-                          value: 60 * 60,
-                          label: '1 hour',
-                        },
-                        {
-                          value: 24 * 60 * 60,
-                          label: '1 day',
-                        },
-                        {
-                          value: 7 * 24 * 60 * 60,
-                          label: '1 week',
-                        },
-                        {
-                          value: 0,
-                          label: 'No cache',
-                        },
-                      ]}
+                    <CacheDurationField
+                      id={`rule-duration-${index}`}
                       {...inputProps()}
                     />
                   )}
@@ -186,5 +124,85 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function CacheDurationField(props: {
+  id?: string;
+  label?: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const [mode, setMode] = createSignal<'preset' | 'custom'>(
+    isPresetDuration(props.value) ? 'preset' : 'custom',
+  );
+
+  const [customValue, setCustomValue] = createSignal(
+    mode() === 'custom' ? props.value : 0,
+  );
+
+  // Sync with external value changes
+  createEffect(
+    on(
+      () => props.value,
+      newValue => {
+        if (isPresetDuration(newValue)) {
+          setMode('preset');
+        } else {
+          setMode('custom');
+          setCustomValue(newValue);
+        }
+      },
+    ),
+  );
+
+  function isPresetDuration(duration: number) {
+    return [
+      { value: 60 * 60, label: '1 hour' },
+      { value: 24 * 60 * 60, label: '1 day' },
+      { value: 7 * 24 * 60 * 60, label: '1 week' },
+      { value: 0, label: 'No cache (network-only)' },
+      { value: -1, label: 'Custom' },
+    ].some(option => option.value === duration && option.value !== -1);
+  }
+
+  return (
+    <>
+      <SelectField
+        id={props.id}
+        placeholder="Select cache duration"
+        options={[
+          { value: 60 * 60, label: '1 hour' },
+          { value: 24 * 60 * 60, label: '1 day' },
+          { value: 7 * 24 * 60 * 60, label: '1 week' },
+          { value: 0, label: 'No cache (network-only)' },
+          { value: -1, label: 'Custom' },
+        ]}
+        value={mode() === 'preset' ? props.value : -1}
+        onChange={value => {
+          if (value === -1) {
+            setMode('custom');
+            props.onChange(customValue());
+          } else {
+            setMode('preset');
+            props.onChange(value);
+          }
+        }}
+      />
+
+      <Show when={mode() === 'custom'}>
+        <NumberField
+          id={props.id}
+          label={props.label ?? 'Cache duration'}
+          placeholder="Enter cache duration (in seconds)"
+          class="mt-2"
+          value={customValue()}
+          onChange={value => {
+            setCustomValue(value);
+            props.onChange(value);
+          }}
+        />
+      </Show>
+    </>
   );
 }
