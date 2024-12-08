@@ -118,7 +118,7 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
               }
               class="w-full"
             >
-              Add cache rule
+              Add cache rule +
             </Button>
           </div>
         </div>
@@ -127,43 +127,74 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
   );
 }
 
-function CacheDurationField(props: {
+interface CacheDurationFieldProps {
   id?: string;
   label?: string;
   value: number;
   onChange: (value: number) => void;
-}) {
-  const [mode, setMode] = createSignal<'preset' | 'custom'>(
-    isPresetDuration(props.value) ? 'preset' : 'custom',
+  onBlur: () => void;
+}
+
+enum SelectOptions {
+  OneHour,
+  OneDay,
+  OneWeek,
+  NoCache,
+  Custom,
+}
+
+function CacheDurationField(props: CacheDurationFieldProps) {
+  const [selectValue, setSelectValue] = createSignal<SelectOptions>(
+    toSelectValue(props.value),
   );
 
-  const [customValue, setCustomValue] = createSignal(
-    mode() === 'custom' ? props.value : 0,
+  const [customValue, setCustomValue] = createSignal<number | undefined>(
+    selectValue() === SelectOptions.Custom ? props.value : undefined,
   );
 
-  // Sync with external value changes
+  // Update the select value when the props value changes.
   createEffect(
     on(
       () => props.value,
       newValue => {
-        if (isPresetDuration(newValue)) {
-          setMode('preset');
-        } else {
-          setMode('custom');
-          setCustomValue(newValue);
-        }
+        const selectValue = toSelectValue(newValue);
+        setSelectValue(selectValue);
+        setCustomValue(
+          selectValue === SelectOptions.Custom ? newValue : undefined,
+        );
       },
+      { defer: true },
     ),
   );
 
-  function isPresetDuration(duration: number) {
-    return [
-      { value: 60 * 60, label: '1 hour' },
-      { value: 24 * 60 * 60, label: '1 day' },
-      { value: 7 * 24 * 60 * 60, label: '1 week' },
-      { value: 0, label: 'No cache (network-only)' },
-      { value: -1, label: 'Custom' },
-    ].some(option => option.value === duration && option.value !== -1);
+  function toSelectValue(value: number) {
+    switch (value) {
+      case 60 * 60:
+        return SelectOptions.OneHour;
+      case 24 * 60 * 60:
+        return SelectOptions.OneDay;
+      case 7 * 24 * 60 * 60:
+        return SelectOptions.OneWeek;
+      case 0:
+        return SelectOptions.NoCache;
+      default:
+        return SelectOptions.Custom;
+    }
+  }
+
+  function toDuration(value: SelectOptions) {
+    switch (value) {
+      case SelectOptions.OneHour:
+        return 60 * 60;
+      case SelectOptions.OneDay:
+        return 24 * 60 * 60;
+      case SelectOptions.OneWeek:
+        return 7 * 24 * 60 * 60;
+      case SelectOptions.NoCache:
+        return 0;
+      case SelectOptions.Custom:
+        return customValue();
+    }
   }
 
   return (
@@ -171,36 +202,37 @@ function CacheDurationField(props: {
       <SelectField
         id={props.id}
         placeholder="Select cache duration"
-        options={[
-          { value: 60 * 60, label: '1 hour' },
-          { value: 24 * 60 * 60, label: '1 day' },
-          { value: 7 * 24 * 60 * 60, label: '1 week' },
-          { value: 0, label: 'No cache (network-only)' },
-          { value: -1, label: 'Custom' },
-        ]}
-        value={mode() === 'preset' ? props.value : -1}
-        onChange={value => {
-          if (value === -1) {
-            setMode('custom');
-            props.onChange(customValue());
-          } else {
-            setMode('preset');
-            props.onChange(value);
+        label={props.label}
+        options={
+          [
+            { value: SelectOptions.OneHour, label: '1 hour' },
+            { value: SelectOptions.OneDay, label: '1 day' },
+            { value: SelectOptions.OneWeek, label: '1 week' },
+            { value: SelectOptions.Custom, label: 'Custom' },
+            {
+              value: SelectOptions.NoCache,
+              label: 'No cache',
+            },
+          ] as const
+        }
+        value={selectValue()}
+        onChange={(value: SelectOptions) => {
+          setSelectValue(value);
+
+          if (value !== SelectOptions.Custom) {
+            props.onChange(toDuration(value));
           }
         }}
+        onBlur={props.onBlur}
       />
 
-      <Show when={mode() === 'custom'}>
+      <Show when={selectValue() === SelectOptions.Custom}>
         <NumberField
           id={props.id}
-          label={props.label ?? 'Cache duration'}
-          placeholder="Enter cache duration (in seconds)"
-          class="mt-2"
+          placeholder="Cache duration (seconds)"
           value={customValue()}
-          onChange={value => {
-            setCustomValue(value);
-            props.onChange(value);
-          }}
+          onChange={value => props.onChange(value)}
+          onBlur={props.onBlur}
         />
       </Show>
     </>
