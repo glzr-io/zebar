@@ -1,10 +1,3 @@
-console.log('Service worker loaded', Math.random());
-
-let configPromise = new Promise(resolve => {
-  // Store resolver globally so we can call it when config arrives.
-  self.configResolver = resolve;
-});
-
 self.addEventListener('install', () => {
   // Skip waiting for activation. Only has an effect if there's a newly
   // installed service worker that would otherwise remain in the `waiting`
@@ -35,17 +28,28 @@ self.addEventListener('fetch', event => {
   event.respondWith(handleFetch(event));
 });
 
+/**
+ * Config-related state.
+ *
+ * The cache config is asynchronously resolved by posting a message from
+ * the initialization script.
+ */
+const deferredConfig = {
+  value: null,
+  resolve: null,
+  promise: new Promise(resolve =>
+    setTimeout(() => (deferredConfig.resolve = resolve)),
+  ),
+};
+
 self.addEventListener('message', event => {
   switch (event.data.type) {
     case 'CLEAR_CACHE':
-      event.waitUntil(
-        // TODO: This doesn't work.
-        caches.open('v1').then(cache => cache.delete(event.data)),
-      );
+      event.waitUntil(clearCache());
       break;
     case 'SET_CONFIG':
-      // TODO: This won't update the config if another message is received.
-      self.configResolver(event.data.config);
+      deferredConfig.value = event.data.config;
+      deferredConfig.resolve();
       break;
     default:
       console.error(
@@ -55,10 +59,17 @@ self.addEventListener('message', event => {
   }
 });
 
+async function clearCache() {
+  const cache = await caches.open('v1');
+  const keys = await cache.keys();
+  await Promise.all(keys.map(key => cache.delete(key)));
+}
+
 async function handleFetch(event) {
   // Wait for config to be set before processing any requests.
-  const config = await configPromise;
-  console.log('config', config);
+  const config = await deferredConfig.promise.then(
+    () => deferredConfig.value,
+  );
 
   // First, try to get the resource from the cache.
   const cache = await caches.open('v1');
