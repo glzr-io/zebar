@@ -45,7 +45,7 @@ const deferredConfig = {
 self.addEventListener('message', event => {
   switch (event.data.type) {
     case 'CLEAR_CACHE':
-      event.waitUntil(clearAllCaches());
+      event.waitUntil(clearCache());
       break;
     case 'SET_CONFIG':
       deferredConfig.value = event.data.config;
@@ -59,18 +59,12 @@ self.addEventListener('message', event => {
   }
 });
 
-async function clearAllCaches() {
+async function clearCache() {
   await Promise.all(
     ['responses-v1', 'metadata-v1'].map(cacheName =>
-      clearCache(cacheName),
+      caches.delete(cacheName),
     ),
   );
-}
-
-async function clearCache(cacheName) {
-  const cache = await caches.open(cacheName);
-  const keys = await cache.keys();
-  await Promise.all(keys.map(key => cache.delete(key)));
 }
 
 async function handleFetch(event) {
@@ -93,6 +87,7 @@ async function handleFetch(event) {
   // Check if there's a valid cached response.
   if (cachedResponse) {
     const hasExpired =
+      !cachedMetadata ||
       Date.now() > cachedMetadata.timestamp + cachedMetadata.duration;
 
     if (!hasExpired) {
@@ -143,14 +138,14 @@ async function handleFetch(event) {
 }
 
 /**
- * Gets the cache duration (in seconds) for a URL.
+ * Gets the cache duration (in milliseconds) for a URL.
  */
 function getCacheDuration(url, config) {
   for (const rule of config.rules) {
     if (new RegExp(rule.urlRegex).test(url)) {
-      return rule.duration;
+      return rule.duration * 1000;
     }
   }
 
-  return config.defaultDuration;
+  return config.defaultDuration * 1000;
 }
