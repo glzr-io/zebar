@@ -22,8 +22,27 @@
     "transparent": {
       "type": "boolean"
     },
-    "cacheAssets": {
-      "type": "boolean"
+    "caching": {
+      "type": "object",
+      "properties": {
+        "defaultDuration": {
+          "type": "integer"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "urlRegex": {
+                "type": "string"
+              },
+              "duration": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
     },
     "presets": {
       "type": "array",
