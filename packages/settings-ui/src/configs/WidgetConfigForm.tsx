@@ -15,6 +15,7 @@ import { IconAlertTriangle, IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { batch, createEffect, on, Show } from 'solid-js';
 import { WidgetConfig } from 'zebar';
+import { WidgetCachingSubform } from './WidgetCachingSubform';
 
 export interface WidgetConfigFormProps {
   config: WidgetConfig;
@@ -182,6 +183,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               />
             )}
           </Field>
+
+          <WidgetCachingSubform
+            value={configForm.value.caching}
+            onChange={value => configForm.setFieldValue('caching', value)}
+          />
         </CardContent>
       </Card>
 

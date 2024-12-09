@@ -80,8 +80,8 @@ importers:
   packages/settings-ui:
     dependencies:
       '@glzr/components':
-        specifier: 1.0.2
-        version: 1.0.2(solid-js@1.9.3)
+        specifier: 1.1.0
+        version: 1.1.0(solid-js@1.9.3)
       '@solidjs/router':
         specifier: 0.14.8
         version: 0.14.8(solid-js@1.9.3)
@@ -734,8 +734,8 @@ packages:
   '@floating-ui/utils@0.2.8':
     resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
 
-  '@glzr/components@1.0.2':
-    resolution: {integrity: sha512-lpnj/mn05tMciI9TQH57VjyM5VdHpA14HHM89sCbpvMVYOxzI67DU+UxnjhWyLG5Ea7RX1sBUS2iR9fcmAsh7Q==}
+  '@glzr/components@1.1.0':
+    resolution: {integrity: sha512-KTsF5TumJMwvieJlLFnvpfZAK5ehavJRNsK9/0mTazE2qlR9b0yxUiNeP8/m8oZRhpXUajyVFocE+O8JVEfyuA==}
     peerDependencies:
       solid-js: '>=1.7.0'
 
@@ -2631,7 +2631,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.8': {}
 
-  '@glzr/components@1.0.2(solid-js@1.9.3)':
+  '@glzr/components@1.1.0(solid-js@1.9.3)':
     dependencies:
       '@corvu/drawer': 0.2.2(solid-js@1.9.3)
       '@corvu/resizable': 0.2.3(solid-js@1.9.3)

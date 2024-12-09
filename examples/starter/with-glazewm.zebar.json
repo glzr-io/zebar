@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/glzr-io/zebar/raw/v2.4.0/resources/widget-schema.json",
+  "$schema": "https://github.com/glzr-io/zebar/raw/v2.7.0/resources/widget-schema.json",
   "htmlPath": "./with-glazewm.html",
   "zOrder": "normal",
   "shownInTaskbar": false,

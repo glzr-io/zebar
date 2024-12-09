@@ -90,6 +90,10 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
+  /// How network requests should be cached.
+  #[serde(default)]
+  pub caching: WidgetCaching,
+
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -102,6 +106,28 @@ pub enum ZOrder {
   BottomMost,
   Normal,
   TopMost,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetCaching {
+  /// Default duration to cache network resources for (in seconds).
+  #[serde(default = "default_u32::<604800>")]
+  pub default_duration: u32,
+
+  /// Custom cache rules.
+  #[serde(default)]
+  pub rules: Vec<WidgetCachingRule>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetCachingRule {
+  /// URL regex pattern to match.
+  pub url_regex: String,
+
+  /// Duration to cache the matched requests for (in seconds).
+  pub duration: u32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -646,6 +672,11 @@ fn is_app_installed(app_name: &str) -> bool {
 
 /// Helper function for setting a default value for a boolean field.
 const fn default_bool<const V: bool>() -> bool {
+  V
+}
+
+/// Helper function for setting the default value for a `u32` field.
+const fn default_u32<const V: u32>() -> u32 {
   V
 }
 

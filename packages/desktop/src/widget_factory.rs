@@ -1,6 +1,5 @@
 use std::{
   collections::HashMap,
-  i32,
   path::PathBuf,
   sync::{
     atomic::{AtomicU32, Ordering},
@@ -8,17 +7,19 @@ use std::{
   },
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
+use base64::prelude::*;
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
-  WebviewWindowBuilder, WindowEvent,
+  path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
+  Url, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
   task,
 };
 use tracing::{error, info};
+use uuid::Uuid;
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -88,6 +89,9 @@ pub struct WidgetState {
 
   /// How the widget was opened.
   pub open_options: WidgetOpenOptions,
+
+  #[serde(skip_serializing)]
+  pub asset_server_token: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -233,29 +237,59 @@ impl WidgetFactory {
       // Use running widget count as a unique label for the Tauri window.
       let widget_id = format!("widget-{}", new_count);
 
-      let html_path = config_path
-        .parent()
-        .map(|dir| dir.join(&widget_config.html_path))
-        .filter(|path| path.exists())
-        .with_context(|| {
-          format!(
-            "HTML file not found at '{}' for config '{}'.",
-            widget_config.html_path.display(),
-            config_path.display()
-          )
-        })?;
-
       info!(
-        "Creating window for widget #{} from {}",
-        new_count,
+        "Creating window for {} from {}",
+        widget_id,
         config_path.display()
       );
 
-      let webview_url = WebviewUrl::App(
-        Self::to_asset_url(&html_path.to_unicode_string()).into(),
-      );
+      let parent_dir =
+        config_path.parent().context("No parent directory.")?;
 
-      // Note that window label needs to be globally unique.
+      let html_path = parent_dir.join(&widget_config.html_path);
+
+      if !html_path.exists() {
+        bail!(
+          "HTML file not found at '{}' for config '{}'.",
+          widget_config.html_path.display(),
+          config_path.display()
+        )
+      }
+
+      let html_filename = html_path
+        .file_name()
+        .and_then(|file_name| file_name.to_str())
+        .context("Not a valid HTML file path.")?;
+
+      // Generate a unique token to identify requests from the widget to
+      // the asset server.
+      let asset_server_token = Uuid::new_v4().to_string();
+
+      let url = Url::parse_with_params(
+        "http://127.0.0.1:6124/__zebar/init",
+        &[
+          ("token", &asset_server_token),
+          ("redirect", &format!("/{}", html_filename)),
+        ],
+      )?;
+
+      let webview_url = WebviewUrl::External(url);
+
+      let mut state = WidgetState {
+        id: widget_id.clone(),
+        window_handle: None,
+        asset_server_token,
+        config: widget_config.clone(),
+        config_path: config_path.clone(),
+        html_path: html_path.clone(),
+        open_options: open_options.clone(),
+      };
+
+      // Widgets from the same top-level directory share their browser
+      // cache (i.e. `localStorage`, `sessionStorage`, SW cache, etc.).
+      let cache_id = BASE64_STANDARD
+        .encode(parent_dir.to_path_buf().to_unicode_string());
+
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
@@ -272,18 +306,30 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
+      .initialization_script(&self.initialization_script(&state)?)
+      .data_directory(
+        // TODO: Add this as an ext method on the Tauri window.
+        self
+          .app_handle
+          .path()
+          .resolve(
+            format!(".glzr/zebar/tmp-{}", cache_id),
+            BaseDirectory::Home,
+          )
+          .context("Unable to get home directory.")
+          .unwrap(),
+      )
       .build()?;
 
-      let mut size = coordinates.size;
-      let mut position = coordinates.position;
-
-      if placement.dock_to_edge.enabled {
-        (size, position) = self.dock_to_edge(
+      // Widget coordinates might be modified when docked to an edge.
+      let (size, position) = match placement.dock_to_edge.enabled {
+        false => (coordinates.size, coordinates.position),
+        true => self.dock_to_edge(
           &window,
           &placement.dock_to_edge,
           &coordinates,
-        )?;
-      }
+        )?,
+      };
 
       info!("Positioning widget to {:?} {:?}", size, position);
       let _ = window.set_size(size);
@@ -296,33 +342,6 @@ impl WidgetFactory {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
       }
-
-      let window_handle = {
-        #[cfg(target_os = "windows")]
-        {
-          let handle =
-            window.hwnd().context("Failed to get window handle.")?;
-
-          Some(handle.0 as isize)
-        }
-
-        #[cfg(not(target_os = "windows"))]
-        None
-      };
-
-      let state = WidgetState {
-        id: widget_id.clone(),
-        window_handle,
-        config: widget_config.clone(),
-        config_path: config_path.clone(),
-        html_path: html_path.clone(),
-        open_options: open_options.clone(),
-      };
-
-      _ = window.eval(&format!(
-        "window.__ZEBAR_STATE={0}; sessionStorage.setItem('ZEBAR_STATE', JSON.stringify({0}))",
-        serde_json::to_string(&state)?
-      ));
 
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
       // so we also set the window as a tool window.
@@ -339,6 +358,16 @@ impl WidgetFactory {
         if widget_config.z_order == crate::config::ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
+      }
+
+      #[cfg(target_os = "windows")]
+      {
+        state.window_handle = {
+          let handle =
+            window.hwnd().context("Failed to get window handle.")?;
+
+          Some(handle.0 as isize)
+        };
       }
 
       {
@@ -493,15 +522,16 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Converts a file path to a Tauri asset URL.
-  ///
-  /// Returns a string that can be used as a webview URL.
-  fn to_asset_url(file_path: &str) -> String {
-    if cfg!(target_os = "windows") {
-      format!("http://asset.localhost/{}", file_path)
-    } else {
-      format!("asset://localhost/{}", file_path)
-    }
+  fn initialization_script(
+    &self,
+    state: &WidgetState,
+  ) -> anyhow::Result<String> {
+    let state_script =
+      format!("window.__ZEBAR_STATE={};", serde_json::to_string(state)?);
+
+    let sw_script = include_str!("../resources/initialization-script.js");
+
+    Ok(format!("{state_script}\n{sw_script}"))
   }
 
   /// Registers window events for a given widget.
@@ -779,5 +809,15 @@ impl WidgetFactory {
         acc
       },
     )
+  }
+
+  pub async fn state_by_token(&self, token: &str) -> Option<WidgetState> {
+    self
+      .widget_states
+      .lock()
+      .await
+      .values()
+      .find(|state| state.asset_server_token == token)
+      .cloned()
   }
 }
