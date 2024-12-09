@@ -2,7 +2,13 @@ if (window.location.host === '127.0.0.1:6124') {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/__zebar/sw.js', { scope: '/' })
-      .then(() => console.log('[Zebar] Service Worker registered.'))
+      .then(sw => {
+        console.log('[Zebar] Service Worker registered.', sw);
+        sw.active.postMessage({
+          type: 'SET_CONFIG',
+          config: window.__ZEBAR_STATE.config.caching,
+        });
+      })
       .catch(err =>
         console.error('[Zebar] Service Worker failed to register:', err),
       );
