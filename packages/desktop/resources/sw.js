@@ -75,8 +75,14 @@ async function handleFetch(event) {
   const cache = await caches.open('v1');
   const cachedResponse = await cache.match(event.request);
 
+  // Check if there's a valid cached response.
   if (cachedResponse) {
-    return cachedResponse;
+    if (!hasResponseExpired(cachedResponse)) {
+      return cachedResponse;
+    }
+
+    // If expired, delete it.
+    await cache.delete(event.request);
   }
 
   try {
@@ -90,15 +96,61 @@ async function handleFetch(event) {
       networkResponse &&
       (networkResponse.ok || networkResponse.type === 'opaque')
     ) {
-      await cache.put(event.request, networkResponse.clone());
+      const duration = getCacheDuration(event.request.url, config);
+      const response = await addResponseMetadata(
+        networkResponse,
+        duration,
+      );
+
+      await cache.put(event.request, response);
     }
 
     return networkResponse;
   } catch (error) {
+    console.error(error);
     return new Response('Offline or network error occurred.', {
       status: 503,
       statusText: 'Service Unavailable',
       headers: new Headers({ 'Content-Type': 'text/plain' }),
     });
   }
+}
+
+/**
+ * Gets the cache duration (in seconds) for a URL.
+ */
+function getCacheDuration(url, config) {
+  for (const rule of config.rules) {
+    if (new RegExp(rule.urlRegex).test(url)) {
+      return rule.duration;
+    }
+  }
+
+  return config.defaultDuration;
+}
+
+/**
+ * Gets whether a response has expired.
+ */
+function hasResponseExpired(response) {
+  const timestamp = response.headers.get('x-sw-timestamp');
+  const duration = response.headers.get('x-sw-duration');
+
+  return Date.now() > Number(timestamp) + Number(duration);
+}
+
+/**
+ * Adds cache-related metadata to a network response.
+ */
+async function addResponseMetadata(response, duration) {
+  // Clone the response and add metadata.
+  const headers = new Headers(response.headers);
+  headers.set('x-sw-timestamp', Date.now().toString());
+  headers.set('x-sw-duration', (duration * 1000).toString());
+
+  return new Response(await response.clone().blob(), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
