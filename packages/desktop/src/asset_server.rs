@@ -22,7 +22,7 @@ pub fn setup_asset_server(
       .configure(rocket::Config::figment().merge(("port", 6124)))
       .manage(config)
       .manage(widget_factory)
-      .mount("/", routes![sw_js, normalize_css, init, serve]);
+      .mount("/", routes![sw_js, normalize_css, init, serve, state]);
 
     if let Err(err) = rocket.launch().await {
       error!("Asset server failed to start: {:?}", err);
@@ -69,6 +69,19 @@ impl<'r> Responder<'r, 'static> for SwResponse {
 #[get("/__zebar/normalize.css")]
 pub fn normalize_css() -> (ContentType, &'static str) {
   (ContentType::CSS, include_str!("../resources/normalize.css"))
+}
+
+#[get("/__zebar/state.json")]
+pub async fn state(
+  token: WidgetToken,
+  widget_factory: &State<Arc<WidgetFactory>>,
+) -> Option<(ContentType, String)> {
+  let widget_state = widget_factory.state_by_token(&token.0).await?;
+
+  Some((
+    ContentType::JSON,
+    serde_json::to_string(&widget_state).unwrap(),
+  ))
 }
 
 #[rocket::get("/<path..>", rank = 100)]

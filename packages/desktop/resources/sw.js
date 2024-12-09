@@ -1,4 +1,7 @@
 console.log('Service worker loaded', Math.random());
+fetch('/__zebar/state.json')
+  .then(r => r.json())
+  .then(console.log);
 caches.open('v1').then(cache => {
   cache.keys().then(keys => {
     console.log('keys', keys);

@@ -45,7 +45,7 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
     <div>
       <h3 class="text-lg font-semibold">Cache settings</h3>
       <p class="text-sm text-muted-foreground mb-3">
-        Control how long any web requests are stored for offline
+        Any web requests made by the widget will be cached for offline
         availability & faster loading.
       </p>
 
