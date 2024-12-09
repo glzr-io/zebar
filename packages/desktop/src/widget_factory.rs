@@ -792,7 +792,15 @@ impl WidgetFactory {
   /// Clears the cache for all open widgets.
   pub fn clear_cache(&self) {
     for (_, window) in self.app_handle.webview_windows() {
-      _ = window.eval(include_str!("../resources/clear-sw-cache.js"));
+      // Post a message to the service worker for clearing the cache.
+      _ = window.eval(
+        r"
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(sw => {
+            sw.active?.postMessage({ type: 'CLEAR_CACHE' });
+          });
+        }",
+      );
     }
   }
 
