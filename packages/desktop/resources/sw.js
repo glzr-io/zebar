@@ -45,7 +45,7 @@ const deferredConfig = {
 self.addEventListener('message', event => {
   switch (event.data.type) {
     case 'CLEAR_CACHE':
-      event.waitUntil(clearCache());
+      event.waitUntil(clearAllCaches());
       break;
     case 'SET_CONFIG':
       deferredConfig.value = event.data.config;
@@ -59,8 +59,16 @@ self.addEventListener('message', event => {
   }
 });
 
-async function clearCache() {
-  const cache = await caches.open('v1');
+async function clearAllCaches() {
+  await Promise.all(
+    ['responses-v1', 'metadata-v1'].map(cacheName =>
+      clearCache(cacheName),
+    ),
+  );
+}
+
+async function clearCache(cacheName) {
+  const cache = await caches.open(cacheName);
   const keys = await cache.keys();
   await Promise.all(keys.map(key => cache.delete(key)));
 }
@@ -71,18 +79,31 @@ async function handleFetch(event) {
     () => deferredConfig.value,
   );
 
-  // First, try to get the resource from the cache.
-  const cache = await caches.open('v1');
-  const cachedResponse = await cache.match(event.request);
+  const [responseCache, metadataCache] = await Promise.all([
+    caches.open('responses-v1'),
+    caches.open('metadata-v1'),
+  ]);
+
+  // First, try to get the resource and its metadata from the cache.
+  const [cachedResponse, cachedMetadata] = await Promise.all([
+    responseCache.match(event.request),
+    metadataCache.match(event.request).then(res => res?.json()),
+  ]);
 
   // Check if there's a valid cached response.
   if (cachedResponse) {
-    if (!hasResponseExpired(cachedResponse)) {
+    const hasExpired =
+      Date.now() > cachedMetadata.timestamp + cachedMetadata.duration;
+
+    if (!hasExpired) {
       return cachedResponse;
     }
 
     // If expired, delete it.
-    await cache.delete(event.request);
+    await Promise.all([
+      responseCache.delete(event.request),
+      metadataCache.delete(event.request),
+    ]);
   }
 
   try {
@@ -96,13 +117,18 @@ async function handleFetch(event) {
       networkResponse &&
       (networkResponse.ok || networkResponse.type === 'opaque')
     ) {
-      const duration = getCacheDuration(event.request.url, config);
-      const response = await addResponseMetadata(
-        networkResponse,
-        duration,
-      );
+      const metadata = {
+        timestamp: Date.now(),
+        duration: getCacheDuration(event.request.url, config),
+      };
 
-      await cache.put(event.request, response);
+      await Promise.all([
+        responseCache.put(event.request, networkResponse.clone()),
+        metadataCache.put(
+          event.request,
+          new Response(JSON.stringify(metadata)),
+        ),
+      ]);
     }
 
     return networkResponse;
@@ -127,30 +153,4 @@ function getCacheDuration(url, config) {
   }
 
   return config.defaultDuration;
-}
-
-/**
- * Gets whether a response has expired.
- */
-function hasResponseExpired(response) {
-  const timestamp = response.headers.get('x-sw-timestamp');
-  const duration = response.headers.get('x-sw-duration');
-
-  return Date.now() > Number(timestamp) + Number(duration);
-}
-
-/**
- * Adds cache-related metadata to a network response.
- */
-async function addResponseMetadata(response, duration) {
-  // Clone the response and add metadata.
-  const headers = new Headers(response.headers);
-  headers.set('x-sw-timestamp', Date.now().toString());
-  headers.set('x-sw-duration', (duration * 1000).toString());
-
-  return new Response(await response.clone().blob(), {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
 }

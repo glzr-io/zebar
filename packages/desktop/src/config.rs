@@ -108,16 +108,23 @@ pub enum ZOrder {
   TopMost,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetCaching {
   /// Default duration to cache network resources for (in seconds).
-  #[serde(default = "default_u32::<604800>")]
   pub default_duration: u32,
 
   /// Custom cache rules.
-  #[serde(default)]
   pub rules: Vec<WidgetCachingRule>,
+}
+
+impl Default for WidgetCaching {
+  fn default() -> Self {
+    Self {
+      default_duration: 604800,
+      rules: Vec::new(),
+    }
+  }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
