@@ -789,6 +789,13 @@ impl WidgetFactory {
     self.relaunch_by_ids(&widget_ids).await
   }
 
+  /// Clears the cache for all open widgets.
+  pub fn clear_cache(&self) {
+    for (_, window) in self.app_handle.webview_windows() {
+      _ = window.eval(include_str!("../resources/clear-sw-cache.js"));
+    }
+  }
+
   /// Returns widget states by their widget ID's.
   pub async fn states(&self) -> HashMap<String, WidgetState> {
     self.widget_states.lock().await.clone()
