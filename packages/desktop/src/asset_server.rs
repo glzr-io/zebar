@@ -22,7 +22,7 @@ pub fn setup_asset_server(
       .configure(rocket::Config::figment().merge(("port", 6124)))
       .manage(config)
       .manage(widget_factory)
-      .mount("/", routes![sw_js, normalize_css, init, serve, state]);
+      .mount("/", routes![sw_js, normalize_css, init, serve]);
 
     if let Err(err) = rocket.launch().await {
       error!("Asset server failed to start: {:?}", err);
@@ -71,30 +71,15 @@ pub fn normalize_css() -> (ContentType, &'static str) {
   (ContentType::CSS, include_str!("../resources/normalize.css"))
 }
 
-#[get("/__zebar/state.json")]
-pub async fn state(
-  token: WidgetToken,
-  widget_factory: &State<Arc<WidgetFactory>>,
-) -> Option<(ContentType, String)> {
-  let widget_state = widget_factory.state_by_token(&token.0).await?;
-
-  Some((
-    ContentType::JSON,
-    serde_json::to_string(&widget_state).unwrap(),
-  ))
-}
-
 #[rocket::get("/<path..>", rank = 100)]
 pub async fn serve(
   path: Option<PathBuf>,
-  token: WidgetToken,
+  token: ServerToken,
   widget_factory: &State<Arc<WidgetFactory>>,
 ) -> Option<NamedFile> {
-  // Retrieve the widget state for the corresponding token.
-  let widget_state = widget_factory.state_by_token(&token.0).await?;
+  // Retrieve base directory for the corresponding token.
+  let base_url = widget_factory.directory_by_token(&token.0).await?;
 
-  // Determine the final path to serve.
-  let base_url = widget_state.html_path.parent().map(PathBuf::from)?;
   let asset_path = base_url
     .join(path.unwrap_or("index.html".into()))
     .to_absolute()
@@ -110,12 +95,12 @@ pub async fn serve(
   NamedFile::open(asset_path).await.ok()
 }
 
-/// Token for identifying which widget is being accessed.
+/// Token for identifying which directory is being accessed.
 #[derive(Debug)]
-pub struct WidgetToken(pub String);
+pub struct ServerToken(pub String);
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for WidgetToken {
+impl<'r> FromRequest<'r> for ServerToken {
   type Error = anyhow::Error;
 
   async fn from_request(
@@ -125,11 +110,11 @@ impl<'r> FromRequest<'r> for WidgetToken {
 
     match token {
       Some(token) => {
-        Outcome::Success(WidgetToken(token.value_trimmed().to_string()))
+        Outcome::Success(ServerToken(token.value_trimmed().to_string()))
       }
       None => Outcome::Error((
         Status::Unauthorized,
-        anyhow::anyhow!("Missing token for widget."),
+        anyhow::anyhow!("Missing token for accessing directory."),
       )),
     }
   }

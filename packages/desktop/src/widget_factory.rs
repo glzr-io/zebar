@@ -43,6 +43,9 @@ pub struct WidgetFactory {
 
   pub close_tx: broadcast::Sender<String>,
 
+  /// Map of directory tokens to their corresponding path.
+  asset_server_tokens: Arc<Mutex<HashMap<String, PathBuf>>>,
+
   /// Reference to `Config`.
   config: Arc<Config>,
 
@@ -89,9 +92,6 @@ pub struct WidgetState {
 
   /// How the widget was opened.
   pub open_options: WidgetOpenOptions,
-
-  #[serde(skip_serializing)]
-  pub asset_server_token: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -167,6 +167,7 @@ impl WidgetFactory {
       _close_rx,
       close_tx,
       config,
+      asset_server_tokens: Arc::new(Mutex::new(HashMap::new())),
       _open_rx,
       open_tx,
       monitor_state,
@@ -256,20 +257,25 @@ impl WidgetFactory {
         )
       }
 
-      let html_filename = html_path
-        .file_name()
-        .and_then(|file_name| file_name.to_str())
-        .context("Not a valid HTML file path.")?;
-
-      // Generate a unique token to identify requests from the widget to
-      // the asset server.
-      let asset_server_token = Uuid::new_v4().to_string();
-
       let url = Url::parse_with_params(
         "http://127.0.0.1:6124/__zebar/init",
         &[
-          ("token", &asset_server_token),
-          ("redirect", &format!("/{}", html_filename)),
+          (
+            "token",
+            // Generate a unique token to identify requests from the
+            // widget to the asset server.
+            &self.upsert_or_get_token(parent_dir.to_path_buf()).await,
+          ),
+          (
+            "redirect",
+            &format!(
+              "/{}",
+              html_path
+                .strip_prefix(parent_dir)?
+                .to_path_buf()
+                .to_unicode_string()
+            ),
+          ),
         ],
       )?;
 
@@ -278,7 +284,6 @@ impl WidgetFactory {
       let mut state = WidgetState {
         id: widget_id.clone(),
         window_handle: None,
-        asset_server_token,
         config: widget_config.clone(),
         config_path: config_path.clone(),
         html_path: html_path.clone(),
@@ -826,13 +831,36 @@ impl WidgetFactory {
     )
   }
 
-  pub async fn state_by_token(&self, token: &str) -> Option<WidgetState> {
+  /// Returns an asset server token for a given directory.
+  ///
+  /// If the directory does not have an existing token, a new one is
+  /// generated and inserted.
+  async fn upsert_or_get_token(&self, directory: PathBuf) -> String {
+    let mut lock = self.asset_server_tokens.lock().await;
+
+    // Find existing token for this path.
+    let found_token = lock
+      .iter()
+      .find(|(_, p)| **p == directory)
+      .map(|(token, _)| token.clone());
+
+    found_token.unwrap_or_else(|| {
+      let new_token = Uuid::new_v4().to_string();
+      lock.insert(new_token.clone(), directory);
+      new_token
+    })
+  }
+
+  /// Returns the base directory for a given asset server token.
+  pub async fn directory_by_token(
+    &self,
+    asset_server_token: &str,
+  ) -> Option<PathBuf> {
     self
-      .widget_states
+      .asset_server_tokens
       .lock()
       .await
-      .values()
-      .find(|state| state.asset_server_token == token)
+      .get(asset_server_token)
       .cloned()
   }
 }
