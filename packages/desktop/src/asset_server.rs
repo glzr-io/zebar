@@ -1,4 +1,8 @@
-use std::{io::Cursor, path::PathBuf, sync::Arc};
+use std::{
+  io::Cursor,
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
 use rocket::{
   fs::NamedFile,
@@ -28,6 +32,33 @@ pub fn setup_asset_server(
       error!("Asset server failed to start: {:?}", err);
     }
   });
+}
+
+pub async fn create_init_url(
+  widget_factory: &WidgetFactory,
+  parent_dir: &Path,
+  html_path: &Path,
+) -> anyhow::Result<tauri::Url> {
+  let url = tauri::Url::parse_with_params(
+    "http://127.0.0.1:6124/__zebar/init",
+    &[
+      (
+        "token",
+        // Generate a unique token to identify requests from the
+        // widget to the asset server.
+        &widget_factory.upsert_or_get_token(parent_dir).await,
+      ),
+      (
+        "redirect",
+        &format!(
+          "/{}",
+          html_path.strip_prefix(parent_dir)?.to_unicode_string()
+        ),
+      ),
+    ],
+  )?;
+
+  Ok(url)
 }
 
 #[get("/__zebar/init?<token>&<redirect>")]

@@ -12,7 +12,7 @@ use base64::prelude::*;
 use serde::Serialize;
 use tauri::{
   path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
-  Url, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -26,6 +26,7 @@ use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
+  asset_server::create_init_url,
   common::PathExt,
   config::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
@@ -257,26 +258,9 @@ impl WidgetFactory {
         )
       }
 
-      let url = Url::parse_with_params(
-        "http://127.0.0.1:6124/__zebar/init",
-        &[
-          (
-            "token",
-            // Generate a unique token to identify requests from the
-            // widget to the asset server.
-            &self.upsert_or_get_token(parent_dir).await,
-          ),
-          (
-            "redirect",
-            &format!(
-              "/{}",
-              html_path.strip_prefix(parent_dir)?.to_unicode_string()
-            ),
-          ),
-        ],
-      )?;
-
-      let webview_url = WebviewUrl::External(url);
+      let webview_url = WebviewUrl::External(
+        create_init_url(self, &parent_dir, &html_path).await?,
+      );
 
       let mut state = WidgetState {
         id: widget_id.clone(),
@@ -832,7 +816,7 @@ impl WidgetFactory {
   ///
   /// If the directory does not have an existing token, a new one is
   /// generated and inserted.
-  async fn upsert_or_get_token(&self, directory: &Path) -> String {
+  pub async fn upsert_or_get_token(&self, directory: &Path) -> String {
     let mut asset_server_tokens = self.asset_server_tokens.lock().await;
 
     // Find existing token for this path.
