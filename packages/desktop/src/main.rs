@@ -6,28 +6,26 @@
 use std::{env, sync::Arc};
 
 use clap::Parser;
-use cli::MonitorType;
-use config::{MonitorSelection, WidgetPlacement};
-use providers::ProviderEmission;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
 use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
-use widget_factory::WidgetOpenOptions;
 
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
-  cli::{Cli, CliCommand, QueryArgs},
-  config::Config,
+  asset_server::setup_asset_server,
+  cli::{Cli, CliCommand, MonitorType, QueryArgs},
+  config::{Config, MonitorSelection, WidgetPlacement},
   monitor_state::MonitorState,
-  providers::ProviderManager,
+  providers::{ProviderEmission, ProviderManager},
   sys_tray::SysTray,
-  widget_factory::WidgetFactory,
+  widget_factory::{WidgetFactory, WidgetOpenOptions},
 };
 
+mod asset_server;
 mod cli;
 mod commands;
 mod common;
@@ -36,6 +34,9 @@ mod monitor_state;
 mod providers;
 mod sys_tray;
 mod widget_factory;
+
+#[macro_use]
+extern crate rocket;
 
 /// Main entry point for the application.
 ///
@@ -161,6 +162,8 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   // guaranteed to be one of the open commands here.
   setup_single_instance(app, widget_factory.clone())?;
 
+  setup_asset_server();
+
   // Prevent windows from showing up in the dock on MacOS.
   #[cfg(target_os = "macos")]
   app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -221,14 +224,14 @@ fn listen_events(
       let res = tokio::select! {
         Ok(widget_state) = widget_open_rx.recv() => {
           info!("Widget opened.");
-          tray.refresh().await;
-          app_handle.emit("widget-opened", widget_state);
+          let _ = tray.refresh().await;
+          let _ = app_handle.emit("widget-opened", widget_state);
           Ok(())
         },
         Ok(widget_id) = widget_close_rx.recv() => {
           info!("Widget closed.");
-          tray.refresh().await;
-          app_handle.emit("widget-closed", widget_id);
+          let _ = tray.refresh().await;
+          let _ = app_handle.emit("widget-closed", widget_id);
           Ok(())
         },
         Ok(_) = settings_change_rx.recv() => {

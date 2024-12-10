@@ -8,7 +8,7 @@
     "dev:local": "vite"
   },
   "dependencies": {
-    "@glzr/components": "1.0.2",
+    "@glzr/components": "1.1.0",
     "@solidjs/router": "0.14.8",
     "@tabler/icons-solidjs": "3.19.0",
     "@tauri-apps/api": "2.0.2",

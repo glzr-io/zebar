@@ -230,7 +230,17 @@ impl SysTray {
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
       .text(MenuEvent::OpenSettings, "Open settings")
       .item(&configs_menu)
-      .text(MenuEvent::ReloadConfigs, "Reload configs")
+      .text(MenuEvent::ReloadConfigs, {
+        #[cfg(windows)]
+        {
+          // Windows needs to triple escape ampersands.
+          "Empty cache &&& reload configs"
+        }
+        #[cfg(not(windows))]
+        {
+          "Empty cache & reload configs"
+        }
+      })
       .separator();
 
     // Add submenus for currently active widget.
@@ -287,7 +297,10 @@ impl SysTray {
         MenuEvent::ShowConfigFolder => config
           .open_config_dir()
           .context("Failed to open config folder."),
-        MenuEvent::ReloadConfigs => config.reload().await,
+        MenuEvent::ReloadConfigs => {
+          widget_factory.clear_cache();
+          config.reload().await
+        }
         MenuEvent::OpenSettings => {
           Self::open_settings_window(&app_handle, None)
         }

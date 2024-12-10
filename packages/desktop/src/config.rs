@@ -90,6 +90,10 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
+  /// How network requests should be cached.
+  #[serde(default)]
+  pub caching: WidgetCaching,
+
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -102,6 +106,35 @@ pub enum ZOrder {
   BottomMost,
   Normal,
   TopMost,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetCaching {
+  /// Default duration to cache network resources for (in seconds).
+  pub default_duration: u32,
+
+  /// Custom cache rules.
+  pub rules: Vec<WidgetCachingRule>,
+}
+
+impl Default for WidgetCaching {
+  fn default() -> Self {
+    Self {
+      default_duration: 604800,
+      rules: Vec::new(),
+    }
+  }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetCachingRule {
+  /// URL regex pattern to match.
+  pub url_regex: String,
+
+  /// Duration to cache the matched requests for (in seconds).
+  pub duration: u32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

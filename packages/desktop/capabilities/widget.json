@@ -4,7 +4,11 @@
   "description": "Widget capabilities",
   "windows": ["widget-*"],
   "remote": {
-    "urls": ["http://asset.localhost", "asset://localhost"]
+    "urls": [
+      "http://asset.localhost",
+      "asset://localhost",
+      "http://127.0.0.1:6124"
+    ]
   },
   "permissions": [
     "core:app:default",
