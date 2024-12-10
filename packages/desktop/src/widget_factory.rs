@@ -1,6 +1,6 @@
 use std::{
   collections::HashMap,
-  path::PathBuf,
+  path::{Path, PathBuf},
   sync::{
     atomic::{AtomicU32, Ordering},
     Arc,
@@ -264,16 +264,13 @@ impl WidgetFactory {
             "token",
             // Generate a unique token to identify requests from the
             // widget to the asset server.
-            &self.upsert_or_get_token(parent_dir.to_path_buf()).await,
+            &self.upsert_or_get_token(parent_dir).await,
           ),
           (
             "redirect",
             &format!(
               "/{}",
-              html_path
-                .strip_prefix(parent_dir)?
-                .to_path_buf()
-                .to_unicode_string()
+              html_path.strip_prefix(parent_dir)?.to_unicode_string()
             ),
           ),
         ],
@@ -292,8 +289,8 @@ impl WidgetFactory {
 
       // Widgets from the same top-level directory share their browser
       // cache (i.e. `localStorage`, `sessionStorage`, SW cache, etc.).
-      let cache_id = BASE64_STANDARD
-        .encode(parent_dir.to_path_buf().to_unicode_string());
+      let cache_id =
+        BASE64_STANDARD.encode(parent_dir.to_unicode_string());
 
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
@@ -835,18 +832,21 @@ impl WidgetFactory {
   ///
   /// If the directory does not have an existing token, a new one is
   /// generated and inserted.
-  async fn upsert_or_get_token(&self, directory: PathBuf) -> String {
-    let mut lock = self.asset_server_tokens.lock().await;
+  async fn upsert_or_get_token(&self, directory: &Path) -> String {
+    let mut asset_server_tokens = self.asset_server_tokens.lock().await;
 
     // Find existing token for this path.
-    let found_token = lock
+    let found_token = asset_server_tokens
       .iter()
-      .find(|(_, p)| **p == directory)
+      .find(|(_, path)| *path == directory)
       .map(|(token, _)| token.clone());
 
     found_token.unwrap_or_else(|| {
       let new_token = Uuid::new_v4().to_string();
-      lock.insert(new_token.clone(), directory);
+
+      asset_server_tokens
+        .insert(new_token.clone(), directory.to_path_buf());
+
       new_token
     })
   }

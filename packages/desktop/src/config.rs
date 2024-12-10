@@ -682,11 +682,6 @@ const fn default_bool<const V: bool>() -> bool {
   V
 }
 
-/// Helper function for setting the default value for a `u32` field.
-const fn default_u32<const V: u32>() -> u32 {
-  V
-}
-
 /// Helper function for setting the default value for a
 /// `WidgetPreset::name` field.
 fn default_preset_name() -> String {
