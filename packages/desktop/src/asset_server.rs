@@ -1,7 +1,8 @@
 use std::{
+  collections::HashMap,
   io::Cursor,
   path::{Path, PathBuf},
-  sync::Arc,
+  sync::LazyLock,
 };
 
 use rocket::{
@@ -9,23 +10,26 @@ use rocket::{
   http::{ContentType, Cookie, CookieJar, Header, SameSite, Status},
   request::{FromRequest, Outcome},
   response::{self, Redirect, Responder, Response},
-  tokio::task,
-  Request, State,
+  Request,
 };
+use tokio::{sync::Mutex, task};
+use uuid::Uuid;
 
-use crate::{
-  common::PathExt, config::Config, widget_factory::WidgetFactory,
-};
+use crate::common::PathExt;
 
-pub fn setup_asset_server(
-  config: Arc<Config>,
-  widget_factory: Arc<WidgetFactory>,
-) {
+/// Port for the localhost asset server.
+const ASSET_SERVER_PORT: u16 = 6124;
+
+/// Map of tokens to their corresponding path.
+static ASSET_SERVER_TOKENS: LazyLock<Mutex<HashMap<String, PathBuf>>> =
+  LazyLock::new(|| Mutex::new(HashMap::new()));
+
+pub fn setup_asset_server() {
   task::spawn(async move {
     let rocket = rocket::build()
-      .configure(rocket::Config::figment().merge(("port", 6124)))
-      .manage(config)
-      .manage(widget_factory)
+      .configure(
+        rocket::Config::figment().merge(("port", ASSET_SERVER_PORT)),
+      )
       .mount("/", routes![sw_js, normalize_css, init, serve]);
 
     if let Err(err) = rocket.launch().await {
@@ -35,30 +39,46 @@ pub fn setup_asset_server(
 }
 
 pub async fn create_init_url(
-  widget_factory: &WidgetFactory,
   parent_dir: &Path,
   html_path: &Path,
 ) -> anyhow::Result<tauri::Url> {
+  // Generate a unique token to identify requests from the widget to the
+  // asset server.
+  let token = upsert_or_get_token(parent_dir).await;
+
+  let redirect = format!(
+    "/{}",
+    html_path.strip_prefix(parent_dir)?.to_unicode_string()
+  );
+
   let url = tauri::Url::parse_with_params(
-    "http://127.0.0.1:6124/__zebar/init",
-    &[
-      (
-        "token",
-        // Generate a unique token to identify requests from the
-        // widget to the asset server.
-        &widget_factory.upsert_or_get_token(parent_dir).await,
-      ),
-      (
-        "redirect",
-        &format!(
-          "/{}",
-          html_path.strip_prefix(parent_dir)?.to_unicode_string()
-        ),
-      ),
-    ],
+    &format!("http://127.0.0.1:{}/__zebar/init", ASSET_SERVER_PORT),
+    &[("token", &token), ("redirect", &redirect)],
   )?;
 
   Ok(url)
+}
+
+/// Returns an asset server token for a given directory.
+///
+/// If the directory does not have an existing token, a new one is
+/// generated and inserted.
+async fn upsert_or_get_token(directory: &Path) -> String {
+  let mut asset_server_tokens = ASSET_SERVER_TOKENS.lock().await;
+
+  // Find existing token for this path.
+  let found_token = asset_server_tokens
+    .iter()
+    .find(|(_, path)| *path == directory)
+    .map(|(token, _)| token.clone());
+
+  found_token.unwrap_or_else(|| {
+    let new_token = Uuid::new_v4().to_string();
+
+    asset_server_tokens.insert(new_token.clone(), directory.to_path_buf());
+
+    new_token
+  })
 }
 
 #[get("/__zebar/init?<token>&<redirect>")]
@@ -106,10 +126,10 @@ pub fn normalize_css() -> (ContentType, &'static str) {
 pub async fn serve(
   path: Option<PathBuf>,
   token: ServerToken,
-  widget_factory: &State<Arc<WidgetFactory>>,
 ) -> Option<NamedFile> {
   // Retrieve base directory for the corresponding token.
-  let base_url = widget_factory.directory_by_token(&token.0).await?;
+  let base_url =
+    { ASSET_SERVER_TOKENS.lock().await.get(&token.0).cloned() }?;
 
   let asset_path = base_url
     .join(path.unwrap_or("index.html".into()))

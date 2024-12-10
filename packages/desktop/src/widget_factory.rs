@@ -1,6 +1,6 @@
 use std::{
   collections::HashMap,
-  path::{Path, PathBuf},
+  path::PathBuf,
   sync::{
     atomic::{AtomicU32, Ordering},
     Arc,
@@ -19,7 +19,6 @@ use tokio::{
   task,
 };
 use tracing::{error, info};
-use uuid::Uuid;
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -43,9 +42,6 @@ pub struct WidgetFactory {
   _close_rx: broadcast::Receiver<String>,
 
   pub close_tx: broadcast::Sender<String>,
-
-  /// Map of directory tokens to their corresponding path.
-  asset_server_tokens: Arc<Mutex<HashMap<String, PathBuf>>>,
 
   /// Reference to `Config`.
   config: Arc<Config>,
@@ -168,7 +164,6 @@ impl WidgetFactory {
       _close_rx,
       close_tx,
       config,
-      asset_server_tokens: Arc::new(Mutex::new(HashMap::new())),
       _open_rx,
       open_tx,
       monitor_state,
@@ -259,7 +254,7 @@ impl WidgetFactory {
       }
 
       let webview_url = WebviewUrl::External(
-        create_init_url(self, &parent_dir, &html_path).await?,
+        create_init_url(&parent_dir, &html_path).await?,
       );
 
       let mut state = WidgetState {
@@ -810,41 +805,5 @@ impl WidgetFactory {
         acc
       },
     )
-  }
-
-  /// Returns an asset server token for a given directory.
-  ///
-  /// If the directory does not have an existing token, a new one is
-  /// generated and inserted.
-  pub async fn upsert_or_get_token(&self, directory: &Path) -> String {
-    let mut asset_server_tokens = self.asset_server_tokens.lock().await;
-
-    // Find existing token for this path.
-    let found_token = asset_server_tokens
-      .iter()
-      .find(|(_, path)| *path == directory)
-      .map(|(token, _)| token.clone());
-
-    found_token.unwrap_or_else(|| {
-      let new_token = Uuid::new_v4().to_string();
-
-      asset_server_tokens
-        .insert(new_token.clone(), directory.to_path_buf());
-
-      new_token
-    })
-  }
-
-  /// Returns the base directory for a given asset server token.
-  pub async fn directory_by_token(
-    &self,
-    asset_server_token: &str,
-  ) -> Option<PathBuf> {
-    self
-      .asset_server_tokens
-      .lock()
-      .await
-      .get(asset_server_token)
-      .cloned()
   }
 }
