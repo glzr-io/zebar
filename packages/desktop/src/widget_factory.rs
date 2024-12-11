@@ -1,6 +1,5 @@
 use std::{
   collections::HashMap,
-  i32,
   path::PathBuf,
   sync::{
     atomic::{AtomicU32, Ordering},
@@ -8,11 +7,12 @@ use std::{
   },
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
+use base64::prelude::*;
 use serde::Serialize;
 use tauri::{
-  AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
-  WebviewWindowBuilder, WindowEvent,
+  path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
+  WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -25,6 +25,7 @@ use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
+  asset_server::create_init_url,
   common::PathExt,
   config::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
@@ -233,29 +234,43 @@ impl WidgetFactory {
       // Use running widget count as a unique label for the Tauri window.
       let widget_id = format!("widget-{}", new_count);
 
-      let html_path = config_path
-        .parent()
-        .map(|dir| dir.join(&widget_config.html_path))
-        .filter(|path| path.exists())
-        .with_context(|| {
-          format!(
-            "HTML file not found at '{}' for config '{}'.",
-            widget_config.html_path.display(),
-            config_path.display()
-          )
-        })?;
-
       info!(
-        "Creating window for widget #{} from {}",
-        new_count,
+        "Creating window for {} from {}",
+        widget_id,
         config_path.display()
       );
 
-      let webview_url = WebviewUrl::App(
-        Self::to_asset_url(&html_path.to_unicode_string()).into(),
+      let parent_dir =
+        config_path.parent().context("No parent directory.")?;
+
+      let html_path = parent_dir.join(&widget_config.html_path);
+
+      if !html_path.exists() {
+        bail!(
+          "HTML file not found at '{}' for config '{}'.",
+          widget_config.html_path.display(),
+          config_path.display()
+        )
+      }
+
+      let webview_url = WebviewUrl::External(
+        create_init_url(&parent_dir, &html_path).await?,
       );
 
-      // Note that window label needs to be globally unique.
+      let mut state = WidgetState {
+        id: widget_id.clone(),
+        window_handle: None,
+        config: widget_config.clone(),
+        config_path: config_path.clone(),
+        html_path: html_path.clone(),
+        open_options: open_options.clone(),
+      };
+
+      // Widgets from the same top-level directory share their browser
+      // cache (i.e. `localStorage`, `sessionStorage`, SW cache, etc.).
+      let cache_id =
+        BASE64_STANDARD.encode(parent_dir.to_unicode_string());
+
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
@@ -272,18 +287,30 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
+      .initialization_script(&self.initialization_script(&state)?)
+      .data_directory(
+        // TODO: Add this as an ext method on the Tauri window.
+        self
+          .app_handle
+          .path()
+          .resolve(
+            format!(".glzr/zebar/tmp-{}", cache_id),
+            BaseDirectory::Home,
+          )
+          .context("Unable to get home directory.")
+          .unwrap(),
+      )
       .build()?;
 
-      let mut size = coordinates.size;
-      let mut position = coordinates.position;
-
-      if placement.dock_to_edge.enabled {
-        (size, position) = self.dock_to_edge(
+      // Widget coordinates might be modified when docked to an edge.
+      let (size, position) = match placement.dock_to_edge.enabled {
+        false => (coordinates.size, coordinates.position),
+        true => self.dock_to_edge(
           &window,
           &placement.dock_to_edge,
           &coordinates,
-        )?;
-      }
+        )?,
+      };
 
       info!("Positioning widget to {:?} {:?}", size, position);
       let _ = window.set_size(size);
@@ -296,33 +323,6 @@ impl WidgetFactory {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
       }
-
-      let window_handle = {
-        #[cfg(target_os = "windows")]
-        {
-          let handle =
-            window.hwnd().context("Failed to get window handle.")?;
-
-          Some(handle.0 as isize)
-        }
-
-        #[cfg(not(target_os = "windows"))]
-        None
-      };
-
-      let state = WidgetState {
-        id: widget_id.clone(),
-        window_handle,
-        config: widget_config.clone(),
-        config_path: config_path.clone(),
-        html_path: html_path.clone(),
-        open_options: open_options.clone(),
-      };
-
-      _ = window.eval(&format!(
-        "window.__ZEBAR_STATE={0}; sessionStorage.setItem('ZEBAR_STATE', JSON.stringify({0}))",
-        serde_json::to_string(&state)?
-      ));
 
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
       // so we also set the window as a tool window.
@@ -339,6 +339,16 @@ impl WidgetFactory {
         if widget_config.z_order == crate::config::ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
+      }
+
+      #[cfg(target_os = "windows")]
+      {
+        state.window_handle = {
+          let handle =
+            window.hwnd().context("Failed to get window handle.")?;
+
+          Some(handle.0 as isize)
+        };
       }
 
       {
@@ -493,15 +503,16 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Converts a file path to a Tauri asset URL.
-  ///
-  /// Returns a string that can be used as a webview URL.
-  fn to_asset_url(file_path: &str) -> String {
-    if cfg!(target_os = "windows") {
-      format!("http://asset.localhost/{}", file_path)
-    } else {
-      format!("asset://localhost/{}", file_path)
-    }
+  fn initialization_script(
+    &self,
+    state: &WidgetState,
+  ) -> anyhow::Result<String> {
+    let state_script =
+      format!("window.__ZEBAR_STATE={};", serde_json::to_string(state)?);
+
+    let sw_script = include_str!("../resources/initialization-script.js");
+
+    Ok(format!("{state_script}\n{sw_script}"))
   }
 
   /// Registers window events for a given widget.
@@ -757,6 +768,21 @@ impl WidgetFactory {
     };
 
     self.relaunch_by_ids(&widget_ids).await
+  }
+
+  /// Clears the cache for all open widgets.
+  pub fn clear_cache(&self) {
+    for (_, window) in self.app_handle.webview_windows() {
+      // Post a message to the service worker for clearing the cache.
+      _ = window.eval(
+        r"
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(sw => {
+            sw.active?.postMessage({ type: 'CLEAR_CACHE' });
+          });
+        }",
+      );
+    }
   }
 
   /// Returns widget states by their widget ID's.

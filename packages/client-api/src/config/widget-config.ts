@@ -1,3 +1,4 @@
+import type { WidgetCaching } from './widget-caching';
 import type { WidgetPreset } from './widget-preset';
 
 export type WidgetConfig = {
@@ -7,5 +8,6 @@ export type WidgetConfig = {
   focused: boolean;
   resizable: boolean;
   transparent: boolean;
+  caching: WidgetCaching;
   presets: WidgetPreset[];
 };
