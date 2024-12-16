@@ -1,3 +1,4 @@
+export * from './audio/audio-provider-types';
 export * from './battery/battery-provider-types';
 export * from './cpu/cpu-provider-types';
 export * from './date/date-provider-types';

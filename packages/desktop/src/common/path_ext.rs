@@ -57,3 +57,13 @@ impl PathExt for PathBuf {
     self.to_string_lossy().to_string()
   }
 }
+
+impl PathExt for Path {
+  fn to_absolute(&self) -> anyhow::Result<PathBuf> {
+    self.to_path_buf().to_absolute()
+  }
+
+  fn to_unicode_string(&self) -> String {
+    self.to_string_lossy().to_string()
+  }
+}
