@@ -34,6 +34,7 @@ const localPacksMock = [
   {
     id: 'my-custom-widgets',
     name: 'My Custom Widgets',
+    author: 'me',
     description: 'Personal collection of widgets',
     version: '0.1.0',
     widgets: [{ id: 'todo-list', name: 'Todo List' }],
@@ -43,6 +44,7 @@ const localPacksMock = [
 type WidgetPack = {
   id: string;
   name: string;
+  author: string;
   description: string;
   version: string;
   widgets: { id: string; name: string }[];

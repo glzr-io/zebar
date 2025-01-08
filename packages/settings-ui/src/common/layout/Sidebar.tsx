@@ -68,7 +68,7 @@ export function Sidebar(props: SidebarProps) {
       </SidebarItem>
 
       {!isCollapsed() && (
-        <h3 class="px-4 text-xs font-medium text-muted-foreground truncate">
+        <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
           Community Packs
         </h3>
       )}
@@ -82,7 +82,12 @@ export function Sidebar(props: SidebarProps) {
             variant="ghost"
           >
             <div class="flex items-center gap-2 w-full overflow-hidden">
-              <div class="truncate">{pack.name}</div>
+              <div class="truncate">
+                <span class="truncate block">{pack.name}</span>
+                <span class="truncate block text-xs text-muted-foreground font-normal">
+                  {pack.author} • v{pack.version}
+                </span>
+              </div>
               <IconChevronDown class="size-4 flex-none ml-auto" />
             </div>
           </SidebarItem>
@@ -90,7 +95,7 @@ export function Sidebar(props: SidebarProps) {
       </For>
 
       {!isCollapsed() && (
-        <h3 class="px-4 text-xs font-medium text-muted-foreground truncate">
+        <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
           Local Packs
         </h3>
       )}
