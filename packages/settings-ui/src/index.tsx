@@ -1,18 +1,22 @@
 /* @refresh reload */
 import './index.css';
-import { HashRouter, Route } from '@solidjs/router';
+import { HashRouter, Navigate, Route } from '@solidjs/router';
 import { render } from 'solid-js/web';
 
 import { AppLayout, UserWidgetPacksProvider } from './common';
-import { WidgetPacks } from './configs';
+import { WidgetPack, WidgetPacks } from './configs';
 
 render(
   () => (
     <UserWidgetPacksProvider>
       <AppLayout>
         <HashRouter>
-          <Route path="/" component={WidgetPacks} />
-          <Route path="/widget/:path" component={WidgetPacks} />
+          <Route
+            path="/"
+            component={() => <Navigate href="/widget-packs" />}
+          />
+          <Route path="/widget-packs" component={WidgetPacks} />
+          <Route path="/widget-packs/:path" component={WidgetPack} />
         </HashRouter>
       </AppLayout>
     </UserWidgetPacksProvider>
