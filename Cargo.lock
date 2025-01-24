@@ -7445,6 +7445,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "z-shell"
+version = "0.0.0"
+dependencies = [
+ "encoding_rs",
+ "os_pipe",
+ "regex",
+ "serde",
+ "serde_json",
+ "shared_child",
+ "thiserror 2.0.11",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "zbus"
 version = "5.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
