@@ -1,6 +1,5 @@
-use std::{collections::HashMap, path::PathBuf, string::FromUtf8Error};
+use std::{collections::HashMap, path::PathBuf};
 
-use encoding_rs::Encoding;
 use serde::{Deserialize, Serialize};
 
 use crate::process::{CommandEvent, TerminatedPayload};
@@ -22,36 +21,19 @@ pub enum JSCommandEvent {
   Terminated(TerminatedPayload),
 }
 
-fn get_event_buffer(
-  line: Vec<u8>,
-  encoding: EncodingWrapper,
-) -> Result<Buffer, FromUtf8Error> {
-  match encoding {
-    EncodingWrapper::Text(character_encoding) => {
-      match character_encoding {
-        Some(encoding) => Ok(Buffer::Text(
-          encoding.decode_with_bom_removal(&line).0.into(),
-        )),
-        None => String::from_utf8(line).map(Buffer::Text),
-      }
-    }
-    EncodingWrapper::Raw => Ok(Buffer::Raw(line)),
-  }
-}
-
 impl JSCommandEvent {
-  pub fn new(event: CommandEvent, encoding: EncodingWrapper) -> Self {
+  pub fn new(event: CommandEvent, encoding: Encoding) -> Self {
     match event {
       CommandEvent::Terminated(payload) => {
         JSCommandEvent::Terminated(payload)
       }
       CommandEvent::Error(error) => JSCommandEvent::Error(error),
-      CommandEvent::Stderr(line) => get_event_buffer(line, encoding)
-        .map(JSCommandEvent::Stderr)
-        .unwrap_or_else(|e| JSCommandEvent::Error(e.to_string())),
-      CommandEvent::Stdout(line) => get_event_buffer(line, encoding)
-        .map(JSCommandEvent::Stdout)
-        .unwrap_or_else(|e| JSCommandEvent::Error(e.to_string())),
+      CommandEvent::Stderr(line) => {
+        JSCommandEvent::Stderr(encoding.decode(line))
+      }
+      CommandEvent::Stdout(line) => {
+        JSCommandEvent::Stdout(encoding.decode(line))
+      }
     }
   }
 }
@@ -63,10 +45,55 @@ pub enum Buffer {
   Raw(Vec<u8>),
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum EncodingWrapper {
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
+pub enum Encoding {
+  #[serde(rename = "raw")]
   Raw,
-  Text(Option<&'static Encoding>),
+  #[serde(rename = "utf-8")]
+  Utf8,
+  #[serde(rename = "utf-16")]
+  Utf16,
+  #[serde(rename = "gbk")]
+  Gbk,
+  #[serde(rename = "gb18030")]
+  Gb18030,
+  #[serde(rename = "big5")]
+  Big5,
+  #[serde(rename = "euc-jp")]
+  EucJp,
+  #[serde(rename = "euc-kr")]
+  EucKr,
+  #[serde(rename = "iso-2022-jp")]
+  Iso2022Jp,
+  #[serde(rename = "shift-jis")]
+  ShiftJis,
+}
+
+impl Encoding {
+  pub fn decode(&self, line: Vec<u8>) -> Buffer {
+    match self.as_encoding() {
+      Some(encoding) => {
+        let encoding = encoding.decode_with_bom_removal(&line).0;
+        Buffer::Text(encoding.into())
+      }
+      None => Buffer::Raw(line),
+    }
+  }
+
+  pub fn as_encoding(&self) -> Option<&'static encoding_rs::Encoding> {
+    match self {
+      Encoding::Raw => None,
+      Encoding::Utf8 => Some(encoding_rs::UTF_8),
+      Encoding::Gbk => Some(encoding_rs::GBK),
+      Encoding::Gb18030 => Some(encoding_rs::GB18030),
+      Encoding::Big5 => Some(encoding_rs::BIG5),
+      Encoding::EucJp => Some(encoding_rs::EUC_JP),
+      Encoding::Iso2022Jp => Some(encoding_rs::ISO_2022_JP),
+      Encoding::ShiftJis => Some(encoding_rs::SHIFT_JIS),
+      Encoding::EucKr => Some(encoding_rs::EUC_KR),
+      Encoding::Utf16 => Some(encoding_rs::UTF_16LE),
+    }
+  }
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -80,22 +107,15 @@ pub struct CommandOptions {
   pub env: Option<HashMap<String, String>>,
 
   /// Character encoding for stdout/stderr.
-  pub encoding: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-pub enum Output {
-  String(String),
-  Raw(Vec<u8>),
+  pub encoding: Option<Encoding>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ChildProcessReturn {
   pub code: Option<i32>,
   pub signal: Option<i32>,
-  pub stdout: Output,
-  pub stderr: Output,
+  pub stdout: Buffer,
+  pub stderr: Buffer,
 }
 
 #[allow(clippy::unnecessary_wraps)]

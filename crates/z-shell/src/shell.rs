@@ -1,20 +1,20 @@
+#[cfg(unix)]
+use std::os::unix::process::ExitStatusExt;
 use std::{
   collections::HashMap,
-  ffi::OsStr,
   future::Future,
   pin::Pin,
   sync::{Arc, Mutex},
 };
 
-use encoding_rs::Encoding;
 use tokio::sync::mpsc;
 
 use crate::{
   commands::{
-    Buffer, ChildProcessReturn, CommandOptions, EncodingWrapper,
-    JSCommandEvent, Output, ProcessId,
+    Buffer, ChildProcessReturn, CommandOptions, Encoding, JSCommandEvent,
+    ProcessId,
   },
-  process::{Command, CommandChild},
+  process::CommandChild,
 };
 
 pub struct Shell {
@@ -22,11 +22,6 @@ pub struct Shell {
 }
 
 impl Shell {
-  /// Creates a new `Command` for launching the given program.
-  pub fn command(&self, program: impl AsRef<OsStr>) -> Command {
-    Command::new(program)
-  }
-
   pub async fn execute(
     program: &str,
     args: &[&str],
@@ -37,26 +32,8 @@ impl Shell {
     let mut command: std::process::Command = command.into();
     let output = command.output()?;
 
-    let (stdout, stderr) = match encoding {
-      EncodingWrapper::Text(Some(encoding)) => (
-        Output::String(
-          encoding.decode_with_bom_removal(&output.stdout).0.into(),
-        ),
-        Output::String(
-          encoding.decode_with_bom_removal(&output.stderr).0.into(),
-        ),
-      ),
-      EncodingWrapper::Text(None) => (
-        Output::String(String::from_utf8(output.stdout)?),
-        Output::String(String::from_utf8(output.stderr)?),
-      ),
-      EncodingWrapper::Raw => {
-        (Output::Raw(output.stdout), Output::Raw(output.stderr))
-      }
-    };
-
-    #[cfg(unix)]
-    use std::os::unix::process::ExitStatusExt;
+    let stdout = encoding.decode(output.stdout);
+    let stderr = encoding.decode(output.stderr);
 
     Ok(ChildProcessReturn {
       code: output.status.code(),
@@ -89,7 +66,7 @@ impl Shell {
         if matches!(event, crate::process::CommandEvent::Terminated(_)) {
           children.lock().unwrap().remove(&pid);
         };
-        let js_event = JSCommandEvent::new(event, encoding);
+        let js_event = JSCommandEvent::new(event, encoding.clone());
 
         if on_event.send(js_event.clone()).await.is_err() {
           fn send<'a>(
@@ -117,7 +94,7 @@ impl Shell {
     program: &str,
     args: &[&str],
     options: CommandOptions,
-  ) -> crate::Result<(crate::process::Command, EncodingWrapper)> {
+  ) -> crate::Result<(crate::process::Command, Encoding)> {
     let mut command = crate::process::Command::new(program);
     command = command.args(args);
 
@@ -132,43 +109,33 @@ impl Shell {
     }
 
     let encoding = match options.encoding {
-      Option::None => EncodingWrapper::Text(None),
-      Some(encoding) => match encoding.as_str() {
-        "raw" => {
-          command = command.set_raw_out(true);
-          EncodingWrapper::Raw
-        }
-        _ => {
-          if let Some(text_encoding) =
-            Encoding::for_label(encoding.as_bytes())
-          {
-            EncodingWrapper::Text(Some(text_encoding))
-          } else {
-            return Err(crate::Error::UnknownEncoding(encoding));
-          }
-        }
-      },
+      None => Encoding::Utf8,
+      Some(encoding) => encoding,
     };
+
+    if encoding == Encoding::Raw {
+      command = command.set_raw_out(true);
+    }
 
     Ok((command, encoding))
   }
 
   pub fn stdin_write(
     &self,
-    pid: u32,
+    pid: ProcessId,
     buffer: Buffer,
   ) -> crate::Result<()> {
     if let Some(child) = self.children.lock().unwrap().get_mut(&pid) {
       match buffer {
-        Buffer::Text(t) => child.write(t.as_bytes())?,
-        Buffer::Raw(r) => child.write(&r)?,
+        Buffer::Text(text) => child.write(text.as_bytes())?,
+        Buffer::Raw(raw) => child.write(&raw)?,
       }
     }
 
     Ok(())
   }
 
-  pub fn kill(&self, pid: u32) -> crate::Result<()> {
+  pub fn kill(&self, pid: ProcessId) -> crate::Result<()> {
     if let Some(child) = self.children.lock().unwrap().remove(&pid) {
       child.kill()?;
     }
