@@ -103,14 +103,14 @@ fn default_env() -> Option<HashMap<String, String>> {
   Some(HashMap::default())
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Output {
   String(String),
   Raw(Vec<u8>),
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct ChildProcessReturn {
   pub code: Option<i32>,
   pub signal: Option<i32>,

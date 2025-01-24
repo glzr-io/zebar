@@ -1,8 +1,8 @@
 #![feature(slice_internals)]
 
-mod commands;
+pub mod commands;
 pub mod error;
-mod process;
+pub mod process;
 pub mod shell;
 
 pub use error::Error;

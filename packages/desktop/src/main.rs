@@ -14,6 +14,10 @@ use tauri_plugin_shell::ShellExt;
 use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
+use z_shell::{
+  commands::{CommandOptions, ExecuteArgs},
+  shell::Shell,
+};
 
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
@@ -158,6 +162,26 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     monitor_state.clone(),
   ));
   app.manage(widget_factory.clone());
+
+  let shell = Shell::execute(
+    "code".to_string(),
+    ExecuteArgs::Single("--version".to_string()),
+    CommandOptions::default(),
+  )
+  .await;
+
+  println!(" aaaaaaaaaa {:?}", shell);
+
+  let shell = Shell::execute(
+    r#"c:\Users\larsb\AppData\Local\Programs\cursor\resources\app\bin\code"#.to_string(),
+    ExecuteArgs::Single("--version".to_string()),
+    CommandOptions::default(),
+  )
+  .await;
+
+  println!(" bbb {:?}", shell);
+  // .spawn("echo", ExecuteArgs::new(), on_event,
+  // CommandOptions::default());
 
   // If this is not the first instance of the app, this will emit within
   // the original instance and exit immediately. The CLI command is

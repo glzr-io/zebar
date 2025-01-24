@@ -1,9 +1,12 @@
 use std::{
   collections::HashMap,
   ffi::OsStr,
+  future::Future,
+  pin::Pin,
   sync::{Arc, Mutex},
 };
 
+use encoding_rs::Encoding;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -15,7 +18,7 @@ use crate::{
 };
 
 pub struct Shell {
-  children: Arc<Mutex<HashMap<u32, CommandChild>>>,
+  children: Arc<Mutex<HashMap<ChildId, CommandChild>>>,
 }
 
 impl Shell {
@@ -71,7 +74,7 @@ impl Shell {
     &self,
     program: String,
     args: ExecuteArgs,
-    on_event: mpsc::Channel<JSCommandEvent>,
+    on_event: mpsc::Sender<JSCommandEvent>,
     options: CommandOptions,
   ) -> crate::Result<ChildId> {
     let (command, encoding) = Self::prepare_cmd(program, args, options)?;
@@ -89,15 +92,15 @@ impl Shell {
         };
         let js_event = JSCommandEvent::new(event, encoding);
 
-        if on_event.send(js_event.clone()).is_err() {
+        if on_event.send(js_event.clone()).await.is_err() {
           fn send<'a>(
-            on_event: &'a Channel<JSCommandEvent>,
+            on_event: &'a mpsc::Sender<JSCommandEvent>,
             js_event: &'a JSCommandEvent,
           ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
             Box::pin(async move {
               tokio::time::sleep(std::time::Duration::from_millis(15))
                 .await;
-              if on_event.send(js_event.clone()).is_err() {
+              if on_event.send(js_event.clone()).await.is_err() {
                 send(on_event, js_event).await;
               }
             })

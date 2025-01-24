@@ -40,6 +40,7 @@ tokio = { version = "1.33", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4"] }
+z-shell = { path = "../../crates/z-shell" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
