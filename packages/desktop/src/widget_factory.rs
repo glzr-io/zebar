@@ -536,7 +536,7 @@ impl WidgetFactory {
           .iter()
           .map(|shell| {
             json!({
-              "name": shell.program,
+              "name": format!("{}-spawn-{}", widget_id, shell.program),
               "cmd": shell.program,
               "args": [{ "validator": shell.args_regex }],
               "sidecar": false
@@ -552,7 +552,7 @@ impl WidgetFactory {
           .iter()
           .map(|shell| {
             json!({
-              "name": shell.program,
+              "name": format!("{}-execute-{}", widget_id, shell.program),
               "cmd": shell.program,
               "args": [{ "validator": shell.args_regex }],
               "sidecar": false

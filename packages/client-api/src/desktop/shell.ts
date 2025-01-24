@@ -1,5 +1,7 @@
 import { Command } from '@tauri-apps/plugin-shell';
 
+import { currentWidget } from './widgets';
+
 export interface ShellSpawnOptions {
   /**
    * Current working directory.
@@ -62,6 +64,7 @@ export async function shellExec<
   options?: ShellSpawnOptions,
 ): Promise<ShellExitStatus<TOutput>> {
   const output = await createCommand<TOutput>(
+    'execute',
     program,
     args,
     options,
@@ -91,7 +94,7 @@ export async function shellSpawn<
   args?: string | string[],
   options?: ShellSpawnOptions,
 ): Promise<ShellProcess<TOutput>> {
-  const command = createCommand<TOutput>(program, args, options);
+  const command = createCommand<TOutput>('spawn', program, args, options);
   const process = await command.spawn();
 
   return {
@@ -111,14 +114,19 @@ export async function shellSpawn<
  * Creates a shell command via Tauri's shell plugin.
  */
 function createCommand<TOutput extends string | Uint8Array = string>(
+  type: 'execute' | 'spawn',
   program: string,
   args?: string | string[],
   options?: ShellSpawnOptions,
 ): Command<TOutput> {
-  return (Command as any).create(program, args, {
-    ...options,
-    // Tauri's `SpawnOptions` type is not explicit about allowing `env` to
-    // be `null`.
-    env: options?.env ?? undefined,
-  });
+  return (Command as any).create(
+    `${currentWidget().id}-${type}-${program}`,
+    args,
+    {
+      ...options,
+      // Tauri's `SpawnOptions` type is not explicit about allowing `env` to
+      // be `null`.
+      env: options?.env ?? undefined,
+    },
+  );
 }
