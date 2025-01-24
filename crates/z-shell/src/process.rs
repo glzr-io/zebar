@@ -1,9 +1,11 @@
+use core::slice::memchr;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::{
   ffi::OsStr,
+  future::Future,
   io::{BufRead, BufReader, Write},
   path::{Path, PathBuf},
   process::{Command as StdCommand, Stdio},
@@ -19,6 +21,7 @@ pub use encoding_rs::Encoding;
 use os_pipe::{pipe, PipeReader, PipeWriter};
 use serde::Serialize;
 use shared_child::SharedChild;
+use tokio::sync::mpsc;
 
 /// Payload for the [`CommandEvent::Terminated`] command event.
 #[derive(Debug, Clone, Serialize)]
@@ -110,16 +113,6 @@ pub struct Output {
   pub stderr: Vec<u8>,
 }
 
-fn relative_command_path(command: &Path) -> crate::Result<PathBuf> {
-  match platform::current_exe()?.parent() {
-    #[cfg(windows)]
-    Some(exe_dir) => Ok(exe_dir.join(command).with_extension("exe")),
-    #[cfg(not(windows))]
-    Some(exe_dir) => Ok(exe_dir.join(command)),
-    None => Err(crate::Error::CurrentExeHasNoParent),
-  }
-}
-
 impl From<Command> for StdCommand {
   fn from(cmd: Command) -> StdCommand {
     cmd.cmd
@@ -140,12 +133,6 @@ impl Command {
       cmd: command,
       raw_out: false,
     }
-  }
-
-  pub(crate) fn new_sidecar<S: AsRef<Path>>(
-    program: S,
-  ) -> crate::Result<Self> {
-    Ok(Self::new(relative_command_path(program.as_ref())?))
   }
 
   /// Appends an argument to the command.
@@ -242,7 +229,7 @@ impl Command {
   /// ```
   pub fn spawn(
     self,
-  ) -> crate::Result<(Receiver<CommandEvent>, CommandChild)> {
+  ) -> crate::Result<(mpsc::Receiver<CommandEvent>, CommandChild)> {
     let raw = self.raw_out;
     let mut command: StdCommand = self.into();
     let (stdout_reader, stdout_writer) = pipe()?;
@@ -257,7 +244,7 @@ impl Command {
     let child_ = child.clone();
     let guard = Arc::new(RwLock::new(()));
 
-    let (tx, rx) = channel(1);
+    let (tx, rx) = mpsc::channel(1);
 
     spawn_pipe_reader(
       tx.clone(),
@@ -266,6 +253,7 @@ impl Command {
       CommandEvent::Stdout,
       raw,
     );
+
     spawn_pipe_reader(
       tx.clone(),
       guard.clone(),
@@ -278,7 +266,7 @@ impl Command {
       let _ = match child_.wait() {
         Ok(status) => {
           let _l = guard.write().unwrap();
-          block_on_task(async move {
+          block_on(async move {
             tx.send(CommandEvent::Terminated(TerminatedPayload {
               code: status.code(),
               #[cfg(windows)]
@@ -291,7 +279,7 @@ impl Command {
         }
         Err(e) => {
           let _l = guard.write().unwrap();
-          block_on_task(async move {
+          block_on(async move {
             tx.send(CommandEvent::Error(e.to_string())).await
           })
         }
@@ -382,7 +370,7 @@ fn read_raw_bytes<
   F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static,
 >(
   mut reader: BufReader<PipeReader>,
-  tx: Sender<CommandEvent>,
+  tx: mpsc::Sender<CommandEvent>,
   wrapper: F,
 ) {
   loop {
@@ -395,14 +383,12 @@ fn read_raw_bytes<
         }
         let tx_ = tx.clone();
         let _ =
-          block_on_task(
-            async move { tx_.send(wrapper(buf.to_vec())).await },
-          );
+          block_on(async move { tx_.send(wrapper(buf.to_vec())).await });
         reader.consume(length);
       }
       Err(e) => {
         let tx_ = tx.clone();
-        let _ = block_on_task(async move {
+        let _ = block_on(async move {
           tx_.send(CommandEvent::Error(e.to_string())).await
         });
       }
@@ -412,22 +398,22 @@ fn read_raw_bytes<
 
 fn read_line<F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static>(
   mut reader: BufReader<PipeReader>,
-  tx: Sender<CommandEvent>,
+  tx: mpsc::Sender<CommandEvent>,
   wrapper: F,
 ) {
   loop {
     let mut buf = Vec::new();
-    match tauri::utils::io::read_line(&mut reader, &mut buf) {
+    match read_line2(&mut reader, &mut buf) {
       Ok(n) => {
         if n == 0 {
           break;
         }
         let tx_ = tx.clone();
-        let _ = block_on_task(async move { tx_.send(wrapper(buf)).await });
+        let _ = block_on(async move { tx_.send(wrapper(buf)).await });
       }
       Err(e) => {
         let tx_ = tx.clone();
-        let _ = block_on_task(async move {
+        let _ = block_on(async move {
           tx_.send(CommandEvent::Error(e.to_string())).await
         });
         break;
@@ -439,7 +425,7 @@ fn read_line<F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static>(
 fn spawn_pipe_reader<
   F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static,
 >(
-  tx: Sender<CommandEvent>,
+  tx: mpsc::Sender<CommandEvent>,
   guard: Arc<RwLock<()>>,
   pipe_reader: PipeReader,
   wrapper: F,
@@ -455,6 +441,58 @@ fn spawn_pipe_reader<
       read_line(reader, tx, wrapper);
     }
   });
+}
+
+/// Runs a future to completion on runtime.
+pub fn block_on<F: Future>(task: F) -> F::Output {
+  let runtime = tokio::runtime::Handle::current();
+  runtime.block_on(task)
+}
+
+/// Read all bytes until a newline (the `0xA` byte) or a carriage return
+/// (`\r`) is reached, and append them to the provided buffer.
+///
+/// Adapted from <https://doc.rust-lang.org/std/io/trait.BufRead.html#method.read_line>.
+fn read_line2<R: BufRead + ?Sized>(
+  r: &mut R,
+  buf: &mut Vec<u8>,
+) -> std::io::Result<usize> {
+  let mut read = 0;
+  loop {
+    let (done, used) = {
+      let available = match r.fill_buf() {
+        Ok(n) => n,
+        Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => {
+          continue
+        }
+
+        Err(e) => return Err(e),
+      };
+      match memchr::memchr(b'\n', available) {
+        Some(i) => {
+          let end = i + 1;
+          buf.extend_from_slice(&available[..end]);
+          (true, end)
+        }
+        None => match memchr::memchr(b'\r', available) {
+          Some(i) => {
+            let end = i + 1;
+            buf.extend_from_slice(&available[..end]);
+            (true, end)
+          }
+          None => {
+            buf.extend_from_slice(available);
+            (false, available.len())
+          }
+        },
+      }
+    };
+    r.consume(used);
+    read += used;
+    if done || used == 0 {
+      return Ok(read);
+    }
+  }
 }
 
 // tests for the commands functions.
