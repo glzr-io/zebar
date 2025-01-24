@@ -4,10 +4,8 @@ use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::{
-  ffi::OsStr,
   future::Future,
   io::{BufRead, BufReader, Write},
-  path::Path,
   process::{Command as StdCommand, Stdio},
   sync::{Arc, RwLock},
   thread::spawn,
@@ -17,11 +15,12 @@ use std::{
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const NEWLINE_BYTE: u8 = b'\n';
 
-pub use encoding_rs::Encoding;
 use os_pipe::{pipe, PipeReader, PipeWriter};
 use serde::Serialize;
 use shared_child::SharedChild;
 use tokio::sync::mpsc;
+
+use crate::commands::{CommandOptions, Encoding};
 
 /// Payload for the [`CommandEvent::Terminated`] command event.
 #[derive(Debug, Clone, Serialize)]
@@ -54,19 +53,12 @@ pub enum CommandEvent {
   Terminated(TerminatedPayload),
 }
 
-/// The type to spawn commands.
-#[derive(Debug)]
-pub struct Command {
-  cmd: StdCommand,
-  raw_out: bool,
-}
-
 /// The spawned child process.
+#[derive(Debug)]
 pub struct CommandChild {
   inner: Arc<SharedChild>,
   stdin_writer: PipeWriter,
   rx: mpsc::Receiver<CommandEvent>,
-  termination_handler: Option<Box<dyn FnOnce() + Send + 'static>>,
 }
 
 impl CommandChild {
@@ -90,31 +82,9 @@ impl CommandChild {
   pub fn events(&mut self) -> &mut mpsc::Receiver<CommandEvent> {
     &mut self.rx
   }
-
-  pub(crate) fn set_termination_handler<F>(&mut self, handler: F)
-  where
-    F: FnOnce() + Send + 'static,
-  {
-    self.termination_handler = Some(Box::new(handler));
-  }
 }
 
-impl Drop for CommandChild {
-  fn drop(&mut self) {
-    if let Some(handler) = self.termination_handler.take() {
-      if self
-        .inner
-        .try_wait()
-        .map(|status| status.is_some())
-        .unwrap_or(false)
-      {
-        handler();
-      }
-    }
-  }
-}
-
-/// Describes the result of a process after it has terminated.
+/// The result of a process after it has terminated.
 #[derive(Debug)]
 pub struct ExitStatus {
   code: Option<i32>,
@@ -146,88 +116,48 @@ pub struct Output {
   pub stderr: Vec<u8>,
 }
 
+/// The type to spawn commands.
+#[derive(Debug)]
+pub struct Command {
+  inner: StdCommand,
+  encoding: Encoding,
+}
+
 impl From<Command> for StdCommand {
   fn from(cmd: Command) -> StdCommand {
-    cmd.cmd
+    cmd.inner
   }
 }
 
 impl Command {
-  pub(crate) fn new<S: AsRef<OsStr>>(program: S) -> Self {
+  pub fn new(
+    program: &str,
+    args: &[&str],
+    options: CommandOptions,
+  ) -> Self {
     let mut command = StdCommand::new(program);
+
+    if let Some(cwd) = options.cwd {
+      command.current_dir(cwd);
+    }
+
+    if options.clear_env {
+      command.env_clear();
+    }
 
     command.stdout(Stdio::piped());
     command.stdin(Stdio::piped());
     command.stderr(Stdio::piped());
+    command.args(args);
+    command.envs(options.env);
+
     #[cfg(windows)]
     command.creation_flags(CREATE_NO_WINDOW);
 
     Self {
-      cmd: command,
-      raw_out: false,
+      inner: command,
+      encoding: options.encoding,
     }
-  }
-
-  /// Appends an argument to the command.
-  #[must_use]
-  pub fn arg<S: AsRef<OsStr>>(mut self, arg: S) -> Self {
-    self.cmd.arg(arg);
-    self
-  }
-
-  /// Appends arguments to the command.
-  #[must_use]
-  pub fn args<I, S>(mut self, args: I) -> Self
-  where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-  {
-    self.cmd.args(args);
-    self
-  }
-
-  /// Clears the entire environment map for the child process.
-  #[must_use]
-  pub fn env_clear(mut self) -> Self {
-    self.cmd.env_clear();
-    self
-  }
-
-  /// Inserts or updates an explicit environment variable mapping.
-  #[must_use]
-  pub fn env<K, V>(mut self, key: K, value: V) -> Self
-  where
-    K: AsRef<OsStr>,
-    V: AsRef<OsStr>,
-  {
-    self.cmd.env(key, value);
-    self
-  }
-
-  /// Adds or updates multiple environment variable mappings.
-  #[must_use]
-  pub fn envs<I, K, V>(mut self, envs: I) -> Self
-  where
-    I: IntoIterator<Item = (K, V)>,
-    K: AsRef<OsStr>,
-    V: AsRef<OsStr>,
-  {
-    self.cmd.envs(envs);
-    self
-  }
-
-  /// Sets the working directory for the child process.
-  #[must_use]
-  pub fn current_dir<P: AsRef<Path>>(mut self, current_dir: P) -> Self {
-    self.cmd.current_dir(current_dir);
-    self
-  }
-
-  /// Configures the reader to output bytes from the child process exactly
-  /// as received
-  pub fn set_raw_out(mut self, raw_out: bool) -> Self {
-    self.raw_out = raw_out;
-    self
   }
 
   /// Spawns the command.
@@ -258,7 +188,7 @@ impl Command {
   /// });
   /// ```
   pub fn spawn(self) -> crate::Result<CommandChild> {
-    let raw = self.raw_out;
+    let encoding = self.encoding.clone();
     let mut command: StdCommand = self.into();
     let (stdout_reader, stdout_writer) = pipe()?;
     let (stderr_reader, stderr_writer) = pipe()?;
@@ -279,7 +209,7 @@ impl Command {
       guard.clone(),
       stdout_reader,
       CommandEvent::Stdout,
-      raw,
+      encoding.clone(),
     );
 
     spawn_pipe_reader(
@@ -287,7 +217,7 @@ impl Command {
       guard.clone(),
       stderr_reader,
       CommandEvent::Stderr,
-      raw,
+      encoding,
     );
 
     spawn(move || {
@@ -318,7 +248,6 @@ impl Command {
       inner: child,
       stdin_writer,
       rx,
-      termination_handler: None,
     })
   }
 
@@ -455,13 +384,13 @@ fn spawn_pipe_reader<
   guard: Arc<RwLock<()>>,
   pipe_reader: PipeReader,
   wrapper: F,
-  raw_out: bool,
+  encoding: Encoding,
 ) {
   spawn(move || {
     let _lock = guard.read().unwrap();
     let reader = BufReader::new(pipe_reader);
 
-    if raw_out {
+    if encoding == Encoding::Raw {
       read_raw_bytes(reader, tx, wrapper);
     } else {
       read_line(reader, tx, wrapper);

@@ -96,18 +96,29 @@ impl Encoding {
   }
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct CommandOptions {
   pub cwd: Option<PathBuf>,
 
-  /// By default we don't add any env variables to the spawned process
-  /// but the env is an `Option` so when it's `None` we clear the env.
-  #[serde(default = "default_env")]
-  pub env: Option<HashMap<String, String>>,
+  pub env: HashMap<String, String>,
+
+  /// Clear the environment variables of the spawned process.
+  pub clear_env: bool,
 
   /// Character encoding for stdout/stderr.
-  pub encoding: Option<Encoding>,
+  pub encoding: Encoding,
+}
+
+impl Default for CommandOptions {
+  fn default() -> Self {
+    Self {
+      cwd: None,
+      env: HashMap::default(),
+      clear_env: true,
+      encoding: Encoding::Utf8,
+    }
+  }
 }
 
 #[derive(Debug, Serialize)]
@@ -116,9 +127,4 @@ pub struct ChildProcessReturn {
   pub signal: Option<i32>,
   pub stdout: Buffer,
   pub stderr: Buffer,
-}
-
-#[allow(clippy::unnecessary_wraps)]
-fn default_env() -> Option<HashMap<String, String>> {
-  Some(HashMap::default())
 }
