@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::process::{CommandEvent, TerminatedPayload};
 
-pub type ChildId = u32;
+pub type ProcessId = u32;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "event", content = "payload")]
@@ -20,21 +20,6 @@ pub enum JSCommandEvent {
   Error(String),
   /// Command process terminated.
   Terminated(TerminatedPayload),
-}
-
-/// Allowed representation of `Execute` command arguments.
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(untagged, deny_unknown_fields)]
-#[non_exhaustive]
-pub enum ExecuteArgs {
-  /// No arguments
-  None,
-
-  /// A single string argument
-  Single(String),
-
-  /// Multiple string arguments
-  List(Vec<String>),
 }
 
 fn get_event_buffer(
@@ -98,11 +83,6 @@ pub struct CommandOptions {
   pub encoding: Option<String>,
 }
 
-#[allow(clippy::unnecessary_wraps)]
-fn default_env() -> Option<HashMap<String, String>> {
-  Some(HashMap::default())
-}
-
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Output {
@@ -116,4 +96,9 @@ pub struct ChildProcessReturn {
   pub signal: Option<i32>,
   pub stdout: Output,
   pub stderr: Output,
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn default_env() -> Option<HashMap<String, String>> {
+  Some(HashMap::default())
 }

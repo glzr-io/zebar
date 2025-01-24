@@ -6,16 +6,22 @@ use serde::{Serialize, Serializer};
 pub enum Error {
   #[error(transparent)]
   Io(#[from] std::io::Error),
+
   #[error("Current executable path has no parent")]
   CurrentExeHasNoParent,
+
   #[error("Unknown program {0}")]
   UnknownProgramName(String),
+
   #[error("Program not allowed on the configured shell scope: {0}")]
   ProgramNotAllowed(PathBuf),
+
   #[error("Unknown encoding {0}")]
   UnknownEncoding(String),
+
   #[error(transparent)]
   Json(#[from] serde_json::Error),
+
   #[error(transparent)]
   Utf8(#[from] std::string::FromUtf8Error),
 }

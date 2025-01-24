@@ -7,7 +7,7 @@ use std::{
   ffi::OsStr,
   future::Future,
   io::{BufRead, BufReader, Write},
-  path::{Path, PathBuf},
+  path::Path,
   process::{Command as StdCommand, Stdio},
   sync::{Arc, RwLock},
   thread::spawn,
@@ -28,6 +28,7 @@ use tokio::sync::mpsc;
 pub struct TerminatedPayload {
   /// Exit code of the process.
   pub code: Option<i32>,
+
   /// If the process was terminated by a signal, represents that signal.
   pub signal: Option<i32>,
 }
@@ -39,13 +40,16 @@ pub enum CommandEvent {
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
   /// found.
   Stderr(Vec<u8>),
+
   /// If configured for raw output, all bytes written to stdout.
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
   /// found.
   Stdout(Vec<u8>),
+
   /// An error happened waiting for the command to finish or converting
   /// the stdout/stderr bytes to a UTF-8 string.
   Error(String),
+
   /// Command process terminated.
   Terminated(TerminatedPayload),
 }
@@ -57,7 +61,7 @@ pub struct Command {
   raw_out: bool,
 }
 
-/// Spawned child process.
+/// The spawned child process.
 #[derive(Debug)]
 pub struct CommandChild {
   inner: Arc<SharedChild>,
@@ -107,8 +111,10 @@ impl ExitStatus {
 pub struct Output {
   /// The status (exit code) of the process.
   pub status: ExitStatus,
+
   /// The data that the process wrote to stdout.
   pub stdout: Vec<u8>,
+
   /// The data that the process wrote to stderr.
   pub stderr: Vec<u8>,
 }

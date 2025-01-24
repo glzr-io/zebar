@@ -11,14 +11,14 @@ use tokio::sync::mpsc;
 
 use crate::{
   commands::{
-    Buffer, ChildId, ChildProcessReturn, CommandOptions, EncodingWrapper,
-    ExecuteArgs, JSCommandEvent, Output,
+    Buffer, ChildProcessReturn, CommandOptions, EncodingWrapper,
+    JSCommandEvent, Output, ProcessId,
   },
   process::{Command, CommandChild},
 };
 
 pub struct Shell {
-  children: Arc<Mutex<HashMap<ChildId, CommandChild>>>,
+  children: Arc<Mutex<HashMap<ProcessId, CommandChild>>>,
 }
 
 impl Shell {
@@ -28,8 +28,8 @@ impl Shell {
   }
 
   pub async fn execute(
-    program: String,
-    args: ExecuteArgs,
+    program: &str,
+    args: &[&str],
     options: CommandOptions,
   ) -> crate::Result<ChildProcessReturn> {
     let (command, encoding) = Self::prepare_cmd(program, args, options)?;
@@ -72,13 +72,12 @@ impl Shell {
   #[allow(clippy::too_many_arguments)]
   pub fn spawn(
     &self,
-    program: String,
-    args: ExecuteArgs,
+    program: &str,
+    args: &[&str],
     on_event: mpsc::Sender<JSCommandEvent>,
     options: CommandOptions,
-  ) -> crate::Result<ChildId> {
+  ) -> crate::Result<ProcessId> {
     let (command, encoding) = Self::prepare_cmd(program, args, options)?;
-
     let (mut rx, child) = command.spawn()?;
 
     let pid = child.pid();
@@ -115,11 +114,12 @@ impl Shell {
 
   #[inline(always)]
   fn prepare_cmd(
-    program: String,
-    args: ExecuteArgs,
+    program: &str,
+    args: &[&str],
     options: CommandOptions,
   ) -> crate::Result<(crate::process::Command, EncodingWrapper)> {
     let mut command = crate::process::Command::new(program);
+    command = command.args(args);
 
     if let Some(cwd) = options.cwd {
       command = command.current_dir(cwd);
