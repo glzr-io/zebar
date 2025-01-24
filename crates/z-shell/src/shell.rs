@@ -1,18 +1,12 @@
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
-use std::{
-  collections::HashMap,
-  sync::{Arc, Mutex},
-};
 
 use crate::{
-  commands::{Buffer, ChildProcessReturn, CommandOptions, ProcessId},
-  process::CommandChild,
+  options::CommandOptions,
+  process::{ChildProcessReturn, CommandChild},
 };
 
-pub struct Shell {
-  children: Arc<Mutex<HashMap<ProcessId, CommandChild>>>,
-}
+pub struct Shell;
 
 impl Shell {
   pub async fn execute(
@@ -47,28 +41,5 @@ impl Shell {
     options: CommandOptions,
   ) -> crate::Result<CommandChild> {
     crate::process::Command::new(program, args, options).spawn()
-  }
-
-  pub fn stdin_write(
-    &self,
-    pid: ProcessId,
-    buffer: Buffer,
-  ) -> crate::Result<()> {
-    if let Some(child) = self.children.lock().unwrap().get_mut(&pid) {
-      match buffer {
-        Buffer::Text(text) => child.write(text.as_bytes())?,
-        Buffer::Raw(raw) => child.write(&raw)?,
-      }
-    }
-
-    Ok(())
-  }
-
-  pub fn kill(&self, pid: ProcessId) -> crate::Result<()> {
-    if let Some(child) = self.children.lock().unwrap().remove(&pid) {
-      child.kill()?;
-    }
-
-    Ok(())
   }
 }

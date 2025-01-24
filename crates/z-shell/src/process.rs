@@ -16,11 +16,60 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const NEWLINE_BYTE: u8 = b'\n';
 
 use os_pipe::{pipe, PipeReader, PipeWriter};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shared_child::SharedChild;
 use tokio::sync::mpsc;
 
-use crate::commands::{CommandOptions, Encoding};
+use crate::{encoding::Encoding, options::CommandOptions};
+
+pub type ProcessId = u32;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "event", content = "payload")]
+#[non_exhaustive]
+pub enum JSCommandEvent {
+  /// Stderr bytes until a newline (\n) or carriage return (\r) is found.
+  Stderr(Buffer),
+  /// Stdout bytes until a newline (\n) or carriage return (\r) is found.
+  Stdout(Buffer),
+  /// An error happened waiting for the command to finish or converting
+  /// the stdout/stderr bytes to an UTF-8 string.
+  Error(String),
+  /// Command process terminated.
+  Terminated(TerminatedPayload),
+}
+
+impl JSCommandEvent {
+  pub fn new(event: CommandEvent, encoding: Encoding) -> Self {
+    match event {
+      CommandEvent::Terminated(payload) => {
+        JSCommandEvent::Terminated(payload)
+      }
+      CommandEvent::Error(error) => JSCommandEvent::Error(error),
+      CommandEvent::Stderr(line) => {
+        JSCommandEvent::Stderr(encoding.decode(line))
+      }
+      CommandEvent::Stdout(line) => {
+        JSCommandEvent::Stdout(encoding.decode(line))
+      }
+    }
+  }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum Buffer {
+  Text(String),
+  Raw(Vec<u8>),
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChildProcessReturn {
+  pub code: Option<i32>,
+  pub signal: Option<i32>,
+  pub stdout: Buffer,
+  pub stderr: Buffer,
+}
 
 /// Payload for the [`CommandEvent::Terminated`] command event.
 #[derive(Debug, Clone, Serialize)]

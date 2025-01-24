@@ -1,7 +1,8 @@
 #![feature(slice_internals)]
 
-pub mod commands;
+pub mod encoding;
 pub mod error;
+pub mod options;
 pub mod process;
 pub mod shell;
 
