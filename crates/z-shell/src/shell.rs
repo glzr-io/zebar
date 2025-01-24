@@ -51,42 +51,22 @@ impl Shell {
     &self,
     program: &str,
     args: &[&str],
-    on_event: mpsc::Sender<JSCommandEvent>,
     options: CommandOptions,
-  ) -> crate::Result<ProcessId> {
+  ) -> crate::Result<CommandChild> {
     let (command, encoding) = Self::prepare_cmd(program, args, options)?;
-    let (mut rx, child) = command.spawn()?;
+    let mut child = command.spawn()?;
 
     let pid = child.pid();
-    self.children.lock().unwrap().insert(pid, child);
     let children = self.children.clone();
 
-    tokio::spawn(async move {
-      while let Some(event) = rx.recv().await {
-        if matches!(event, crate::process::CommandEvent::Terminated(_)) {
-          children.lock().unwrap().remove(&pid);
-        };
-        let js_event = JSCommandEvent::new(event, encoding.clone());
-
-        if on_event.send(js_event.clone()).await.is_err() {
-          fn send<'a>(
-            on_event: &'a mpsc::Sender<JSCommandEvent>,
-            js_event: &'a JSCommandEvent,
-          ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
-            Box::pin(async move {
-              tokio::time::sleep(std::time::Duration::from_millis(15))
-                .await;
-              if on_event.send(js_event.clone()).await.is_err() {
-                send(on_event, js_event).await;
-              }
-            })
-          }
-          send(&on_event, &js_event).await;
-        }
-      }
+    // Remove the child process from state on kill.
+    child.set_termination_handler(move || {
+      children.lock().unwrap().remove(&pid);
     });
 
-    Ok(pid)
+    self.children.lock().unwrap().insert(pid, child);
+
+    Ok(child)
   }
 
   #[inline(always)]

@@ -62,10 +62,11 @@ pub struct Command {
 }
 
 /// The spawned child process.
-#[derive(Debug)]
 pub struct CommandChild {
   inner: Arc<SharedChild>,
   stdin_writer: PipeWriter,
+  rx: mpsc::Receiver<CommandEvent>,
+  termination_handler: Option<Box<dyn FnOnce() + Send + 'static>>,
 }
 
 impl CommandChild {
@@ -84,6 +85,32 @@ impl CommandChild {
   /// Returns the process pid.
   pub fn pid(&self) -> u32 {
     self.inner.id()
+  }
+
+  pub fn events(&mut self) -> &mut mpsc::Receiver<CommandEvent> {
+    &mut self.rx
+  }
+
+  pub(crate) fn set_termination_handler<F>(&mut self, handler: F)
+  where
+    F: FnOnce() + Send + 'static,
+  {
+    self.termination_handler = Some(Box::new(handler));
+  }
+}
+
+impl Drop for CommandChild {
+  fn drop(&mut self) {
+    if let Some(handler) = self.termination_handler.take() {
+      if self
+        .inner
+        .try_wait()
+        .map(|status| status.is_some())
+        .unwrap_or(false)
+      {
+        handler();
+      }
+    }
   }
 }
 
@@ -208,12 +235,9 @@ impl Command {
   /// # Examples
   ///
   /// ```rust,no_run
-  /// use tauri_plugin_shell::{process::CommandEvent, ShellExt};
-  /// tauri::Builder::default()
-  ///   .setup(|app| {
-  ///     let handle = app.handle().clone();
-  ///     tauri::async_runtime::spawn(async move {
-  ///       let (mut rx, mut child) = handle.shell().command("cargo")
+  /// use shell::{process::CommandEvent, ShellExt};
+  /// let shell = Shell::new();
+  ///       let (mut rx, mut child) = shell.command("cargo")
   ///         .args(["tauri", "dev"])
   ///         .spawn()
   ///         .expect("Failed to spawn cargo");
@@ -233,9 +257,7 @@ impl Command {
   ///     Ok(())
   /// });
   /// ```
-  pub fn spawn(
-    self,
-  ) -> crate::Result<(mpsc::Receiver<CommandEvent>, CommandChild)> {
+  pub fn spawn(self) -> crate::Result<CommandChild> {
     let raw = self.raw_out;
     let mut command: StdCommand = self.into();
     let (stdout_reader, stdout_writer) = pipe()?;
@@ -283,22 +305,21 @@ impl Command {
             .await
           })
         }
-        Err(e) => {
+        Err(err) => {
           let _l = guard.write().unwrap();
           block_on(async move {
-            tx.send(CommandEvent::Error(e.to_string())).await
+            tx.send(CommandEvent::Error(err.to_string())).await
           })
         }
       };
     });
 
-    Ok((
+    Ok(CommandChild {
+      inner: child,
+      stdin_writer,
       rx,
-      CommandChild {
-        inner: child,
-        stdin_writer,
-      },
-    ))
+      termination_handler: None,
+    })
   }
 
   /// Executes a command as a child process, waiting for it to finish and
@@ -306,7 +327,7 @@ impl Command {
   ///
   /// # Examples
   /// ```rust,no_run
-  /// use tauri_plugin_shell::ShellExt;
+  /// use shell::ShellExt;
   /// tauri::Builder::default()
   ///   .setup(|app| {
   ///     let status = tauri::async_runtime::block_on(async move { app.shell().command("which").args(["ls"]).status().await.unwrap() });
@@ -315,15 +336,15 @@ impl Command {
   ///   });
   /// ```
   pub async fn status(self) -> crate::Result<ExitStatus> {
-    let (mut rx, _child) = self.spawn()?;
-    let mut code = None;
-    #[allow(clippy::collapsible_match)]
-    while let Some(event) = rx.recv().await {
+    let mut child = self.spawn()?;
+
+    while let Some(event) = child.events().recv().await {
       if let CommandEvent::Terminated(payload) = event {
-        code = payload.code;
+        return Ok(ExitStatus { code: payload.code });
       }
     }
-    Ok(ExitStatus { code })
+
+    Ok(ExitStatus { code: None })
   }
 
   /// Executes the command as a child process, waiting for it to finish and
@@ -332,7 +353,7 @@ impl Command {
   /// # Examples
   ///
   /// ```rust,no_run
-  /// use tauri_plugin_shell::ShellExt;
+  /// use shell::ShellExt;
   /// tauri::Builder::default()
   ///   .setup(|app| {
   ///     let output = tauri::async_runtime::block_on(async move { app.shell().command("echo").args(["TAURI"]).output().await.unwrap() });
@@ -342,13 +363,13 @@ impl Command {
   ///   });
   /// ```
   pub async fn output(self) -> crate::Result<Output> {
-    let (mut rx, _child) = self.spawn()?;
+    let mut child = self.spawn()?;
 
     let mut code = None;
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
 
-    while let Some(event) = rx.recv().await {
+    while let Some(event) = child.events().recv().await {
       match event {
         CommandEvent::Terminated(payload) => {
           code = payload.code;
@@ -364,6 +385,7 @@ impl Command {
         CommandEvent::Error(_) => {}
       }
     }
+
     Ok(Output {
       status: ExitStatus { code },
       stdout,
@@ -381,21 +403,20 @@ fn read_raw_bytes<
 ) {
   loop {
     let result = reader.fill_buf();
+    let tx_ = tx.clone();
     match result {
       Ok(buf) => {
         let length = buf.len();
         if length == 0 {
           break;
         }
-        let tx_ = tx.clone();
         let _ =
           block_on(async move { tx_.send(wrapper(buf.to_vec())).await });
         reader.consume(length);
       }
-      Err(e) => {
-        let tx_ = tx.clone();
+      Err(err) => {
         let _ = block_on(async move {
-          tx_.send(CommandEvent::Error(e.to_string())).await
+          tx_.send(CommandEvent::Error(err.to_string())).await
         });
       }
     }
@@ -409,18 +430,17 @@ fn read_line<F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static>(
 ) {
   loop {
     let mut buf = Vec::new();
+    let tx_ = tx.clone();
     match read_line2(&mut reader, &mut buf) {
       Ok(n) => {
         if n == 0 {
           break;
         }
-        let tx_ = tx.clone();
         let _ = block_on(async move { tx_.send(wrapper(buf)).await });
       }
-      Err(e) => {
-        let tx_ = tx.clone();
+      Err(err) => {
         let _ = block_on(async move {
-          tx_.send(CommandEvent::Error(e.to_string())).await
+          tx_.send(CommandEvent::Error(err.to_string())).await
         });
         break;
       }
@@ -472,7 +492,7 @@ fn read_line2<R: BufRead + ?Sized>(
           continue
         }
 
-        Err(e) => return Err(e),
+        Err(err) => return Err(err),
       };
       match memchr::memchr(b'\n', available) {
         Some(i) => {
