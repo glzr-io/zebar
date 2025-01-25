@@ -15,7 +15,7 @@ use std::{
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 use os_pipe::{pipe, PipeReader, PipeWriter};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use shared_child::SharedChild;
 use tokio::sync::mpsc;
 
@@ -23,7 +23,7 @@ use crate::{encoding::Encoding, options::CommandOptions};
 
 pub type ProcessId = u32;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum Buffer {
   Text(String),
@@ -82,18 +82,8 @@ impl Buffer {
   }
 }
 
-/// Payload for the [`CommandEvent::Terminated`] command event.
-#[derive(Debug, Clone, Serialize)]
-pub struct TerminatedPayload {
-  /// Exit code of the process.
-  pub code: Option<i32>,
-
-  /// If the process was terminated by a signal, represents that signal.
-  pub signal: Option<i32>,
-}
-
 /// A event sent to the command callback.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Serialize)]
 pub enum CommandEvent {
   /// If configured for raw output, all bytes written to stderr.
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
@@ -110,7 +100,7 @@ pub enum CommandEvent {
   Error(String),
 
   /// Command process terminated.
-  Terminated(TerminatedPayload),
+  Terminated(ExitStatus),
 }
 
 /// The child process spawned by a shell command.
@@ -122,19 +112,19 @@ pub struct CommandChild {
 }
 
 impl CommandChild {
-  /// Writes to process stdin.
+  /// Writes to the child process' stdin.
   pub fn write(&mut self, buf: &[u8]) -> crate::Result<()> {
     self.stdin_writer.write_all(buf)?;
     Ok(())
   }
 
-  /// Sends a kill signal to the child.
+  /// Sends a kill signal to the child process.
   pub fn kill(self) -> crate::Result<()> {
     self.inner.kill()?;
     Ok(())
   }
 
-  /// Returns the process pid.
+  /// Returns the child process' pid.
   pub fn pid(&self) -> u32 {
     self.inner.id()
   }
@@ -146,17 +136,16 @@ impl CommandChild {
 }
 
 /// The result of a process after it has terminated.
-#[derive(Debug)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct ExitStatus {
-  code: Option<i32>,
+  /// Exit code of the process.
+  pub code: Option<i32>,
+
+  /// If the process was terminated by a signal, represents that signal.
+  pub signal: Option<i32>,
 }
 
 impl ExitStatus {
-  /// Returns the exit code of the process, if any.
-  pub fn code(&self) -> Option<i32> {
-    self.code
-  }
-
   /// Returns true if exit status is zero. Signal termination is not
   /// considered a success, and success is defined as a zero exit status.
   pub fn success(&self) -> bool {
@@ -165,9 +154,9 @@ impl ExitStatus {
 }
 
 /// The output of a finished process.
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Output {
-  /// The status (exit code) of the process.
+  /// The exit code and termination signal of the process.
   pub status: ExitStatus,
 
   /// The data that the process wrote to stdout.
@@ -188,14 +177,10 @@ impl Shell {
   /// # Examples
   ///
   /// ```rust,no_run
-  /// use shell::ShellExt;
-  /// tauri::Builder::default()
-  ///   .setup(|app| {
-  ///     let output = tauri::async_runtime::block_on(async move { app.shell().command("echo").args(["TAURI"]).output().await.unwrap() });
-  ///     assert!(output.status.success());
-  ///     assert_eq!(String::from_utf8(output.stdout).unwrap(), "TAURI");
-  ///     Ok(())
-  ///   });
+  /// use shell::{Shell, CommandOptions};
+  /// let output = Shell::execute("echo", ["Hello!"], CommandOptions::default()).await.unwrap();
+  /// assert!(output.status.success());
+  /// assert_eq!(String::from_utf8(output.stdout).unwrap(), "Hello!");
   /// ```
   pub async fn execute(
     program: &str,
@@ -207,14 +192,14 @@ impl Shell {
 
     let mut child = Self::spawn_child(&mut command, options)?;
 
-    let mut code = None;
+    let mut status = ExitStatus::default();
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
 
     while let Some(event) = child.events().recv().await {
       match event {
-        CommandEvent::Terminated(payload) => {
-          code = payload.code;
+        CommandEvent::Terminated(exit_status) => {
+          status = exit_status;
         }
         CommandEvent::Stdout(line) => {
           stdout.push(line);
@@ -227,7 +212,7 @@ impl Shell {
     }
 
     Ok(Output {
-      status: ExitStatus { code },
+      status,
       stdout: Buffer::join(&stdout)?,
       stderr: Buffer::join(&stderr)?,
     })
@@ -238,27 +223,21 @@ impl Shell {
   /// # Examples
   ///
   /// ```rust,no_run
-  /// use shell::{process::CommandEvent, ShellExt};
-  /// let shell = Shell::new();
-  ///       let (mut rx, mut child) = shell.command("cargo")
-  ///         .args(["tauri", "dev"])
-  ///         .spawn()
-  ///         .expect("Failed to spawn cargo");
+  /// use shell::{CommandEvent, Shell};
+  /// let shell = Shell::spawn("cargo", ["tauri", "dev"], CommandOptions::default())
+  ///   .expect("Failed to spawn cargo");
   ///
-  ///       let mut i = 0;
-  ///       while let Some(event) = rx.recv().await {
-  ///         if let CommandEvent::Stdout(line) = event {
-  ///           println!("got: {}", String::from_utf8(line).unwrap());
-  ///           i += 1;
-  ///           if i == 4 {
-  ///             child.write("message from Rust\n".as_bytes()).unwrap();
-  ///             i = 0;
-  ///           }
-  ///         }
-  ///       }
-  ///     });
-  ///     Ok(())
-  /// });
+  /// let mut i = 0;
+  /// while let Some(event) = shell.events().recv().await {
+  ///   if let CommandEvent::Stdout(line) = event {
+  ///     println!("got: {}", String::from_utf8(line).unwrap());
+  ///     i += 1;
+  ///     if i == 4 {
+  ///       shell.write("message from Rust\n".as_bytes()).unwrap();
+  ///       i = 0;
+  ///     }
+  ///   }
+  /// }
   /// ```
   pub fn spawn(
     program: &str,
@@ -296,12 +275,12 @@ impl Shell {
     let mut child = Self::spawn_child(&mut command, options)?;
 
     while let Some(event) = child.events().recv().await {
-      if let CommandEvent::Terminated(payload) = event {
-        return Ok(ExitStatus { code: payload.code });
+      if let CommandEvent::Terminated(status) = event {
+        return Ok(status);
       }
     }
 
-    Ok(ExitStatus { code: None })
+    Ok(ExitStatus::default())
   }
 
   fn spawn_child(
@@ -344,7 +323,7 @@ impl Shell {
       let _lock = guard.write().unwrap();
 
       let event = match status {
-        Ok(status) => CommandEvent::Terminated(TerminatedPayload {
+        Ok(status) => CommandEvent::Terminated(ExitStatus {
           code: status.code(),
           #[cfg(windows)]
           signal: None,
