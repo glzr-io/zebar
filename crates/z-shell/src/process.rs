@@ -64,6 +64,8 @@ impl Buffer {
     }
   }
 
+  /// Returns the buffer contents as a string slice if it contains text
+  /// data. Returns `None` if the buffer contains raw bytes.
   pub fn as_str(&self) -> Option<&str> {
     match self {
       Buffer::Text(string) => Some(string),
@@ -71,20 +73,13 @@ impl Buffer {
     }
   }
 
+  /// Returns the buffer contents as a byte slice.
   pub fn as_bytes(&self) -> &[u8] {
     match self {
       Buffer::Text(string) => string.as_bytes(),
       Buffer::Raw(bytes) => bytes,
     }
   }
-}
-
-#[derive(Debug, Serialize)]
-pub struct ChildProcessReturn {
-  pub code: Option<i32>,
-  pub signal: Option<i32>,
-  pub stdout: Buffer,
-  pub stderr: Buffer,
 }
 
 /// Payload for the [`CommandEvent::Terminated`] command event.
@@ -118,7 +113,7 @@ pub enum CommandEvent {
   Terminated(TerminatedPayload),
 }
 
-/// The spawned child process.
+/// The child process spawned by a shell command.
 #[derive(Debug)]
 pub struct CommandChild {
   inner: Arc<SharedChild>,
@@ -144,6 +139,7 @@ impl CommandChild {
     self.inner.id()
   }
 
+  /// Returns a channel of events from the child process.
   pub fn events(&mut self) -> &mut mpsc::Receiver<CommandEvent> {
     &mut self.rx
   }
@@ -183,49 +179,61 @@ pub struct Output {
 
 /// The type to spawn commands.
 #[derive(Debug)]
-pub struct Command {
-  inner: StdCommand,
-  encoding: Encoding,
-}
+pub struct Shell;
 
-impl From<Command> for StdCommand {
-  fn from(cmd: Command) -> StdCommand {
-    cmd.inner
-  }
-}
-
-impl Command {
-  pub fn new(
+impl Shell {
+  /// Executes a command as a child process, waiting for it to finish and
+  /// collecting all of its output. Stdin is ignored.
+  ///
+  /// # Examples
+  ///
+  /// ```rust,no_run
+  /// use shell::ShellExt;
+  /// tauri::Builder::default()
+  ///   .setup(|app| {
+  ///     let output = tauri::async_runtime::block_on(async move { app.shell().command("echo").args(["TAURI"]).output().await.unwrap() });
+  ///     assert!(output.status.success());
+  ///     assert_eq!(String::from_utf8(output.stdout).unwrap(), "TAURI");
+  ///     Ok(())
+  ///   });
+  /// ```
+  pub async fn execute(
     program: &str,
     args: &[&str],
     options: CommandOptions,
-  ) -> Self {
-    let mut command = StdCommand::new(program);
+  ) -> crate::Result<Output> {
+    let (mut command, options) =
+      Self::create_command(program, args, options);
 
-    if let Some(cwd) = options.cwd {
-      command.current_dir(cwd);
+    let mut child = Self::spawn_child(&mut command, options)?;
+
+    let mut code = None;
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+
+    while let Some(event) = child.events().recv().await {
+      match event {
+        CommandEvent::Terminated(payload) => {
+          code = payload.code;
+        }
+        CommandEvent::Stdout(line) => {
+          stdout.push(line);
+        }
+        CommandEvent::Stderr(line) => {
+          stderr.push(line);
+        }
+        CommandEvent::Error(_) => {}
+      }
     }
 
-    if options.clear_env {
-      command.env_clear();
-    }
-
-    command.stdout(Stdio::piped());
-    command.stdin(Stdio::piped());
-    command.stderr(Stdio::piped());
-    command.args(args);
-    command.envs(options.env);
-
-    #[cfg(windows)]
-    command.creation_flags(CREATE_NO_WINDOW);
-
-    Self {
-      inner: command,
-      encoding: options.encoding,
-    }
+    Ok(Output {
+      status: ExitStatus { code },
+      stdout: Buffer::join(&stdout)?,
+      stderr: Buffer::join(&stderr)?,
+    })
   }
 
-  /// Spawns the command.
+  /// Spawns the command as a child process.
   ///
   /// # Examples
   ///
@@ -252,17 +260,63 @@ impl Command {
   ///     Ok(())
   /// });
   /// ```
-  pub fn spawn(self) -> crate::Result<CommandChild> {
-    let encoding = self.encoding.clone();
-    let mut command: StdCommand = self.into();
+  pub fn spawn(
+    program: &str,
+    args: &[&str],
+    options: CommandOptions,
+  ) -> crate::Result<CommandChild> {
+    let (mut command, options) =
+      Self::create_command(program, args, options);
+
+    Self::spawn_child(&mut command, options)
+  }
+
+  /// Executes a command as a child process, waiting for it to finish and
+  /// collecting its exit status. Stdin, stdout and stderr are ignored.
+  ///
+  /// # Examples
+  /// ```rust,no_run
+  /// use shell::ShellExt;
+  /// tauri::Builder::default()
+  ///   .setup(|app| {
+  ///     let status = tauri::async_runtime::block_on(async move { app.shell().command("which").args(["ls"]).status().await.unwrap() });
+  ///     println!("`which` finished with status: {:?}", status.code());
+  ///     Ok(())
+  ///   });
+  /// ```
+  pub async fn status(
+    &self,
+    program: &str,
+    args: &[&str],
+    options: CommandOptions,
+  ) -> crate::Result<ExitStatus> {
+    let (mut command, options) =
+      Self::create_command(program, args, options);
+
+    let mut child = Self::spawn_child(&mut command, options)?;
+
+    while let Some(event) = child.events().recv().await {
+      if let CommandEvent::Terminated(payload) = event {
+        return Ok(ExitStatus { code: payload.code });
+      }
+    }
+
+    Ok(ExitStatus { code: None })
+  }
+
+  fn spawn_child(
+    command: &mut StdCommand,
+    options: CommandOptions,
+  ) -> crate::Result<CommandChild> {
     let (stdout_reader, stdout_writer) = pipe()?;
     let (stderr_reader, stderr_writer) = pipe()?;
     let (stdin_reader, stdin_writer) = pipe()?;
+
     command.stdout(stdout_writer);
     command.stderr(stderr_writer);
     command.stdin(stdin_reader);
 
-    let shared_child = SharedChild::spawn(&mut command)?;
+    let shared_child = SharedChild::spawn(command)?;
     let child = Arc::new(shared_child);
     let child_ = child.clone();
     let guard = Arc::new(RwLock::new(()));
@@ -274,7 +328,7 @@ impl Command {
       guard.clone(),
       stdout_reader,
       CommandEvent::Stdout,
-      encoding.clone(),
+      options.encoding.clone(),
     );
 
     spawn_pipe_reader(
@@ -282,7 +336,7 @@ impl Command {
       guard.clone(),
       stderr_reader,
       CommandEvent::Stderr,
-      encoding,
+      options.encoding,
     );
 
     spawn(move || {
@@ -310,73 +364,32 @@ impl Command {
     })
   }
 
-  /// Executes a command as a child process, waiting for it to finish and
-  /// collecting its exit status. Stdin, stdout and stderr are ignored.
-  ///
-  /// # Examples
-  /// ```rust,no_run
-  /// use shell::ShellExt;
-  /// tauri::Builder::default()
-  ///   .setup(|app| {
-  ///     let status = tauri::async_runtime::block_on(async move { app.shell().command("which").args(["ls"]).status().await.unwrap() });
-  ///     println!("`which` finished with status: {:?}", status.code());
-  ///     Ok(())
-  ///   });
-  /// ```
-  pub async fn status(self) -> crate::Result<ExitStatus> {
-    let mut child = self.spawn()?;
+  /// Creates a `Command` instance.
+  fn create_command(
+    program: &str,
+    args: &[&str],
+    options: CommandOptions,
+  ) -> (StdCommand, CommandOptions) {
+    let mut command = StdCommand::new(program);
 
-    while let Some(event) = child.events().recv().await {
-      if let CommandEvent::Terminated(payload) = event {
-        return Ok(ExitStatus { code: payload.code });
-      }
+    if let Some(cwd) = &options.cwd {
+      command.current_dir(cwd);
     }
 
-    Ok(ExitStatus { code: None })
-  }
-
-  /// Executes the command as a child process, waiting for it to finish and
-  /// collecting all of its output. Stdin is ignored.
-  ///
-  /// # Examples
-  ///
-  /// ```rust,no_run
-  /// use shell::ShellExt;
-  /// tauri::Builder::default()
-  ///   .setup(|app| {
-  ///     let output = tauri::async_runtime::block_on(async move { app.shell().command("echo").args(["TAURI"]).output().await.unwrap() });
-  ///     assert!(output.status.success());
-  ///     assert_eq!(String::from_utf8(output.stdout).unwrap(), "TAURI");
-  ///     Ok(())
-  ///   });
-  /// ```
-  pub async fn output(self) -> crate::Result<Output> {
-    let mut child = self.spawn()?;
-
-    let mut code = None;
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-
-    while let Some(event) = child.events().recv().await {
-      match event {
-        CommandEvent::Terminated(payload) => {
-          code = payload.code;
-        }
-        CommandEvent::Stdout(line) => {
-          stdout.push(line);
-        }
-        CommandEvent::Stderr(line) => {
-          stderr.push(line);
-        }
-        CommandEvent::Error(_) => {}
-      }
+    if options.clear_env {
+      command.env_clear();
     }
 
-    Ok(Output {
-      status: ExitStatus { code },
-      stdout: Buffer::join(&stdout)?,
-      stderr: Buffer::join(&stderr)?,
-    })
+    command.stdout(Stdio::piped());
+    command.stdin(Stdio::piped());
+    command.stderr(Stdio::piped());
+    command.args(args);
+    command.envs(&options.env);
+
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
+
+    (command, options)
   }
 }
 
