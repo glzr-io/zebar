@@ -6,7 +6,6 @@
 use std::{env, sync::Arc};
 
 use clap::Parser;
-use privilege_store::PrivilegeStore;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
@@ -14,7 +13,7 @@ use tauri_plugin_shell::ShellExt;
 use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
-use z_shell::{options::CommandOptions, process::Shell};
+use z_shell::{CommandOptions, Shell};
 
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;

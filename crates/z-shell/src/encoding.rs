@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::process::Buffer;
+use crate::shell::Buffer;
 
 #[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Encoding {

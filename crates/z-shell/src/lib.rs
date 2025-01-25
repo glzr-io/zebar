@@ -1,13 +1,13 @@
 #![feature(slice_internals)]
 
-pub mod encoding;
-pub mod error;
-pub mod options;
-pub mod process;
+mod encoding;
+mod error;
+mod options;
+mod shell;
 
 pub use encoding::*;
 pub use error::*;
 pub use options::*;
-pub use process::*;
+pub use shell::*;
 
 pub type Result<T> = std::result::Result<T, Error>;
