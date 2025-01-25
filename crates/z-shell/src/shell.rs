@@ -11,7 +11,7 @@ use std::{
 };
 
 #[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 use os_pipe::{pipe, PipeReader, PipeWriter};
 use serde::Serialize;
@@ -30,38 +30,36 @@ pub enum Buffer {
 }
 
 impl Buffer {
-  /// Joins multiple buffers of the same type into a single buffer.
+  /// Creates a new buffer.
+  pub fn new(is_raw: bool) -> Buffer {
+    if is_raw {
+      Buffer::Raw(Vec::new())
+    } else {
+      Buffer::Text(String::new())
+    }
+  }
+
+  /// Pushes a buffer of the same type into the current buffer.
   ///
   /// # Examples
   /// ```
-  /// use crate::process::Buffer;
-  /// let joined = Buffer::join(&[
-  ///   Buffer::Text("Hello".to_string()),
-  ///   Buffer::Text("World!".to_string())
-  /// ]).unwrap();
-  /// assert_eq!(joined, Buffer::Text("Hello\nWorld!".to_string()));
+  /// use crate::shell::Buffer;
+  /// let mut buffer = Buffer::new(false);
+  /// buffer.push(Buffer::Text("Hello".to_string())).unwrap();
+  /// assert_eq!(buffer, Buffer::Text("Hello".to_string()));
   /// ```
-  pub fn join(buffers: &[Buffer]) -> crate::Result<Buffer> {
-    println!("buffers: {:?}", buffers);
-    let start = buffers.first().ok_or(crate::Error::InvalidBuffer)?;
+  pub fn push(&mut self, buffer: Buffer) -> crate::Result<()> {
+    match self {
+      Buffer::Text(string) => {
+        let incoming_string =
+          buffer.as_str().ok_or(crate::Error::InvalidBuffer)?;
 
-    match start {
-      Buffer::Text(_) => {
-        let strings = buffers
-          .iter()
-          .map(|bytes| bytes.as_str().ok_or(crate::Error::InvalidBuffer))
-          .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(Buffer::Text(strings.join("\n")))
+        string.push_str(incoming_string);
       }
-      Buffer::Raw(_) => Ok(Buffer::Raw(
-        buffers
-          .iter()
-          .flat_map(|bytes| bytes.as_bytes())
-          .copied()
-          .collect(),
-      )),
+      Buffer::Raw(bytes) => bytes.extend_from_slice(buffer.as_bytes()),
     }
+
+    Ok(())
   }
 
   /// Returns the buffer contents as a string slice if it contains text
@@ -193,8 +191,8 @@ impl Shell {
     let mut child = Self::spawn(program, args, options)?;
 
     let mut status = ExitStatus::default();
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
+    let mut stdout = Buffer::new(options.encoding == Encoding::Raw);
+    let mut stderr = Buffer::new(options.encoding == Encoding::Raw);
 
     while let Some(event) = child.events().recv().await {
       match event {
@@ -202,10 +200,10 @@ impl Shell {
           status = exit_status;
         }
         CommandEvent::Stdout(line) => {
-          stdout.push(line);
+          stdout.push(line)?;
         }
         CommandEvent::Stderr(line) => {
-          stderr.push(line);
+          stderr.push(line)?;
         }
         CommandEvent::Error(_) => {}
       }
@@ -213,8 +211,8 @@ impl Shell {
 
     Ok(Output {
       status,
-      stdout: Buffer::join(&stdout)?,
-      stderr: Buffer::join(&stderr)?,
+      stdout,
+      stderr,
     })
   }
 
@@ -482,130 +480,65 @@ fn read_line2<R: BufRead + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-  #[cfg(not(windows))]
   use super::*;
 
-  #[cfg(not(windows))]
-  #[test]
-  fn test_cmd_spawn_output() {
-    let cmd = Command::new("cat").args(["test/test.txt"]);
-    let (mut rx, _) = cmd.spawn().unwrap();
+  #[tokio::test]
+  async fn test_echo_command() {
+    let output = Shell::execute(
+      if cfg!(windows) { "cmd" } else { "sh" },
+      &[if cfg!(windows) { "/C" } else { "-c" }, "echo hello world"],
+      &CommandOptions::default(),
+    )
+    .await
+    .unwrap();
 
-    tauri::async_runtime::block_on(async move {
-      while let Some(event) = rx.recv().await {
-        match event {
-          CommandEvent::Terminated(payload) => {
-            assert_eq!(payload.code, Some(0));
-          }
-          CommandEvent::Stdout(line) => {
-            assert_eq!(
-              String::from_utf8(line).unwrap(),
-              "This is a test doc!"
-            );
-          }
-          _ => {}
+    assert!(output.status.success());
+    assert!(output.stderr.as_str().unwrap().is_empty());
+    assert!(output.stdout.as_str().unwrap().contains("hello world"));
+  }
+
+  #[tokio::test]
+  async fn test_command_failure() {
+    let output = Shell::execute(
+      if cfg!(windows) { "cmd" } else { "sh" },
+      &[
+        if cfg!(windows) { "/C" } else { "-c" },
+        "nonexistent_command",
+      ],
+      &CommandOptions::default(),
+    )
+    .await
+    .unwrap();
+
+    assert!(!output.status.success());
+    assert!(!output.stderr.as_str().unwrap().is_empty());
+  }
+
+  #[tokio::test]
+  async fn test_raw_output() {
+    let mut options = CommandOptions::default();
+    options.encoding = Encoding::Raw;
+
+    let mut child = Shell::spawn(
+      if cfg!(windows) { "cmd" } else { "sh" },
+      &[if cfg!(windows) { "/C" } else { "-c" }, "echo test"],
+      &options,
+    )
+    .unwrap();
+
+    let mut saw_stdout = false;
+    while let Some(event) = child.events().recv().await {
+      match event {
+        CommandEvent::Stdout(Buffer::Raw(bytes)) => {
+          assert!(!bytes.is_empty());
+          saw_stdout = true;
         }
-      }
-    });
-  }
-
-  #[cfg(not(windows))]
-  #[test]
-  fn test_cmd_spawn_raw_output() {
-    let cmd = Command::new("cat").args(["test/test.txt"]);
-    let (mut rx, _) = cmd.spawn().unwrap();
-
-    tauri::async_runtime::block_on(async move {
-      while let Some(event) = rx.recv().await {
-        match event {
-          CommandEvent::Terminated(payload) => {
-            assert_eq!(payload.code, Some(0));
-          }
-          CommandEvent::Stdout(line) => {
-            assert_eq!(
-              String::from_utf8(line).unwrap(),
-              "This is a test doc!"
-            );
-          }
-          _ => {}
+        CommandEvent::Terminated(status) => {
+          assert!(status.success());
         }
+        _ => {}
       }
-    });
-  }
-
-  #[cfg(not(windows))]
-  #[test]
-  // test the failure case
-  fn test_cmd_spawn_fail() {
-    let cmd = Command::new("cat").args(["test/"]);
-    let (mut rx, _) = cmd.spawn().unwrap();
-
-    tauri::async_runtime::block_on(async move {
-      while let Some(event) = rx.recv().await {
-        match event {
-          CommandEvent::Terminated(payload) => {
-            assert_eq!(payload.code, Some(1));
-          }
-          CommandEvent::Stderr(line) => {
-            assert_eq!(
-              String::from_utf8(line).unwrap(),
-              "cat: test/: Is a directory\n"
-            );
-          }
-          _ => {}
-        }
-      }
-    });
-  }
-
-  #[cfg(not(windows))]
-  #[test]
-  // test the failure case (raw encoding)
-  fn test_cmd_spawn_raw_fail() {
-    let cmd = Command::new("cat").args(["test/"]);
-    let (mut rx, _) = cmd.spawn().unwrap();
-
-    tauri::async_runtime::block_on(async move {
-      while let Some(event) = rx.recv().await {
-        match event {
-          CommandEvent::Terminated(payload) => {
-            assert_eq!(payload.code, Some(1));
-          }
-          CommandEvent::Stderr(line) => {
-            assert_eq!(
-              String::from_utf8(line).unwrap(),
-              "cat: test/: Is a directory\n"
-            );
-          }
-          _ => {}
-        }
-      }
-    });
-  }
-
-  #[cfg(not(windows))]
-  #[test]
-  fn test_cmd_output_output() {
-    let cmd = Command::new("cat").args(["test/test.txt"]);
-    let output = tauri::async_runtime::block_on(cmd.output()).unwrap();
-
-    assert_eq!(String::from_utf8(output.stderr).unwrap(), "");
-    assert_eq!(
-      String::from_utf8(output.stdout).unwrap(),
-      "This is a test doc!\n"
-    );
-  }
-
-  #[cfg(not(windows))]
-  #[test]
-  fn test_cmd_output_output_fail() {
-    let cmd = Command::new("cat").args(["test/"]);
-    let output = tauri::async_runtime::block_on(cmd.output()).unwrap();
-
-    assert_eq!(String::from_utf8(output.stdout).unwrap(), "");
-    assert_eq!(
-      String::from_utf8(output.stderr).unwrap(),
-      "cat: test/: Is a directory\n\n"
-    );
+    }
+    assert!(saw_stdout);
   }
 }
