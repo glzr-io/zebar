@@ -177,20 +177,17 @@ impl Shell {
   /// # Examples
   ///
   /// ```rust,no_run
-  /// use shell::{Shell, CommandOptions};
+  /// use shell::{CommandOptions, Shell};
   /// let output = Shell::execute("echo", ["Hello!"], CommandOptions::default()).await.unwrap();
   /// assert!(output.status.success());
-  /// assert_eq!(String::from_utf8(output.stdout).unwrap(), "Hello!");
+  /// assert_eq!(output.stdout.as_str().unwrap(), "Hello!");
   /// ```
   pub async fn execute(
     program: &str,
     args: &[&str],
     options: CommandOptions,
   ) -> crate::Result<Output> {
-    let (mut command, options) =
-      Self::create_command(program, args, options);
-
-    let mut child = Self::spawn_child(&mut command, options)?;
+    let mut child = Self::spawn(program, args, options)?;
 
     let mut status = ExitStatus::default();
     let mut stdout = Vec::new();
@@ -218,24 +215,44 @@ impl Shell {
     })
   }
 
+  /// Executes a command as a child process, waiting for it to finish and
+  /// collecting its exit status. Stdin, stdout and stderr are ignored.
+  ///
+  /// # Examples
+  /// ```rust,no_run
+  /// use shell::{CommandOptions, Shell};
+  /// let status = Shell::status("echo", ["Hello!"], CommandOptions::default()).await.unwrap();
+  /// assert!(status.success());
+  /// ```
+  pub async fn status(
+    &self,
+    program: &str,
+    args: &[&str],
+    options: CommandOptions,
+  ) -> crate::Result<ExitStatus> {
+    let mut child = Self::spawn(program, args, options)?;
+
+    while let Some(event) = child.events().recv().await {
+      if let CommandEvent::Terminated(status) = event {
+        return Ok(status);
+      }
+    }
+
+    Ok(ExitStatus::default())
+  }
+
   /// Spawns the command as a child process.
   ///
   /// # Examples
   ///
   /// ```rust,no_run
   /// use shell::{CommandEvent, Shell};
-  /// let shell = Shell::spawn("cargo", ["tauri", "dev"], CommandOptions::default())
-  ///   .expect("Failed to spawn cargo");
+  /// let child = Shell::spawn("yes", [], CommandOptions::default())
+  ///   .expect("Failed to spawn yes.");
   ///
-  /// let mut i = 0;
-  /// while let Some(event) = shell.events().recv().await {
-  ///   if let CommandEvent::Stdout(line) = event {
-  ///     println!("got: {}", String::from_utf8(line).unwrap());
-  ///     i += 1;
-  ///     if i == 4 {
-  ///       shell.write("message from Rust\n".as_bytes()).unwrap();
-  ///       i = 0;
-  ///     }
+  /// while let Some(event) = child.events().recv().await {
+  ///   if let CommandEvent::Stdout(buffer) = event {
+  ///     println!("got: {}", buffer.as_str().unwrap());
   ///   }
   /// }
   /// ```
@@ -250,39 +267,7 @@ impl Shell {
     Self::spawn_child(&mut command, options)
   }
 
-  /// Executes a command as a child process, waiting for it to finish and
-  /// collecting its exit status. Stdin, stdout and stderr are ignored.
-  ///
-  /// # Examples
-  /// ```rust,no_run
-  /// use shell::ShellExt;
-  /// tauri::Builder::default()
-  ///   .setup(|app| {
-  ///     let status = tauri::async_runtime::block_on(async move { app.shell().command("which").args(["ls"]).status().await.unwrap() });
-  ///     println!("`which` finished with status: {:?}", status.code());
-  ///     Ok(())
-  ///   });
-  /// ```
-  pub async fn status(
-    &self,
-    program: &str,
-    args: &[&str],
-    options: CommandOptions,
-  ) -> crate::Result<ExitStatus> {
-    let (mut command, options) =
-      Self::create_command(program, args, options);
-
-    let mut child = Self::spawn_child(&mut command, options)?;
-
-    while let Some(event) = child.events().recv().await {
-      if let CommandEvent::Terminated(status) = event {
-        return Ok(status);
-      }
-    }
-
-    Ok(ExitStatus::default())
-  }
-
+  /// Spawns the command as a child process.
   fn spawn_child(
     command: &mut StdCommand,
     options: CommandOptions,
