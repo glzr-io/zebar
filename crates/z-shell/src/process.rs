@@ -270,27 +270,21 @@ impl Command {
     );
 
     spawn(move || {
-      let _ = match child_.wait() {
-        Ok(status) => {
-          let _l = guard.write().unwrap();
-          block_on(async move {
-            tx.send(CommandEvent::Terminated(TerminatedPayload {
-              code: status.code(),
-              #[cfg(windows)]
-              signal: None,
-              #[cfg(unix)]
-              signal: status.signal(),
-            }))
-            .await
-          })
-        }
-        Err(err) => {
-          let _l = guard.write().unwrap();
-          block_on(async move {
-            tx.send(CommandEvent::Error(err.to_string())).await
-          })
-        }
+      let status = child_.wait();
+      let _lock = guard.write().unwrap();
+
+      let event = match status {
+        Ok(status) => CommandEvent::Terminated(TerminatedPayload {
+          code: status.code(),
+          #[cfg(windows)]
+          signal: None,
+          #[cfg(unix)]
+          signal: status.signal(),
+        }),
+        Err(err) => CommandEvent::Error(err.to_string()),
       };
+
+      let _ = block_on(async move { tx.send(event).await });
     });
 
     Ok(CommandChild {

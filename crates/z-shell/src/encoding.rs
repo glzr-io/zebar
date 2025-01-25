@@ -28,27 +28,35 @@ pub enum Encoding {
 
 impl Encoding {
   pub fn decode(&self, line: Vec<u8>) -> Buffer {
-    match self.as_encoding() {
-      Some(encoding) => {
+    match <&Encoding as TryInto<&'static encoding_rs::Encoding>>::try_into(
+      self,
+    ) {
+      Ok(encoding) => {
         let encoding = encoding.decode_with_bom_removal(&line).0;
         Buffer::Text(encoding.into())
       }
-      None => Buffer::Raw(line),
+      Err(_) => Buffer::Raw(line),
     }
   }
+}
 
-  pub fn as_encoding(&self) -> Option<&'static encoding_rs::Encoding> {
+impl TryInto<&'static encoding_rs::Encoding> for &Encoding {
+  type Error = ();
+
+  fn try_into(
+    self,
+  ) -> Result<&'static encoding_rs::Encoding, Self::Error> {
     match self {
-      Encoding::Raw => None,
-      Encoding::Utf8 => Some(encoding_rs::UTF_8),
-      Encoding::Gbk => Some(encoding_rs::GBK),
-      Encoding::Gb18030 => Some(encoding_rs::GB18030),
-      Encoding::Big5 => Some(encoding_rs::BIG5),
-      Encoding::EucJp => Some(encoding_rs::EUC_JP),
-      Encoding::Iso2022Jp => Some(encoding_rs::ISO_2022_JP),
-      Encoding::ShiftJis => Some(encoding_rs::SHIFT_JIS),
-      Encoding::EucKr => Some(encoding_rs::EUC_KR),
-      Encoding::Utf16 => Some(encoding_rs::UTF_16LE),
+      Encoding::Raw => Err(()),
+      Encoding::Utf8 => Ok(encoding_rs::UTF_8),
+      Encoding::Gbk => Ok(encoding_rs::GBK),
+      Encoding::Gb18030 => Ok(encoding_rs::GB18030),
+      Encoding::Big5 => Ok(encoding_rs::BIG5),
+      Encoding::EucJp => Ok(encoding_rs::EUC_JP),
+      Encoding::Iso2022Jp => Ok(encoding_rs::ISO_2022_JP),
+      Encoding::ShiftJis => Ok(encoding_rs::SHIFT_JIS),
+      Encoding::EucKr => Ok(encoding_rs::EUC_KR),
+      Encoding::Utf16 => Ok(encoding_rs::UTF_16LE),
     }
   }
 }
