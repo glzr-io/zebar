@@ -24,6 +24,9 @@ pub enum Error {
 
   #[error(transparent)]
   Utf8(#[from] std::string::FromUtf8Error),
+
+  #[error("Invalid buffer")]
+  InvalidBuffer,
 }
 
 impl Serialize for Error {

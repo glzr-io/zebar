@@ -13,7 +13,6 @@ use std::{
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-const NEWLINE_BYTE: u8 = b'\n';
 
 use os_pipe::{pipe, PipeReader, PipeWriter};
 use serde::{Deserialize, Serialize};
@@ -24,43 +23,60 @@ use crate::{encoding::Encoding, options::CommandOptions};
 
 pub type ProcessId = u32;
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "event", content = "payload")]
-#[non_exhaustive]
-pub enum JSCommandEvent {
-  /// Stderr bytes until a newline (\n) or carriage return (\r) is found.
-  Stderr(Buffer),
-  /// Stdout bytes until a newline (\n) or carriage return (\r) is found.
-  Stdout(Buffer),
-  /// An error happened waiting for the command to finish or converting
-  /// the stdout/stderr bytes to an UTF-8 string.
-  Error(String),
-  /// Command process terminated.
-  Terminated(TerminatedPayload),
-}
-
-impl JSCommandEvent {
-  pub fn new(event: CommandEvent, encoding: Encoding) -> Self {
-    match event {
-      CommandEvent::Terminated(payload) => {
-        JSCommandEvent::Terminated(payload)
-      }
-      CommandEvent::Error(error) => JSCommandEvent::Error(error),
-      CommandEvent::Stderr(line) => {
-        JSCommandEvent::Stderr(encoding.decode(line))
-      }
-      CommandEvent::Stdout(line) => {
-        JSCommandEvent::Stdout(encoding.decode(line))
-      }
-    }
-  }
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Buffer {
   Text(String),
   Raw(Vec<u8>),
+}
+
+impl Buffer {
+  /// Joins multiple buffers of the same type into a single buffer.
+  ///
+  /// # Examples
+  /// ```
+  /// use crate::process::Buffer;
+  /// let joined = Buffer::join(&[
+  ///   Buffer::Text("Hello".to_string()),
+  ///   Buffer::Text("World!".to_string())
+  /// ]).unwrap();
+  /// assert_eq!(joined, Buffer::Text("Hello\nWorld!".to_string()));
+  /// ```
+  pub fn join(buffers: &[Buffer]) -> crate::Result<Buffer> {
+    let start = buffers.first().ok_or(crate::Error::InvalidBuffer)?;
+
+    match start {
+      Buffer::Text(_) => {
+        let strings = buffers
+          .iter()
+          .map(|bytes| bytes.as_str().ok_or(crate::Error::InvalidBuffer))
+          .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Buffer::Text(strings.join("\n")))
+      }
+      Buffer::Raw(_) => Ok(Buffer::Raw(
+        buffers
+          .iter()
+          .flat_map(|bytes| bytes.as_bytes())
+          .copied()
+          .collect(),
+      )),
+    }
+  }
+
+  pub fn as_str(&self) -> Option<&str> {
+    match self {
+      Buffer::Text(string) => Some(string),
+      Buffer::Raw(_) => None,
+    }
+  }
+
+  pub fn as_bytes(&self) -> &[u8] {
+    match self {
+      Buffer::Text(string) => string.as_bytes(),
+      Buffer::Raw(bytes) => bytes,
+    }
+  }
 }
 
 #[derive(Debug, Serialize)]
@@ -87,12 +103,12 @@ pub enum CommandEvent {
   /// If configured for raw output, all bytes written to stderr.
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
   /// found.
-  Stderr(Vec<u8>),
+  Stderr(Buffer),
 
   /// If configured for raw output, all bytes written to stdout.
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
   /// found.
-  Stdout(Vec<u8>),
+  Stdout(Buffer),
 
   /// An error happened waiting for the command to finish or converting
   /// the stdout/stderr bytes to a UTF-8 string.
@@ -159,10 +175,10 @@ pub struct Output {
   pub status: ExitStatus,
 
   /// The data that the process wrote to stdout.
-  pub stdout: Vec<u8>,
+  pub stdout: Buffer,
 
   /// The data that the process wrote to stderr.
-  pub stderr: Vec<u8>,
+  pub stderr: Buffer,
 }
 
 /// The type to spawn commands.
@@ -347,12 +363,10 @@ impl Command {
           code = payload.code;
         }
         CommandEvent::Stdout(line) => {
-          stdout.extend(line);
-          stdout.push(NEWLINE_BYTE);
+          stdout.push(line);
         }
         CommandEvent::Stderr(line) => {
-          stderr.extend(line);
-          stderr.push(NEWLINE_BYTE);
+          stderr.push(line);
         }
         CommandEvent::Error(_) => {}
       }
@@ -360,14 +374,14 @@ impl Command {
 
     Ok(Output {
       status: ExitStatus { code },
-      stdout,
-      stderr,
+      stdout: Buffer::join(&stdout)?,
+      stderr: Buffer::join(&stderr)?,
     })
   }
 }
 
 fn read_raw_bytes<
-  F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static,
+  F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static,
 >(
   mut reader: BufReader<PipeReader>,
   tx: mpsc::Sender<CommandEvent>,
@@ -382,8 +396,8 @@ fn read_raw_bytes<
         if length == 0 {
           break;
         }
-        let _ =
-          block_on(async move { tx_.send(wrapper(buf.to_vec())).await });
+        let buffer = Buffer::Raw(buf.to_vec());
+        let _ = block_on(async move { tx_.send(wrapper(buffer)).await });
         reader.consume(length);
       }
       Err(err) => {
@@ -395,10 +409,11 @@ fn read_raw_bytes<
   }
 }
 
-fn read_line<F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static>(
+fn read_line<F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static>(
   mut reader: BufReader<PipeReader>,
   tx: mpsc::Sender<CommandEvent>,
   wrapper: F,
+  encoding: Encoding,
 ) {
   loop {
     let mut buf = Vec::new();
@@ -408,7 +423,8 @@ fn read_line<F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static>(
         if n == 0 {
           break;
         }
-        let _ = block_on(async move { tx_.send(wrapper(buf)).await });
+        let buffer = encoding.decode(buf);
+        let _ = block_on(async move { tx_.send(wrapper(buffer)).await });
       }
       Err(err) => {
         let _ = block_on(async move {
@@ -421,7 +437,7 @@ fn read_line<F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static>(
 }
 
 fn spawn_pipe_reader<
-  F: Fn(Vec<u8>) -> CommandEvent + Send + Copy + 'static,
+  F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static,
 >(
   tx: mpsc::Sender<CommandEvent>,
   guard: Arc<RwLock<()>>,
@@ -436,7 +452,7 @@ fn spawn_pipe_reader<
     if encoding == Encoding::Raw {
       read_raw_bytes(reader, tx, wrapper);
     } else {
-      read_line(reader, tx, wrapper);
+      read_line(reader, tx, wrapper, encoding);
     }
   });
 }
