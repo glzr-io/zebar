@@ -160,7 +160,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.manage(widget_factory.clone());
 
   let shell =
-    Shell::execute("code", &["--version"], CommandOptions::default())
+    Shell::execute("code", &["--version"], &CommandOptions::default())
       .await;
 
   println!(" aaaaaaaaaa {:?}", shell);
@@ -168,7 +168,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   let shell = Shell::execute(
     r#"c:\Users\larsb\AppData\Local\Programs\cursor\resources\app\bin\code.cmd"#,
     &["--version"],
-    CommandOptions::default(),
+    &CommandOptions::default(),
   )
   .await;
 

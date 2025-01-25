@@ -4,9 +4,8 @@ use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::{
-  future::Future,
   io::{BufRead, BufReader, Write},
-  process::{Command as StdCommand, Stdio},
+  process::{Command, Stdio},
   sync::{Arc, RwLock},
   thread::spawn,
 };
@@ -43,6 +42,7 @@ impl Buffer {
   /// assert_eq!(joined, Buffer::Text("Hello\nWorld!".to_string()));
   /// ```
   pub fn join(buffers: &[Buffer]) -> crate::Result<Buffer> {
+    println!("buffers: {:?}", buffers);
     let start = buffers.first().ok_or(crate::Error::InvalidBuffer)?;
 
     match start {
@@ -178,14 +178,17 @@ impl Shell {
   ///
   /// ```rust,no_run
   /// use shell::{CommandOptions, Shell};
-  /// let output = Shell::execute("echo", ["Hello!"], CommandOptions::default()).await.unwrap();
+  /// let output =
+  ///     Shell::execute("echo", &["Hello!"], &CommandOptions::default())
+  ///       .await
+  ///       .unwrap();
   /// assert!(output.status.success());
   /// assert_eq!(output.stdout.as_str().unwrap(), "Hello!");
   /// ```
   pub async fn execute(
     program: &str,
     args: &[&str],
-    options: CommandOptions,
+    options: &CommandOptions,
   ) -> crate::Result<Output> {
     let mut child = Self::spawn(program, args, options)?;
 
@@ -221,14 +224,17 @@ impl Shell {
   /// # Examples
   /// ```rust,no_run
   /// use shell::{CommandOptions, Shell};
-  /// let status = Shell::status("echo", ["Hello!"], CommandOptions::default()).await.unwrap();
+  /// let status =
+  ///     Shell::status("echo", ["Hello!"], CommandOptions::default())
+  ///       .await
+  ///       .unwrap();
   /// assert!(status.success());
   /// ```
   pub async fn status(
     &self,
     program: &str,
     args: &[&str],
-    options: CommandOptions,
+    options: &CommandOptions,
   ) -> crate::Result<ExitStatus> {
     let mut child = Self::spawn(program, args, options)?;
 
@@ -252,25 +258,23 @@ impl Shell {
   ///
   /// while let Some(event) = child.events().recv().await {
   ///   if let CommandEvent::Stdout(buffer) = event {
-  ///     println!("got: {}", buffer.as_str().unwrap());
+  ///     println!("stdout: {}", buffer.as_str().unwrap());
   ///   }
   /// }
   /// ```
   pub fn spawn(
     program: &str,
     args: &[&str],
-    options: CommandOptions,
+    options: &CommandOptions,
   ) -> crate::Result<CommandChild> {
-    let (mut command, options) =
-      Self::create_command(program, args, options);
-
+    let mut command = Self::create_command(program, args, options);
     Self::spawn_child(&mut command, options)
   }
 
   /// Spawns the command as a child process.
   fn spawn_child(
-    command: &mut StdCommand,
-    options: CommandOptions,
+    command: &mut Command,
+    options: &CommandOptions,
   ) -> crate::Result<CommandChild> {
     let (stdout_reader, stdout_writer) = pipe()?;
     let (stderr_reader, stderr_writer) = pipe()?;
@@ -300,7 +304,7 @@ impl Shell {
       guard.clone(),
       stderr_reader,
       CommandEvent::Stderr,
-      options.encoding,
+      options.encoding.clone(),
     );
 
     spawn(move || {
@@ -318,7 +322,7 @@ impl Shell {
         Err(err) => CommandEvent::Error(err.to_string()),
       };
 
-      let _ = block_on(async move { tx.send(event).await });
+      let _ = tx.blocking_send(event);
     });
 
     Ok(CommandChild {
@@ -332,9 +336,9 @@ impl Shell {
   fn create_command(
     program: &str,
     args: &[&str],
-    options: CommandOptions,
-  ) -> (StdCommand, CommandOptions) {
-    let mut command = StdCommand::new(program);
+    options: &CommandOptions,
+  ) -> Command {
+    let mut command = Command::new(program);
 
     if let Some(cwd) = &options.cwd {
       command.current_dir(cwd);
@@ -353,7 +357,7 @@ impl Shell {
     #[cfg(windows)]
     command.creation_flags(CREATE_NO_WINDOW);
 
-    (command, options)
+    command
   }
 }
 
@@ -374,13 +378,11 @@ fn read_raw_bytes<
           break;
         }
         let buffer = Buffer::Raw(buf.to_vec());
-        let _ = block_on(async move { tx_.send(wrapper(buffer)).await });
+        let _ = tx_.blocking_send(wrapper(buffer));
         reader.consume(length);
       }
       Err(err) => {
-        let _ = block_on(async move {
-          tx_.send(CommandEvent::Error(err.to_string())).await
-        });
+        let _ = tx_.blocking_send(CommandEvent::Error(err.to_string()));
       }
     }
   }
@@ -401,12 +403,10 @@ fn read_line<F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static>(
           break;
         }
         let buffer = encoding.decode(buf);
-        let _ = block_on(async move { tx_.send(wrapper(buffer)).await });
+        let _ = tx_.blocking_send(wrapper(buffer));
       }
       Err(err) => {
-        let _ = block_on(async move {
-          tx_.send(CommandEvent::Error(err.to_string())).await
-        });
+        let _ = tx_.blocking_send(CommandEvent::Error(err.to_string()));
         break;
       }
     }
@@ -432,12 +432,6 @@ fn spawn_pipe_reader<
       read_line(reader, tx, wrapper, encoding);
     }
   });
-}
-
-/// Runs a future to completion on runtime.
-pub fn block_on<F: Future>(task: F) -> F::Output {
-  let runtime = tokio::runtime::Handle::current();
-  runtime.block_on(task)
 }
 
 /// Read all bytes until a newline (the `0xA` byte) or a carriage return
@@ -486,7 +480,6 @@ fn read_line2<R: BufRead + ?Sized>(
   }
 }
 
-// tests for the commands functions.
 #[cfg(test)]
 mod tests {
   #[cfg(not(windows))]
