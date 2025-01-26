@@ -6,7 +6,7 @@ import {
 } from './desktop-commands';
 
 interface ShellEmission {
-  processId: number;
+  pid: number;
   event: ShellEvent;
 }
 
@@ -84,7 +84,7 @@ export async function shellSpawn<
   const unlistenEvents = await listen(
     'shell-emit',
     (event: Event<ShellEmission>) => {
-      if (event.payload.processId === processId) {
+      if (event.payload.pid === processId) {
         const shellEvent = event.payload.event;
 
         switch (shellEvent.type) {

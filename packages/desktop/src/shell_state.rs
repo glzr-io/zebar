@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Context;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shell::{Buffer, CommandEvent, CommandOptions, ProcessId, Shell};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
@@ -25,6 +25,25 @@ pub struct ProcessHandle {
 pub struct ShellEmission {
   pid: ProcessId,
   event: CommandEvent,
+}
+
+/// Arguments for a shell command.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum ShellCommandArgs {
+  String(String),
+  Array(Vec<String>),
+}
+
+impl From<ShellCommandArgs> for Vec<String> {
+  fn from(val: ShellCommandArgs) -> Self {
+    match val {
+      ShellCommandArgs::String(args) => {
+        args.split(' ').map(String::from).collect()
+      }
+      ShellCommandArgs::Array(args) => args,
+    }
+  }
 }
 
 /// Manages the state and lifecycle of shell processes.
@@ -56,32 +75,35 @@ impl ShellState {
 
     // Create channels for write and kill signals.
     let (write_tx, mut write_rx) = mpsc::unbounded_channel::<Buffer>();
-    let (kill_tx, kill_rx) = oneshot::channel();
+    let (kill_tx, mut kill_rx) = oneshot::channel();
 
     // Set up event handling.
     let event_task = tokio::spawn(async move {
-      tokio::select! {
-        // Process events from the child.
-        Some(event) = child.events().recv() => {
-          let _ = app_handle.emit("shell-emit", ShellEmission {
-            pid,
-            event,
-          });
-        }
-
-        // Process write requests.
-        Some(buffer) = write_rx.recv() => {
-          if let Err(err) = child.write(buffer.as_bytes()) {
+      loop {
+        tokio::select! {
+          // Process events from the child.
+          Some(event) = child.events().recv() => {
             let _ = app_handle.emit("shell-emit", ShellEmission {
               pid,
-              event: CommandEvent::Error(format!("Write error: {}", err)),
+              event,
             });
           }
-        }
 
-        // Kill the process when signal is received.
-        _ = kill_rx => {
-          let _ = child.kill();
+          // Process write requests.
+          Some(buffer) = write_rx.recv() => {
+            if let Err(err) = child.write(buffer.as_bytes()) {
+              let _ = app_handle.emit("shell-emit", ShellEmission {
+                pid,
+                event: CommandEvent::Error(format!("Write error: {}", err)),
+              });
+            }
+          }
+
+          // Kill the process when signal is received.
+          _ = &mut kill_rx => {
+            let _ = child.kill();
+            break;
+          }
         }
       }
     });

@@ -13,7 +13,7 @@ use crate::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
     ProviderManager,
   },
-  shell_state::ShellState,
+  shell_state::{ShellCommandArgs, ShellState},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -154,9 +154,10 @@ pub fn set_skip_taskbar(
 #[tauri::command]
 pub async fn shell_execute(
   program: String,
-  args: Vec<String>,
+  args: ShellCommandArgs,
   options: shell::CommandOptions,
 ) -> anyhow::Result<shell::ShellExecuteOutput, String> {
+  let args: Vec<String> = args.into();
   Shell::execute(&program, &args, &options)
     .await
     .map_err(|err| err.to_string())
@@ -165,12 +166,12 @@ pub async fn shell_execute(
 #[tauri::command]
 pub async fn shell_spawn(
   program: String,
-  args: Vec<String>,
+  args: ShellCommandArgs,
   options: shell::CommandOptions,
   shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<shell::ProcessId, String> {
   shell_state
-    .spawn(&program, &args, &options)
+    .spawn(&program, &args.into(), &options)
     .map_err(|err| err.to_string())
 }
 

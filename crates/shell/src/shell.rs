@@ -82,7 +82,7 @@ impl Buffer {
 
 /// A event sent to the command callback.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(tag = "type", content = "data")]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum CommandEvent {
   /// If configured for raw output, all bytes written to stderr.
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
@@ -392,6 +392,7 @@ impl Shell {
       let mut reader = StdoutReader::new(pipe, encoding);
 
       while let Ok(Some(buffer)) = reader.read_next() {
+        println!("buffer: {:?}", buffer);
         if tx.blocking_send(wrapper(buffer)).is_err() {
           break;
         }

@@ -23,7 +23,7 @@ impl Default for CommandOptions {
     Self {
       cwd: None,
       env: HashMap::default(),
-      clear_env: true,
+      clear_env: false,
       encoding: Encoding::Utf8,
     }
   }
