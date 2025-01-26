@@ -168,7 +168,7 @@ pub async fn shell_spawn(
   args: &[&str],
   options: &z_shell::CommandOptions,
   shell_state: State<'_, Arc<ShellState>>,
-) -> anyhow::Result<z_shell::CommandChild, String> {
+) -> anyhow::Result<z_shell::ProcessId, String> {
   shell_state
     .spawn(program, args, options)
     .map_err(|err| err.to_string())

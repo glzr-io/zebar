@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Context;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
 use z_shell::{
   Buffer, CommandChild, CommandEvent, CommandOptions, ProcessId, Shell,
@@ -63,7 +63,7 @@ impl ShellState {
     program: &str,
     args: &[&str],
     options: &CommandOptions,
-  ) -> anyhow::Result<CommandChild> {
+  ) -> anyhow::Result<ProcessId> {
     let mut child = Shell::spawn(program, args, options)?;
     let pid = child.pid();
 
@@ -75,53 +75,53 @@ impl ShellState {
     let app_handle = self.app_handle.clone();
     let event_task = tokio::spawn(async move {
       tokio::select! {
-          _ = async {
-              while let Some(event) = child.events().recv().await {
-                  let shell_event = match event {
-                      CommandEvent::Stdout(buffer) => {
-                          if let Some(text) = buffer.as_str() {
-                              Some(ShellEvent::Stdout {
-                                  pid,
-                                  data: text.to_string(),
-                              })
-                          } else {
-                              None
-                          }
-                      },
-                      CommandEvent::Stderr(buffer) => {
-                          if let Some(text) = buffer.as_str() {
-                              Some(ShellEvent::Stderr {
-                                  pid,
-                                  data: text.to_string(),
-                              })
-                          } else {
-                              None
-                          }
-                      },
-                      CommandEvent::Error(message) => {
-                          Some(ShellEvent::Error {
-                              pid,
-                              message,
-                          })
-                      },
-                      CommandEvent::Terminated(status) => {
-                          Some(ShellEvent::Exit {
-                              pid,
-                              code: status.code,
-                              signal: status.signal,
-                          })
-                      },
-                  };
+        _ = async {
+          while let Some(event) = child.events().recv().await {
+            let shell_event = match event {
+              CommandEvent::Stdout(buffer) => {
+                if let Some(text) = buffer.as_str() {
+                  Some(ShellEvent::Stdout {
+                    pid,
+                    data: text.to_string(),
+                  })
+                } else {
+                  None
+                }
+              },
+              CommandEvent::Stderr(buffer) => {
+                if let Some(text) = buffer.as_str() {
+                  Some(ShellEvent::Stderr {
+                    pid,
+                    data: text.to_string(),
+                  })
+                } else {
+                  None
+                }
+              },
+              CommandEvent::Error(message) => {
+                Some(ShellEvent::Error {
+                  pid,
+                  message,
+                })
+              },
+              CommandEvent::Terminated(status) => {
+                Some(ShellEvent::Exit {
+                  pid,
+                  code: status.code,
+                  signal: status.signal,
+                })
+              },
+            };
 
-                  if let Some(event) = shell_event {
-                      let _ = app_handle.emit_all("shell-event", event);
-                  }
-              }
-          } => {},
-          _ = kill_rx => {
-              // Kill the process when signal is received.
-              let _ = child.kill();
+            if let Some(event) = shell_event {
+              let _ = app_handle.emit("shell-event", event);
+            }
           }
+        } => {},
+        _ = kill_rx => {
+          // Kill the process when signal is received.
+          let _ = child.kill();
+        }
       }
     });
 
@@ -134,7 +134,7 @@ impl ShellState {
       },
     );
 
-    Ok(child)
+    Ok(pid)
   }
 
   /// Writes data to the standard input of a running process.
@@ -159,7 +159,7 @@ impl ShellState {
       handle
         .kill_tx
         .send(())
-        .context("Failed to send kill command.")?;
+        .map_err(|_| anyhow::anyhow!("Failed to send kill command."))?;
     }
 
     Ok(())
