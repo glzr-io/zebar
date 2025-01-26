@@ -1,5 +1,3 @@
-import { Command } from '@tauri-apps/plugin-shell';
-
 import { currentWidget } from './widgets';
 
 export interface ShellSpawnOptions {

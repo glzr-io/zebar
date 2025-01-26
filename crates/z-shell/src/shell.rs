@@ -13,7 +13,7 @@ use std::{
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-use os_pipe::{pipe, PipeReader, PipeWriter};
+use os_pipe::{pipe, PipeWriter};
 use serde::Serialize;
 use shared_child::SharedChild;
 use tokio::sync::mpsc;
