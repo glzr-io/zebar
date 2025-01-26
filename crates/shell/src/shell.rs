@@ -104,13 +104,13 @@ pub enum CommandEvent {
 
 /// The child process spawned by a shell command.
 #[derive(Debug)]
-pub struct CommandChild {
+pub struct ChildProcess {
   inner: Arc<SharedChild>,
   stdin_writer: PipeWriter,
   rx: mpsc::Receiver<CommandEvent>,
 }
 
-impl CommandChild {
+impl ChildProcess {
   /// Writes to the child process' stdin.
   pub fn write(&mut self, buffer: &[u8]) -> crate::Result<()> {
     self.stdin_writer.write_all(buffer)?;
@@ -273,7 +273,7 @@ impl Shell {
     program: &str,
     args: I,
     options: &CommandOptions,
-  ) -> crate::Result<CommandChild>
+  ) -> crate::Result<ChildProcess>
   where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -286,7 +286,7 @@ impl Shell {
   fn spawn_child(
     command: &mut Command,
     options: &CommandOptions,
-  ) -> crate::Result<CommandChild> {
+  ) -> crate::Result<ChildProcess> {
     let (stdout_reader, stdout_writer) = pipe()?;
     let (stderr_reader, stderr_writer) = pipe()?;
     let (stdin_reader, stdin_writer) = pipe()?;
@@ -336,7 +336,7 @@ impl Shell {
       let _ = tx.blocking_send(event);
     });
 
-    Ok(CommandChild {
+    Ok(ChildProcess {
       inner: child,
       stdin_writer,
       rx,

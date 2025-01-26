@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Context;
 use shell::{
-  Buffer, CommandChild, CommandEvent, CommandOptions, ProcessId, Shell,
+  Buffer, ChildProcess, CommandEvent, CommandOptions, ProcessId, Shell,
 };
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
