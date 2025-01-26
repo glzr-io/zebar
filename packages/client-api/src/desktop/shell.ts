@@ -1,49 +1,14 @@
-import { currentWidget } from './widgets';
+import { listen } from '@tauri-apps/api/event';
+import {
+  desktopCommands,
+  type ShellCommandOptions,
+  type ShellExecuteOutput,
+} from './desktop-commands';
 
-export interface ShellSpawnOptions {
-  /**
-   * Current working directory.
-   */
-  cwd?: string;
-
-  /**
-   * Environment variables.
-   *
-   * Set to `null` to clear the process env and prevent inheritance from
-   * the parent process.
-   */
-  env?: Record<string, string> | null;
-
-  /**
-   * Character encoding for stdout/stderr.
-   *
-   * - `text` (default): stdout/stderr are returned as a UTF-8 encoded
-   * `string`.
-   * - `raw`: stdout/stderr are returned as raw bytes (`Uint8Array`).
-   */
-  encoding?: 'text' | 'raw';
-}
-
-export interface ShellProcess<
-  TOutput extends string | Uint8Array = string,
-> {
+type ShellEvent = {
   processId: number;
-  onStdout: (callback: (line: TOutput) => void) => void;
-  onStderr: (callback: (line: TOutput) => void) => void;
-  onExit: (
-    callback: (status: Omit<ShellExitStatus, 'stdout' | 'stderr'>) => void,
-  ) => void;
-  kill: () => void;
-  write: (data: string | Uint8Array) => void;
-}
-
-export interface ShellExitStatus<
-  TOutput extends string | Uint8Array = string,
-> {
-  exitCode: number;
-  stdout: TOutput;
-  stderr: TOutput;
-}
+  event: string;
+};
 
 /**
  * Executes a shell command and waits for completion.
@@ -59,20 +24,9 @@ export async function shellExec<
 >(
   program: string,
   args?: string | string[],
-  options?: ShellSpawnOptions,
-): Promise<ShellExitStatus<TOutput>> {
-  const output = await createCommand<TOutput>(
-    'execute',
-    program,
-    args,
-    options,
-  ).execute();
-
-  return {
-    exitCode: output.code ?? 0,
-    stdout: output.stdout,
-    stderr: output.stderr,
-  };
+  options?: ShellCommandOptions,
+): Promise<ShellExecuteOutput<TOutput>> {
+  return await desktopCommands.shellExecute(program, args, options);
 }
 
 /**
@@ -90,41 +44,45 @@ export async function shellSpawn<
 >(
   program: string,
   args?: string | string[],
-  options?: ShellSpawnOptions,
+  options?: ShellCommandOptions,
 ): Promise<ShellProcess<TOutput>> {
-  const command = createCommand<TOutput>('spawn', program, args, options);
-  const process = await command.spawn();
+  const processId = await desktopCommands.shellSpawn(
+    program,
+    args,
+    options,
+  );
+
+  const events = listen('shell-event', (event: Event<ShellEvent>) => {
+    if (event.payload.processId === processId) {
+      callback(event);
+    }
+  });
 
   return {
-    processId: process.pid,
+    processId,
     onStdout: callback => command.stdout.on('data', callback),
     onStderr: callback => command.stderr.on('data', callback),
     onExit: callback =>
       command.on('close', status =>
         callback({ exitCode: status.code ?? 0 }),
       ),
-    kill: () => process.kill(),
-    write: data => process.write(data),
+    kill: () => desktopCommands.shellKill(processId),
+    write: data => desktopCommands.shellWrite(processId, data),
   };
 }
 
-/**
- * Creates a shell command via Tauri's shell plugin.
- */
-function createCommand<TOutput extends string | Uint8Array = string>(
-  type: 'execute' | 'spawn',
-  program: string,
-  args?: string | string[],
-  options?: ShellSpawnOptions,
-): Command<TOutput> {
-  return (Command as any).create(
-    `${currentWidget().id}-${type}-${program}`,
-    args,
-    {
-      ...options,
-      // Tauri's `SpawnOptions` type is not explicit about allowing `env` to
-      // be `null`.
-      env: options?.env ?? undefined,
-    },
-  );
+export interface ShellProcess<
+  TOutput extends string | Uint8Array = string,
+> {
+  processId: number;
+  onStdout: (callback: (line: TOutput) => void) => void;
+  onStderr: (callback: (line: TOutput) => void) => void;
+  onExit: (
+    callback: (status: {
+      exitCode: number | null;
+      signal: number | null;
+    }) => void,
+  ) => void;
+  kill: () => void;
+  write: (data: string | Uint8Array) => void;
 }

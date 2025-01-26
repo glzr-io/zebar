@@ -153,8 +153,9 @@ impl ExitStatus {
 
 /// The output of a finished process.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Output {
+pub struct ShellExecuteOutput {
   /// The exit code and termination signal of the process.
+  #[serde(flatten)]
   pub status: ExitStatus,
 
   /// The data that the process wrote to stdout.
@@ -187,7 +188,7 @@ impl Shell {
     program: &str,
     args: I,
     options: &CommandOptions,
-  ) -> crate::Result<Output>
+  ) -> crate::Result<ShellExecuteOutput>
   where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -213,7 +214,7 @@ impl Shell {
       }
     }
 
-    Ok(Output {
+    Ok(ShellExecuteOutput {
       status,
       stdout,
       stderr,

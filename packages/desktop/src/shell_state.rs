@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Context;
 use shell::{
-  Buffer, ChildProcess, CommandEvent, CommandOptions, ProcessId, Shell,
+  Buffer, CommandEvent, CommandOptions, ExitStatus, ProcessId, Shell,
 };
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
@@ -24,11 +24,11 @@ pub struct ProcessHandle {
 pub enum ShellEvent {
   Stdout {
     pid: ProcessId,
-    data: String,
+    stdout: Buffer,
   },
   Stderr {
     pid: ProcessId,
-    data: String,
+    stderr: Buffer,
   },
   Error {
     pid: ProcessId,
@@ -36,8 +36,8 @@ pub enum ShellEvent {
   },
   Exit {
     pid: ProcessId,
-    code: Option<i32>,
-    signal: Option<i32>,
+    #[serde(flatten)]
+    status: ExitStatus,
   },
 }
 
@@ -50,10 +50,10 @@ pub struct ShellState {
 
 impl ShellState {
   /// Creates a new `ShellState` instance.
-  pub fn new(app_handle: AppHandle) -> Self {
+  pub fn new(app_handle: &AppHandle) -> Self {
     Self {
       children: Arc::new(Mutex::new(HashMap::new())),
-      app_handle,
+      app_handle: app_handle.clone(),
     }
   }
 
@@ -77,7 +77,14 @@ impl ShellState {
       tokio::select! {
         // Process events from the child.
         Some(event) = child.events().recv() => {
-          Self::handle_event(&app_handle, pid, event);
+          let shell_event = match event {
+            CommandEvent::Stdout(stdout) => ShellEvent::Stdout { pid, stdout },
+            CommandEvent::Stderr(stderr) => ShellEvent::Stderr { pid, stderr },
+            CommandEvent::Error(message) => ShellEvent::Error { pid, message },
+            CommandEvent::Terminated(status) => ShellEvent::Exit { pid, status },
+          };
+
+          let _ = app_handle.emit("shell-event", shell_event);
         }
 
         // Process write requests.
@@ -109,49 +116,8 @@ impl ShellState {
     Ok(pid)
   }
 
-  fn handle_event(
-    app_handle: &AppHandle,
-    pid: ProcessId,
-    event: CommandEvent,
-  ) {
-    let shell_event = match event {
-      CommandEvent::Stdout(buffer) => {
-        if let Some(text) = buffer.as_str() {
-          Some(ShellEvent::Stdout {
-            pid,
-            data: text.to_string(),
-          })
-        } else {
-          None
-        }
-      }
-      CommandEvent::Stderr(buffer) => {
-        if let Some(text) = buffer.as_str() {
-          Some(ShellEvent::Stderr {
-            pid,
-            data: text.to_string(),
-          })
-        } else {
-          None
-        }
-      }
-      CommandEvent::Error(message) => {
-        Some(ShellEvent::Error { pid, message })
-      }
-      CommandEvent::Terminated(status) => Some(ShellEvent::Exit {
-        pid,
-        code: status.code,
-        signal: status.signal,
-      }),
-    };
-
-    if let Some(event) = shell_event {
-      let _ = app_handle.emit("shell-event", event);
-    }
-  }
-
   /// Writes data to the standard input of a running process.
-  pub fn stdin_write(
+  pub fn write(
     &self,
     pid: ProcessId,
     buffer: Buffer,

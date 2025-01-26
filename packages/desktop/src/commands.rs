@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
-use tauri::{State, Window};
 use shell::Shell;
+use tauri::{State, Window};
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -156,7 +156,7 @@ pub async fn shell_execute(
   program: String,
   args: Vec<String>,
   options: shell::CommandOptions,
-) -> anyhow::Result<shell::Output, String> {
+) -> anyhow::Result<shell::ShellExecuteOutput, String> {
   Shell::execute(&program, &args, &options)
     .await
     .map_err(|err| err.to_string())
@@ -175,13 +175,13 @@ pub async fn shell_spawn(
 }
 
 #[tauri::command]
-pub async fn shell_stdin_write(
+pub async fn shell_write(
   pid: shell::ProcessId,
   buffer: shell::Buffer,
   shell_state: State<'_, Arc<ShellState>>,
 ) -> anyhow::Result<(), String> {
   shell_state
-    .stdin_write(pid, buffer)
+    .write(pid, buffer)
     .map_err(|err| err.to_string())
 }
 

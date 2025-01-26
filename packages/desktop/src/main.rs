@@ -6,6 +6,7 @@ use std::{env, sync::Arc};
 
 use clap::Parser;
 use shell::{CommandOptions, Shell};
+use shell_state::ShellState;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
@@ -96,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
       commands::set_skip_taskbar,
       commands::shell_execute,
       commands::shell_spawn,
-      commands::shell_stdin_write,
+      commands::shell_write,
       commands::shell_kill,
     ])
     .build(tauri::generate_context!())?;
@@ -195,6 +196,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     .asset_protocol_scope()
     .allow_directory(&config.config_dir, true)?;
 
+  app.manage(ShellState::new(app.handle()));
   app.handle().plugin(tauri_plugin_dialog::init())?;
 
   // Initialize `ProviderManager` in Tauri state.
