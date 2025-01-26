@@ -5,13 +5,13 @@
 use std::{env, sync::Arc};
 
 use clap::Parser;
+use shell::{CommandOptions, Shell};
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
 use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
-use z_shell::{CommandOptions, Shell};
 
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;

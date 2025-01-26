@@ -1,5 +1,5 @@
 [package]
-name = "z-shell"
+name = "shell"
 version = "0.0.0"
 authors = ["you"]
 license = ""

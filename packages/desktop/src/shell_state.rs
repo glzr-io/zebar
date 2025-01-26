@@ -4,11 +4,11 @@ use std::{
 };
 
 use anyhow::Context;
-use tauri::{AppHandle, Emitter};
-use tokio::sync::{mpsc, oneshot};
-use z_shell::{
+use shell::{
   Buffer, CommandChild, CommandEvent, CommandOptions, ProcessId, Shell,
 };
+use tauri::{AppHandle, Emitter};
+use tokio::sync::{mpsc, oneshot};
 
 /// Handle for managing a spawned child process.
 #[derive(Debug)]

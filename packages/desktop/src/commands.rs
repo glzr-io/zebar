@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use tauri::{State, Window};
-use z_shell::Shell;
+use shell::Shell;
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -155,8 +155,8 @@ pub fn set_skip_taskbar(
 pub async fn shell_execute(
   program: String,
   args: Vec<String>,
-  options: z_shell::CommandOptions,
-) -> anyhow::Result<z_shell::Output, String> {
+  options: shell::CommandOptions,
+) -> anyhow::Result<shell::Output, String> {
   Shell::execute(&program, &args, &options)
     .await
     .map_err(|err| err.to_string())
@@ -166,9 +166,9 @@ pub async fn shell_execute(
 pub async fn shell_spawn(
   program: String,
   args: Vec<String>,
-  options: z_shell::CommandOptions,
+  options: shell::CommandOptions,
   shell_state: State<'_, Arc<ShellState>>,
-) -> anyhow::Result<z_shell::ProcessId, String> {
+) -> anyhow::Result<shell::ProcessId, String> {
   shell_state
     .spawn(&program, &args, &options)
     .map_err(|err| err.to_string())
@@ -176,8 +176,8 @@ pub async fn shell_spawn(
 
 #[tauri::command]
 pub async fn shell_stdin_write(
-  pid: z_shell::ProcessId,
-  buffer: z_shell::Buffer,
+  pid: shell::ProcessId,
+  buffer: shell::Buffer,
   shell_state: State<'_, Arc<ShellState>>,
 ) -> anyhow::Result<(), String> {
   shell_state
@@ -187,7 +187,7 @@ pub async fn shell_stdin_write(
 
 #[tauri::command]
 pub async fn shell_kill(
-  pid: z_shell::ProcessId,
+  pid: shell::ProcessId,
   shell_state: State<'_, Arc<ShellState>>,
 ) -> anyhow::Result<(), String> {
   shell_state.kill(pid).map_err(|err| err.to_string())
