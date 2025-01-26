@@ -166,11 +166,11 @@ pub async fn shell_execute(
 pub async fn shell_spawn(
   program: String,
   args: Vec<String>,
-  options: &z_shell::CommandOptions,
+  options: z_shell::CommandOptions,
   shell_state: State<'_, Arc<ShellState>>,
 ) -> anyhow::Result<z_shell::ProcessId, String> {
   shell_state
-    .spawn(&program, &args, options)
+    .spawn(&program, &args, &options)
     .map_err(|err| err.to_string())
 }
 

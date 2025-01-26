@@ -61,7 +61,7 @@ impl ShellState {
   pub fn spawn(
     &self,
     program: &str,
-    args: &[&str],
+    args: &Vec<String>,
     options: &CommandOptions,
   ) -> anyhow::Result<ProcessId> {
     let mut child = Shell::spawn(program, args, options)?;

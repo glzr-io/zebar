@@ -4,6 +4,7 @@ use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::{
+  ffi::OsStr,
   io::{BufRead, BufReader, Write},
   process::{Command, Stdio},
   sync::{Arc, RwLock},
@@ -14,7 +15,7 @@ use std::{
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 use os_pipe::{pipe, PipeWriter};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shared_child::SharedChild;
 use tokio::sync::mpsc;
 
@@ -22,7 +23,7 @@ use crate::{encoding::Encoding, options::CommandOptions};
 
 pub type ProcessId = u32;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Buffer {
   Text(String),
@@ -81,7 +82,7 @@ impl Buffer {
 }
 
 /// A event sent to the command callback.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum CommandEvent {
   /// If configured for raw output, all bytes written to stderr.
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
@@ -134,7 +135,7 @@ impl CommandChild {
 }
 
 /// The result of a process after it has terminated.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExitStatus {
   /// Exit code of the process.
   pub code: Option<i32>,
@@ -152,7 +153,7 @@ impl ExitStatus {
 }
 
 /// The output of a finished process.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Output {
   /// The exit code and termination signal of the process.
   pub status: ExitStatus,
@@ -183,11 +184,15 @@ impl Shell {
   /// assert!(output.status.success());
   /// assert_eq!(output.stdout.as_str().unwrap(), "Hello!");
   /// ```
-  pub async fn execute(
+  pub async fn execute<I, S>(
     program: &str,
-    args: &[&str],
+    args: I,
     options: &CommandOptions,
-  ) -> crate::Result<Output> {
+  ) -> crate::Result<Output>
+  where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+  {
     let mut child = Self::spawn(program, args, options)?;
 
     let mut status = ExitStatus::default();
@@ -228,12 +233,16 @@ impl Shell {
   ///       .unwrap();
   /// assert!(status.success());
   /// ```
-  pub async fn status(
+  pub async fn status<I, S>(
     &self,
     program: &str,
-    args: &[&str],
+    args: I,
     options: &CommandOptions,
-  ) -> crate::Result<ExitStatus> {
+  ) -> crate::Result<ExitStatus>
+  where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+  {
     let mut child = Self::spawn(program, args, options)?;
 
     while let Some(event) = child.events().recv().await {
@@ -260,11 +269,15 @@ impl Shell {
   ///   }
   /// }
   /// ```
-  pub fn spawn(
+  pub fn spawn<I, S>(
     program: &str,
-    args: &[&str],
+    args: I,
     options: &CommandOptions,
-  ) -> crate::Result<CommandChild> {
+  ) -> crate::Result<CommandChild>
+  where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+  {
     let mut command = Self::create_command(program, args, options);
     Self::spawn_child(&mut command, options)
   }
@@ -331,11 +344,15 @@ impl Shell {
   }
 
   /// Creates a `Command` instance.
-  fn create_command(
+  fn create_command<I, S>(
     program: &str,
-    args: &[&str],
+    args: I,
     options: &CommandOptions,
-  ) -> Command {
+  ) -> Command
+  where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+  {
     let mut command = Command::new(program);
 
     if let Some(cwd) = &options.cwd {
@@ -440,6 +457,8 @@ impl StdOutReader {
 
       match Self::find_delimiter(&chunk) {
         Some(pos) => {
+          // Delimiter found - consume up to and including the delimiter.
+          // The delimiter is included in the output buffer.
           buffer.extend_from_slice(&chunk[..=pos]);
           self.reader.consume(pos + 1);
           break;

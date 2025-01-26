@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::encoding::Encoding;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CommandOptions {
   pub cwd: Option<PathBuf>,
