@@ -111,8 +111,8 @@ pub struct CommandChild {
 
 impl CommandChild {
   /// Writes to the child process' stdin.
-  pub fn write(&mut self, buf: &[u8]) -> crate::Result<()> {
-    self.stdin_writer.write_all(buf)?;
+  pub fn write(&mut self, buffer: &[u8]) -> crate::Result<()> {
+    self.stdin_writer.write_all(buffer)?;
     Ok(())
   }
 
@@ -289,7 +289,7 @@ impl Shell {
 
     let (tx, rx) = mpsc::channel(1);
 
-    spawn_pipe_reader(
+    Self::spawn_pipe_reader(
       tx.clone(),
       guard.clone(),
       stdout_reader,
@@ -297,7 +297,7 @@ impl Shell {
       options.encoding.clone(),
     );
 
-    spawn_pipe_reader(
+    Self::spawn_pipe_reader(
       tx.clone(),
       guard.clone(),
       stderr_reader,
@@ -357,124 +357,121 @@ impl Shell {
 
     command
   }
-}
 
-fn read_raw_bytes<
-  F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static,
->(
-  mut reader: BufReader<PipeReader>,
-  tx: mpsc::Sender<CommandEvent>,
-  wrapper: F,
-) {
-  loop {
-    let result = reader.fill_buf();
-    let tx_ = tx.clone();
-    match result {
-      Ok(buf) => {
-        let length = buf.len();
-        if length == 0 {
+  /// Spawns a thread to read from stdout/stderr and emit the output
+  /// through a channel.
+  fn spawn_pipe_reader<F>(
+    tx: mpsc::Sender<CommandEvent>,
+    guard: Arc<RwLock<()>>,
+    pipe: os_pipe::PipeReader,
+    wrapper: F,
+    encoding: Encoding,
+  ) where
+    F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static,
+  {
+    spawn(move || {
+      let _lock = guard.read().unwrap();
+      let mut reader = StdOutReader::new(pipe, encoding);
+
+      while let Ok(Some(buffer)) = reader.read_next() {
+        if tx.blocking_send(wrapper(buffer)).is_err() {
           break;
         }
-        let buffer = Buffer::Raw(buf.to_vec());
-        let _ = tx_.blocking_send(wrapper(buffer));
-        reader.consume(length);
       }
-      Err(err) => {
-        let _ = tx_.blocking_send(CommandEvent::Error(err.to_string()));
-      }
-    }
+    });
   }
 }
 
-fn read_line<F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static>(
-  mut reader: BufReader<PipeReader>,
-  tx: mpsc::Sender<CommandEvent>,
-  wrapper: F,
+/// A pipe reader for stdout/stderr.
+struct StdOutReader {
+  reader: BufReader<os_pipe::PipeReader>,
   encoding: Encoding,
-) {
-  loop {
-    let mut buf = Vec::new();
-    let tx_ = tx.clone();
-    match read_line2(&mut reader, &mut buf) {
-      Ok(n) => {
-        if n == 0 {
-          break;
+}
+
+impl StdOutReader {
+  /// Creates a new `StdOutReader` instance.
+  fn new(pipe: os_pipe::PipeReader, encoding: Encoding) -> Self {
+    Self {
+      reader: BufReader::new(pipe),
+      encoding,
+    }
+  }
+
+  /// Reads the next chunk of data.
+  fn read_next(&mut self) -> std::io::Result<Option<Buffer>> {
+    if self.encoding == Encoding::Raw {
+      self.read_raw_chunk()
+    } else {
+      self.read_line()
+    }
+  }
+
+  /// Reads a chunk of raw bytes.
+  fn read_raw_chunk(&mut self) -> std::io::Result<Option<Buffer>> {
+    let chunk = self.reader.fill_buf()?.to_vec();
+
+    if chunk.is_empty() {
+      return Ok(None);
+    }
+
+    self.reader.consume(chunk.len());
+    Ok(Some(Buffer::Raw(chunk)))
+  }
+
+  /// Reads until a line ending (\n or \r) is found.
+  fn read_line(&mut self) -> std::io::Result<Option<Buffer>> {
+    let mut buffer = Vec::new();
+
+    loop {
+      let chunk = match self.reader.fill_buf() {
+        Ok(chunk) => chunk.to_vec(),
+        Err(err) => {
+          if err.kind() == std::io::ErrorKind::Interrupted {
+            continue;
+          } else {
+            return Err(err);
+          }
         }
-        let buffer = encoding.decode(buf);
-        let _ = tx_.blocking_send(wrapper(buffer));
-      }
-      Err(err) => {
-        let _ = tx_.blocking_send(CommandEvent::Error(err.to_string()));
+      };
+
+      if chunk.is_empty() {
         break;
       }
+
+      match Self::find_delimiter(&chunk) {
+        Some(pos) => {
+          buffer.extend_from_slice(&chunk[..=pos]);
+          self.reader.consume(pos + 1);
+          break;
+        }
+        None => {
+          // No delimiter found - consume entire chunk.
+          buffer.extend_from_slice(&chunk);
+          self.reader.consume(chunk.len());
+        }
+      }
+    }
+
+    if buffer.is_empty() {
+      Ok(None)
+    } else {
+      Ok(Some(self.encoding.decode(buffer)))
     }
   }
-}
 
-fn spawn_pipe_reader<
-  F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static,
->(
-  tx: mpsc::Sender<CommandEvent>,
-  guard: Arc<RwLock<()>>,
-  pipe_reader: PipeReader,
-  wrapper: F,
-  encoding: Encoding,
-) {
-  spawn(move || {
-    let _lock = guard.read().unwrap();
-    let reader = BufReader::new(pipe_reader);
-
-    if encoding == Encoding::Raw {
-      read_raw_bytes(reader, tx, wrapper);
-    } else {
-      read_line(reader, tx, wrapper, encoding);
+  /// Finds the position of a line delimiter (\n or \r) within a buffer.
+  fn find_delimiter(buffer: &[u8]) -> Option<usize> {
+    // Try to find a newline.
+    if let Some(pos) = memchr::memchr(b'\n', buffer) {
+      return Some(pos);
     }
-  });
-}
 
-/// Read all bytes until a newline (the `0xA` byte) or a carriage return
-/// (`\r`) is reached, and append them to the provided buffer.
-///
-/// Adapted from <https://doc.rust-lang.org/std/io/trait.BufRead.html#method.read_line>.
-fn read_line2<R: BufRead + ?Sized>(
-  r: &mut R,
-  buf: &mut Vec<u8>,
-) -> std::io::Result<usize> {
-  let mut read = 0;
-  loop {
-    let (done, used) = {
-      let available = match r.fill_buf() {
-        Ok(n) => n,
-        Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => {
-          continue
-        }
-
-        Err(err) => return Err(err),
-      };
-      match memchr::memchr(b'\n', available) {
-        Some(i) => {
-          let end = i + 1;
-          buf.extend_from_slice(&available[..end]);
-          (true, end)
-        }
-        None => match memchr::memchr(b'\r', available) {
-          Some(i) => {
-            let end = i + 1;
-            buf.extend_from_slice(&available[..end]);
-            (true, end)
-          }
-          None => {
-            buf.extend_from_slice(available);
-            (false, available.len())
-          }
-        },
-      }
-    };
-    r.consume(used);
-    read += used;
-    if done || used == 0 {
-      return Ok(read);
+    // Try to find a carriage return.
+    if let Some(pos) = memchr::memchr(b'\r', buffer) {
+      return Some(pos);
     }
+
+    None
   }
 }
 
@@ -516,8 +513,10 @@ mod tests {
 
   #[tokio::test]
   async fn test_raw_output() {
-    let mut options = CommandOptions::default();
-    options.encoding = Encoding::Raw;
+    let options = CommandOptions {
+      encoding: Encoding::Raw,
+      ..Default::default()
+    };
 
     let mut child = Shell::spawn(
       if cfg!(windows) { "cmd" } else { "sh" },
