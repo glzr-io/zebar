@@ -167,7 +167,7 @@ pub async fn shell_spawn(
   program: String,
   args: Vec<String>,
   options: shell::CommandOptions,
-  shell_state: State<'_, Arc<ShellState>>,
+  shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<shell::ProcessId, String> {
   shell_state
     .spawn(&program, &args, &options)
@@ -178,7 +178,7 @@ pub async fn shell_spawn(
 pub async fn shell_write(
   pid: shell::ProcessId,
   buffer: shell::Buffer,
-  shell_state: State<'_, Arc<ShellState>>,
+  shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<(), String> {
   shell_state
     .write(pid, buffer)
@@ -188,7 +188,7 @@ pub async fn shell_write(
 #[tauri::command]
 pub async fn shell_kill(
   pid: shell::ProcessId,
-  shell_state: State<'_, Arc<ShellState>>,
+  shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<(), String> {
   shell_state.kill(pid).map_err(|err| err.to_string())
 }

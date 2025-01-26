@@ -20,15 +20,19 @@ console.log(
   'xxxxxxxxx',
   await zebar.shellExec('git', ['commit', '--help']),
 );
+const yes = await zebar.shellSpawn('yes', []);
+yes.onStdout(output => console.log('stdout', output));
+yes.onStderr(output => console.log('stderr', output));
+yes.onExit(output => console.log('exit', output));
 console.log('xxxxxxxxx', await zebar.shellExec('node', ['fjdisa']));
-console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
-console.log(
-  'xxxxxxxxx',
-  await zebar.shellExec(
-    'C:/Users/larsb/AppData/Local/Programs/cursor/resources/app/bin/code',
-  ),
-);
-console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
+// console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
+// console.log(
+//   'xxxxxxxxx',
+//   await zebar.shellExec(
+//     'C:/Users/larsb/AppData/Local/Programs/cursor/resources/app/bin/code',
+//   ),
+// );
+// console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
 
 render(() => <App />, document.getElementById('root')!);
 
