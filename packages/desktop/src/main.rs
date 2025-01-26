@@ -34,6 +34,7 @@ mod common;
 mod config;
 mod monitor_state;
 mod providers;
+mod shell_state;
 mod sys_tray;
 mod widget_factory;
 

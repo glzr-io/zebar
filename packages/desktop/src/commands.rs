@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use tauri::{State, Window};
+use z_shell::Shell;
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -12,6 +13,7 @@ use crate::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
     ProviderManager,
   },
+  shell_state::ShellState,
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -147,4 +149,46 @@ pub fn set_skip_taskbar(
     .map_err(|err| err.to_string())?;
 
   Ok(())
+}
+
+#[tauri::command]
+pub async fn shell_execute(
+  program: &str,
+  args: &[&str],
+  options: &z_shell::CommandOptions,
+) -> anyhow::Result<z_shell::Output, String> {
+  Shell::execute(program, args, options)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn shell_spawn(
+  program: &str,
+  args: &[&str],
+  options: &z_shell::CommandOptions,
+  shell_state: State<'_, Arc<ShellState>>,
+) -> anyhow::Result<z_shell::CommandChild, String> {
+  shell_state
+    .spawn(program, args, options)
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn shell_stdin_write(
+  pid: z_shell::ProcessId,
+  buffer: z_shell::Buffer,
+  shell_state: State<'_, Arc<ShellState>>,
+) -> anyhow::Result<(), String> {
+  shell_state
+    .stdin_write(pid, buffer)
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn shell_kill(
+  pid: z_shell::ProcessId,
+  shell_state: State<'_, Arc<ShellState>>,
+) -> anyhow::Result<(), String> {
+  shell_state.kill(pid).map_err(|err| err.to_string())
 }

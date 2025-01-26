@@ -234,10 +234,6 @@ impl WidgetFactory {
       // Use running widget count as a unique label for the Tauri window.
       let widget_id = format!("widget-{}", new_count);
 
-      // Add additional capabilities (e.g. shell access) for the widget.
-      self
-        .add_widget_capabilities(&widget_id, &widget_config.privileges)?;
-
       info!(
         "Creating window for {} from {}",
         widget_id,
@@ -517,54 +513,6 @@ impl WidgetFactory {
     let sw_script = include_str!("../resources/initialization-script.js");
 
     Ok(format!("{state_script}\n{sw_script}"))
-  }
-
-  /// Adds Tauri capabilities for a given widget ID (e.g. shell access).
-  fn add_widget_capabilities(
-    &self,
-    widget_id: &str,
-    privileges: &WidgetPrivileges,
-  ) -> anyhow::Result<()> {
-    let capability = CapabilityBuilder::new(widget_id)
-      .window(widget_id)
-      .remote("http://asset.localhost".to_string())
-      .remote("asset://localhost".to_string())
-      .permission_scoped(
-        "shell:allow-spawn",
-        privileges
-          .shell_commands
-          .iter()
-          .map(|shell| {
-            json!({
-              "name": format!("{}-spawn-{}", widget_id, shell.program),
-              "cmd": shell.program,
-              "args": [{ "validator": shell.args_regex }],
-              "sidecar": false
-            })
-          })
-          .collect::<Vec<serde_json::Value>>(),
-        vec![],
-      )
-      .permission_scoped(
-        "shell:allow-execute",
-        privileges
-          .shell_commands
-          .iter()
-          .map(|shell| {
-            json!({
-              "name": format!("{}-execute-{}", widget_id, shell.program),
-              "cmd": shell.program,
-              "args": [{ "validator": shell.args_regex }],
-              "sidecar": false
-            })
-          })
-          .collect::<Vec<serde_json::Value>>(),
-        vec![],
-      );
-
-    self.app_handle.add_capability(capability)?;
-
-    Ok(())
   }
 
   /// Registers window events for a given widget.
