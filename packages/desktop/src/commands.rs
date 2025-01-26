@@ -153,24 +153,24 @@ pub fn set_skip_taskbar(
 
 #[tauri::command]
 pub async fn shell_execute(
-  program: &str,
-  args: &[&str],
-  options: &z_shell::CommandOptions,
+  program: String,
+  args: Vec<String>,
+  options: z_shell::CommandOptions,
 ) -> anyhow::Result<z_shell::Output, String> {
-  Shell::execute(program, args, options)
+  Shell::execute(&program, &args, &options)
     .await
     .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
 pub async fn shell_spawn(
-  program: &str,
-  args: &[&str],
+  program: String,
+  args: Vec<String>,
   options: &z_shell::CommandOptions,
   shell_state: State<'_, Arc<ShellState>>,
 ) -> anyhow::Result<z_shell::ProcessId, String> {
   shell_state
-    .spawn(program, args, options)
+    .spawn(&program, &args, options)
     .map_err(|err| err.to_string())
 }
 

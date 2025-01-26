@@ -93,7 +93,11 @@ async fn main() -> anyhow::Result<()> {
       commands::unlisten_provider,
       commands::call_provider_function,
       commands::set_always_on_top,
-      commands::set_skip_taskbar
+      commands::set_skip_taskbar,
+      commands::shell_execute,
+      commands::shell_spawn,
+      commands::shell_stdin_write,
+      commands::shell_kill,
     ])
     .build(tauri::generate_context!())?;
 

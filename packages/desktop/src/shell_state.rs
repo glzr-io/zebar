@@ -66,60 +66,32 @@ impl ShellState {
   ) -> anyhow::Result<ProcessId> {
     let mut child = Shell::spawn(program, args, options)?;
     let pid = child.pid();
+    let app_handle = self.app_handle.clone();
 
     // Create channels for write and kill signals.
-    let (write_tx, mut write_rx) = mpsc::unbounded_channel();
+    let (write_tx, mut write_rx) = mpsc::unbounded_channel::<Buffer>();
     let (kill_tx, kill_rx) = oneshot::channel();
 
     // Set up event handling.
-    let app_handle = self.app_handle.clone();
     let event_task = tokio::spawn(async move {
       tokio::select! {
-        _ = async {
-          while let Some(event) = child.events().recv().await {
-            let shell_event = match event {
-              CommandEvent::Stdout(buffer) => {
-                if let Some(text) = buffer.as_str() {
-                  Some(ShellEvent::Stdout {
-                    pid,
-                    data: text.to_string(),
-                  })
-                } else {
-                  None
-                }
-              },
-              CommandEvent::Stderr(buffer) => {
-                if let Some(text) = buffer.as_str() {
-                  Some(ShellEvent::Stderr {
-                    pid,
-                    data: text.to_string(),
-                  })
-                } else {
-                  None
-                }
-              },
-              CommandEvent::Error(message) => {
-                Some(ShellEvent::Error {
-                  pid,
-                  message,
-                })
-              },
-              CommandEvent::Terminated(status) => {
-                Some(ShellEvent::Exit {
-                  pid,
-                  code: status.code,
-                  signal: status.signal,
-                })
-              },
-            };
+        // Process events from the child.
+        Some(event) = child.events().recv() => {
+          Self::handle_event(&app_handle, pid, event);
+        }
 
-            if let Some(event) = shell_event {
-              let _ = app_handle.emit("shell-event", event);
-            }
+        // Process write requests.
+        Some(buffer) = write_rx.recv() => {
+          if let Err(err) = child.write(buffer.as_bytes()) {
+            let _ = app_handle.emit("shell-event", ShellEvent::Error {
+              pid,
+              message: format!("Write error: {}", err),
+            });
           }
-        } => {},
+        }
+
+        // Kill the process when signal is received.
         _ = kill_rx => {
-          // Kill the process when signal is received.
           let _ = child.kill();
         }
       }
@@ -135,6 +107,47 @@ impl ShellState {
     );
 
     Ok(pid)
+  }
+
+  fn handle_event(
+    app_handle: &AppHandle,
+    pid: ProcessId,
+    event: CommandEvent,
+  ) {
+    let shell_event = match event {
+      CommandEvent::Stdout(buffer) => {
+        if let Some(text) = buffer.as_str() {
+          Some(ShellEvent::Stdout {
+            pid,
+            data: text.to_string(),
+          })
+        } else {
+          None
+        }
+      }
+      CommandEvent::Stderr(buffer) => {
+        if let Some(text) = buffer.as_str() {
+          Some(ShellEvent::Stderr {
+            pid,
+            data: text.to_string(),
+          })
+        } else {
+          None
+        }
+      }
+      CommandEvent::Error(message) => {
+        Some(ShellEvent::Error { pid, message })
+      }
+      CommandEvent::Terminated(status) => Some(ShellEvent::Exit {
+        pid,
+        code: status.code,
+        signal: status.signal,
+      }),
+    };
+
+    if let Some(event) = shell_event {
+      let _ = app_handle.emit("shell-event", event);
+    }
   }
 
   /// Writes data to the standard input of a running process.
@@ -170,7 +183,7 @@ impl Drop for ShellState {
   fn drop(&mut self) {
     let mut children = self.children.lock().unwrap();
 
-    for (_, child) in children.iter_mut() {
+    for (_, child) in children.drain() {
       let _ = child.kill_tx.send(());
     }
   }
