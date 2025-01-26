@@ -1,27 +1,26 @@
-use core::slice::memchr;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::{
   ffi::OsStr,
-  io::{BufRead, BufReader, Write},
+  io::Write,
   process::{Command, Stdio},
   sync::{Arc, RwLock},
   thread::spawn,
 };
-
-#[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 use os_pipe::{pipe, PipeWriter};
 use serde::{Deserialize, Serialize};
 use shared_child::SharedChild;
 use tokio::sync::mpsc;
 
-use crate::{encoding::Encoding, options::CommandOptions};
+use crate::{encoding::Encoding, options::CommandOptions, StdoutReader};
 
 pub type ProcessId = u32;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
@@ -388,7 +387,7 @@ impl Shell {
   {
     spawn(move || {
       let _lock = guard.read().unwrap();
-      let mut reader = StdOutReader::new(pipe, encoding);
+      let mut reader = StdoutReader::new(pipe, encoding);
 
       while let Ok(Some(buffer)) = reader.read_next() {
         if tx.blocking_send(wrapper(buffer)).is_err() {
@@ -396,101 +395,6 @@ impl Shell {
         }
       }
     });
-  }
-}
-
-/// A pipe reader for stdout/stderr.
-struct StdOutReader {
-  reader: BufReader<os_pipe::PipeReader>,
-  encoding: Encoding,
-}
-
-impl StdOutReader {
-  /// Creates a new `StdOutReader` instance.
-  fn new(pipe: os_pipe::PipeReader, encoding: Encoding) -> Self {
-    Self {
-      reader: BufReader::new(pipe),
-      encoding,
-    }
-  }
-
-  /// Reads the next chunk of data.
-  fn read_next(&mut self) -> std::io::Result<Option<Buffer>> {
-    if self.encoding == Encoding::Raw {
-      self.read_raw_chunk()
-    } else {
-      self.read_line()
-    }
-  }
-
-  /// Reads a chunk of raw bytes.
-  fn read_raw_chunk(&mut self) -> std::io::Result<Option<Buffer>> {
-    let chunk = self.reader.fill_buf()?.to_vec();
-
-    if chunk.is_empty() {
-      return Ok(None);
-    }
-
-    self.reader.consume(chunk.len());
-    Ok(Some(Buffer::Raw(chunk)))
-  }
-
-  /// Reads until a line ending (\n or \r) is found.
-  fn read_line(&mut self) -> std::io::Result<Option<Buffer>> {
-    let mut buffer = Vec::new();
-
-    loop {
-      let chunk = match self.reader.fill_buf() {
-        Ok(chunk) => chunk.to_vec(),
-        Err(err) => {
-          if err.kind() == std::io::ErrorKind::Interrupted {
-            continue;
-          } else {
-            return Err(err);
-          }
-        }
-      };
-
-      if chunk.is_empty() {
-        break;
-      }
-
-      match Self::find_delimiter(&chunk) {
-        Some(pos) => {
-          // Delimiter found - consume up to and including the delimiter.
-          // The delimiter is included in the output buffer.
-          buffer.extend_from_slice(&chunk[..=pos]);
-          self.reader.consume(pos + 1);
-          break;
-        }
-        None => {
-          // No delimiter found - consume entire chunk.
-          buffer.extend_from_slice(&chunk);
-          self.reader.consume(chunk.len());
-        }
-      }
-    }
-
-    if buffer.is_empty() {
-      Ok(None)
-    } else {
-      Ok(Some(self.encoding.decode(buffer)))
-    }
-  }
-
-  /// Finds the position of a line delimiter (\n or \r) within a buffer.
-  fn find_delimiter(buffer: &[u8]) -> Option<usize> {
-    // Try to find a newline.
-    if let Some(pos) = memchr::memchr(b'\n', buffer) {
-      return Some(pos);
-    }
-
-    // Try to find a carriage return.
-    if let Some(pos) = memchr::memchr(b'\r', buffer) {
-      return Some(pos);
-    }
-
-    None
   }
 }
 
@@ -539,7 +443,7 @@ mod tests {
 
     let mut child = Shell::spawn(
       if cfg!(windows) { "cmd" } else { "sh" },
-      &[if cfg!(windows) { "/C" } else { "-c" }, "echo test"],
+      [if cfg!(windows) { "/C" } else { "-c" }, "echo test"],
       &options,
     )
     .unwrap();
