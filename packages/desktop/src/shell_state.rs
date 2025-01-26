@@ -4,9 +4,8 @@ use std::{
 };
 
 use anyhow::Context;
-use shell::{
-  Buffer, CommandEvent, CommandOptions, ExitStatus, ProcessId, Shell,
-};
+use serde::Serialize;
+use shell::{Buffer, CommandEvent, CommandOptions, ProcessId, Shell};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
 
@@ -18,27 +17,14 @@ pub struct ProcessHandle {
   _event_task: tokio::task::JoinHandle<()>,
 }
 
-/// Events emitted by spawned child processes.
-#[derive(Clone, serde::Serialize)]
-#[serde(tag = "type", content = "event")]
-pub enum ShellEvent {
-  Stdout {
-    pid: ProcessId,
-    stdout: Buffer,
-  },
-  Stderr {
-    pid: ProcessId,
-    stderr: Buffer,
-  },
-  Error {
-    pid: ProcessId,
-    message: String,
-  },
-  Exit {
-    pid: ProcessId,
-    #[serde(flatten)]
-    status: ExitStatus,
-  },
+/// Payload for events emitted by spawned child processes.
+///
+/// Sent to the client via the `shell-emit` event.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellEmission {
+  pid: ProcessId,
+  event: CommandEvent,
 }
 
 /// Manages the state and lifecycle of shell processes.
@@ -77,22 +63,18 @@ impl ShellState {
       tokio::select! {
         // Process events from the child.
         Some(event) = child.events().recv() => {
-          let shell_event = match event {
-            CommandEvent::Stdout(stdout) => ShellEvent::Stdout { pid, stdout },
-            CommandEvent::Stderr(stderr) => ShellEvent::Stderr { pid, stderr },
-            CommandEvent::Error(message) => ShellEvent::Error { pid, message },
-            CommandEvent::Terminated(status) => ShellEvent::Exit { pid, status },
-          };
-
-          let _ = app_handle.emit("shell-event", shell_event);
+          let _ = app_handle.emit("shell-emit", ShellEmission {
+            pid,
+            event,
+          });
         }
 
         // Process write requests.
         Some(buffer) = write_rx.recv() => {
           if let Err(err) = child.write(buffer.as_bytes()) {
-            let _ = app_handle.emit("shell-event", ShellEvent::Error {
+            let _ = app_handle.emit("shell-emit", ShellEmission {
               pid,
-              message: format!("Write error: {}", err),
+              event: CommandEvent::Error(format!("Write error: {}", err)),
             });
           }
         }

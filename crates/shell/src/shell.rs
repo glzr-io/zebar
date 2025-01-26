@@ -82,6 +82,7 @@ impl Buffer {
 
 /// A event sent to the command callback.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "type", content = "data")]
 pub enum CommandEvent {
   /// If configured for raw output, all bytes written to stderr.
   /// Otherwise, bytes until a newline (\n) or carriage return (\r) is

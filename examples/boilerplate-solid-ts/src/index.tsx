@@ -13,6 +13,23 @@ const providers = zebar.createProviderGroup({
   media: { type: 'media' },
 });
 
+const xx = zebar.shellExec('cmd', ['/c', 'code', '.']);
+console.log('xxxxxxxxx', await xx);
+console.log('xxxxxxxxx', await zebar.shellExec('echo', ['hdfldas']));
+console.log(
+  'xxxxxxxxx',
+  await zebar.shellExec('git', ['commit', '--help']),
+);
+console.log('xxxxxxxxx', await zebar.shellExec('node', ['fjdisa']));
+console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
+console.log(
+  'xxxxxxxxx',
+  await zebar.shellExec(
+    'C:/Users/larsb/AppData/Local/Programs/cursor/resources/app/bin/code',
+  ),
+);
+console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
+
 render(() => <App />, document.getElementById('root')!);
 
 function App() {

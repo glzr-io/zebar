@@ -1,14 +1,35 @@
-import { listen } from '@tauri-apps/api/event';
+import { listen, type Event } from '@tauri-apps/api/event';
 import {
   desktopCommands,
   type ShellCommandOptions,
   type ShellExecuteOutput,
 } from './desktop-commands';
 
-type ShellEvent = {
+interface ShellEmission {
   processId: number;
-  event: string;
-};
+  event: ShellEvent;
+}
+
+type ShellEvent<T extends string | Uint8Array = string> =
+  | {
+      type: 'stdout';
+      data: T;
+    }
+  | {
+      type: 'stderr';
+      data: T;
+    }
+  | {
+      type: 'error';
+      data: string;
+    }
+  | {
+      type: 'terminated';
+      data: {
+        exitCode: number | null;
+        signal: number | null;
+      };
+    };
 
 /**
  * Executes a shell command and waits for completion.
@@ -52,20 +73,48 @@ export async function shellSpawn<
     options,
   );
 
-  const events = listen('shell-event', (event: Event<ShellEvent>) => {
-    if (event.payload.processId === processId) {
-      callback(event);
-    }
-  });
+  const stdoutCallbacks: ((data: TOutput) => void)[] = [];
+  const stderrCallbacks: ((data: TOutput) => void)[] = [];
+  const errorCallbacks: ((data: string) => void)[] = [];
+  const exitCallbacks: ((data: {
+    exitCode: number | null;
+    signal: number | null;
+  }) => void)[] = [];
+
+  const unlistenEvents = await listen(
+    'shell-emit',
+    (event: Event<ShellEmission>) => {
+      if (event.payload.processId === processId) {
+        const shellEvent = event.payload.event;
+
+        switch (shellEvent.type) {
+          case 'stdout':
+            stdoutCallbacks.forEach(callback =>
+              callback(shellEvent.data as TOutput),
+            );
+            break;
+          case 'stderr':
+            stderrCallbacks.forEach(callback =>
+              callback(shellEvent.data as TOutput),
+            );
+            break;
+          case 'error':
+            errorCallbacks.forEach(callback => callback(shellEvent.data));
+            break;
+          case 'terminated':
+            exitCallbacks.forEach(callback => callback(shellEvent.data));
+            unlistenEvents();
+            break;
+        }
+      }
+    },
+  );
 
   return {
     processId,
-    onStdout: callback => command.stdout.on('data', callback),
-    onStderr: callback => command.stderr.on('data', callback),
-    onExit: callback =>
-      command.on('close', status =>
-        callback({ exitCode: status.code ?? 0 }),
-      ),
+    onStdout: callback => stdoutCallbacks.push(callback),
+    onStderr: callback => stderrCallbacks.push(callback),
+    onExit: callback => exitCallbacks.push(callback),
     kill: () => desktopCommands.shellKill(processId),
     write: data => desktopCommands.shellWrite(processId, data),
   };

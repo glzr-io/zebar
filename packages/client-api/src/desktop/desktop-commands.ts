@@ -91,8 +91,8 @@ function setSkipTaskbar(skip: boolean): Promise<void> {
 
 function shellExecute<TOutput extends string | Uint8Array = string>(
   program: string,
-  args?: string | string[],
-  options?: ShellCommandOptions,
+  args: string | string[] = [],
+  options: ShellCommandOptions = {},
 ): Promise<ShellExecuteOutput<TOutput>> {
   return invoke<ShellExecuteOutput<TOutput>>('shell_execute', {
     program,
@@ -103,8 +103,8 @@ function shellExecute<TOutput extends string | Uint8Array = string>(
 
 function shellSpawn(
   program: string,
-  args?: string | string[],
-  options?: ShellCommandOptions,
+  args: string | string[] = [],
+  options: ShellCommandOptions = {},
 ): Promise<number> {
   return invoke<number>('shell_spawn', { program, args, options });
 }
