@@ -53,7 +53,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
 
   function addNewShellCommand() {
     // 'privileges' key might not already exist for configs prior to
-    // v2.4.0.
+    // v2.7.0.
     configForm.setFieldValue('privileges', privileges => ({
       ...privileges,
       shellCommands: [
