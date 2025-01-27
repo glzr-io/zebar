@@ -2,7 +2,7 @@ import { listen, type Event } from '@tauri-apps/api/event';
 import {
   desktopCommands,
   type ShellCommandOptions,
-  type ShellExecuteOutput,
+  type ShellExecOutput,
 } from './desktop-commands';
 
 interface ShellEmission {
@@ -34,11 +34,17 @@ type ShellEvent<T extends string | Uint8Array = string> =
 /**
  * Executes a shell command and waits for completion.
  *
+ * @example
+ * ```ts
+ * const curl = await zebar.shellExec('curl', 'https://www.google.com');
+ * console.log(curl.stdout);
+ * ```
+ *
  * @param {string} command - Path to program executable, or program name
  * (if in $PATH).
  * @param {string | string[]} args - Arguments to pass to the program.
  * @param {Object} options - Spawn options (optional).
- * @throws - If the command fails to execute.
+ * @throws - If shell permissions are missing.
  */
 export async function shellExec<
   TOutput extends string | Uint8Array = string,
@@ -46,8 +52,8 @@ export async function shellExec<
   program: string,
   args?: string | string[],
   options?: ShellCommandOptions,
-): Promise<ShellExecuteOutput<TOutput>> {
-  return await desktopCommands.shellExecute(program, args, options);
+): Promise<ShellExecOutput<TOutput>> {
+  return await desktopCommands.shellExec(program, args, options);
 }
 
 /**
@@ -55,10 +61,23 @@ export async function shellExec<
  * interaction with the spawned process, such as sending input and killing
  * the process.
  *
+ * @example
+ * ```ts
+ * const ping = await zebar.shellSpawn('ping', '127.0.0.1 -n 10 -w 3000');
+ * ping.onStdout(output => console.log('stdout', output));
+ * ping.onStderr(output => console.log('stderr', output));
+ * ping.onExit(output => console.log('exit', output));
+ *
+ * // Interacting with the process.
+ * ping.write('Hello, world!');
+ * ping.kill();
+ * ```
+ *
  * @param {string} command - Path to program executable, or program name
  * (if in $PATH).
  * @param {string | string[]} args - Arguments to pass to the program.
  * @param {Object} options - Spawn options (optional).
+ * @throws - If shell permissions are missing.
  */
 export async function shellSpawn<
   TOutput extends string | Uint8Array = string,

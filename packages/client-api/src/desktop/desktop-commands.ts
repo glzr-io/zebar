@@ -17,7 +17,7 @@ export const desktopCommands = {
   callProviderFunction,
   setAlwaysOnTop,
   setSkipTaskbar,
-  shellExecute,
+  shellExec,
   shellSpawn,
   shellWrite,
   shellKill,
@@ -89,12 +89,12 @@ function setSkipTaskbar(skip: boolean): Promise<void> {
   return invoke<void>('set_skip_taskbar', { skip });
 }
 
-function shellExecute<TOutput extends string | Uint8Array = string>(
+function shellExec<TOutput extends string | Uint8Array = string>(
   program: string,
   args: string | string[] = [],
   options: ShellCommandOptions = {},
-): Promise<ShellExecuteOutput<TOutput>> {
-  return invoke<ShellExecuteOutput<TOutput>>('shell_execute', {
+): Promise<ShellExecOutput<TOutput>> {
+  return invoke<ShellExecOutput<TOutput>>('shell_exec', {
     program,
     args,
     options,
@@ -157,7 +157,7 @@ export type ShellOutputEncoding =
   | 'iso-2022-jp'
   | 'shift-jis';
 
-export interface ShellExecuteOutput<
+export interface ShellExecOutput<
   TOutput extends string | Uint8Array = string,
 > {
   code: number | null;

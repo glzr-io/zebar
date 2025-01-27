@@ -1,6 +1,5 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
-use shell::Shell;
 use tauri::{State, Window};
 
 #[cfg(target_os = "macos")]
@@ -152,13 +151,16 @@ pub fn set_skip_taskbar(
 }
 
 #[tauri::command]
-pub async fn shell_execute(
+pub async fn shell_exec(
   program: String,
   args: ShellCommandArgs,
   options: shell::CommandOptions,
-) -> anyhow::Result<shell::ShellExecuteOutput, String> {
-  let args: Vec<String> = args.into();
-  Shell::execute(&program, &args, &options)
+  window: Window,
+  shell_state: State<'_, ShellState>,
+) -> anyhow::Result<shell::ShellExecOutput, String> {
+  let widget_id = window.label();
+  shell_state
+    .exec(&widget_id, &program, args, &options)
     .await
     .map_err(|err| err.to_string())
 }
@@ -168,10 +170,13 @@ pub async fn shell_spawn(
   program: String,
   args: ShellCommandArgs,
   options: shell::CommandOptions,
+  window: Window,
   shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<shell::ProcessId, String> {
+  let widget_id = window.label();
   shell_state
-    .spawn(&program, &args.into(), &options)
+    .spawn(&widget_id, &program, args, &options)
+    .await
     .map_err(|err| err.to_string())
 }
 

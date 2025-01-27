@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
       commands::call_provider_function,
       commands::set_always_on_top,
       commands::set_skip_taskbar,
-      commands::shell_execute,
+      commands::shell_exec,
       commands::shell_spawn,
       commands::shell_write,
       commands::shell_kill,
@@ -164,12 +164,11 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.manage(widget_factory.clone());
 
   let shell =
-    Shell::execute("code", &["--version"], &CommandOptions::default())
-      .await;
+    Shell::exec("code", &["--version"], &CommandOptions::default()).await;
 
   println!(" aaaaaaaaaa {:?}", shell);
 
-  let shell = Shell::execute(
+  let shell = Shell::exec(
     r#"c:\Users\larsb\AppData\Local\Programs\cursor\resources\app\bin\code.cmd"#,
     &["--version"],
     &CommandOptions::default(),
@@ -196,7 +195,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     .asset_protocol_scope()
     .allow_directory(&config.config_dir, true)?;
 
-  app.manage(ShellState::new(app.handle()));
+  app.manage(ShellState::new(app.handle(), widget_factory.clone()));
   app.handle().plugin(tauri_plugin_dialog::init())?;
 
   // Initialize `ProviderManager` in Tauri state.

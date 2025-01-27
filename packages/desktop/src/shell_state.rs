@@ -3,11 +3,15 @@ use std::{
   sync::{Arc, Mutex},
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use shell::{Buffer, CommandEvent, CommandOptions, ProcessId, Shell};
+use shell::{
+  Buffer, CommandEvent, CommandOptions, ProcessId, Shell, ShellExecOutput,
+};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
+
+use crate::widget_factory::WidgetFactory;
 
 /// Handle for managing a spawned child process.
 #[derive(Debug)]
@@ -46,32 +50,82 @@ impl From<ShellCommandArgs> for Vec<String> {
   }
 }
 
+impl From<ShellCommandArgs> for String {
+  fn from(val: ShellCommandArgs) -> Self {
+    match val {
+      ShellCommandArgs::String(args) => args,
+      ShellCommandArgs::Array(args) => args.join(" "),
+    }
+  }
+}
+
 /// Manages the state and lifecycle of shell processes.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ShellState {
-  children: Arc<Mutex<HashMap<ProcessId, ProcessHandle>>>,
   app_handle: AppHandle,
+  children: Arc<Mutex<HashMap<ProcessId, ProcessHandle>>>,
+  widget_factory: Arc<WidgetFactory>,
 }
 
 impl ShellState {
   /// Creates a new `ShellState` instance.
-  pub fn new(app_handle: &AppHandle) -> Self {
+  pub fn new(
+    app_handle: &AppHandle,
+    widget_factory: Arc<WidgetFactory>,
+  ) -> Self {
     Self {
       children: Arc::new(Mutex::new(HashMap::new())),
       app_handle: app_handle.clone(),
+      widget_factory,
     }
   }
 
-  /// Spawns a new child process.
-  pub fn spawn(
+  /// Executes a command as a child process.
+  ///
+  /// Checks for widget's shell privileges before executing the command.
+  pub async fn exec(
     &self,
+    widget_id: &str,
     program: &str,
-    args: &Vec<String>,
+    args: ShellCommandArgs,
+    options: &CommandOptions,
+  ) -> anyhow::Result<ShellExecOutput> {
+    if !self
+      .has_shell_privilege(widget_id, program, args.clone())
+      .await
+    {
+      bail!("Insufficient privileges.")
+    }
+
+    let args_vec: Vec<String> = args.into();
+    Shell::exec(program, &args_vec, options)
+      .await
+      .map_err(|err| anyhow::anyhow!("Failed to execute command: {}", err))
+  }
+
+  /// Spawns a new child process.
+  ///
+  /// Checks for widget's shell privileges before spawning the process.
+  /// Shell events are emitted to the given widget.
+  pub async fn spawn(
+    &self,
+    widget_id: &str,
+    program: &str,
+    args: ShellCommandArgs,
     options: &CommandOptions,
   ) -> anyhow::Result<ProcessId> {
-    let mut child = Shell::spawn(program, args, options)?;
-    let pid = child.pid();
+    if !self
+      .has_shell_privilege(widget_id, program, args.clone())
+      .await
+    {
+      bail!("Insufficient privileges.")
+    }
+
+    let args_vec: Vec<String> = args.into();
+    let mut child = Shell::spawn(program, &args_vec, options)?;
     let app_handle = self.app_handle.clone();
+    let widget_id = widget_id.to_string();
+    let pid = child.pid();
 
     // Create channels for write and kill signals.
     let (write_tx, mut write_rx) = mpsc::unbounded_channel::<Buffer>();
@@ -83,7 +137,7 @@ impl ShellState {
         tokio::select! {
           // Process events from the child.
           Some(event) = child.events().recv() => {
-            let _ = app_handle.emit("shell-emit", ShellEmission {
+            let _ = app_handle.emit_to(widget_id.clone(), "shell-emit", ShellEmission {
               pid,
               event,
             });
@@ -92,7 +146,7 @@ impl ShellState {
           // Process write requests.
           Some(buffer) = write_rx.recv() => {
             if let Err(err) = child.write(buffer.as_bytes()) {
-              let _ = app_handle.emit("shell-emit", ShellEmission {
+              let _ = app_handle.emit_to(widget_id.clone(), "shell-emit", ShellEmission {
                 pid,
                 event: CommandEvent::Error(format!("Write error: {}", err)),
               });
@@ -146,6 +200,30 @@ impl ShellState {
     }
 
     Ok(())
+  }
+
+  /// Whether a widget has privilege to execute a program with given
+  /// arguments.
+  async fn has_shell_privilege(
+    &self,
+    widget_id: &str,
+    program: &str,
+    args: ShellCommandArgs,
+  ) -> bool {
+    let Some(widget) = self.widget_factory.state_by_id(widget_id).await
+    else {
+      return false;
+    };
+
+    let args_str: String = args.into();
+    let shell_privileges = widget.config.privileges.shell_commands;
+
+    shell_privileges.iter().any(|privilege| {
+      privilege.program == program
+        && regex::Regex::new(&privilege.args_regex)
+          .map(|re| re.is_match(&args_str))
+          .unwrap_or(false)
+    })
   }
 }
 

@@ -10,6 +10,7 @@ use tracing::info;
 
 use crate::config::MonitorSelection;
 
+#[derive(Debug)]
 pub struct MonitorState {
   _change_rx: broadcast::Receiver<Vec<Monitor>>,
 

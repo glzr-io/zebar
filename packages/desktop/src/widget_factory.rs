@@ -31,12 +31,13 @@ use crate::{
   common::PathExt,
   config::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
-    WidgetPlacement, WidgetPrivileges,
+    WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
 };
 
 /// Manages the creation of Zebar widgets.
+#[derive(Debug)]
 pub struct WidgetFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
@@ -788,6 +789,11 @@ impl WidgetFactory {
   /// Returns widget states by their widget ID's.
   pub async fn states(&self) -> HashMap<String, WidgetState> {
     self.widget_states.lock().await.clone()
+  }
+
+  /// Returns a widget state by its widget ID.
+  pub async fn state_by_id(&self, widget_id: &str) -> Option<WidgetState> {
+    self.widget_states.lock().await.get(widget_id).cloned()
   }
 
   /// Returns widget states grouped by their config paths.

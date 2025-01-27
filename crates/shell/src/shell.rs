@@ -154,7 +154,7 @@ impl ExitStatus {
 
 /// The output of a finished process.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ShellExecuteOutput {
+pub struct ShellExecOutput {
   /// The exit code and termination signal of the process.
   #[serde(flatten)]
   pub status: ExitStatus,
@@ -179,17 +179,17 @@ impl Shell {
   /// ```rust,no_run
   /// use shell::{CommandOptions, Shell};
   /// let output =
-  ///     Shell::execute("echo", &["Hello!"], &CommandOptions::default())
+  ///     Shell::exec("echo", &["Hello!"], &CommandOptions::default())
   ///       .await
   ///       .unwrap();
   /// assert!(output.status.success());
   /// assert_eq!(output.stdout.as_str().unwrap(), "Hello!");
   /// ```
-  pub async fn execute<I, S>(
+  pub async fn exec<I, S>(
     program: &str,
     args: I,
     options: &CommandOptions,
-  ) -> crate::Result<ShellExecuteOutput>
+  ) -> crate::Result<ShellExecOutput>
   where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -215,7 +215,7 @@ impl Shell {
       }
     }
 
-    Ok(ShellExecuteOutput {
+    Ok(ShellExecOutput {
       status,
       stdout,
       stderr,
@@ -407,7 +407,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_echo_command() {
-    let output = Shell::execute(
+    let output = Shell::exec(
       if cfg!(windows) { "cmd" } else { "sh" },
       &[if cfg!(windows) { "/C" } else { "-c" }, "echo hello world"],
       &CommandOptions::default(),
@@ -422,7 +422,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_command_failure() {
-    let output = Shell::execute(
+    let output = Shell::exec(
       if cfg!(windows) { "cmd" } else { "sh" },
       &[
         if cfg!(windows) { "/C" } else { "-c" },
