@@ -30,7 +30,8 @@ pub enum Buffer {
 }
 
 impl Buffer {
-  /// Creates a new buffer.
+  /// Creates a `Buffer` instance, either containing raw bytes or text
+  /// based on the `is_raw` flag.
   pub fn new(is_raw: bool) -> Buffer {
     if is_raw {
       Buffer::Raw(Vec::new())
@@ -80,25 +81,24 @@ impl Buffer {
   }
 }
 
-/// A event sent to the command callback.
+/// Event emitted by child process execution.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
-pub enum CommandEvent {
-  /// If configured for raw output, all bytes written to stderr.
-  /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
-  /// found.
-  Stderr(Buffer),
-
-  /// If configured for raw output, all bytes written to stdout.
-  /// Otherwise, bytes until a newline (\n) or carriage return (\r) is
-  /// found.
+pub enum ChildProcessEvent {
+  /// Raw or line-buffered stdout output. If configured for raw output,
+  /// all bytes written to stdout. Otherwise, bytes until a newline (\n)
+  /// or carriage return (\r) is found.
   Stdout(Buffer),
 
-  /// An error happened waiting for the command to finish or converting
-  /// the stdout/stderr bytes to a UTF-8 string.
+  /// Raw or line-buffered stderr output. If configured for raw output,
+  /// all bytes written to stderr. Otherwise, bytes until a newline (\n)
+  /// or carriage return (\r) is found.
+  Stderr(Buffer),
+
+  /// An error occurred waiting for the child process to finish.
   Error(String),
 
-  /// Command process terminated.
+  /// Child process terminated.
   Terminated(ExitStatus),
 }
 
@@ -107,7 +107,7 @@ pub enum CommandEvent {
 pub struct ChildProcess {
   inner: Arc<SharedChild>,
   stdin_writer: PipeWriter,
-  rx: mpsc::Receiver<CommandEvent>,
+  rx: mpsc::Receiver<ChildProcessEvent>,
 }
 
 impl ChildProcess {
@@ -129,7 +129,7 @@ impl ChildProcess {
   }
 
   /// Returns a channel of events from the child process.
-  pub fn events(&mut self) -> &mut mpsc::Receiver<CommandEvent> {
+  pub fn events(&mut self) -> &mut mpsc::Receiver<ChildProcessEvent> {
     &mut self.rx
   }
 }
@@ -140,16 +140,11 @@ pub struct ExitStatus {
   /// Exit code of the process.
   pub code: Option<i32>,
 
-  /// If the process was terminated by a signal, represents that signal.
-  pub signal: Option<i32>,
-}
+  /// Whether the process exited with a zero exit code.
+  pub success: bool,
 
-impl ExitStatus {
-  /// Returns true if exit status is zero. Signal termination is not
-  /// considered a success, and success is defined as a zero exit status.
-  pub fn success(&self) -> bool {
-    self.code == Some(0)
-  }
+  /// Termination signal if process was killed.
+  pub signal: Option<i32>,
 }
 
 /// The output of a finished process.
@@ -159,10 +154,10 @@ pub struct ShellExecOutput {
   #[serde(flatten)]
   pub status: ExitStatus,
 
-  /// The data that the process wrote to stdout.
+  /// The buffer that the process wrote to stdout.
   pub stdout: Buffer,
 
-  /// The data that the process wrote to stderr.
+  /// The buffer that the process wrote to stderr.
   pub stderr: Buffer,
 }
 
@@ -182,7 +177,7 @@ impl Shell {
   ///     Shell::exec("echo", &["Hello!"], &CommandOptions::default())
   ///       .await
   ///       .unwrap();
-  /// assert!(output.status.success());
+  /// assert!(output.status.success);
   /// assert_eq!(output.stdout.as_str().unwrap(), "Hello!");
   /// ```
   pub async fn exec<I, S>(
@@ -202,16 +197,16 @@ impl Shell {
 
     while let Some(event) = child.events().recv().await {
       match event {
-        CommandEvent::Terminated(exit_status) => {
+        ChildProcessEvent::Terminated(exit_status) => {
           status = exit_status;
         }
-        CommandEvent::Stdout(line) => {
+        ChildProcessEvent::Stdout(line) => {
           stdout.push(line)?;
         }
-        CommandEvent::Stderr(line) => {
+        ChildProcessEvent::Stderr(line) => {
           stderr.push(line)?;
         }
-        CommandEvent::Error(_) => {}
+        ChildProcessEvent::Error(_) => {}
       }
     }
 
@@ -232,7 +227,7 @@ impl Shell {
   ///     Shell::status("echo", ["Hello!"], CommandOptions::default())
   ///       .await
   ///       .unwrap();
-  /// assert!(status.success());
+  /// assert!(status.success);
   /// ```
   pub async fn status<I, S>(
     &self,
@@ -247,7 +242,7 @@ impl Shell {
     let mut child = Self::spawn(program, args, options)?;
 
     while let Some(event) = child.events().recv().await {
-      if let CommandEvent::Terminated(status) = event {
+      if let ChildProcessEvent::Terminated(status) = event {
         return Ok(status);
       }
     }
@@ -307,7 +302,7 @@ impl Shell {
       tx.clone(),
       guard.clone(),
       stdout_reader,
-      CommandEvent::Stdout,
+      ChildProcessEvent::Stdout,
       options.encoding.clone(),
     );
 
@@ -315,7 +310,7 @@ impl Shell {
       tx.clone(),
       guard.clone(),
       stderr_reader,
-      CommandEvent::Stderr,
+      ChildProcessEvent::Stderr,
       options.encoding.clone(),
     );
 
@@ -324,14 +319,15 @@ impl Shell {
       let _lock = guard.write().unwrap();
 
       let event = match status {
-        Ok(status) => CommandEvent::Terminated(ExitStatus {
+        Ok(status) => ChildProcessEvent::Terminated(ExitStatus {
           code: status.code(),
+          success: status.code().is_some_and(|code| code == 0),
           #[cfg(windows)]
           signal: None,
           #[cfg(unix)]
           signal: status.signal(),
         }),
-        Err(err) => CommandEvent::Error(err.to_string()),
+        Err(err) => ChildProcessEvent::Error(err.to_string()),
       };
 
       let _ = tx.blocking_send(event);
@@ -379,20 +375,19 @@ impl Shell {
   /// Spawns a thread to read from stdout/stderr and emit the output
   /// through a channel.
   fn spawn_pipe_reader<F>(
-    tx: mpsc::Sender<CommandEvent>,
+    tx: mpsc::Sender<ChildProcessEvent>,
     guard: Arc<RwLock<()>>,
     pipe: os_pipe::PipeReader,
     wrapper: F,
     encoding: Encoding,
   ) where
-    F: Fn(Buffer) -> CommandEvent + Send + Copy + 'static,
+    F: Fn(Buffer) -> ChildProcessEvent + Send + Copy + 'static,
   {
     spawn(move || {
       let _lock = guard.read().unwrap();
       let mut reader = StdoutReader::new(pipe, encoding);
 
       while let Ok(Some(buffer)) = reader.read_next() {
-        println!("buffer: {:?}", buffer);
         if tx.blocking_send(wrapper(buffer)).is_err() {
           break;
         }
@@ -415,7 +410,7 @@ mod tests {
     .await
     .unwrap();
 
-    assert!(output.status.success());
+    assert!(output.status.success);
     assert!(output.stderr.as_str().unwrap().is_empty());
     assert!(output.stdout.as_str().unwrap().contains("hello world"));
   }
@@ -433,7 +428,7 @@ mod tests {
     .await
     .unwrap();
 
-    assert!(!output.status.success());
+    assert!(!output.status.success);
     assert!(!output.stderr.as_str().unwrap().is_empty());
   }
 
@@ -454,12 +449,12 @@ mod tests {
     let mut saw_stdout = false;
     while let Some(event) = child.events().recv().await {
       match event {
-        CommandEvent::Stdout(Buffer::Raw(bytes)) => {
+        ChildProcessEvent::Stdout(Buffer::Raw(bytes)) => {
           assert!(!bytes.is_empty());
           saw_stdout = true;
         }
-        CommandEvent::Terminated(status) => {
-          assert!(status.success());
+        ChildProcessEvent::Terminated(status) => {
+          assert!(status.success);
         }
         _ => {}
       }

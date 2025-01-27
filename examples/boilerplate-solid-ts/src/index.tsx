@@ -13,36 +13,6 @@ const providers = zebar.createProviderGroup({
   media: { type: 'media' },
 });
 
-console.log('xxxxxxxxx', await zebar.shellExec('echo', ['hdfldas']));
-
-const test = await zebar.shellExec('ping', [
-  '127.0.0.1',
-  '-n',
-  '10',
-  '-w',
-  '3000',
-]);
-console.log('test', test);
-const git = await zebar.shellSpawn('ping', [
-  '127.0.0.1',
-  '-n',
-  '10',
-  '-w',
-  '3000',
-]);
-git.onStdout(output => console.log('stdout', output));
-git.onStderr(output => console.log('stderr', output));
-git.onExit(output => console.log('exit', output));
-console.log('xxxxxxxxx', await zebar.shellExec('node', ['fjdisa']));
-// console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
-// console.log(
-//   'xxxxxxxxx',
-//   await zebar.shellExec(
-//     'C:/Users/larsb/AppData/Local/Programs/cursor/resources/app/bin/code',
-//   ),
-// );
-// console.log('xxxxxxxxx', await zebar.shellExec('code', ['.']));
-
 render(() => <App />, document.getElementById('root')!);
 
 function App() {

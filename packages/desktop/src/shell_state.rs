@@ -6,7 +6,8 @@ use std::{
 use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
 use shell::{
-  Buffer, CommandEvent, CommandOptions, ProcessId, Shell, ShellExecOutput,
+  Buffer, ChildProcessEvent, CommandOptions, ProcessId, Shell,
+  ShellExecOutput,
 };
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
@@ -28,7 +29,7 @@ pub struct ProcessHandle {
 #[serde(rename_all = "camelCase")]
 pub struct ShellEmission {
   pid: ProcessId,
-  event: CommandEvent,
+  event: ChildProcessEvent,
 }
 
 /// Arguments for a shell command.
@@ -82,7 +83,7 @@ impl ShellState {
 
   /// Executes a command as a child process.
   ///
-  /// Checks for widget's shell privileges before executing the command.
+  /// Validates widget's shell privileges before executing the command.
   pub async fn exec(
     &self,
     widget_id: &str,
@@ -90,22 +91,19 @@ impl ShellState {
     args: ShellCommandArgs,
     options: &CommandOptions,
   ) -> anyhow::Result<ShellExecOutput> {
-    if !self
-      .has_shell_privilege(widget_id, program, args.clone())
-      .await
-    {
-      bail!("Insufficient privileges.")
-    }
+    self
+      .check_shell_privilege(widget_id, program, args.clone())
+      .await?;
 
     let args_vec: Vec<String> = args.into();
-    Shell::exec(program, &args_vec, options)
-      .await
-      .map_err(|err| anyhow::anyhow!("Failed to execute command: {}", err))
+    let output = Shell::exec(program, &args_vec, options).await?;
+
+    Ok(output)
   }
 
   /// Spawns a new child process.
   ///
-  /// Checks for widget's shell privileges before spawning the process.
+  /// Validates widget's shell privileges before spawning the process.
   /// Shell events are emitted to the given widget.
   pub async fn spawn(
     &self,
@@ -114,12 +112,9 @@ impl ShellState {
     args: ShellCommandArgs,
     options: &CommandOptions,
   ) -> anyhow::Result<ProcessId> {
-    if !self
-      .has_shell_privilege(widget_id, program, args.clone())
-      .await
-    {
-      bail!("Insufficient privileges.")
-    }
+    self
+      .check_shell_privilege(widget_id, program, args.clone())
+      .await?;
 
     let args_vec: Vec<String> = args.into();
     let mut child = Shell::spawn(program, &args_vec, options)?;
@@ -148,7 +143,7 @@ impl ShellState {
             if let Err(err) = child.write(buffer.as_bytes()) {
               let _ = app_handle.emit_to(widget_id.clone(), "shell-emit", ShellEmission {
                 pid,
-                event: CommandEvent::Error(format!("Write error: {}", err)),
+                event: ChildProcessEvent::Error(format!("Write error: {}", err)),
               });
             }
           }
@@ -202,28 +197,60 @@ impl ShellState {
     Ok(())
   }
 
-  /// Whether a widget has privilege to execute a program with given
-  /// arguments.
-  async fn has_shell_privilege(
+  /// Validates whether a widget has privilege to execute a program with
+  /// given arguments.
+  ///
+  /// Returns an error if widget does not have privilege.
+  async fn check_shell_privilege(
     &self,
     widget_id: &str,
     program: &str,
     args: ShellCommandArgs,
-  ) -> bool {
-    let Some(widget) = self.widget_factory.state_by_id(widget_id).await
-    else {
-      return false;
-    };
+  ) -> anyhow::Result<()> {
+    let widget = self
+      .widget_factory
+      .state_by_id(widget_id)
+      .await
+      .with_context(|| {
+        format!("Widget with ID '{widget_id}' not found.")
+      })?;
 
     let args_str: String = args.into();
     let shell_privileges = widget.config.privileges.shell_commands;
 
-    shell_privileges.iter().any(|privilege| {
-      privilege.program == program
-        && regex::Regex::new(&privilege.args_regex)
-          .map(|re| re.is_match(&args_str))
-          .unwrap_or(false)
-    })
+    // Check if any privilege matches the program.
+    let program_privileges: Vec<_> = shell_privileges
+      .iter()
+      .filter(|privilege| privilege.program == program)
+      .collect();
+
+    if program_privileges.is_empty() {
+      bail!("No shell privileges found for program '{program}'.");
+    }
+
+    for privilege in program_privileges {
+      // Allow empty args if args regex is also empty.
+      if privilege.args_regex.is_empty() {
+        if args_str.is_empty() {
+          return Ok(());
+        }
+
+        continue;
+      }
+
+      // Check if args match the regex pattern.
+      if let Ok(re) = regex::Regex::new(&privilege.args_regex) {
+        if re.is_match(&args_str) {
+          return Ok(());
+        }
+      }
+    }
+
+    bail!(
+      "Arguments '{}' are not allowed for program '{}'. Check widget's shell privileges.",
+      args_str,
+      program
+    )
   }
 }
 

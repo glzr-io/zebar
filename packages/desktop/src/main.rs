@@ -163,22 +163,6 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   ));
   app.manage(widget_factory.clone());
 
-  let shell =
-    Shell::exec("code", &["--version"], &CommandOptions::default()).await;
-
-  println!(" aaaaaaaaaa {:?}", shell);
-
-  let shell = Shell::exec(
-    r#"c:\Users\larsb\AppData\Local\Programs\cursor\resources\app\bin\code.cmd"#,
-    &["--version"],
-    &CommandOptions::default(),
-  )
-  .await;
-
-  println!(" bbb {:?}", shell);
-  // .spawn("echo", ExecuteArgs::new(), on_event,
-  // CommandOptions::default());
-
   // If this is not the first instance of the app, this will emit within
   // the original instance and exit immediately. The CLI command is
   // guaranteed to be one of the open commands here.

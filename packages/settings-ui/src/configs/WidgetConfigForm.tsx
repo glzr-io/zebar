@@ -59,8 +59,8 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
       shellCommands: [
         ...privileges.shellCommands,
         {
-          program: '',
-          argsRegex: '',
+          program: 'curl',
+          argsRegex: '.*',
         },
       ],
     }));
@@ -242,7 +242,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                   {inputProps => (
                     <TextField
                       id={`privilege-args-${index}`}
-                      label="Arguments regex"
+                      label="Arguments regex (use .* to allow all)"
                       placeholder="Regular expression for allowed arguments"
                       {...inputProps()}
                     />
@@ -268,7 +268,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
             </div>
           ))}
 
-          <Button variant="outline" onClick={addNewShellCommand}>
+          <Button
+            class="block"
+            variant="outline"
+            onClick={addNewShellCommand}
+          >
             Add allowed shell command +
           </Button>
         </CardContent>
