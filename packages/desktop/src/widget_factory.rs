@@ -10,11 +10,9 @@ use std::{
 use anyhow::{bail, Context};
 use base64::prelude::*;
 use serde::Serialize;
-use serde_json::json;
 use tauri::{
-  self, ipc::CapabilityBuilder, path::BaseDirectory, AppHandle, Manager,
-  PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder,
-  WindowEvent,
+  self, path::BaseDirectory, AppHandle, Manager, PhysicalPosition,
+  PhysicalSize, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},

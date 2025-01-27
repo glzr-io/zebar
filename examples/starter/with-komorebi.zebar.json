@@ -6,6 +6,10 @@
   "focused": false,
   "resizable": false,
   "transparent": false,
+  "caching": {
+    "defaultDuration": 604800,
+    "rules": []
+  },
   "privileges": {
     "shellCommands": []
   },

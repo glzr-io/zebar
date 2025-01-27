@@ -113,7 +113,7 @@ pub enum ZOrder {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase")]
 pub struct WidgetCaching {
   /// Default duration to cache network resources for (in seconds).
   pub default_duration: u32,

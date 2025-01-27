@@ -44,6 +44,25 @@
         }
       }
     },
+    "privileges": {
+      "type": "object",
+      "properties": {
+        "shellCommands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "program": {
+                "type": "string"
+              },
+              "argsRegex": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "presets": {
       "type": "array",
       "items": [
@@ -136,7 +155,7 @@
                 }
               ]
             },
-            "reserveSpace": {
+            "dockToEdge": {
               "type": "object",
               "properties": {
                 "enabled": {
@@ -144,14 +163,22 @@
                   "default": false
                 },
                 "edge": {
-                  "type": "string",
-                  "enum": ["top", "right", "bottom", "left"],
-                  "default": "top"
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": ["top", "right", "bottom", "left"]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
                 },
-                "thickness": {
+                "windowMargin": {
                   "type": "string"
                 }
-              }
+              },
+              "additionalProperties": false
             }
           },
           "required": [
