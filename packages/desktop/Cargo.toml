@@ -35,7 +35,7 @@ tauri = { version = "2.0", features = [
 ] }
 tauri-plugin-dialog = "2.0"
 tauri-plugin-single-instance = "2.0"
-tokio = { version = "1.33", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4"] }
