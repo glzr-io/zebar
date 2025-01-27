@@ -1,6 +1,5 @@
 // Prevent additional console window on Windows in release mode.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![feature(async_closure)]
 #![feature(iterator_try_collect)]
 
 use std::{env, sync::Arc};
@@ -21,6 +20,7 @@ use crate::{
   config::{Config, MonitorSelection, WidgetPlacement},
   monitor_state::MonitorState,
   providers::{ProviderEmission, ProviderManager},
+  shell_state::ShellState,
   sys_tray::SysTray,
   widget_factory::{WidgetFactory, WidgetOpenOptions},
 };
@@ -32,6 +32,7 @@ mod common;
 mod config;
 mod monitor_state;
 mod providers;
+mod shell_state;
 mod sys_tray;
 mod widget_factory;
 
@@ -92,7 +93,11 @@ async fn main() -> anyhow::Result<()> {
       commands::unlisten_provider,
       commands::call_provider_function,
       commands::set_always_on_top,
-      commands::set_skip_taskbar
+      commands::set_skip_taskbar,
+      commands::shell_exec,
+      commands::shell_spawn,
+      commands::shell_write,
+      commands::shell_kill,
     ])
     .build(tauri::generate_context!())?;
 
@@ -173,8 +178,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     .asset_protocol_scope()
     .allow_directory(&config.config_dir, true)?;
 
-  app.handle().plugin(tauri_plugin_shell::init())?;
-  app.handle().plugin(tauri_plugin_http::init())?;
+  app.manage(ShellState::new(app.handle(), widget_factory.clone()));
   app.handle().plugin(tauri_plugin_dialog::init())?;
 
   // Initialize `ProviderManager` in Tauri state.

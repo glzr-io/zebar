@@ -17,6 +17,10 @@ export const desktopCommands = {
   callProviderFunction,
   setAlwaysOnTop,
   setSkipTaskbar,
+  shellExec,
+  shellSpawn,
+  shellWrite,
+  shellKill,
 };
 
 export type ProviderFunction = AudioFunction | MediaFunction;
@@ -83,6 +87,83 @@ function setAlwaysOnTop(): Promise<void> {
 
 function setSkipTaskbar(skip: boolean): Promise<void> {
   return invoke<void>('set_skip_taskbar', { skip });
+}
+
+function shellExec<TOutput extends string | Uint8Array = string>(
+  program: string,
+  args: string | string[] = [],
+  options: ShellCommandOptions = {},
+): Promise<ShellExecOutput<TOutput>> {
+  return invoke<ShellExecOutput<TOutput>>('shell_exec', {
+    program,
+    args,
+    options,
+  });
+}
+
+function shellSpawn(
+  program: string,
+  args: string | string[] = [],
+  options: ShellCommandOptions = {},
+): Promise<number> {
+  return invoke<number>('shell_spawn', { program, args, options });
+}
+
+function shellWrite(
+  processId: number,
+  buffer: string | Uint8Array,
+): Promise<void> {
+  return invoke<void>('shell_write', { processId, buffer });
+}
+
+function shellKill(processId: number): Promise<void> {
+  return invoke<void>('shell_kill', { processId });
+}
+
+export interface ShellCommandOptions {
+  /**
+   * Current working directory.
+   */
+  cwd?: string;
+
+  /**
+   * Environment variables.
+   */
+  env?: Record<string, string> | null;
+
+  /**
+   * Clear the environment variables of the spawned process.
+   */
+  clearEnv?: boolean;
+
+  /**
+   * Character encoding for stdout/stderr.
+   *
+   * Defaults to `utf-8` (string). Use `raw` to return raw bytes
+   * (`Uint8Array`).
+   */
+  encoding?: ShellOutputEncoding;
+}
+
+export type ShellOutputEncoding =
+  | 'raw'
+  | 'utf-8'
+  | 'utf-16'
+  | 'gbk'
+  | 'gb18030'
+  | 'big5'
+  | 'euc-jp'
+  | 'euc-kr'
+  | 'iso-2022-jp'
+  | 'shift-jis';
+
+export interface ShellExecOutput<
+  TOutput extends string | Uint8Array = string,
+> {
+  code: number | null;
+  signal: number | null;
+  stdout: TOutput;
+  stderr: TOutput;
 }
 
 /**

@@ -24,6 +24,7 @@ reqwest = { version = "0.11", features = ["json"] }
 rocket = { version = "0.5", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+shell-util = { path = "../../crates/shell-util" }
 starship-battery = "0.8"
 sysinfo = "0.30"
 tauri = { version = "2.0", features = [
@@ -33,10 +34,8 @@ tauri = { version = "2.0", features = [
   "tray-icon",
 ] }
 tauri-plugin-dialog = "2.0"
-tauri-plugin-http = "2.0"
-tauri-plugin-shell = "2.0"
 tauri-plugin-single-instance = "2.0"
-tokio = { version = "1.33", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4"] }

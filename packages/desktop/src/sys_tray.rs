@@ -367,6 +367,7 @@ impl SysTray {
         .focused(true)
         .visible(true)
         .inner_size(900., 600.)
+        .visible(true)
         .build()
         .context("Failed to build the settings window.")?;
 

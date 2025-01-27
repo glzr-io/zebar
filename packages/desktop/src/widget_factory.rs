@@ -11,8 +11,8 @@ use anyhow::{bail, Context};
 use base64::prelude::*;
 use serde::Serialize;
 use tauri::{
-  path::BaseDirectory, AppHandle, Manager, PhysicalPosition, PhysicalSize,
-  WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  self, path::BaseDirectory, AppHandle, Manager, PhysicalPosition,
+  PhysicalSize, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -35,6 +35,7 @@ use crate::{
 };
 
 /// Manages the creation of Zebar widgets.
+#[derive(Debug)]
 pub struct WidgetFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
@@ -51,8 +52,6 @@ pub struct WidgetFactory {
   pub open_tx: broadcast::Sender<WidgetState>,
 
   /// Reference to `MonitorState`.
-  ///
-  /// Used for widget positioning.
   monitor_state: Arc<MonitorState>,
 
   /// Running total of widgets created.
@@ -788,6 +787,11 @@ impl WidgetFactory {
   /// Returns widget states by their widget ID's.
   pub async fn states(&self) -> HashMap<String, WidgetState> {
     self.widget_states.lock().await.clone()
+  }
+
+  /// Returns a widget state by its widget ID.
+  pub async fn state_by_id(&self, widget_id: &str) -> Option<WidgetState> {
+    self.widget_states.lock().await.get(widget_id).cloned()
   }
 
   /// Returns widget states grouped by their config paths.
