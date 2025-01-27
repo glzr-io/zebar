@@ -24,6 +24,7 @@ reqwest = { version = "0.11", features = ["json"] }
 rocket = { version = "0.5", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+shell-util = { path = "../../crates/shell-util" }
 starship-battery = "0.8"
 sysinfo = "0.30"
 tauri = { version = "2.0", features = [
@@ -38,7 +39,6 @@ tokio = { version = "1.33", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4"] }
-shell = { path = "../../crates/shell" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }

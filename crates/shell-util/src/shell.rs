@@ -172,7 +172,7 @@ impl Shell {
   /// # Examples
   ///
   /// ```rust,no_run
-  /// use shell::{CommandOptions, Shell};
+  /// use shell_util::{CommandOptions, Shell};
   /// let output =
   ///     Shell::exec("echo", &["Hello!"], &CommandOptions::default())
   ///       .await
@@ -222,7 +222,7 @@ impl Shell {
   ///
   /// # Examples
   /// ```rust,no_run
-  /// use shell::{CommandOptions, Shell};
+  /// use shell_util::{CommandOptions, Shell};
   /// let status =
   ///     Shell::status("echo", ["Hello!"], CommandOptions::default())
   ///       .await
@@ -255,7 +255,7 @@ impl Shell {
   /// # Examples
   ///
   /// ```rust,no_run
-  /// use shell::{CommandEvent, Shell};
+  /// use shell_util::{CommandEvent, Shell};
   /// let child = Shell::spawn("yes", [], CommandOptions::default())
   ///   .expect("Failed to spawn yes.");
   ///

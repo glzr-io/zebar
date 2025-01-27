@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use shell::{
+use shell_util::{
   Buffer, ChildProcessEvent, CommandOptions, ProcessId, Shell,
   ShellExecOutput,
 };

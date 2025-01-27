@@ -154,10 +154,10 @@ pub fn set_skip_taskbar(
 pub async fn shell_exec(
   program: String,
   args: ShellCommandArgs,
-  options: shell::CommandOptions,
+  options: shell_util::CommandOptions,
   window: Window,
   shell_state: State<'_, ShellState>,
-) -> anyhow::Result<shell::ShellExecOutput, String> {
+) -> anyhow::Result<shell_util::ShellExecOutput, String> {
   let widget_id = window.label();
   shell_state
     .exec(&widget_id, &program, args, &options)
@@ -169,10 +169,10 @@ pub async fn shell_exec(
 pub async fn shell_spawn(
   program: String,
   args: ShellCommandArgs,
-  options: shell::CommandOptions,
+  options: shell_util::CommandOptions,
   window: Window,
   shell_state: State<'_, ShellState>,
-) -> anyhow::Result<shell::ProcessId, String> {
+) -> anyhow::Result<shell_util::ProcessId, String> {
   let widget_id = window.label();
   shell_state
     .spawn(&widget_id, &program, args, &options)
@@ -182,8 +182,8 @@ pub async fn shell_spawn(
 
 #[tauri::command]
 pub async fn shell_write(
-  pid: shell::ProcessId,
-  buffer: shell::Buffer,
+  pid: shell_util::ProcessId,
+  buffer: shell_util::Buffer,
   shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<(), String> {
   shell_state
@@ -193,7 +193,7 @@ pub async fn shell_write(
 
 #[tauri::command]
 pub async fn shell_kill(
-  pid: shell::ProcessId,
+  pid: shell_util::ProcessId,
   shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<(), String> {
   shell_state.kill(pid).map_err(|err| err.to_string())

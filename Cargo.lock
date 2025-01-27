@@ -4820,7 +4820,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "shell"
+name = "shell-util"
 version = "0.0.0"
 dependencies = [
  "encoding_rs",
@@ -7187,7 +7187,7 @@ dependencies = [
  "rocket",
  "serde",
  "serde_json",
- "shell",
+ "shell-util",
  "starship-battery",
  "sysinfo",
  "tauri",

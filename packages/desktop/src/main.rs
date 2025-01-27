@@ -5,8 +5,6 @@
 use std::{env, sync::Arc};
 
 use clap::Parser;
-use shell::{CommandOptions, Shell};
-use shell_state::ShellState;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
@@ -22,6 +20,7 @@ use crate::{
   config::{Config, MonitorSelection, WidgetPlacement},
   monitor_state::MonitorState,
   providers::{ProviderEmission, ProviderManager},
+  shell_state::ShellState,
   sys_tray::SysTray,
   widget_factory::{WidgetFactory, WidgetOpenOptions},
 };
