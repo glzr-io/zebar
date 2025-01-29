@@ -5358,6 +5358,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "systray-util"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
+ "tokio",
+ "tracing",
+ "windows 0.58.0",
+ "windows-core 0.58.0",
+]
+
+[[package]]
 name = "tao"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
