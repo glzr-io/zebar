@@ -11,8 +11,8 @@ use windows::Win32::{
     },
     WindowsAndMessaging::{
       DefWindowProcW, SendMessageW, SetTimer, SetWindowPos, HICON,
-      HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WM_COPYDATA,
-      WM_TIMER,
+      HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+      WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
     },
   },
 };
@@ -83,7 +83,11 @@ extern "system" fn window_proc(
   lparam: LPARAM,
 ) -> LRESULT {
   match msg {
-    WM_COPYDATA => handle_copy_data(hwnd, wparam, lparam),
+    WM_COPYDATA => {
+      handle_copy_data(hwnd, wparam, lparam);
+      forward_message(hwnd, wparam, lparam);
+      LRESULT(0)
+    }
     WM_TIMER => {
       // Regain tray priority.
       let _ = unsafe {
@@ -100,7 +104,14 @@ extern "system" fn window_proc(
 
       LRESULT(0)
     }
-    _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
+    _ => {
+      tracing::info!("msg: {:#x}", msg);
+      if msg == WM_ACTIVATEAPP || msg == WM_COMMAND || msg >= WM_USER {
+        forward_message(hwnd, wparam, lparam);
+      }
+
+      unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+    }
   }
 }
 
@@ -117,17 +128,19 @@ fn handle_copy_data(
       Some(data) => data,
       None => {
         tracing::warn!("Invalid COPYDATASTRUCT pointer.");
-        forward_to_real_tray(hwnd, wparam, lparam);
+        forward_message(hwnd, wparam, lparam);
         return LRESULT(0);
       }
     };
+
+  tracing::info!("COPYDATASTRUCT: {:?}", copy_data);
 
   // Process tray data if valid.
   if copy_data.dwData == 1 && !copy_data.lpData.is_null() {
     process_tray_data(hwnd, copy_data);
   }
 
-  forward_to_real_tray(hwnd, wparam, lparam);
+  forward_message(hwnd, wparam, lparam);
 
   LRESULT(0)
 }
@@ -147,7 +160,8 @@ fn process_tray_data(hwnd: HWND, copy_data: &COPYDATASTRUCT) {
   );
 }
 
-fn forward_to_real_tray(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) {
+/// Forwards a message to the real tray window.
+fn forward_message(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) {
   if let Some(real_tray) = Util::tray_window(hwnd.0 as isize) {
     tracing::debug!("Forwarding to real tray window: {:?}", real_tray);
 
