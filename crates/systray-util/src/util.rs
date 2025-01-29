@@ -1,16 +1,17 @@
 use std::{os::windows::io::AsRawHandle, thread::JoinHandle};
 
 use windows::Win32::{
-  Foundation::{HANDLE, LPARAM, WPARAM},
+  Foundation::{BOOL, HANDLE, HWND, LPARAM, WPARAM},
   System::Threading::GetThreadId,
   UI::WindowsAndMessaging::{
-    CreateWindowExW, DispatchMessageW, GetMessageW, PostThreadMessageW,
+    CreateWindowExW, DispatchMessageW, EnumWindows, FindWindowExW,
+    FindWindowW, GetClassNameW, GetMessageW, PostThreadMessageW,
     RegisterClassW, TranslateMessage, CS_HREDRAW, CS_VREDRAW,
     CW_USEDEFAULT, MSG, WINDOW_EX_STYLE, WM_QUIT, WNDCLASSW, WNDPROC,
     WS_OVERLAPPEDWINDOW,
   },
 };
-use windows_core::PCWSTR;
+use windows_core::{w, PCWSTR, PWSTR};
 
 pub type WindowProcedure = WNDPROC;
 
@@ -102,4 +103,97 @@ impl Util {
   pub fn to_wide(string: &str) -> Vec<u16> {
     string.encode_utf16().chain(std::iter::once(0)).collect()
   }
+
+  /// TODO: Could be significantly simplified.
+  pub fn tray_window(spy_window: isize) -> Option<isize> {
+    let real_tray =
+      unsafe { FindWindowW(w!("Shell_TrayWnd"), PWSTR::null()) }.ok()?;
+
+    if real_tray != HWND(spy_window as _) {
+      if let Ok(_) = unsafe {
+        FindWindowExW(
+          real_tray,
+          HWND(std::ptr::null_mut()),
+          w!("TrayNotifyWnd"),
+          PWSTR::null(),
+        )
+      } {
+        return Some(real_tray.0 as isize);
+      }
+    }
+
+    let mut info = FindRealTrayInfo {
+      spy_window: HWND(spy_window as _),
+      result_window: HWND(std::ptr::null_mut()),
+    };
+
+    unsafe extern "system" fn enum_proc(
+      hwnd: HWND,
+      lparam: LPARAM,
+    ) -> BOOL {
+      let info = lparam.0 as *mut FindRealTrayInfo;
+      let mut class_name = [0u16; 16];
+
+      if GetClassNameW(hwnd, &mut class_name) != 0 {
+        let class_str = String::from_utf16_lossy(
+          &class_name
+            [..class_name.iter().position(|&x| x == 0).unwrap_or(0)],
+        );
+        if class_str == "Shell_TrayWnd" && hwnd != (*info).spy_window {
+          if let Ok(_) = FindWindowExW(
+            hwnd,
+            HWND(std::ptr::null_mut()),
+            w!("TrayNotifyWnd"),
+            PWSTR::null(),
+          ) {
+            (*info).result_window = hwnd;
+            return false.into();
+          }
+        }
+      }
+      true.into()
+    }
+
+    let _ = unsafe {
+      EnumWindows(Some(enum_proc), LPARAM(&mut info as *mut _ as isize))
+    };
+
+    if !info.result_window.0.is_null() {
+      Some(info.result_window.0 as isize)
+    } else {
+      let progman =
+        unsafe { FindWindowW(w!("Progman"), PWSTR::null()) }.ok()?;
+      let tray = unsafe {
+        FindWindowExW(
+          progman,
+          HWND(std::ptr::null_mut()),
+          w!("Shell_TrayWnd"),
+          PWSTR::null(),
+        )
+      }
+      .ok()?;
+
+      if tray != HWND(spy_window as _) {
+        if let Ok(_) = unsafe {
+          FindWindowExW(
+            tray,
+            HWND(std::ptr::null_mut()),
+            w!("TrayNotifyWnd"),
+            PWSTR::null(),
+          )
+        } {
+          Some(tray.0 as isize)
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+    }
+  }
+}
+
+struct FindRealTrayInfo {
+  spy_window: HWND,
+  result_window: HWND,
 }

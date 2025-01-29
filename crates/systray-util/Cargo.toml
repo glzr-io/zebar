@@ -6,11 +6,20 @@ license = ""
 repository = ""
 edition = "2021"
 
+[lib]
+path = "src/lib.rs"
+
+# TODO: Remove this after testing.
+[[bin]]
+name = "systray-util"
+path = "src/main.rs"
+
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]

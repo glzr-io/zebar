@@ -4,10 +4,51 @@ use tokio::sync::mpsc;
 use windows::Win32::{
   Foundation::{HWND, LPARAM, LRESULT, WPARAM},
   System::DataExchange::COPYDATASTRUCT,
-  UI::WindowsAndMessaging::WM_COPYDATA,
+  UI::{
+    Shell::{
+      NOTIFYICONDATAW_0, NOTIFY_ICON_DATA_FLAGS,
+      NOTIFY_ICON_INFOTIP_FLAGS, NOTIFY_ICON_STATE,
+    },
+    WindowsAndMessaging::{
+      DefWindowProcW, SendMessageW, SetTimer, SetWindowPos, HICON,
+      HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WM_COPYDATA,
+      WM_TIMER,
+    },
+  },
 };
 
 use crate::Util;
+
+#[repr(C)]
+struct ShellTrayData {
+  dw_magic: i32,
+  dw_message: u32,
+  nid: NotifyIconDataFixed,
+}
+
+#[repr(C)]
+struct NotifyIconDataFixed {
+  cb_size: u32,
+  hwnd_raw: u32,
+  uid: u32,
+  flags: NOTIFY_ICON_DATA_FLAGS,
+  callback_message: u32,
+  hicon_raw: u32,
+  sz_tip: [u16; 128],
+  state: NOTIFY_ICON_STATE,
+  state_mask: NOTIFY_ICON_STATE,
+  sz_info: [u16; 256],
+  union: NOTIFYICONDATAW_0,
+  sz_info_title: [u16; 64],
+  info_flags: NOTIFY_ICON_INFOTIP_FLAGS,
+  guid: windows::core::GUID,
+  balloon_icon: HICON,
+}
+
+enum PlatformEvent {
+  // TODO: Add proper type.
+  TrayUpdate(String),
+}
 
 /// Global instance of sender for platform events.
 ///
@@ -26,123 +67,95 @@ pub fn run() -> crate::Result<()> {
   let window =
     Util::create_message_window("Shell_TrayWnd", Some(window_proc))?;
 
+  // TODO: Check whether this can be done in a better way. Check out
+  // SimpleClassicTheme.Taskbar project for potential implementation.
+  unsafe { SetTimer(HWND(window as _), 1, 100, None) };
+
   Util::run_message_loop();
 
   Ok(())
 }
 
-unsafe extern "system" fn window_proc(
+extern "system" fn window_proc(
   hwnd: HWND,
   msg: u32,
   wparam: WPARAM,
   lparam: LPARAM,
 ) -> LRESULT {
   match msg {
-    WM_COPYDATA => {
-      tracing::info!("Incoming WM_COPYDATA message.");
-
-      let copy_data = match (lparam.0 as *const COPYDATASTRUCT).as_ref() {
-        Some(data) => {
-          println!("  Got COPYDATASTRUCT");
-          data
-        }
-        None => {
-          println!("  Invalid COPYDATASTRUCT pointer");
-          return LRESULT(0);
-        }
-      };
-
-      // Forward to real tray first
-      let fwd_result = if let Some(real_tray) = find_real_tray(hwnd) {
-        println!("  Forwarding to real tray: {:?}", real_tray);
-        SendMessageW(real_tray, WM_COPYDATA, wparam, lparam)
-      } else {
-        println!("  No real tray found");
-        LRESULT(1)
-      };
-
-      if copy_data.dwData == 1 && !copy_data.lpData.is_null() {
-        println!("  Processing tray data");
-        let tray_data =
-          std::mem::transmute::<_, &ShellTrayData>(copy_data.lpData);
-
-        println!(
-          "  Icon data - hwnd: {:#x}, id: {}, flags: {:#x}",
-          tray_data.nid.hwnd_raw, tray_data.nid.uid, tray_data.nid.flags.0
-        );
-
-        let window_data_ptr =
-          GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut WindowData;
-        if !window_data_ptr.is_null() {
-          println!("  Got window data pointer");
-          let window_data = &mut *window_data_ptr;
-
-          // Update mappings
-          window_data.update_icon_mapping(
-            tray_data.nid.hwnd_raw,
-            tray_data.nid.uid,
-          );
-
-          // Get icon data
-          if let Some(base64_icon) =
-            get_icon_base64(HICON(tray_data.nid.hicon_raw as *mut _))
-          {
-            println!(
-              "  Successfully got icon base64 data, length: {}",
-              base64_icon.len()
-            );
-
-            // Create the payload
-            let payload = json!({
-                "header": {
-                    "magic": tray_data.dw_magic,
-                    "message_type": tray_data.dw_message
-                },
-                "nid": {
-                    "uID": tray_data.nid.uid,
-                    "hWnd": format!("{:x}", tray_data.nid.hwnd_raw),
-                    "uFlags": tray_data.nid.flags.0,
-                    "szTip": String::from_utf16_lossy(&tray_data.nid.sz_tip)
-                        .trim_matches(|c| c == '\0' || c == '\u{1}')
-                        .to_string(),
-                    "icon_data": base64_icon
-                }
-            });
-
-            println!("  Emitting tray-update event");
-            if let Err(e) =
-              window_data.app_handle.emit("tray-update", payload)
-            {
-              println!("  Error emitting event: {:?}", e);
-            } else {
-              println!("  Event emitted successfully");
-            }
-          } else {
-            println!("  Failed to get icon data");
-          }
-        } else {
-          println!("  Window data pointer is null");
-        }
-      } else {
-        println!("  Invalid or empty tray data");
-      }
-
-      fwd_result
-    }
-
+    WM_COPYDATA => handle_copy_data(hwnd, wparam, lparam),
     WM_TIMER => {
-      let _ = SetWindowPos(
-        hwnd,
-        HWND_TOPMOST,
-        0,
-        0,
-        0,
-        0,
-        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-      );
+      // Regain tray priority.
+      let _ = unsafe {
+        SetWindowPos(
+          hwnd,
+          HWND_TOPMOST,
+          0,
+          0,
+          0,
+          0,
+          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+      };
+
       LRESULT(0)
     }
+    _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
+  }
+}
 
-    _ => DefWindowProcW(hwnd, msg, wparam, lparam),
+fn handle_copy_data(
+  hwnd: HWND,
+  wparam: WPARAM,
+  lparam: LPARAM,
+) -> LRESULT {
+  tracing::info!("Incoming `WM_COPYDATA` message.");
+
+  // Extract COPYDATASTRUCT.
+  let copy_data =
+    match unsafe { (lparam.0 as *const COPYDATASTRUCT).as_ref() } {
+      Some(data) => data,
+      None => {
+        tracing::warn!("Invalid COPYDATASTRUCT pointer.");
+        forward_to_real_tray(hwnd, wparam, lparam);
+        return LRESULT(0);
+      }
+    };
+
+  // Process tray data if valid.
+  if copy_data.dwData == 1 && !copy_data.lpData.is_null() {
+    process_tray_data(hwnd, copy_data);
+  }
+
+  forward_to_real_tray(hwnd, wparam, lparam);
+
+  LRESULT(0)
+}
+
+fn process_tray_data(hwnd: HWND, copy_data: &COPYDATASTRUCT) {
+  tracing::info!("Processing tray data.");
+
+  // Get tray data
+  let tray_data =
+    unsafe { std::mem::transmute::<_, &ShellTrayData>(copy_data.lpData) };
+
+  tracing::info!(
+    "Icon data - hwnd: {:#x}, id: {}, flags: {:#x}",
+    tray_data.nid.hwnd_raw,
+    tray_data.nid.uid,
+    tray_data.nid.flags.0
+  );
+}
+
+fn forward_to_real_tray(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) {
+  if let Some(real_tray) = Util::tray_window(hwnd.0 as isize) {
+    tracing::debug!("Forwarding to real tray window: {:?}", real_tray);
+
+    // TODO: Add error handling.
+    let _ = unsafe {
+      SendMessageW(HWND(real_tray as _), WM_COPYDATA, wparam, lparam)
+    };
+  } else {
+    tracing::debug!("No real tray found.");
   }
 }
