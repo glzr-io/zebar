@@ -148,7 +148,9 @@
                   {output.glazewm.isPaused && (
                     <button
                       className="paused-button"
-                      onClick={() => glazewm.runCommand('wm-toggle-pause')}
+                      onClick={() =>
+                        output.glazewm.runCommand('wm-toggle-pause')
+                      }
                     >
                       PAUSED
                     </button>
