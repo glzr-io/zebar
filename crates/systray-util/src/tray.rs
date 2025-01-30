@@ -61,19 +61,6 @@ enum PlatformEvent {
 static PLATFORM_EVENT_TX: OnceLock<mpsc::UnboundedSender<PlatformEvent>> =
   OnceLock::new();
 
-// Track messages that are currently being processed to detect recursion
-static PROCESSING_MESSAGES: LazyLock<
-  Mutex<HashMap<MessageKey, Option<LRESULT>>>,
-> = LazyLock::new(|| Mutex::new(HashMap::new()));
-
-#[derive(Hash, Eq, PartialEq, Clone)]
-struct MessageKey {
-  hwnd: isize,
-  msg: u32,
-  wparam: usize,
-  lparam: isize,
-}
-
 pub fn run() -> crate::Result<()> {
   let (event_tx, event_rx) = mpsc::unbounded_channel();
 
@@ -194,81 +181,21 @@ fn forward_message(
   wparam: WPARAM,
   lparam: LPARAM,
 ) -> LRESULT {
-  let message_key = MessageKey {
-    hwnd: hwnd.0 as isize,
-    msg,
-    wparam: wparam.0,
-    lparam: lparam.0,
-  };
-
-  start_send_message(message_key.clone());
-
-  loop {
-    match message_response(&message_key) {
-      Some(res) => return res,
-      None => {
-        let mut msg = MSG::default();
-
-        // Send off other messages while waiting for response.
-        if unsafe { PeekMessageW(&mut msg, None, 0, 0, PM_NOREMOVE) }
-          .as_bool()
-        {
-          if should_forward_message(msg.message) {
-            start_send_message(MessageKey {
-              hwnd: msg.hwnd.0 as isize,
-              msg: msg.message,
-              wparam: msg.wParam.0,
-              lparam: msg.lParam.0,
-            });
-          }
-        }
-
-        std::thread::sleep(std::time::Duration::from_millis(16));
-      }
-    }
-  }
-}
-
-fn message_response(message_key: &MessageKey) -> Option<LRESULT> {
-  let mut messages = PROCESSING_MESSAGES.lock().unwrap();
-  messages.remove(message_key).flatten()
-}
-
-fn start_send_message(message_key: MessageKey) {
-  let mut messages = PROCESSING_MESSAGES.lock().unwrap();
-
-  if messages.contains_key(&message_key) {
-    return;
-  }
-
-  messages.insert(message_key.clone(), None);
-
-  let real_tray = Util::tray_window_2(message_key.hwnd).unwrap();
-
   tracing::info!(
     "Forwarding msg: {:#x} - {} to real tray window.",
-    message_key.msg,
-    message_key.msg
+    msg,
+    msg
   );
 
-  std::thread::spawn(move || {
-    let res = unsafe {
-      SendMessageW(
-        HWND(real_tray as _),
-        message_key.msg,
-        WPARAM(message_key.wparam),
-        LPARAM(message_key.lparam),
-      )
-    };
+  let Some(real_tray) = Util::tray_window_2(hwnd.0 as isize) else {
+    tracing::warn!("No real tray found.");
+    return LRESULT(0);
+  };
 
-    tracing::info!(
-      "Received response for msg: {:#x} - {} from real tray window.",
-      message_key.msg,
-      message_key.msg
-    );
-
-    // Modify the message to include the result.
-    let mut messages = PROCESSING_MESSAGES.lock().unwrap();
-    messages.insert(message_key, Some(res));
-  });
+  if msg > WM_USER || msg == WM_COPYDATA {
+    unsafe { PostMessageW(HWND(real_tray as _), msg, wparam, lparam) };
+    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+  } else {
+    unsafe { SendMessageW(HWND(real_tray as _), msg, wparam, lparam) }
+  }
 }
