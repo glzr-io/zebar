@@ -10,6 +10,9 @@ pub enum Error {
 
   #[error("Creation of message window failed.")]
   MessageWindowCreationFailed,
+
+  #[error("Failed to forward message to the real tray window: {0}")]
+  ForwardMessageFailed(String),
 }
 
 impl Serialize for Error {

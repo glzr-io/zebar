@@ -10,8 +10,8 @@ use windows::Win32::{
       NOTIFY_ICON_INFOTIP_FLAGS, NOTIFY_ICON_STATE,
     },
     WindowsAndMessaging::{
-      DefWindowProcW, SendMessageW, SetTimer, SetWindowPos, HICON,
-      HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+      DefWindowProcW, PostMessageW, SendMessageW, SetTimer, SetWindowPos,
+      HICON, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
       WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
     },
   },
@@ -24,6 +24,7 @@ struct ShellTrayData {
   dw_magic: i32,
   dw_message: u32,
   nid: NotifyIconDataFixed,
+  u_version: u32,
 }
 
 #[repr(C)]
@@ -85,7 +86,12 @@ extern "system" fn window_proc(
   match msg {
     WM_COPYDATA => {
       handle_copy_data(hwnd, wparam, lparam);
-      forward_message(hwnd, wparam, lparam);
+      if let Err(err) = forward_message(hwnd, msg, wparam, lparam) {
+        tracing::warn!(
+          "Failed to forward message to tray window: {:?}",
+          err
+        );
+      }
       LRESULT(0)
     }
     WM_TIMER => {
@@ -105,9 +111,15 @@ extern "system" fn window_proc(
       LRESULT(0)
     }
     _ => {
-      tracing::info!("msg: {:#x}", msg);
+      tracing::info!("msg: {:#x} {}", msg, msg);
+
       if msg == WM_ACTIVATEAPP || msg == WM_COMMAND || msg >= WM_USER {
-        forward_message(hwnd, wparam, lparam);
+        if let Err(err) = forward_message(hwnd, msg, wparam, lparam) {
+          tracing::warn!(
+            "Failed to forward message to tray window: {:?}",
+            err
+          );
+        }
       }
 
       unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
@@ -122,16 +134,12 @@ fn handle_copy_data(
 ) -> LRESULT {
   tracing::info!("Incoming `WM_COPYDATA` message.");
 
-  // Extract COPYDATASTRUCT.
-  let copy_data =
-    match unsafe { (lparam.0 as *const COPYDATASTRUCT).as_ref() } {
-      Some(data) => data,
-      None => {
-        tracing::warn!("Invalid COPYDATASTRUCT pointer.");
-        forward_message(hwnd, wparam, lparam);
-        return LRESULT(0);
-      }
-    };
+  // Extract `COPYDATASTRUCT` and return early if invalid.
+  let Some(copy_data) =
+    (unsafe { (lparam.0 as *const COPYDATASTRUCT).as_ref() })
+  else {
+    return LRESULT(0);
+  };
 
   tracing::info!("COPYDATASTRUCT: {:?}", copy_data);
 
@@ -139,8 +147,6 @@ fn handle_copy_data(
   if copy_data.dwData == 1 && !copy_data.lpData.is_null() {
     process_tray_data(hwnd, copy_data);
   }
-
-  forward_message(hwnd, wparam, lparam);
 
   LRESULT(0)
 }
@@ -153,23 +159,42 @@ fn process_tray_data(hwnd: HWND, copy_data: &COPYDATASTRUCT) {
     unsafe { std::mem::transmute::<_, &ShellTrayData>(copy_data.lpData) };
 
   tracing::info!(
-    "Icon data - hwnd: {:#x}, id: {}, flags: {:#x}",
+    "Icon data - hwnd: {:#x}, id: {}, flags: {:#x}, message: {}, version: {}",
     tray_data.nid.hwnd_raw,
     tray_data.nid.uid,
-    tray_data.nid.flags.0
+    tray_data.nid.flags.0,
+    tray_data.dw_message,
+    tray_data.u_version
   );
 }
 
 /// Forwards a message to the real tray window.
-fn forward_message(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) {
-  if let Some(real_tray) = Util::tray_window(hwnd.0 as isize) {
-    tracing::debug!("Forwarding to real tray window: {:?}", real_tray);
+fn forward_message(
+  hwnd: HWND,
+  msg: u32,
+  wparam: WPARAM,
+  lparam: LPARAM,
+) -> crate::Result<()> {
+  tracing::info!(
+    "Forwarding msg: {:#x} - {} to real tray window.",
+    msg,
+    msg
+  );
 
-    // TODO: Add error handling.
-    let _ = unsafe {
-      SendMessageW(HWND(real_tray as _), WM_COPYDATA, wparam, lparam)
-    };
+  let real_tray = Util::tray_window_2(hwnd.0 as isize).ok_or(
+    crate::Error::ForwardMessageFailed("No real tray found.".to_string()),
+  )?;
+
+  let send_res = if msg > WM_USER {
+    unsafe { PostMessageW(HWND(real_tray as _), msg, wparam, lparam) }
   } else {
-    tracing::debug!("No real tray found.");
+    unsafe { SendMessageW(HWND(real_tray as _), msg, wparam, lparam) };
+    Err(windows::core::Error::from_win32())
+  };
+
+  if let Err(err) = send_res {
+    crate::Error::ForwardMessageFailed(format!("{:?}", err));
   }
+
+  Ok(())
 }

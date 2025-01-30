@@ -104,6 +104,44 @@ impl Util {
     string.encode_utf16().chain(std::iter::once(0)).collect()
   }
 
+  /// Finds the Windows tray window, optionally ignoring a specific window
+  /// handle.
+  pub fn tray_window_2(hwnd_ignore: isize) -> Option<isize> {
+    let mut taskbar_hwnd = unsafe {
+      FindWindowW(
+        windows::core::PCWSTR::from_raw(
+          "Shell_TrayWnd\0"
+            .encode_utf16()
+            .collect::<Vec<_>>()
+            .as_ptr(),
+        ),
+        windows::core::PCWSTR::null(),
+      )
+    }
+    .ok()?;
+
+    if hwnd_ignore != 0 {
+      while taskbar_hwnd == HWND(hwnd_ignore as _) {
+        taskbar_hwnd = unsafe {
+          FindWindowExW(
+            HWND::default(),
+            taskbar_hwnd,
+            windows::core::PCWSTR::from_raw(
+              "Shell_TrayWnd\0"
+                .encode_utf16()
+                .collect::<Vec<_>>()
+                .as_ptr(),
+            ),
+            windows::core::PCWSTR::null(),
+          )
+        }
+        .ok()?;
+      }
+    }
+
+    Some(taskbar_hwnd.0 as isize)
+  }
+
   /// TODO: Could be significantly simplified.
   pub fn tray_window(spy_window: isize) -> Option<isize> {
     let real_tray =
