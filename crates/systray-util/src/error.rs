@@ -13,6 +13,9 @@ pub enum Error {
 
   #[error("Failed to forward message to the real tray window: {0}")]
   ForwardMessageFailed(String),
+
+  #[error("Invalid `COPYDATASTRUCT`.")]
+  CopyDataInvalid,
 }
 
 impl Serialize for Error {

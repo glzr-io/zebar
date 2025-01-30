@@ -83,63 +83,54 @@ extern "system" fn window_proc(
   wparam: WPARAM,
   lparam: LPARAM,
 ) -> LRESULT {
-  match msg {
-    WM_COPYDATA => {
-      handle_copy_data(hwnd, wparam, lparam);
-      if let Err(err) = forward_message(hwnd, msg, wparam, lparam) {
-        tracing::warn!(
-          "Failed to forward message to tray window: {:?}",
-          err
-        );
-      }
-      LRESULT(0)
-    }
-    WM_TIMER => {
-      // Regain tray priority.
-      let _ = unsafe {
-        SetWindowPos(
-          hwnd,
-          HWND_TOPMOST,
-          0,
-          0,
-          0,
-          0,
-          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-        )
-      };
+  // Regain tray priority.
+  if msg == WM_TIMER {
+    let _ = unsafe {
+      SetWindowPos(
+        hwnd,
+        HWND_TOPMOST,
+        0,
+        0,
+        0,
+        0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+      )
+    };
 
-      LRESULT(0)
-    }
-    _ => {
-      tracing::info!("msg: {:#x} {}", msg, msg);
+    return LRESULT(0);
+  }
 
-      if msg == WM_ACTIVATEAPP || msg == WM_COMMAND || msg >= WM_USER {
-        if let Err(err) = forward_message(hwnd, msg, wparam, lparam) {
-          tracing::warn!(
-            "Failed to forward message to tray window: {:?}",
-            err
-          );
-        }
-      }
+  tracing::info!("msg: {:#x} {}", msg, msg);
 
-      unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+  if msg == WM_COPYDATA {
+    if let Err(err) = handle_copy_data(hwnd, wparam, lparam) {
+      tracing::warn!("Failed to handle `WM_COPYDATA` message: {:?}", err);
     }
   }
+
+  if msg == WM_ACTIVATEAPP || msg == WM_COMMAND || msg >= WM_USER {
+    if let Err(err) = forward_message(hwnd, msg, wparam, lparam) {
+      tracing::warn!(
+        "Failed to forward message to tray window: {:?}",
+        err
+      );
+    }
+  }
+
+  unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
 fn handle_copy_data(
   hwnd: HWND,
   wparam: WPARAM,
   lparam: LPARAM,
-) -> LRESULT {
+) -> crate::Result<()> {
   tracing::info!("Incoming `WM_COPYDATA` message.");
 
   // Extract `COPYDATASTRUCT` and return early if invalid.
-  let Some(copy_data) =
+  let copy_data =
     (unsafe { (lparam.0 as *const COPYDATASTRUCT).as_ref() })
-  else {
-    return LRESULT(0);
-  };
+      .ok_or(crate::Error::CopyDataInvalid)?;
 
   tracing::info!("COPYDATASTRUCT: {:?}", copy_data);
 
@@ -148,7 +139,7 @@ fn handle_copy_data(
     process_tray_data(hwnd, copy_data);
   }
 
-  LRESULT(0)
+  Ok(())
 }
 
 fn process_tray_data(hwnd: HWND, copy_data: &COPYDATASTRUCT) {
