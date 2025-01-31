@@ -6,12 +6,12 @@ use windows::Win32::{
   System::DataExchange::COPYDATASTRUCT,
   UI::{
     Shell::{
-      NIM_ADD, NIM_MODIFY, NOTIFYICONDATAW_0, NOTIFY_ICON_DATA_FLAGS,
-      NOTIFY_ICON_INFOTIP_FLAGS, NOTIFY_ICON_MESSAGE, NOTIFY_ICON_STATE,
+      NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW,
+      NOTIFY_ICON_MESSAGE,
     },
     WindowsAndMessaging::{
       DefWindowProcW, PostMessageW, RegisterWindowMessageW, SendMessageW,
-      SendNotifyMessageW, SetTimer, SetWindowPos, HICON, HWND_BROADCAST,
+      SendNotifyMessageW, SetTimer, SetWindowPos, HWND_BROADCAST,
       HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
       WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
     },
@@ -21,51 +21,36 @@ use windows_core::w;
 
 use crate::{NativeWindow, Util};
 
+/// Tray message sent to `Shell_TrayWnd` and intercepted by our spy window.
 #[repr(C)]
-struct ShellTrayData {
-  dw_magic: i32,
-  dw_message: u32,
-  nid: NotifyIconDataFixed,
-  u_version: u32,
+struct ShellTrayMessage {
+  magic_number: i32,
+  message_type: u32,
+  icon_data: NOTIFYICONDATAW,
+  version: u32,
 }
 
-#[repr(C)]
-struct NotifyIconDataFixed {
-  cb_size: u32,
-  hwnd_raw: u32,
-  uid: u32,
-  flags: NOTIFY_ICON_DATA_FLAGS,
-  callback_message: u32,
-  hicon_raw: u32,
-  sz_tip: [u16; 128],
-  state: NOTIFY_ICON_STATE,
-  state_mask: NOTIFY_ICON_STATE,
-  sz_info: [u16; 256],
-  union: NOTIFYICONDATAW_0,
-  sz_info_title: [u16; 64],
-  info_flags: NOTIFY_ICON_INFOTIP_FLAGS,
-  guid: windows::core::GUID,
-  balloon_icon: HICON,
+/// Events emitted by the spy window.
+#[derive(Debug)]
+enum TrayEvent {
+  IconAdd(String),
+  IconUpdate(String),
+  IconRemove(String),
 }
 
-enum PlatformEvent {
-  // TODO: Add proper type.
-  TrayUpdate(String),
-}
-
-/// Global instance of sender for platform events.
+/// Global instance of sender for tray events.
 ///
 /// For use with window procedure.
-static PLATFORM_EVENT_TX: OnceLock<mpsc::UnboundedSender<PlatformEvent>> =
+static TRAY_EVENT_TX: OnceLock<mpsc::UnboundedSender<TrayEvent>> =
   OnceLock::new();
 
 pub fn run() -> crate::Result<()> {
   let (event_tx, event_rx) = mpsc::unbounded_channel();
 
-  // Add the sender for platform events to global state.
-  PLATFORM_EVENT_TX
+  // Add the sender for tray events to global state.
+  TRAY_EVENT_TX
     .set(event_tx)
-    .expect("Platform event sender already set.");
+    .expect("Tray event sender already set.");
 
   let window =
     Util::create_message_window("Shell_TrayWnd", Some(window_proc))?;
@@ -141,37 +126,45 @@ fn handle_copy_data(
 
   // Process tray data if valid.
   if copy_data.dwData == 1 && !copy_data.lpData.is_null() {
-    process_tray_data(hwnd, copy_data);
+    tracing::info!("Processing tray data.");
+
+    let tray_message =
+      unsafe { &*copy_data.lpData.cast::<ShellTrayMessage>() };
+
+    match NOTIFY_ICON_MESSAGE(tray_message.message_type) {
+      NIM_ADD | NIM_MODIFY => {
+        let window =
+          NativeWindow::new(tray_message.icon_data.hWnd.0 as isize);
+        let process_name = window.process_name().unwrap_or_default();
+
+        tracing::info!(
+          "Add/Modify data - hwnd: {:#x}, process: {}, tooltip: {}, message: {}",
+          tray_message.icon_data.hWnd.0 as isize,
+          process_name,
+          String::from_utf16_lossy(&tray_message.icon_data.szTip),
+          tray_message.message_type
+        );
+      }
+      NIM_DELETE => {
+        tracing::info!(
+          "Delete data - hwnd: {:#x}",
+          tray_message.icon_data.hWnd.0 as isize
+        );
+      }
+      NIM_SETVERSION => {
+        tracing::info!(
+          "Set version - hwnd: {:#x}, version: {}",
+          tray_message.icon_data.hWnd.0 as isize,
+          tray_message.version
+        );
+      }
+      _ => {
+        tracing::info!("Other message: {:#x}", tray_message.message_type);
+      }
+    }
   }
 
   Ok(())
-}
-
-fn process_tray_data(hwnd: HWND, copy_data: &COPYDATASTRUCT) {
-  tracing::info!("Processing tray data.");
-
-  // NIM_ADD
-  // Get tray data
-  let tray_data =
-    unsafe { std::mem::transmute::<_, &ShellTrayData>(copy_data.lpData) };
-
-  match NOTIFY_ICON_MESSAGE(tray_data.dw_message) {
-    NIM_ADD | NIM_MODIFY => {
-      let window = NativeWindow::new(tray_data.nid.hwnd_raw as isize);
-      let title = window.process_name().unwrap_or_default();
-
-      tracing::info!(
-        "Add/Modify data - hwnd: {:#x}, title: {}, tooltip: {}, message: {}",
-        tray_data.nid.hwnd_raw,
-        title,
-        String::from_utf16_lossy(&tray_data.nid.sz_tip),
-        tray_data.dw_message
-      );
-    }
-    _ => {
-      tracing::info!("Other message: {:#x}", tray_data.dw_message);
-    }
-  }
 }
 
 /// Refreshes the icons of the tray.
