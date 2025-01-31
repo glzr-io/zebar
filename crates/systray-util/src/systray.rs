@@ -4,26 +4,29 @@ use crate::{IconData, TrayEvent, TraySpy};
 
 pub struct Systray {
   pub icons: HashMap<u32, IconData>,
+  event_rx: tokio::sync::mpsc::UnboundedReceiver<TrayEvent>,
 }
 
 impl Systray {
   pub fn new() -> crate::Result<Self> {
-    let (_spy, mut event_rx) = TraySpy::new()?;
+    let (_spy, event_rx) = TraySpy::new()?;
+    Ok(Systray {
+      icons: HashMap::new(),
+      event_rx,
+    })
+  }
 
-    let mut icons = HashMap::new();
-
-    while let Some(event) = event_rx.blocking_recv() {
-      match event {
+  pub fn changes(&mut self) -> Option<TrayEvent> {
+    if let Some(event) = self.event_rx.blocking_recv() {
+      match &event {
         TrayEvent::IconAdd(icon_data) => {
           tracing::info!(
             "New icon added: {} ({})",
             icon_data.tooltip,
             icon_data.uid
           );
-
           println!("New icon added: {:?}", icon_data);
-
-          icons.insert(icon_data.uid, icon_data);
+          self.icons.insert(icon_data.uid, icon_data.clone());
         }
         TrayEvent::IconUpdate(icon_data) => {
           tracing::info!(
@@ -32,17 +35,16 @@ impl Systray {
             icon_data.uid
           );
           println!("Icon modified: {:?}", icon_data);
-
-          icons.insert(icon_data.uid, icon_data);
+          self.icons.insert(icon_data.uid, icon_data.clone());
         }
         TrayEvent::IconRemove(uid) => {
           tracing::info!("Icon removed: {:#x}", uid);
-
-          icons.remove(&uid);
+          self.icons.remove(uid);
         }
       }
+      Some(event)
+    } else {
+      None
     }
-
-    Ok(Systray { icons })
   }
 }

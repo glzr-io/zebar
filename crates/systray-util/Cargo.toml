@@ -15,7 +15,7 @@ name = "systray-util"
 path = "src/main.rs"
 
 [dependencies]
-image = "0.25"
+image = { version = "0.25", features = ["serde"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

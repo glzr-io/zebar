@@ -1,6 +1,7 @@
 use std::{sync::OnceLock, thread::JoinHandle};
 
 use image::RgbaImage;
+use serde::Serialize;
 use tokio::sync::mpsc;
 use windows::Win32::{
   Foundation::{HWND, LPARAM, LRESULT, WPARAM},
@@ -98,7 +99,7 @@ pub(crate) enum TrayEvent {
   IconRemove(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IconData {
   pub uid: u32,
   pub window_handle: isize,

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use systray_util::{Systray, SystrayEvent};
+use systray_util::Systray;
 
 use crate::providers::{
   CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
@@ -37,30 +37,20 @@ impl SystrayProvider {
   }
 }
 
-#[async_trait]
 impl Provider for SystrayProvider {
   fn runtime_type(&self) -> RuntimeType {
-    RuntimeType::Async
+    RuntimeType::Sync
   }
 
-  async fn start_async(&mut self) {
-    let systray = Systray::new();
+  fn start_sync(&mut self) {
+    // TODO: Error handling.
+    let mut systray = Systray::new().unwrap();
 
-    loop {
-      tokio::select! {
-        Some(event) = systray.icons_changed.recv() => {
-          match event {
-            SystrayEvent::IconAdd(icon) => {
-              self.common.emitter.emit_output(SystrayOutput { icons: vec![icon] });
-            }
-          }
-        }
-        Some(message) = self.common.input.async_rx.recv() => {
-          if let ProviderInputMsg::Stop = message {
-            break;
-          }
-        }
-      }
+    while let Some(event) = systray.changes() {
+      self.common.emitter.emit_output(Ok(SystrayOutput {
+        // TODO: Convert IconData to SystrayIcon.
+        icons: systray.icons.values().cloned().collect(),
+      }));
     }
   }
 }
