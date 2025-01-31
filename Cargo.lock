@@ -7834,6 +7834,7 @@ dependencies = [
  "shell-util",
  "starship-battery",
  "sysinfo",
+ "systray-util",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

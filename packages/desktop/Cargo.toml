@@ -27,6 +27,7 @@ serde_json = "1"
 shell-util = { path = "../../crates/shell-util" }
 starship-battery = "0.8"
 sysinfo = "0.30"
+systray-util = { path = "../../crates/systray-util" }
 tauri = { version = "2.0", features = [
   "devtools",
   "macos-private-api",
