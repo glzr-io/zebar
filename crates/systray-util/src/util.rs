@@ -1,5 +1,6 @@
 use std::{
-  mem::MaybeUninit, os::windows::io::AsRawHandle, thread::JoinHandle,
+  mem::MaybeUninit, os::windows::io::AsRawHandle, ptr::addr_of_mut,
+  thread::JoinHandle,
 };
 
 use image::RgbaImage;
@@ -7,7 +8,7 @@ use windows::Win32::{
   Foundation::{BOOL, HANDLE, HWND, LPARAM, WPARAM},
   Graphics::Gdi::{
     DeleteObject, GetBitmapBits, GetDC, GetDIBits, GetObjectW, ReleaseDC,
-    BITMAP, BITMAPINFO, BITMAPINFOHEADER, DIB_RGB_COLORS, HBITMAP,
+    BITMAP, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP,
     HGDIOBJ,
   },
   System::Threading::GetThreadId,
@@ -114,9 +115,9 @@ impl Util {
   }
 
   /// Converts a Windows icon to a sendable image.
-  pub fn icon_to_image(icon: HICON) -> crate::Result<RgbaImage> {
+  pub fn icon_to_image(icon: u32) -> crate::Result<RgbaImage> {
     let mut icon_info = ICONINFO::default();
-    unsafe { GetIconInfo(icon, &mut icon_info) }?;
+    unsafe { GetIconInfo(HICON(icon as _), &mut icon_info) }?;
     unsafe { DeleteObject(icon_info.hbmMask) }.ok()?;
 
     let mut bitmap = BITMAP::default();
@@ -142,7 +143,7 @@ impl Util {
       width_usize
         .checked_mul(height_usize)
         .and_then(|size| size.checked_mul(4))
-        .unwrap(),
+        .ok_or(crate::Error::IconConversionFailed)?,
     );
 
     let dc = unsafe { GetDC(None) };
@@ -151,7 +152,7 @@ impl Util {
       return Err(windows::core::Error::from_win32().into());
     }
 
-    let bi = BITMAPINFO {
+    let mut bi = BITMAPINFO {
       bmiHeader: BITMAPINFOHEADER {
         biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
         biWidth: bitmap.bmWidth,
@@ -169,8 +170,8 @@ impl Util {
         icon_info.hbmColor,
         0,
         height_u32,
-        Some(&mut buffer as *mut _ as *mut _),
-        &bi as *const _ as *mut _,
+        Some(buffer.as_mut_ptr().cast()),
+        addr_of_mut!(bi).cast(),
         DIB_RGB_COLORS,
       )
     };
@@ -194,7 +195,8 @@ impl Util {
       std::mem::swap(blue, red);
     }
 
-    Ok(RgbaImage::from_vec(width_u32, height_u32, buffer).unwrap())
+    RgbaImage::from_vec(width_u32, height_u32, buffer)
+      .ok_or(crate::Error::IconConversionFailed)
   }
 
   /// Finds the Windows tray window, optionally ignoring a specific window

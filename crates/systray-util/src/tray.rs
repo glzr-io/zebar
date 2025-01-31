@@ -16,6 +16,8 @@ pub fn run() -> crate::Result<()> {
           icon_data.uid
         );
 
+        println!("New icon added: {:?}", icon_data);
+
         icons.insert(icon_data.uid, icon_data);
       }
       TrayEvent::IconUpdate(icon_data) => {
@@ -24,6 +26,7 @@ pub fn run() -> crate::Result<()> {
           icon_data.tooltip,
           icon_data.uid
         );
+        println!("Icon modified: {:?}", icon_data);
 
         icons.insert(icon_data.uid, icon_data);
       }

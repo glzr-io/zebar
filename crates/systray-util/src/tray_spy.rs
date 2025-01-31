@@ -7,12 +7,13 @@ use windows::Win32::{
   System::DataExchange::COPYDATASTRUCT,
   UI::{
     Shell::{
-      NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW,
-      NOTIFY_ICON_MESSAGE,
+      NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW_0,
+      NOTIFY_ICON_DATA_FLAGS, NOTIFY_ICON_INFOTIP_FLAGS,
+      NOTIFY_ICON_MESSAGE, NOTIFY_ICON_STATE,
     },
     WindowsAndMessaging::{
       DefWindowProcW, PostMessageW, RegisterWindowMessageW, SendMessageW,
-      SendNotifyMessageW, SetTimer, SetWindowPos, HWND_BROADCAST,
+      SendNotifyMessageW, SetTimer, SetWindowPos, HICON, HWND_BROADCAST,
       HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
       WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
     },
@@ -37,6 +38,31 @@ struct ShellTrayMessage {
   version: u32,
 }
 
+/// Contains the data for a system tray icon.
+///
+/// When `Shell_NotifyIcon` sends its message to `Shell_Traywnd`, it
+/// actually uses a 32-bit handle for the hwnd. This makes it slightly
+/// different than the `windows` crate's `NOTIFYICONDATAW` type.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct NOTIFYICONDATAW {
+  pub cbSize: u32,
+  pub hWnd: u32,
+  pub uID: u32,
+  pub uFlags: NOTIFY_ICON_DATA_FLAGS,
+  pub uCallbackMessage: u32,
+  pub hIcon: u32,
+  pub szTip: [u16; 128],
+  pub dwState: NOTIFY_ICON_STATE,
+  pub dwStateMask: NOTIFY_ICON_STATE,
+  pub szInfo: [u16; 256],
+  pub Anonymous: NOTIFYICONDATAW_0,
+  pub szInfoTitle: [u16; 64],
+  pub dwInfoFlags: NOTIFY_ICON_INFOTIP_FLAGS,
+  pub guidItem: windows_core::GUID,
+  pub hBalloonIcon: HICON,
+}
+
 impl ShellTrayMessage {
   fn tray_event(&self) -> crate::Result<Option<TrayEvent>> {
     let event = match NOTIFY_ICON_MESSAGE(self.message_type) {
@@ -54,7 +80,7 @@ impl ShellTrayMessage {
   fn icon_data(&self) -> crate::Result<IconData> {
     let icon_data = IconData {
       uid: self.icon_data.uID,
-      window_handle: self.icon_data.hWnd.0 as isize,
+      window_handle: self.icon_data.hWnd as isize,
       tooltip: String::from_utf16_lossy(&self.icon_data.szTip),
       icon: Util::icon_to_image(self.icon_data.hIcon)?,
       callback: self.icon_data.uCallbackMessage,
