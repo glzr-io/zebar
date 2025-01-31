@@ -74,7 +74,7 @@ pub fn run() -> crate::Result<()> {
   // SimpleClassicTheme.Taskbar project for potential implementation.
   unsafe { SetTimer(HWND(window as _), 1, 100, None) };
 
-  refresh_icons();
+  refresh_icons()?;
 
   Util::run_message_loop();
 
@@ -174,25 +174,32 @@ fn process_tray_data(hwnd: HWND, copy_data: &COPYDATASTRUCT) {
   }
 }
 
-/// Determines whether a message should be forwarded to the real tray
-/// window.
+/// Refreshes the icons of the tray.
+///
+/// Simulates the Windows taskbar being re-created. Some windows fail to
+/// re-add their icons, in which case it's an implementation error on their
+/// side. These windows that fail also do not re-add their icons to the
+/// Windows taskbar when `explorer.exe` is restarted ordinarily.
+fn refresh_icons() -> crate::Result<()> {
+  tracing::info!("Refreshing icons by sending `TaskbarCreated` message.");
+
+  let msg = unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) };
+
+  if msg == 0 {
+    return Err(windows::core::Error::from_win32().into());
+  }
+
+  unsafe { SendNotifyMessageW(HWND_BROADCAST, msg, None, None) }?;
+
+  Ok(())
+}
+
+/// Whether a message should be forwarded to the real tray window.
 fn should_forward_message(msg: u32) -> bool {
   msg == WM_COPYDATA
     || msg == WM_ACTIVATEAPP
     || msg == WM_COMMAND
     || msg >= WM_USER
-}
-
-fn refresh_icons() {
-  let msg = unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) };
-
-  if msg > 0 {
-    tracing::info!("Sending TaskbarCreated message.");
-
-    unsafe {
-      SendNotifyMessageW(HWND_BROADCAST, msg, None, None);
-    }
-  }
 }
 
 /// Forwards a message to the real tray window.
