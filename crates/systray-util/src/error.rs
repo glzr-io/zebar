@@ -19,6 +19,9 @@ pub enum Error {
 
   #[error("Cast error")]
   CastError(#[from] std::num::TryFromIntError),
+
+  #[error("Icon conversion failed.")]
+  IconConversionFailed,
 }
 
 impl Serialize for Error {

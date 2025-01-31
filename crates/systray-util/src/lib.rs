@@ -1,11 +1,11 @@
 mod error;
-mod tray;
+mod systray;
 mod tray_spy;
 mod util;
 mod window;
 
 pub use error::*;
-pub use tray::*;
+pub use systray::*;
 pub use tray_spy::*;
 pub use util::*;
 pub use window::*;
