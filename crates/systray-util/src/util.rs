@@ -8,7 +8,7 @@ use windows::Win32::{
     FindWindowW, GetClassNameW, GetMessageW, PostThreadMessageW,
     RegisterClassW, TranslateMessage, CS_HREDRAW, CS_VREDRAW,
     CW_USEDEFAULT, MSG, WINDOW_EX_STYLE, WM_QUIT, WNDCLASSW, WNDPROC,
-    WS_OVERLAPPEDWINDOW,
+    WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW,
   },
 };
 use windows_core::{w, PCWSTR, PWSTR};
@@ -42,7 +42,7 @@ impl Util {
 
     let handle = unsafe {
       CreateWindowExW(
-        WINDOW_EX_STYLE::default(),
+        WS_EX_TOOLWINDOW | WS_EX_APPWINDOW | WS_EX_TOPMOST,
         PCWSTR::from_raw(class_name.as_ptr()),
         PCWSTR::from_raw(class_name.as_ptr()),
         WS_OVERLAPPEDWINDOW,

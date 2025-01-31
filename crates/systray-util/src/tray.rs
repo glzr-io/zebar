@@ -1,7 +1,4 @@
-use std::{
-  collections::{HashMap, VecDeque},
-  sync::{LazyLock, Mutex, OnceLock},
-};
+use std::sync::OnceLock;
 
 use tokio::sync::mpsc;
 use windows::Win32::{
@@ -9,19 +6,20 @@ use windows::Win32::{
   System::DataExchange::COPYDATASTRUCT,
   UI::{
     Shell::{
-      NIM_ADD, NOTIFYICONDATAW_0, NOTIFY_ICON_DATA_FLAGS,
-      NOTIFY_ICON_INFOTIP_FLAGS, NOTIFY_ICON_STATE,
+      NIM_ADD, NIM_MODIFY, NOTIFYICONDATAW_0, NOTIFY_ICON_DATA_FLAGS,
+      NOTIFY_ICON_INFOTIP_FLAGS, NOTIFY_ICON_MESSAGE, NOTIFY_ICON_STATE,
     },
     WindowsAndMessaging::{
-      DefWindowProcW, PeekMessageW, PostMessageW, SendMessageW, SetTimer,
-      SetWindowPos, HICON, HWND_TOPMOST, MSG, PM_NOREMOVE, SWP_NOACTIVATE,
-      SWP_NOMOVE, SWP_NOSIZE, WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA,
-      WM_TIMER, WM_USER,
+      DefWindowProcW, PostMessageW, RegisterWindowMessageW, SendMessageW,
+      SendNotifyMessageW, SetTimer, SetWindowPos, HICON, HWND_BROADCAST,
+      HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+      WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
     },
   },
 };
+use windows_core::w;
 
-use crate::Util;
+use crate::{NativeWindow, Util};
 
 #[repr(C)]
 struct ShellTrayData {
@@ -75,6 +73,8 @@ pub fn run() -> crate::Result<()> {
   // TODO: Check whether this can be done in a better way. Check out
   // SimpleClassicTheme.Taskbar project for potential implementation.
   unsafe { SetTimer(HWND(window as _), 1, 100, None) };
+
+  refresh_icons();
 
   Util::run_message_loop();
 
@@ -155,14 +155,23 @@ fn process_tray_data(hwnd: HWND, copy_data: &COPYDATASTRUCT) {
   let tray_data =
     unsafe { std::mem::transmute::<_, &ShellTrayData>(copy_data.lpData) };
 
-  tracing::info!(
-    "Icon data - hwnd: {:#x}, id: {}, flags: {:#x}, message: {}, version: {}",
-    tray_data.nid.hwnd_raw,
-    tray_data.nid.uid,
-    tray_data.nid.flags.0,
-    tray_data.dw_message,
-    tray_data.u_version
-  );
+  match NOTIFY_ICON_MESSAGE(tray_data.dw_message) {
+    NIM_ADD | NIM_MODIFY => {
+      let window = NativeWindow::new(tray_data.nid.hwnd_raw as isize);
+      let title = window.process_name().unwrap_or_default();
+
+      tracing::info!(
+        "Add/Modify data - hwnd: {:#x}, title: {}, tooltip: {}, message: {}",
+        tray_data.nid.hwnd_raw,
+        title,
+        String::from_utf16_lossy(&tray_data.nid.sz_tip),
+        tray_data.dw_message
+      );
+    }
+    _ => {
+      tracing::info!("Other message: {:#x}", tray_data.dw_message);
+    }
+  }
 }
 
 /// Determines whether a message should be forwarded to the real tray
@@ -172,6 +181,18 @@ fn should_forward_message(msg: u32) -> bool {
     || msg == WM_ACTIVATEAPP
     || msg == WM_COMMAND
     || msg >= WM_USER
+}
+
+fn refresh_icons() {
+  let msg = unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) };
+
+  if msg > 0 {
+    tracing::info!("Sending TaskbarCreated message.");
+
+    unsafe {
+      SendNotifyMessageW(HWND_BROADCAST, msg, None, None);
+    }
+  }
 }
 
 /// Forwards a message to the real tray window.
