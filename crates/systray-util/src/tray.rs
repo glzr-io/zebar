@@ -19,7 +19,7 @@ use windows::Win32::{
 };
 use windows_core::w;
 
-use crate::{NativeWindow, Util};
+use crate::Util;
 
 /// Tray message sent to `Shell_TrayWnd` and intercepted by our spy window.
 #[repr(C)]
@@ -30,12 +30,45 @@ struct ShellTrayMessage {
   version: u32,
 }
 
+impl ShellTrayMessage {
+  fn to_tray_event(&self) -> Option<TrayEvent> {
+    match NOTIFY_ICON_MESSAGE(self.message_type) {
+      NIM_ADD => Some(TrayEvent::IconAdd(self.to_icon_data())),
+      NIM_MODIFY | NIM_SETVERSION => {
+        Some(TrayEvent::IconUpdate(self.to_icon_data()))
+      }
+      NIM_DELETE => Some(TrayEvent::IconRemove(self.icon_data.uID)),
+      _ => None,
+    }
+  }
+
+  fn to_icon_data(&self) -> IconData {
+    IconData {
+      uid: self.icon_data.uID,
+      window_handle: self.icon_data.hWnd.0 as isize,
+      tooltip: String::from_utf16_lossy(&self.icon_data.szTip),
+      // TODO: Convert icon to vector.
+      icon: vec![],
+      callback: self.icon_data.uCallbackMessage,
+    }
+  }
+}
+
 /// Events emitted by the spy window.
 #[derive(Debug)]
 enum TrayEvent {
-  IconAdd(String),
-  IconUpdate(String),
-  IconRemove(String),
+  IconAdd(IconData),
+  IconUpdate(IconData),
+  IconRemove(u32),
+}
+
+#[derive(Debug)]
+struct IconData {
+  uid: u32,
+  window_handle: isize,
+  tooltip: String,
+  icon: Vec<u8>,
+  callback: u32,
 }
 
 /// Global instance of sender for tray events.
@@ -131,36 +164,11 @@ fn handle_copy_data(
     let tray_message =
       unsafe { &*copy_data.lpData.cast::<ShellTrayMessage>() };
 
-    match NOTIFY_ICON_MESSAGE(tray_message.message_type) {
-      NIM_ADD | NIM_MODIFY => {
-        let window =
-          NativeWindow::new(tray_message.icon_data.hWnd.0 as isize);
-        let process_name = window.process_name().unwrap_or_default();
+    let event_tx =
+      TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-        tracing::info!(
-          "Add/Modify data - hwnd: {:#x}, process: {}, tooltip: {}, message: {}",
-          tray_message.icon_data.hWnd.0 as isize,
-          process_name,
-          String::from_utf16_lossy(&tray_message.icon_data.szTip),
-          tray_message.message_type
-        );
-      }
-      NIM_DELETE => {
-        tracing::info!(
-          "Delete data - hwnd: {:#x}",
-          tray_message.icon_data.hWnd.0 as isize
-        );
-      }
-      NIM_SETVERSION => {
-        tracing::info!(
-          "Set version - hwnd: {:#x}, version: {}",
-          tray_message.icon_data.hWnd.0 as isize,
-          tray_message.version
-        );
-      }
-      _ => {
-        tracing::info!("Other message: {:#x}", tray_message.message_type);
-      }
+    if let Some(event) = tray_message.to_tray_event() {
+      event_tx.send(event).expect("Failed to send tray event.");
     }
   }
 
