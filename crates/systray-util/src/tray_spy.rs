@@ -1,5 +1,6 @@
 use std::{sync::OnceLock, thread::JoinHandle};
 
+use image::RgbaImage;
 use tokio::sync::mpsc;
 use windows::Win32::{
   Foundation::{HWND, LPARAM, LRESULT, WPARAM},
@@ -37,26 +38,29 @@ struct ShellTrayMessage {
 }
 
 impl ShellTrayMessage {
-  fn tray_event(&self) -> Option<TrayEvent> {
-    match NOTIFY_ICON_MESSAGE(self.message_type) {
-      NIM_ADD => Some(TrayEvent::IconAdd(self.icon_data())),
+  fn tray_event(&self) -> crate::Result<Option<TrayEvent>> {
+    let event = match NOTIFY_ICON_MESSAGE(self.message_type) {
+      NIM_ADD => Some(TrayEvent::IconAdd(self.icon_data()?)),
       NIM_MODIFY | NIM_SETVERSION => {
-        Some(TrayEvent::IconUpdate(self.icon_data()))
+        Some(TrayEvent::IconUpdate(self.icon_data()?))
       }
       NIM_DELETE => Some(TrayEvent::IconRemove(self.icon_data.uID)),
       _ => None,
-    }
+    };
+
+    Ok(event)
   }
 
-  fn icon_data(&self) -> IconData {
-    IconData {
+  fn icon_data(&self) -> crate::Result<IconData> {
+    let icon_data = IconData {
       uid: self.icon_data.uID,
       window_handle: self.icon_data.hWnd.0 as isize,
       tooltip: String::from_utf16_lossy(&self.icon_data.szTip),
-      // TODO: Convert icon to vector.
-      icon: vec![],
+      icon: Util::icon_to_image(self.icon_data.hIcon)?,
       callback: self.icon_data.uCallbackMessage,
-    }
+    };
+
+    Ok(icon_data)
   }
 }
 
@@ -73,7 +77,7 @@ pub(crate) struct IconData {
   pub uid: u32,
   pub window_handle: isize,
   pub tooltip: String,
-  pub icon: Vec<u8>,
+  pub icon: RgbaImage,
   pub callback: u32,
 }
 
@@ -202,7 +206,7 @@ impl TraySpy {
       let event_tx =
         TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-      if let Some(event) = tray_message.tray_event() {
+      if let Some(event) = tray_message.tray_event()? {
         event_tx.send(event).expect("Failed to send tray event.");
       }
     }

@@ -1,14 +1,23 @@
-use std::{os::windows::io::AsRawHandle, thread::JoinHandle};
+use std::{
+  mem::MaybeUninit, os::windows::io::AsRawHandle, thread::JoinHandle,
+};
 
+use image::RgbaImage;
 use windows::Win32::{
   Foundation::{BOOL, HANDLE, HWND, LPARAM, WPARAM},
+  Graphics::Gdi::{
+    DeleteObject, GetBitmapBits, GetDC, GetDIBits, GetObjectW, ReleaseDC,
+    BITMAP, BITMAPINFO, BITMAPINFOHEADER, DIB_RGB_COLORS, HBITMAP,
+    HGDIOBJ,
+  },
   System::Threading::GetThreadId,
   UI::WindowsAndMessaging::{
     CreateWindowExW, DispatchMessageW, EnumWindows, FindWindowExW,
-    FindWindowW, GetClassNameW, GetMessageW, PostThreadMessageW,
-    RegisterClassW, TranslateMessage, CS_HREDRAW, CS_VREDRAW,
-    CW_USEDEFAULT, MSG, WINDOW_EX_STYLE, WM_QUIT, WNDCLASSW, WNDPROC,
-    WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW,
+    FindWindowW, GetClassNameW, GetIconInfo, GetMessageW,
+    PostThreadMessageW, RegisterClassW, TranslateMessage, CS_HREDRAW,
+    CS_VREDRAW, CW_USEDEFAULT, HICON, ICONINFO, MSG, WINDOW_EX_STYLE,
+    WM_QUIT, WNDCLASSW, WNDPROC, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
+    WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW,
   },
 };
 use windows_core::{w, PCWSTR, PWSTR};
@@ -102,6 +111,90 @@ impl Util {
   /// Converts a string to a wide string.
   pub fn to_wide(string: &str) -> Vec<u16> {
     string.encode_utf16().chain(std::iter::once(0)).collect()
+  }
+
+  /// Converts a Windows icon to a sendable image.
+  pub fn icon_to_image(icon: HICON) -> crate::Result<RgbaImage> {
+    let mut icon_info = ICONINFO::default();
+    unsafe { GetIconInfo(icon, &mut icon_info) }?;
+    unsafe { DeleteObject(icon_info.hbmMask) }.ok()?;
+
+    let mut bitmap = BITMAP::default();
+    let bitmap_res = unsafe {
+      GetObjectW(
+        icon_info.hbmColor,
+        std::mem::size_of::<BITMAP>() as i32,
+        Some(&mut bitmap as *mut _ as _),
+      )
+    };
+
+    if bitmap_res == 0 {
+      unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
+      return Err(windows::core::Error::from_win32().into());
+    }
+
+    let width_u32 = u32::try_from(bitmap.bmWidth)?;
+    let height_u32 = u32::try_from(bitmap.bmHeight)?;
+    let width_usize = usize::try_from(bitmap.bmWidth)?;
+    let height_usize = usize::try_from(bitmap.bmHeight)?;
+
+    let mut buffer: Vec<u8> = Vec::with_capacity(
+      width_usize
+        .checked_mul(height_usize)
+        .and_then(|size| size.checked_mul(4))
+        .unwrap(),
+    );
+
+    let dc = unsafe { GetDC(None) };
+    if dc.is_invalid() {
+      unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
+      return Err(windows::core::Error::from_win32().into());
+    }
+
+    let bi = BITMAPINFO {
+      bmiHeader: BITMAPINFOHEADER {
+        biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+        biWidth: bitmap.bmWidth,
+        biHeight: -bitmap.bmHeight.abs(),
+        biPlanes: 1,
+        biBitCount: 32,
+        ..Default::default()
+      },
+      ..Default::default()
+    };
+
+    let result = unsafe {
+      GetDIBits(
+        dc,
+        icon_info.hbmColor,
+        0,
+        height_u32,
+        Some(&mut buffer as *mut _ as *mut _),
+        &bi as *const _ as *mut _,
+        DIB_RGB_COLORS,
+      )
+    };
+
+    if result == 0 {
+      unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
+      unsafe { ReleaseDC(None, dc) };
+      return Err(windows::core::Error::from_win32().into());
+    }
+
+    unsafe { buffer.set_len(buffer.capacity()) };
+    unsafe { ReleaseDC(None, dc) };
+    unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
+
+    // Convert BGR to RGB. The red and blue channels get swapped.
+    for chunk in buffer.chunks_exact_mut(4) {
+      let [blue, _, red, _] = chunk else {
+        unreachable!()
+      };
+
+      std::mem::swap(blue, red);
+    }
+
+    Ok(RgbaImage::from_vec(width_u32, height_u32, buffer).unwrap())
   }
 
   /// Finds the Windows tray window, optionally ignoring a specific window

@@ -16,6 +16,9 @@ pub enum Error {
 
   #[error("Invalid `COPYDATASTRUCT`.")]
   CopyDataInvalid,
+
+  #[error("Cast error")]
+  CastError(#[from] std::num::TryFromIntError),
 }
 
 impl Serialize for Error {
