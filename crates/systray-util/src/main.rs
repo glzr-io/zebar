@@ -1,7 +1,9 @@
-use systray_util::run;
+use systray_util::Systray;
 
 fn main() -> systray_util::Result<()> {
   tracing_subscriber::fmt().init();
 
-  run()
+  let systray = Systray::new()?;
+
+  Ok(())
 }

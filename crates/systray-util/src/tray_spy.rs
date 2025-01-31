@@ -99,7 +99,7 @@ pub(crate) enum TrayEvent {
 }
 
 #[derive(Debug)]
-pub(crate) struct IconData {
+pub struct IconData {
   pub uid: u32,
   pub window_handle: isize,
   pub tooltip: String,
