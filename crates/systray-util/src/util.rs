@@ -5,7 +5,7 @@ use std::{
 
 use image::RgbaImage;
 use windows::Win32::{
-  Foundation::{BOOL, HANDLE, HWND, LPARAM, WPARAM},
+  Foundation::{BOOL, HANDLE, HWND, LPARAM, POINT, WPARAM},
   Graphics::Gdi::{
     DeleteObject, GetBitmapBits, GetDC, GetDIBits, GetObjectW, ReleaseDC,
     BITMAP, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP,
@@ -14,7 +14,7 @@ use windows::Win32::{
   System::Threading::GetThreadId,
   UI::WindowsAndMessaging::{
     CreateWindowExW, DispatchMessageW, EnumWindows, FindWindowExW,
-    FindWindowW, GetClassNameW, GetIconInfo, GetMessageW,
+    FindWindowW, GetClassNameW, GetCursorPos, GetIconInfo, GetMessageW,
     PostThreadMessageW, RegisterClassW, TranslateMessage, CS_HREDRAW,
     CS_VREDRAW, CW_USEDEFAULT, HICON, ICONINFO, MSG, WINDOW_EX_STYLE,
     WM_QUIT, WNDCLASSW, WNDPROC, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
@@ -116,8 +116,15 @@ impl Util {
 
   /// Creates an `LPARAM` from low-order and high-order words. This is
   /// equivalent to the Win32 `MAKELPARAM` macro.
-  pub fn make_lparam(low: u16, high: u16) -> u32 {
-    low as u32 | ((high as u32) << 16)
+  pub fn make_lparam(low: i16, high: i16) -> i32 {
+    low as i32 | ((high as i32) << 16)
+  }
+
+  /// Gets the mouse position in screen coordinates.
+  pub fn cursor_position() -> crate::Result<(i32, i32)> {
+    let mut point = POINT { x: 0, y: 0 };
+    unsafe { GetCursorPos(&mut point) }?;
+    Ok((point.x, point.y))
   }
 
   /// Converts a Windows icon to a sendable image.
