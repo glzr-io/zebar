@@ -1,4 +1,4 @@
-use systray_util::Systray;
+use systray_util::{IconEvent, Systray};
 
 fn main() -> systray_util::Result<()> {
   tracing_subscriber::fmt().init();
@@ -10,7 +10,8 @@ fn main() -> systray_util::Result<()> {
     println!("{} Event: {:?}", index, event);
     index += 1;
 
-    if index == 25 {
+    // Every 25 events, send a test event.
+    if index % 25 == 0 {
       println!("================================================");
       println!("================================================");
       println!("================================================");
@@ -45,10 +46,10 @@ fn main() -> systray_util::Result<()> {
       println!("================================================");
       println!("================================================");
       println!("================================================");
-      println!("Sending left click");
-      let uid = systray.icons.values().next().unwrap();
-      println!("Icon: {:?}", uid);
-      systray.send_left_click(uid.uid)?;
+      println!("Sending right click");
+      let icon = systray.icons.values().nth(index / 25).unwrap();
+      println!("Icon: {:?}", icon);
+      systray.send_icon_event(icon.uid, IconEvent::RightClick)?;
     }
   }
 

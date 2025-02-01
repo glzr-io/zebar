@@ -3,8 +3,13 @@ use std::collections::HashMap;
 use windows::Win32::{
   Foundation::{HWND, LPARAM, WPARAM},
   UI::{
-    Shell::NIN_SELECT,
-    WindowsAndMessaging::{IsWindow, SendNotifyMessageW, WM_LBUTTONUP},
+    Controls::{WM_MOUSEHOVER, WM_MOUSELEAVE},
+    Shell::{NIN_POPUPCLOSE, NIN_POPUPOPEN, NIN_SELECT},
+    WindowsAndMessaging::{
+      IsWindow, SendNotifyMessageW, WM_CONTEXTMENU, WM_LBUTTONDOWN,
+      WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE,
+      WM_RBUTTONDOWN, WM_RBUTTONUP,
+    },
   },
 };
 
@@ -66,29 +71,58 @@ impl Systray {
     }
   }
 
-  pub fn send_left_click(&mut self, icon_uid: u32) -> crate::Result<()> {
+  pub fn send_icon_event(
+    &mut self,
+    icon_uid: u32,
+    event: IconEvent,
+  ) -> crate::Result<()> {
     let icon = self
       .icons
       .get(&icon_uid)
       .ok_or(crate::Error::IconNotFound)?;
 
+    // Checks whether the window associated with the given handle still
+    // exists. If the window is invalid, removes the corresponding icon
+    // from the collection.
     if !unsafe { IsWindow(HWND(icon.window_handle as _)) }.as_bool() {
       self.icons.remove(&icon_uid);
       return Ok(());
     }
 
-    self.send_icon_message(icon, WM_LBUTTONUP);
+    let wm_messages = match event {
+      IconEvent::LeftClick => vec![WM_LBUTTONDOWN, WM_LBUTTONUP],
+      IconEvent::RightClick => vec![WM_RBUTTONDOWN, WM_RBUTTONUP],
+      IconEvent::MiddleClick => {
+        vec![WM_MBUTTONDOWN, WM_MBUTTONUP, WM_CONTEXTMENU]
+      }
+      IconEvent::HoverEnter => vec![WM_MOUSEHOVER],
+      IconEvent::HoverLeave => vec![WM_MOUSELEAVE],
+      IconEvent::HoverMove => vec![WM_MOUSEMOVE],
+    };
+
+    // TODO: Allow icon hwnd to gain focus for left/right/middle clicks.
+
+    for wm_message in wm_messages {
+      self.notify_icon(icon, wm_message)?;
+    }
 
     // This is documented as version 4, but Explorer does this for version
     // 3 as well
     if icon.version >= 3 {
-      self.send_icon_message(icon, NIN_SELECT);
+      let nin_message = match event {
+        IconEvent::HoverEnter => NIN_POPUPOPEN,
+        IconEvent::HoverLeave => NIN_POPUPCLOSE,
+        IconEvent::LeftClick => NIN_SELECT,
+        _ => return Ok(()),
+      };
+
+      self.notify_icon(icon, nin_message)?;
     }
 
     Ok(())
   }
 
-  fn send_icon_message(
+  fn notify_icon(
     &self,
     icon: &IconData,
     message: u32,
@@ -121,19 +155,5 @@ impl Systray {
     }?;
 
     Ok(())
-  }
-
-  /// Checks whether the window associated with the given handle still
-  /// exists. If the window is invalid, removes the corresponding icon
-  /// from the collection.
-  ///
-  /// Returns `true` if the icon was removed, `false` otherwise.
-  fn remove_if_invalid(&mut self, icon: &IconData) -> bool {
-    if unsafe { IsWindow(HWND(icon.window_handle as _)) }.as_bool() {
-      return false;
-    }
-
-    self.icons.remove(&icon.uid);
-    return true;
   }
 }
