@@ -22,6 +22,9 @@ pub enum Error {
 
   #[error("Icon conversion failed.")]
   IconConversionFailed,
+
+  #[error("Icon not found.")]
+  IconNotFound,
 }
 
 impl Serialize for Error {

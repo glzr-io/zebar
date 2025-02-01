@@ -85,6 +85,7 @@ impl ShellTrayMessage {
       tooltip: String::from_utf16_lossy(&self.icon_data.szTip),
       icon: Util::icon_to_image(self.icon_data.hIcon)?,
       callback: self.icon_data.uCallbackMessage,
+      version: self.version,
     };
 
     Ok(icon_data)
@@ -93,7 +94,7 @@ impl ShellTrayMessage {
 
 /// Events emitted by the spy window.
 #[derive(Debug)]
-pub(crate) enum TrayEvent {
+pub enum TrayEvent {
   IconAdd(IconData),
   IconUpdate(IconData),
   IconRemove(u32),
@@ -106,6 +107,7 @@ pub struct IconData {
   pub tooltip: String,
   pub icon: RgbaImage,
   pub callback: u32,
+  pub version: u32,
 }
 
 /// A window that spies on system tray icon messages and broadcasts events.

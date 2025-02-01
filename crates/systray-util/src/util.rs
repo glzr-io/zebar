@@ -114,6 +114,12 @@ impl Util {
     string.encode_utf16().chain(std::iter::once(0)).collect()
   }
 
+  /// Creates an `LPARAM` from low-order and high-order words. This is
+  /// equivalent to the Win32 `MAKELPARAM` macro.
+  pub fn make_lparam(low: u16, high: u16) -> u32 {
+    low as u32 | ((high as u32) << 16)
+  }
+
   /// Converts a Windows icon to a sendable image.
   pub fn icon_to_image(icon: u32) -> crate::Result<RgbaImage> {
     let mut icon_info = ICONINFO::default();
