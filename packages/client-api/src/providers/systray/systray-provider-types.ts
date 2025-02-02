@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
 import type { Provider } from '../create-base-provider';
 
 export interface SystrayProviderConfig {
@@ -11,35 +10,17 @@ export type SystrayProvider = Provider<
 >;
 
 export interface SystrayOutput {
-//   icons: SystrayIcon[];
-  icons: TempSystrayIcon[];
+  icons: SystrayIcon[];
+  onHoverEnter: (iconId: string) => Promise<void>;
+  onHoverLeave: (iconId: string) => Promise<void>;
+  onHoverMove: (iconId: string) => Promise<void>;
+  onRightClick: (iconId: string) => Promise<void>;
+  onLeftClick: (iconId: string) => Promise<void>;
+  onMiddleClick: (iconId: string) => Promise<void>;
 }
 
 export interface SystrayIcon {
   id: string;
-  icon: string;
-  title: string;
-  onRightClick: () => Promise<void>;
-  onLeftClick: () => Promise<void>;
-}
-
-// TODO - this is for testing
-export class TempSystrayIcon implements SystrayIcon {
-  id: string;
-  icon: string;
-  title: string;
-
-  constructor(id: string, icon: string, title: string) {
-    this.id = id;
-    this.icon = icon; 
-    this.title = title;
-  }
-
-  async onRightClick(): Promise<void> {
-    await invoke('systray_right_click', { iconId: this.id });
-  }
-
-  async onLeftClick(): Promise<void> {
-    await invoke('systray_left_click', { iconId: this.id });
-  }
+  icon: number[];
+  tooltip: string;
 }

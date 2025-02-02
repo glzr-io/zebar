@@ -6,7 +6,7 @@ fn main() -> systray_util::Result<()> {
   let mut systray = Systray::new()?;
 
   let mut index = 0;
-  while let Some(event) = systray.changes() {
+  while let Some(event) = systray.events_blocking() {
     println!("{} Event: {:?}", index, event);
     index += 1;
 
@@ -47,7 +47,7 @@ fn main() -> systray_util::Result<()> {
       println!("================================================");
       println!("================================================");
       println!("Sending right click");
-      let icon = systray.icons.values().nth(index / 25).unwrap();
+      let icon = systray.icons().get(index / 25).cloned().unwrap();
       println!("Icon: {:?}", icon);
       systray.send_icon_event(icon.uid, IconEvent::RightClick)?;
     }

@@ -27,7 +27,7 @@ pub enum IconEvent {
 
 #[derive(Debug)]
 pub struct Systray {
-  pub icons: HashMap<u32, IconData>,
+  icons: HashMap<u32, IconData>,
   event_rx: tokio::sync::mpsc::UnboundedReceiver<TrayEvent>,
 }
 
@@ -41,34 +41,51 @@ impl Systray {
     })
   }
 
-  pub fn changes(&mut self) -> Option<TrayEvent> {
-    if let Some(event) = self.event_rx.blocking_recv() {
-      match &event {
-        TrayEvent::IconAdd(icon_data) => {
-          tracing::info!(
-            "New icon added: {} ({})",
-            icon_data.tooltip,
-            icon_data.uid
-          );
-          self.icons.insert(icon_data.uid, icon_data.clone());
-        }
-        TrayEvent::IconUpdate(icon_data) => {
-          tracing::info!(
-            "Icon modified: {} ({})",
-            icon_data.tooltip,
-            icon_data.uid
-          );
-          self.icons.insert(icon_data.uid, icon_data.clone());
-        }
-        TrayEvent::IconRemove(uid) => {
-          tracing::info!("Icon removed: {:#x}", uid);
-          self.icons.remove(uid);
-        }
-      }
-      Some(event)
+  pub fn icons(&self) -> Vec<IconData> {
+    self.icons.values().cloned().collect()
+  }
+
+  pub async fn events(&mut self) -> Option<TrayEvent> {
+    if let Some(event) = self.event_rx.recv().await {
+      self.on_event(event)
     } else {
       None
     }
+  }
+
+  pub fn events_blocking(&mut self) -> Option<TrayEvent> {
+    if let Some(event) = self.event_rx.blocking_recv() {
+      self.on_event(event)
+    } else {
+      None
+    }
+  }
+
+  fn on_event(&mut self, event: TrayEvent) -> Option<TrayEvent> {
+    match &event {
+      TrayEvent::IconAdd(icon_data) => {
+        tracing::info!(
+          "New icon added: {} ({})",
+          icon_data.tooltip,
+          icon_data.uid
+        );
+        self.icons.insert(icon_data.uid, icon_data.clone());
+      }
+      TrayEvent::IconUpdate(icon_data) => {
+        tracing::info!(
+          "Icon modified: {} ({})",
+          icon_data.tooltip,
+          icon_data.uid
+        );
+        self.icons.insert(icon_data.uid, icon_data.clone());
+      }
+      TrayEvent::IconRemove(uid) => {
+        tracing::info!("Icon removed: {:#x}", uid);
+        self.icons.remove(uid);
+      }
+    }
+
+    Some(event)
   }
 
   pub fn send_icon_event(

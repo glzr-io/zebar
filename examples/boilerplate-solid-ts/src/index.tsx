@@ -63,7 +63,7 @@ function App() {
           <img
             class="systray-icon"
             src={`data:image/png;base64,${icon.icon}`}
-            alt={icon.title || `System Tray Icon ${i + 1}`}
+            alt={icon.tooltip || `System Tray Icon ${i + 1}`}
             onClick={() => icon.onRightClick()}
             onError={e => {
               console.error(
@@ -77,5 +77,3 @@ function App() {
     </div>
   );
 }
-
-render(() => <App />, document.getElementById('root'));

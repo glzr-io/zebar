@@ -1,8 +1,6 @@
 use std::{io::Cursor, sync::OnceLock, thread::JoinHandle};
 
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 use image::RgbaImage;
-use serde::Serialize;
 use tokio::sync::mpsc;
 use windows::Win32::{
   Foundation::{HWND, LPARAM, LRESULT, WPARAM},
@@ -112,15 +110,16 @@ pub struct IconData {
 }
 
 impl IconData {
-  pub fn to_base64_png(&self) -> crate::Result<String> {
+  /// Converts the icon to a PNG byte vector.
+  pub fn to_png(&self) -> crate::Result<Vec<u8>> {
     let mut png_bytes: Vec<u8> = Vec::new();
 
-    // Convert RgbaImage to PNG
-    let _ = self
+    self
       .icon
-      .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png);
+      .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
+      .map_err(|_| crate::Error::IconConversionFailed)?;
 
-    Ok(BASE64_STANDARD.encode(png_bytes))
+    Ok(png_bytes)
   }
 }
 

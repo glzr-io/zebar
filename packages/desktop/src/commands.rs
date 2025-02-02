@@ -1,10 +1,5 @@
-use std::{
-  collections::HashMap,
-  path::PathBuf,
-  sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
-use systray_util::{IconEvent, Systray};
 use tauri::{State, Window};
 
 #[cfg(target_os = "macos")]
@@ -202,19 +197,4 @@ pub async fn shell_kill(
   shell_state: State<'_, ShellState>,
 ) -> anyhow::Result<(), String> {
   shell_state.kill(pid).map_err(|err| err.to_string())
-}
-
-#[tauri::command]
-pub async fn handle_right_click(
-  icon_id: String,
-  systray: State<'_, Mutex<Systray>>,
-) -> anyhow::Result<(), String> {
-  println!("right click for icon {}", icon_id);
-  let mut systray = systray.lock().map_err(|e| e.to_string())?;
-  systray
-    .send_icon_event(
-      icon_id.parse::<u32>().map_err(|e| e.to_string())?,
-      IconEvent::RightClick,
-    )
-    .map_err(|e| e.to_string())
 }

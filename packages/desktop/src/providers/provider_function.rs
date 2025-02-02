@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum ProviderFunction {
   Audio(AudioFunction),
   Media(MediaFunction),
+  Systray(SystrayFunction),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +33,22 @@ pub enum MediaFunction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MediaControlArgs {
   pub session_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "name", content = "args", rename_all = "snake_case")]
+pub enum SystrayFunction {
+  IconHoverEnter(SystrayIconArgs),
+  IconHoverLeave(SystrayIconArgs),
+  IconHoverMove(SystrayIconArgs),
+  IconLeftClick(SystrayIconArgs),
+  IconRightClick(SystrayIconArgs),
+  IconMiddleClick(SystrayIconArgs),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystrayIconArgs {
+  pub icon_id: u32,
 }
 
 pub type ProviderFunctionResult = Result<ProviderFunctionResponse, String>;

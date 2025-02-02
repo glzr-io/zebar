@@ -83,7 +83,6 @@ async fn main() -> anyhow::Result<()> {
       })
     })
     .invoke_handler(tauri::generate_handler![
-      commands::handle_right_click,
       commands::widget_configs,
       commands::widget_states,
       commands::start_widget,
