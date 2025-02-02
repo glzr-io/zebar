@@ -12,7 +12,7 @@ use tracing::info;
 #[cfg(windows)]
 use super::{
   audio::AudioProvider, keyboard::KeyboardProvider,
-  komorebi::KomorebiProvider, media::MediaProvider,
+  komorebi::KomorebiProvider, media::MediaProvider, systray::SystrayProvider,
 };
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
@@ -312,6 +312,11 @@ impl ProviderManager {
           #[cfg(windows)]
           ProviderConfig::Keyboard(config) => {
             let mut provider = KeyboardProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Systray(config) => {
+            let mut provider = SystrayProvider::new(config, common);
             provider.start_sync();
           }
           _ => unreachable!(),

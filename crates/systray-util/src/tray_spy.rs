@@ -1,5 +1,6 @@
-use std::{sync::OnceLock, thread::JoinHandle};
+use std::{io::Cursor, sync::OnceLock, thread::JoinHandle};
 
+use base64::{prelude::BASE64_STANDARD, Engine as _};
 use image::RgbaImage;
 use serde::Serialize;
 use tokio::sync::mpsc;
@@ -108,6 +109,19 @@ pub struct IconData {
   pub icon: RgbaImage,
   pub callback: u32,
   pub version: u32,
+}
+
+impl IconData {
+  pub fn to_base64_png(&self) -> crate::Result<String> {
+    let mut png_bytes: Vec<u8> = Vec::new();
+
+    // Convert RgbaImage to PNG
+    let _ = self
+      .icon
+      .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png);
+
+    Ok(BASE64_STANDARD.encode(png_bytes))
+  }
 }
 
 /// A window that spies on system tray icon messages and broadcasts events.

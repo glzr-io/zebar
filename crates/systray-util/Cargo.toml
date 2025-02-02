@@ -15,6 +15,7 @@ name = "systray-util"
 path = "src/main.rs"
 
 [dependencies]
+base64 = "0.22"
 image = { version = "0.25", features = ["serde"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

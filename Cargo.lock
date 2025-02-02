@@ -5732,6 +5732,7 @@ dependencies = [
 name = "systray-util"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
  "image",
  "serde",
  "serde_json",

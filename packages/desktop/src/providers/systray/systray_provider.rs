@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use systray_util::Systray;
+use systray_util::{IconData, Systray};
 
 use crate::providers::{
   CommonProviderState, Provider, ProviderInputMsg, RuntimeType,
@@ -21,6 +21,19 @@ pub struct SystrayIcon {
   pub id: String,
   pub title: String,
   pub icon: String,
+}
+
+impl From<IconData> for SystrayIcon {
+  fn from(icon: IconData) -> Self {
+    SystrayIcon {
+      id: icon.uid.to_string(),
+      // TODO: Use something else for title
+      title: icon.tooltip.clone(),
+      icon: icon
+        .to_base64_png()
+        .expect("Error converting systray icon to base64."),
+    }
+  }
 }
 
 pub struct SystrayProvider {
@@ -49,7 +62,11 @@ impl Provider for SystrayProvider {
     while let Some(event) = systray.changes() {
       self.common.emitter.emit_output(Ok(SystrayOutput {
         // TODO: Convert IconData to SystrayIcon.
-        icons: systray.icons.values().cloned().collect(),
+        icons: systray
+          .icons
+          .values()
+          .map(|icon| icon.clone().into())
+          .collect(),
       }));
     }
   }
