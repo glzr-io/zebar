@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use systray_util::{IconData, Systray};
+use systray_util::{IconData, IconEvent, Systray};
 
 use crate::providers::{
   CommonProviderState, Provider, ProviderFunction,
@@ -51,24 +51,37 @@ impl SystrayProvider {
   }
 
   fn handle_function(
-    &mut self,
+    systray: &mut Systray,
     function: SystrayFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
-    todo!()
-    // match &function {
-    //   SystrayFunction::IconHoverEnter(args) => {
-    //     self.handle_icon_hover_enter(args)
-    //   }
-    //   SystrayFunction::IconHoverLeave(args) => {
-    //     self.handle_icon_hover_leave(args)
-    //   }
-    //   SystrayFunction::IconHoverMove(args) => {
-    //     self.handle_icon_hover_move(args)
-    //   }
-    //   SystrayFunction::IconLeftClick(args) => todo!(),
-    //   SystrayFunction::IconRightClick(args) => todo!(),
-    //   SystrayFunction::IconMiddleClick(args) => todo!(),
-    // }
+    match &function {
+      SystrayFunction::IconHoverEnter(args) => systray.send_icon_event(
+        args.icon_id.parse::<u32>()?,
+        IconEvent::HoverEnter,
+      ),
+      SystrayFunction::IconHoverLeave(args) => systray.send_icon_event(
+        args.icon_id.parse::<u32>()?,
+        IconEvent::HoverLeave,
+      ),
+      SystrayFunction::IconHoverMove(args) => systray.send_icon_event(
+        args.icon_id.parse::<u32>()?,
+        IconEvent::HoverMove,
+      ),
+      SystrayFunction::IconLeftClick(args) => systray.send_icon_event(
+        args.icon_id.parse::<u32>()?,
+        IconEvent::LeftClick,
+      ),
+      SystrayFunction::IconRightClick(args) => systray.send_icon_event(
+        args.icon_id.parse::<u32>()?,
+        IconEvent::RightClick,
+      ),
+      SystrayFunction::IconMiddleClick(args) => systray.send_icon_event(
+        args.icon_id.parse::<u32>()?,
+        IconEvent::MiddleClick,
+      ),
+    }?;
+
+    Ok(ProviderFunctionResponse::Null)
   }
 }
 
@@ -107,7 +120,7 @@ impl Provider for SystrayProvider {
               ProviderFunction::Systray(systray_function),
               sender,
             ) => {
-              let res = self.handle_function(systray_function).map_err(|err| err.to_string());
+              let res = Self::handle_function(&mut systray, systray_function).map_err(|err| err.to_string());
               sender.send(res).unwrap();
             }
             _ => {}

@@ -229,8 +229,6 @@ impl TraySpy {
     wparam: WPARAM,
     lparam: LPARAM,
   ) -> crate::Result<()> {
-    tracing::info!("Incoming `WM_COPYDATA` message.");
-
     // Extract `COPYDATASTRUCT` and return early if invalid.
     let copy_data =
       (unsafe { (lparam.0 as *const COPYDATASTRUCT).as_ref() })

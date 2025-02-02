@@ -31,6 +31,7 @@ pub enum MediaFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MediaControlArgs {
   pub session_id: Option<String>,
 }
@@ -47,8 +48,9 @@ pub enum SystrayFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystrayIconArgs {
-  pub icon_id: u32,
+  pub icon_id: String,
 }
 
 pub type ProviderFunctionResult = Result<ProviderFunctionResponse, String>;

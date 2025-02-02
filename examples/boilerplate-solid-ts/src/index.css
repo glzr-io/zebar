@@ -22,3 +22,9 @@ body,
   background: rgb(84, 66, 220);
   margin-right: 4px;
 }
+
+.systray-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
