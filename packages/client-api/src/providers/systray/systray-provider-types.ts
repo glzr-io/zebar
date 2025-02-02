@@ -21,6 +21,8 @@ export interface SystrayOutput {
 
 export interface SystrayIcon {
   id: string;
-  icon: number[];
+  iconBytes: number[];
+  iconBlob: Blob;
+  iconUrl: string;
   tooltip: string;
 }

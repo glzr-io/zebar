@@ -26,7 +26,17 @@ export function createSystrayProvider(
         } else {
           queue.output({
             ...result.output,
-            icons: result.output.icons,
+            icons: result.output.icons.map(icon => {
+              const iconBlob = new Blob([new Uint8Array(icon.iconBytes)], {
+                type: 'image/png',
+              });
+
+              return {
+                ...icon,
+                iconBlob,
+                iconUrl: URL.createObjectURL(iconBlob),
+              };
+            }),
             onHoverEnter: (iconId: string) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'systray',

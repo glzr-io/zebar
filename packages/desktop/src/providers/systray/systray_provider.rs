@@ -22,7 +22,7 @@ pub struct SystrayOutput {
 pub struct SystrayIcon {
   pub id: String,
   pub tooltip: String,
-  pub icon: Vec<u8>,
+  pub icon_bytes: Vec<u8>,
 }
 
 impl TryFrom<IconData> for SystrayIcon {
@@ -32,7 +32,7 @@ impl TryFrom<IconData> for SystrayIcon {
     Ok(SystrayIcon {
       id: icon.uid.to_string(),
       tooltip: icon.tooltip.clone(),
-      icon: icon.to_png()?,
+      icon_bytes: icon.to_png()?,
     })
   }
 }

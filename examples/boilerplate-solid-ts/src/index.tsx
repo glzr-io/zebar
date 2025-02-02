@@ -33,7 +33,7 @@ function App() {
             max="100"
             step="2"
             value={output.audio.defaultPlaybackDevice.volume}
-            onChange={e => output.audio?.setVolume(e.target.valueAsNumber)}
+            onChange={e => output.audio.setVolume(e.target.valueAsNumber)}
           />
         </div>
       )}
@@ -58,22 +58,21 @@ function App() {
       {output.weather && (
         <div class="chip">Weather temp: {output.weather.celsiusTemp}</div>
       )}
-      <div class="chip">
-        {output.systray?.icons.map((icon, i) => (
-          <img
-            class="systray-icon"
-            src={`data:image/png;base64,${icon.icon}`}
-            alt={icon.tooltip || `System Tray Icon ${i + 1}`}
-            onClick={() => icon.onRightClick()}
-            onError={e => {
-              console.error(
-                `Failed to load icon ${icon.id}:`,
-                icon.icon.substring(0, 100),
-              );
-            }}
-          />
-        ))}
-      </div>
+      {output.systray && (
+        <div class="chip">
+          {output.systray.icons.map(icon => (
+            <img
+              class="systray-icon"
+              src={icon.iconUrl}
+              onClick={() => output.systray.onLeftClick(icon.id)}
+              onContextMenu={() => output.systray.onRightClick(icon.id)}
+              onMouseEnter={() => output.systray.onHoverEnter(icon.id)}
+              onMouseLeave={() => output.systray.onHoverLeave(icon.id)}
+              onMouseMove={() => output.systray.onHoverMove(icon.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
