@@ -63,6 +63,18 @@ pub struct NOTIFYICONDATAW {
   pub hBalloonIcon: HICON,
 }
 
+#[repr(C)]
+#[derive(Debug)]
+struct WINNOTIFYICONIDENTIFIER {
+  dwMagic: i32,
+  dwMessage: i32,
+  cbSize: i32,
+  dwPadding: i32,
+  hWnd: u32,
+  uID: u32,
+  guidItem: windows_core::GUID,
+}
+
 impl ShellTrayMessage {
   fn tray_event(&self) -> crate::Result<Option<TrayEvent>> {
     let event = match NOTIFY_ICON_MESSAGE(self.message_type) {
@@ -183,75 +195,75 @@ impl TraySpy {
     wparam: WPARAM,
     lparam: LPARAM,
   ) -> LRESULT {
-    // Regain tray priority.
-    if msg == WM_TIMER {
-      let _ = unsafe {
-        SetWindowPos(
-          hwnd,
-          HWND_TOPMOST,
-          0,
-          0,
-          0,
-          0,
-          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-        )
-      };
+    match msg {
+      WM_TIMER => {
+        // Regain tray priority.
+        let _ = unsafe {
+          SetWindowPos(
+            hwnd,
+            HWND_TOPMOST,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+          )
+        };
 
-      return LRESULT(0);
-    }
-
-    tracing::info!("msg: {:#x} {}", msg, msg);
-
-    if msg == WM_COPYDATA {
-      if let Err(err) = Self::handle_copy_data(hwnd, wparam, lparam) {
-        tracing::warn!(
-          "Failed to handle `WM_COPYDATA` message: {:?}",
-          err
-        );
+        LRESULT(0)
       }
-    }
-
-    if Self::should_forward_message(msg) {
-      Self::forward_message(hwnd, msg, wparam, lparam)
-      // if let Err(err) = forward_message(hwnd, msg, wparam, lparam) {
-      //   tracing::warn!(
-      //     "Failed to forward message to tray window: {:?}",
-      //     err
-      //   );
-      // }
-    } else {
-      unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+      WM_COPYDATA => Self::handle_copy_data(hwnd, msg, wparam, lparam),
+      _ => {
+        if Self::should_forward_message(msg) {
+          Self::forward_message(hwnd, msg, wparam, lparam)
+        } else {
+          unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+        }
+      }
     }
   }
 
   fn handle_copy_data(
     hwnd: HWND,
+    msg: u32,
     wparam: WPARAM,
     lparam: LPARAM,
-  ) -> crate::Result<()> {
+  ) -> LRESULT {
     // Extract `COPYDATASTRUCT` and return early if invalid.
-    let copy_data =
+    let Some(copy_data) =
       (unsafe { (lparam.0 as *const COPYDATASTRUCT).as_ref() })
-        .ok_or(crate::Error::CopyDataInvalid)?;
+    else {
+      return LRESULT(0);
+    };
 
     tracing::info!("COPYDATASTRUCT: {:?}", copy_data);
 
-    // Process tray data if valid.
-    if copy_data.dwData == 1 && !copy_data.lpData.is_null() {
-      tracing::info!("Processing tray data.");
+    match copy_data.dwData {
+      1 if !copy_data.lpData.is_null() => {
+        let tray_message =
+          unsafe { &*copy_data.lpData.cast::<ShellTrayMessage>() };
 
-      let tray_message =
-        unsafe { &*copy_data.lpData.cast::<ShellTrayMessage>() };
+        tracing::info!("Processing tray data.");
 
-      let event_tx =
-        TRAY_EVENT_TX.get().expect("Tray event sender not set.");
+        let event_tx =
+          TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-      if let Some(event) = tray_message.tray_event()? {
-        event_tx.send(event).expect("Failed to send tray event.");
+        if let Some(event) = tray_message.tray_event().unwrap() {
+          event_tx.send(event).expect("Failed to send tray event.");
+        }
+
+        Self::forward_message(hwnd, msg, wparam, lparam)
       }
-    }
+      3 if !copy_data.lpData.is_null() => {
+        let icon_identifier =
+          unsafe { &*copy_data.lpData.cast::<WINNOTIFYICONIDENTIFIER>() };
 
-    Ok(())
+        tracing::info!("icon identifier {:?}", icon_identifier);
+
+        LRESULT(0)
+      }
+      _ => Self::forward_message(hwnd, msg, wparam, lparam),
+    }
   }
 
   /// Refreshes the icons of the tray.
@@ -297,12 +309,12 @@ impl TraySpy {
       msg
     );
 
-    let Some(real_tray) = Util::tray_window_2(hwnd.0 as isize) else {
+    let Some(real_tray) = Util::tray_window(hwnd.0 as isize) else {
       tracing::warn!("No real tray found.");
-      return LRESULT(0);
+      return unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) };
     };
 
-    if msg > WM_USER || msg == WM_COPYDATA {
+    if msg > WM_USER {
       unsafe { PostMessageW(HWND(real_tray as _), msg, wparam, lparam) };
       unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
     } else {
