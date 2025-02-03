@@ -17,7 +17,7 @@ use windows::Win32::{
   },
 };
 
-use crate::{TrayEvent, TraySpy};
+use crate::{TrayEvent, TraySpy, Util};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IconEvent {
@@ -29,7 +29,7 @@ pub enum IconEvent {
   MiddleClick,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum StableId {
   HandleUid(isize, u32),
   Guid(uuid::Uuid),
@@ -50,29 +50,32 @@ pub struct SystrayIcon {
   pub uid: Option<u32>,
   pub window_handle: Option<isize>,
   pub guid: Option<uuid::Uuid>,
-  pub tooltip: String,
-  pub icon: image::RgbaImage,
-  pub callback: u32,
-  pub version: u32,
+  pub tooltip: Option<String>,
+  pub icon: Option<image::RgbaImage>,
+  pub callback: Option<u32>,
+  pub version: Option<u32>,
 }
 
 impl SystrayIcon {
   /// Converts the icon to a PNG byte vector.
-  pub fn to_png(&self) -> crate::Result<Vec<u8>> {
+  pub fn to_png(&self) -> crate::Result<Option<Vec<u8>>> {
+    let Some(icon) = &self.icon else {
+      return Ok(None);
+    };
+
     let mut png_bytes: Vec<u8> = Vec::new();
 
-    self
-      .icon
+    icon
       .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
       .map_err(|_| crate::Error::IconConversionFailed)?;
 
-    Ok(png_bytes)
+    Ok(Some(png_bytes))
   }
 }
 
 #[derive(Debug)]
 pub struct Systray {
-  icons: HashMap<u32, SystrayIcon>,
+  icons: HashMap<StableId, SystrayIcon>,
   event_rx: tokio::sync::mpsc::UnboundedReceiver<TrayEvent>,
 }
 
@@ -127,23 +130,23 @@ impl Systray {
 
   pub fn send_icon_event(
     &mut self,
-    icon_uid: u32,
+    icon_id: StableId,
     event: IconEvent,
   ) -> crate::Result<()> {
-    let icon = self
-      .icons
-      .get(&icon_uid)
-      .ok_or(crate::Error::IconNotFound)?;
+    let icon =
+      self.icons.get(&icon_id).ok_or(crate::Error::IconNotFound)?;
 
-    let Some(window_handle) = icon.window_handle else {
-      return Ok(());
-    };
+    // Early return if we don't have the required fields.
+    let window_handle =
+      icon.window_handle.ok_or(crate::Error::InoperableIcon)?;
+    let uid = icon.uid.ok_or(crate::Error::InoperableIcon)?;
+    let callback = icon.callback.ok_or(crate::Error::InoperableIcon)?;
 
     // Checks whether the window associated with the given handle still
     // exists. If the window is invalid, removes the corresponding icon
     // from the collection.
     if !unsafe { IsWindow(HWND(window_handle as _)) }.as_bool() {
-      return Ok(());
+      return Err(crate::Error::InoperableIcon);
     }
 
     let wm_messages = match event {
@@ -160,12 +163,18 @@ impl Systray {
     // TODO: Allow icon hwnd to gain focus for left/right/middle clicks.
 
     for wm_message in wm_messages {
-      self.notify_icon(icon, wm_message)?;
+      Self::notify_icon(
+        window_handle,
+        callback,
+        uid,
+        icon.version,
+        wm_message,
+      )?;
     }
 
     // This is documented as version 4, but Explorer does this for version
     // 3 as well
-    if icon.version >= 3 {
+    if icon.version.is_some_and(|version| version >= 3) {
       let nin_message = match event {
         IconEvent::HoverEnter => NIN_POPUPOPEN,
         IconEvent::HoverLeave => NIN_POPUPCLOSE,
@@ -173,43 +182,51 @@ impl Systray {
         _ => return Ok(()),
       };
 
-      self.notify_icon(icon, nin_message)?;
+      Self::notify_icon(
+        window_handle,
+        callback,
+        uid,
+        icon.version,
+        nin_message,
+      )?;
     }
 
     Ok(())
   }
 
   fn notify_icon(
-    &self,
-    icon: &SystrayIcon,
+    window_handle: isize,
+    callback: u32,
+    uid: u32,
+    version: Option<u32>,
     message: u32,
   ) -> crate::Result<()> {
-    // // The wparam is the mouse position for version > 3 (with the low
-    // and // high word being the x and y-coordinates respectively),
-    // and the UID // for version <= 3.
-    // let wparam = if icon.version > 3 {
-    //   let cursor_pos = Util::cursor_position()?;
-    //   Util::make_lparam(cursor_pos.0 as i16, cursor_pos.1 as i16) as u32
-    // } else {
-    //   icon.uid
-    // };
+    // The wparam is the mouse position for version > 3 (with the low and
+    // high word being the x and y-coordinates respectively), and the UID
+    // for version <= 3.
+    let wparam = if version.is_some_and(|version| version > 3) {
+      let cursor_pos = Util::cursor_position()?;
+      Util::make_lparam(cursor_pos.0 as i16, cursor_pos.1 as i16) as u32
+    } else {
+      uid
+    };
 
-    // // The high word for the lparam is the UID for version > 3, and 0
-    // for // version <= 3. The low word is always the message.
-    // let lparam = if icon.version > 3 {
-    //   Util::make_lparam(message as i16, 0)
-    // } else {
-    //   Util::make_lparam(message as i16, icon.uid as i16)
-    // };
+    // The high word for the lparam is the UID for version > 3, and 0 for
+    // version <= 3. The low word is always the message.
+    let lparam = if version.is_some_and(|version| version > 3) {
+      Util::make_lparam(message as i16, 0)
+    } else {
+      Util::make_lparam(message as i16, uid as i16)
+    };
 
-    // unsafe {
-    //   SendNotifyMessageW(
-    //     HWND(icon.window_handle as _),
-    //     icon.callback,
-    //     WPARAM(wparam as _),
-    //     LPARAM(lparam as _),
-    //   )
-    // }?;
+    unsafe {
+      SendNotifyMessageW(
+        HWND(window_handle as _),
+        callback,
+        WPARAM(wparam as _),
+        LPARAM(lparam as _),
+      )
+    }?;
 
     Ok(())
   }

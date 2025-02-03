@@ -25,6 +25,9 @@ pub enum Error {
 
   #[error("Icon not found.")]
   IconNotFound,
+
+  #[error("Unable to send event to icon.")]
+  InoperableIcon,
 }
 
 impl Serialize for Error {
