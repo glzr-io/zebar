@@ -1,4 +1,4 @@
-use std::{io::Cursor, sync::OnceLock, thread::JoinHandle};
+use std::{sync::OnceLock, thread::JoinHandle};
 
 use image::RgbaImage;
 use tokio::sync::mpsc;
@@ -13,7 +13,7 @@ use windows::Win32::{
     },
     WindowsAndMessaging::{
       DefWindowProcW, PostMessageW, RegisterWindowMessageW, SendMessageW,
-      SendNotifyMessageW, SetTimer, SetWindowPos, HICON, HWND_BROADCAST,
+      SendNotifyMessageW, SetTimer, SetWindowPos, HWND_BROADCAST,
       HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
       WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
     },
@@ -45,22 +45,22 @@ struct ShellTrayMessage {
 /// different than the `windows` crate's `NOTIFYICONDATAW` type.
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct NOTIFYICONDATAW {
-  pub cbSize: u32,
-  pub hWnd: u32,
-  pub uID: u32,
-  pub uFlags: NOTIFY_ICON_DATA_FLAGS,
-  pub uCallbackMessage: u32,
-  pub hIcon: u32,
-  pub szTip: [u16; 128],
-  pub dwState: NOTIFY_ICON_STATE,
-  pub dwStateMask: NOTIFY_ICON_STATE,
-  pub szInfo: [u16; 256],
-  pub Anonymous: NOTIFYICONDATAW_0,
-  pub szInfoTitle: [u16; 64],
-  pub dwInfoFlags: NOTIFY_ICON_INFOTIP_FLAGS,
-  pub guidItem: windows_core::GUID,
-  pub hBalloonIcon: u32,
+struct NOTIFYICONDATAW {
+  callback_size: u32,
+  window_handle: u32,
+  uid: u32,
+  flags: NOTIFY_ICON_DATA_FLAGS,
+  callback_message: u32,
+  icon: u32,
+  tooltip: [u16; 128],
+  state: NOTIFY_ICON_STATE,
+  state_mask: NOTIFY_ICON_STATE,
+  size_info: [u16; 256],
+  union: NOTIFYICONDATAW_0,
+  info_title: [u16; 64],
+  info_flags: NOTIFY_ICON_INFOTIP_FLAGS,
+  guid_item: windows_core::GUID,
+  balloon_icon: u32,
 }
 
 #[repr(C)]
@@ -82,21 +82,21 @@ impl ShellTrayMessage {
       NIM_MODIFY | NIM_SETVERSION => {
         Some(TrayEvent::IconUpdate(self.icon_data()?))
       }
-      NIM_DELETE => Some(TrayEvent::IconRemove(self.icon_data.uID)),
+      NIM_DELETE => Some(TrayEvent::IconRemove(self.icon_data()?)),
       _ => None,
     };
 
     Ok(event)
   }
 
-  fn icon_data(&self) -> crate::Result<IconData> {
-    let icon_data = IconData {
-      uid: self.icon_data.uID,
-      window_handle: self.icon_data.hWnd as isize,
-      tooltip: String::from_utf16_lossy(&self.icon_data.szTip),
-      icon: Util::icon_to_image(self.icon_data.hIcon)?,
-      callback: self.icon_data.uCallbackMessage,
-      version: self.version,
+  fn icon_data(&self) -> crate::Result<IconEventData> {
+    let icon_data = IconEventData {
+      uid: Some(self.icon_data.uid),
+      window_handle: Some(self.icon_data.window_handle as isize),
+      tooltip: Some(String::from_utf16_lossy(&self.icon_data.tooltip)),
+      icon: Some(Util::icon_to_image(self.icon_data.icon)?),
+      callback: Some(self.icon_data.callback_message),
+      version: Some(self.version),
     };
 
     Ok(icon_data)
@@ -105,34 +105,20 @@ impl ShellTrayMessage {
 
 /// Events emitted by the spy window.
 #[derive(Debug)]
-pub enum TrayEvent {
-  IconAdd(IconData),
-  IconUpdate(IconData),
-  IconRemove(u32),
+pub(crate) enum TrayEvent {
+  IconAdd(IconEventData),
+  IconUpdate(IconEventData),
+  IconRemove(IconEventData),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct IconData {
-  pub uid: u32,
-  pub window_handle: isize,
-  pub tooltip: String,
-  pub icon: RgbaImage,
-  pub callback: u32,
-  pub version: u32,
-}
-
-impl IconData {
-  /// Converts the icon to a PNG byte vector.
-  pub fn to_png(&self) -> crate::Result<Vec<u8>> {
-    let mut png_bytes: Vec<u8> = Vec::new();
-
-    self
-      .icon
-      .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
-      .map_err(|_| crate::Error::IconConversionFailed)?;
-
-    Ok(png_bytes)
-  }
+pub(crate) struct IconEventData {
+  pub uid: Option<u32>,
+  pub window_handle: Option<isize>,
+  pub tooltip: Option<String>,
+  pub icon: Option<RgbaImage>,
+  pub callback: Option<u32>,
+  pub version: Option<u32>,
 }
 
 /// A window that spies on system tray icon messages and broadcasts events.

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Cursor};
 
 use windows::Win32::{
   Foundation::{HWND, LPARAM, WPARAM},
@@ -13,7 +13,7 @@ use windows::Win32::{
   },
 };
 
-use crate::{IconData, TrayEvent, TraySpy, Util};
+use crate::{TrayEvent, TraySpy, Util};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IconEvent {
@@ -25,9 +25,71 @@ pub enum IconEvent {
   MiddleClick,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StableId {
+  HandleUid(isize, u32),
+  Guid(windows_core::GUID),
+}
+
+impl ToString for StableId {
+  fn to_string(&self) -> String {
+    match self {
+      StableId::HandleUid(handle, uid) => format!("{}:{}", handle, uid),
+      StableId::Guid(guid) => format!("{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}",
+        guid.data1,
+        guid.data2,
+        guid.data3,
+        guid.data4[0],
+        guid.data4[1],
+        guid.data4[2],
+        guid.data4[3],
+        guid.data4[4],
+        guid.data4[5],
+        guid.data4[6],
+        guid.data4[7],
+      ),
+    }
+  }
+}
+
+impl serde::Serialize for StableId {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    self.to_string().serialize(serializer)
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SystrayIcon {
+  pub stable_id: StableId,
+  pub uid: Option<u32>,
+  pub window_handle: Option<isize>,
+  pub guid: Option<windows_core::GUID>,
+  pub tooltip: String,
+  pub icon: image::RgbaImage,
+  pub callback: u32,
+  pub version: u32,
+}
+
+impl SystrayIcon {
+  /// Converts the icon to a PNG byte vector.
+  pub fn to_png(&self) -> crate::Result<Vec<u8>> {
+    let mut png_bytes: Vec<u8> = Vec::new();
+
+    self
+      .icon
+      .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
+      .map_err(|_| crate::Error::IconConversionFailed)?;
+
+    Ok(png_bytes)
+  }
+}
+
 #[derive(Debug)]
 pub struct Systray {
-  icons: HashMap<u32, IconData>,
+  icons: HashMap<u32, SystrayIcon>,
   event_rx: tokio::sync::mpsc::UnboundedReceiver<TrayEvent>,
 }
 
@@ -41,7 +103,7 @@ impl Systray {
     })
   }
 
-  pub fn icons(&self) -> Vec<IconData> {
+  pub fn icons(&self) -> Vec<SystrayIcon> {
     self.icons.values().cloned().collect()
   }
 
@@ -98,11 +160,14 @@ impl Systray {
       .get(&icon_uid)
       .ok_or(crate::Error::IconNotFound)?;
 
+    let Some(window_handle) = icon.window_handle else {
+      return Ok(());
+    };
+
     // Checks whether the window associated with the given handle still
     // exists. If the window is invalid, removes the corresponding icon
     // from the collection.
-    if !unsafe { IsWindow(HWND(icon.window_handle as _)) }.as_bool() {
-      self.icons.remove(&icon_uid);
+    if !unsafe { IsWindow(HWND(window_handle as _)) }.as_bool() {
       return Ok(());
     }
 
@@ -141,7 +206,7 @@ impl Systray {
 
   fn notify_icon(
     &self,
-    icon: &IconData,
+    icon: &SystrayIcon,
     message: u32,
   ) -> crate::Result<()> {
     // The wparam is the mouse position for version > 3 (with the low and

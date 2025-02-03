@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use systray_util::{IconData, IconEvent, Systray};
+use systray_util::{IconEvent, IconEventData, Systray};
 
 use crate::providers::{
   CommonProviderState, Provider, ProviderFunction,
@@ -25,10 +25,10 @@ pub struct SystrayIcon {
   pub icon_bytes: Vec<u8>,
 }
 
-impl TryFrom<IconData> for SystrayIcon {
+impl TryFrom<IconEventData> for SystrayIcon {
   type Error = anyhow::Error;
 
-  fn try_from(icon: IconData) -> Result<Self, Self::Error> {
+  fn try_from(icon: IconEventData) -> Result<Self, Self::Error> {
     Ok(SystrayIcon {
       id: icon.uid.to_string(),
       tooltip: icon.tooltip.clone(),
