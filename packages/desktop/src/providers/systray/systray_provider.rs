@@ -29,18 +29,10 @@ impl TryFrom<IconData> for SystrayIcon {
   type Error = anyhow::Error;
 
   fn try_from(icon: IconData) -> Result<Self, Self::Error> {
-    // todo - ugly code
     Ok(SystrayIcon {
-      id: icon
-        .uid
-        .map_or_else(|| "unknown".to_string(), |uid| uid.to_string()),
-      tooltip: icon
-        .tooltip
-        .clone()
-        .unwrap_or_else(|| "No tooltip".to_string()),
-      icon_bytes: icon
-        .to_png()?
-        .ok_or_else(|| anyhow::anyhow!("Failed to convert icon to PNG"))?,
+      id: icon.uid.to_string(),
+      tooltip: icon.tooltip.clone(),
+      icon_bytes: icon.to_png()?,
     })
   }
 }

@@ -64,28 +64,20 @@ impl Systray {
   fn on_event(&mut self, event: TrayEvent) -> Option<TrayEvent> {
     match &event {
       TrayEvent::IconAdd(icon_data) => {
-        if let Some(uid) = icon_data.uid {
-          tracing::info!(
-            "New icon added: {} ({})",
-            icon_data.tooltip.as_deref().unwrap_or(""),
-            uid
-          );
-          self.icons.insert(uid, icon_data.clone());
-        }
+        tracing::info!(
+          "New icon added: {} ({})",
+          icon_data.tooltip,
+          icon_data.uid
+        );
+        self.icons.insert(icon_data.uid, icon_data.clone());
       }
       TrayEvent::IconUpdate(icon_data) => {
-        if let Some(uid) = icon_data.uid {
-          tracing::info!(
-            "Icon modified: {} ({})",
-            icon_data.tooltip.as_deref().unwrap_or(""),
-            uid
-          );
-          if let Some(existing_icon) = self.icons.get_mut(&uid) {
-            existing_icon.update(icon_data);
-          } else {
-            self.icons.insert(uid, icon_data.clone());
-          }
-        }
+        tracing::info!(
+          "Icon modified: {} ({})",
+          icon_data.tooltip,
+          icon_data.uid
+        );
+        self.icons.insert(icon_data.uid, icon_data.clone());
       }
       TrayEvent::IconRemove(uid) => {
         tracing::info!("Icon removed: {:#x}", uid);
@@ -106,16 +98,11 @@ impl Systray {
       .get(&icon_uid)
       .ok_or(crate::Error::IconNotFound)?;
 
-    // Check if we have a valid window handle
-    if let Some(window_handle) = icon.window_handle {
-      // Checks whether the window associated with the given handle still
-      // exists. If the window is invalid, removes the corresponding icon
-      // from the collection.
-      if !unsafe { IsWindow(HWND(window_handle as _)) }.as_bool() {
-        self.icons.remove(&icon_uid);
-        return Ok(());
-      }
-    } else {
+    // Checks whether the window associated with the given handle still
+    // exists. If the window is invalid, removes the corresponding icon
+    // from the collection.
+    if !unsafe { IsWindow(HWND(icon.window_handle as _)) }.as_bool() {
+      self.icons.remove(&icon_uid);
       return Ok(());
     }
 
@@ -138,7 +125,7 @@ impl Systray {
 
     // This is documented as version 4, but Explorer does this for version
     // 3 as well
-    if icon.version.unwrap_or(0) >= 3 {
+    if icon.version >= 3 {
       let nin_message = match event {
         IconEvent::HoverEnter => NIN_POPUPOPEN,
         IconEvent::HoverLeave => NIN_POPUPCLOSE,
@@ -157,35 +144,28 @@ impl Systray {
     icon: &IconData,
     message: u32,
   ) -> crate::Result<()> {
-    // Early return if we don't have the required fields
-    let (window_handle, uid, callback) =
-      match (icon.window_handle, icon.uid, icon.callback) {
-        (Some(wh), Some(u), Some(c)) => (wh, u, c),
-        _ => return Ok(()),
-      };
-
     // The wparam is the mouse position for version > 3 (with the low and
     // high word being the x and y-coordinates respectively), and the UID
     // for version <= 3.
-    let wparam = if icon.version.unwrap_or(0) > 3 {
+    let wparam = if icon.version > 3 {
       let cursor_pos = Util::cursor_position()?;
       Util::make_lparam(cursor_pos.0 as i16, cursor_pos.1 as i16) as u32
     } else {
-      uid
+      icon.uid
     };
 
     // The high word for the lparam is the UID for version > 3, and 0 for
     // version <= 3. The low word is always the message.
-    let lparam = if icon.version.unwrap_or(0) > 3 {
+    let lparam = if icon.version > 3 {
       Util::make_lparam(message as i16, 0)
     } else {
-      Util::make_lparam(message as i16, uid as i16)
+      Util::make_lparam(message as i16, icon.uid as i16)
     };
 
     unsafe {
       SendNotifyMessageW(
-        HWND(window_handle as _),
-        callback,
+        HWND(icon.window_handle as _),
+        icon.callback,
         WPARAM(wparam as _),
         LPARAM(lparam as _),
       )
