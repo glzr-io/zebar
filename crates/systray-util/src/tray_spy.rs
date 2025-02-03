@@ -35,7 +35,7 @@ static TRAY_EVENT_TX: OnceLock<mpsc::UnboundedSender<TrayEvent>> =
 struct ShellTrayMessage {
   magic_number: i32,
   message_type: u32,
-  icon_data: NOTIFYICONDATAW,
+  icon_data: NotifyIconData,
   version: u32,
 }
 
@@ -46,7 +46,7 @@ struct ShellTrayMessage {
 /// different than the `windows` crate's `NOTIFYICONDATAW` type.
 #[repr(C)]
 #[derive(Clone, Copy)]
-struct NOTIFYICONDATAW {
+struct NotifyIconData {
   callback_size: u32,
   window_handle: u32,
   uid: u32,
@@ -77,22 +77,20 @@ struct WINNOTIFYICONIDENTIFIER {
 }
 
 impl ShellTrayMessage {
-  fn tray_event(&self) -> crate::Result<Option<TrayEvent>> {
-    let event = match NOTIFY_ICON_MESSAGE(self.message_type) {
-      NIM_ADD => Some(TrayEvent::IconAdd(self.icon_data()?)),
+  fn tray_event(&self) -> Option<TrayEvent> {
+    match NOTIFY_ICON_MESSAGE(self.message_type) {
+      NIM_ADD => Some(TrayEvent::IconAdd(self.icon_data())),
       NIM_MODIFY | NIM_SETVERSION => {
-        Some(TrayEvent::IconUpdate(self.icon_data()?))
+        Some(TrayEvent::IconUpdate(self.icon_data()))
       }
-      NIM_DELETE => Some(TrayEvent::IconRemove(self.icon_data()?)),
+      NIM_DELETE => Some(TrayEvent::IconRemove(self.icon_data())),
       _ => None,
-    };
-
-    Ok(event)
+    }
   }
 
-  fn icon_data(&self) -> crate::Result<IconEventData> {
+  fn icon_data(&self) -> IconEventData {
     let icon = if self.icon_data.flags.0 & NIF_ICON.0 != 0 {
-      Some(Util::icon_to_image(self.icon_data.icon)?)
+      Util::icon_to_image(self.icon_data.icon).ok()
     } else {
       None
     };
@@ -103,10 +101,12 @@ impl ShellTrayMessage {
       None
     };
 
-    let tooltip = if !self.icon_data.tooltip.is_empty()
-      && self.icon_data.flags.0 & NIF_TIP.0 != 0
-    {
-      Some(String::from_utf16_lossy(&self.icon_data.tooltip))
+    let tooltip = if self.icon_data.flags.0 & NIF_TIP.0 != 0 {
+      let tooltip_str = String::from_utf16_lossy(&self.icon_data.tooltip)
+        .replace(['\0', '\r'], "")
+        .to_string();
+
+      (!tooltip_str.is_empty()).then_some(tooltip_str)
     } else {
       None
     };
@@ -134,7 +134,7 @@ impl ShellTrayMessage {
       None
     };
 
-    let icon_data = IconEventData {
+    IconEventData {
       uid,
       window_handle,
       guid,
@@ -142,9 +142,7 @@ impl ShellTrayMessage {
       icon,
       callback,
       version,
-    };
-
-    Ok(icon_data)
+    }
   }
 }
 
@@ -276,7 +274,7 @@ impl TraySpy {
         let event_tx =
           TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-        if let Some(event) = tray_message.tray_event().unwrap() {
+        if let Some(event) = tray_message.tray_event() {
           event_tx.send(event).expect("Failed to send tray event.");
         }
 

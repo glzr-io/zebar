@@ -1,4 +1,8 @@
-use std::{collections::HashMap, io::Cursor};
+use std::{
+  collections::HashMap,
+  fmt::{self, Display},
+  io::Cursor,
+};
 
 use windows::Win32::{
   Foundation::{HWND, LPARAM, WPARAM},
@@ -13,7 +17,7 @@ use windows::Win32::{
   },
 };
 
-use crate::{TrayEvent, TraySpy, Util};
+use crate::{TrayEvent, TraySpy};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IconEvent {
@@ -31,11 +35,11 @@ pub enum StableId {
   Guid(uuid::Uuid),
 }
 
-impl ToString for StableId {
-  fn to_string(&self) -> String {
+impl Display for StableId {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      StableId::HandleUid(handle, uid) => format!("{}:{}", handle, uid),
-      StableId::Guid(guid) => guid.to_string(),
+      StableId::HandleUid(handle, uid) => write!(f, "{}:{}", handle, uid),
+      StableId::Guid(guid) => write!(f, "{}", guid),
     }
   }
 }
