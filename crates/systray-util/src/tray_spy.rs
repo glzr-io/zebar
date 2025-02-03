@@ -91,12 +91,12 @@ impl ShellTrayMessage {
 
   fn icon_data(&self) -> crate::Result<IconData> {
     let icon_data = IconData {
-      uid: self.icon_data.uID,
-      window_handle: self.icon_data.hWnd as isize,
-      tooltip: String::from_utf16_lossy(&self.icon_data.szTip),
-      icon: Util::icon_to_image(self.icon_data.hIcon)?,
-      callback: self.icon_data.uCallbackMessage,
-      version: self.version,
+      uid: Some(self.icon_data.uID),
+      window_handle: Some(self.icon_data.hWnd as isize),
+      tooltip: Some(String::from_utf16_lossy(&self.icon_data.szTip)),
+      icon: Some(Util::icon_to_image(self.icon_data.hIcon)?),
+      callback: Some(self.icon_data.uCallbackMessage),
+      version: Some(self.version),
     };
 
     Ok(icon_data)
@@ -113,25 +113,52 @@ pub enum TrayEvent {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IconData {
-  pub uid: u32,
-  pub window_handle: isize,
-  pub tooltip: String,
-  pub icon: RgbaImage,
-  pub callback: u32,
-  pub version: u32,
+  pub uid: Option<u32>,
+  pub window_handle: Option<isize>,
+  pub tooltip: Option<String>,
+  pub icon: Option<RgbaImage>,
+  pub callback: Option<u32>,
+  pub version: Option<u32>,
 }
 
 impl IconData {
+  /// Updates this IconData with non-None values from another IconData
+  pub fn update(&mut self, other: &IconData) {
+    if let Some(uid) = other.uid {
+      self.uid = Some(uid);
+    }
+    if let Some(window_handle) = other.window_handle {
+      self.window_handle = Some(window_handle);
+    }
+    if let Some(tooltip) = &other.tooltip {
+      self.tooltip = Some(tooltip.clone());
+    }
+    if let Some(icon) = &other.icon {
+      self.icon = Some(icon.clone());
+    }
+    if let Some(callback) = other.callback {
+      self.callback = Some(callback);
+    }
+    if let Some(version) = other.version {
+      self.version = Some(version);
+    }
+  }
+
   /// Converts the icon to a PNG byte vector.
-  pub fn to_png(&self) -> crate::Result<Vec<u8>> {
-    let mut png_bytes: Vec<u8> = Vec::new();
-
-    self
-      .icon
-      .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
-      .map_err(|_| crate::Error::IconConversionFailed)?;
-
-    Ok(png_bytes)
+  pub fn to_png(&self) -> crate::Result<Option<Vec<u8>>> {
+    match &self.icon {
+      Some(icon) => {
+        let mut png_bytes: Vec<u8> = Vec::new();
+        icon
+          .write_to(
+            &mut Cursor::new(&mut png_bytes),
+            image::ImageFormat::Png,
+          )
+          .map_err(|_| crate::Error::IconConversionFailed)?;
+        Ok(Some(png_bytes))
+      }
+      None => Ok(None),
+    }
   }
 }
 
