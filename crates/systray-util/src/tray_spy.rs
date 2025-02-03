@@ -120,7 +120,7 @@ impl ShellTrayMessage {
       (None, None)
     };
 
-    let callback = if self.icon_data.flags.0 & NIF_MESSAGE.0 != 0 {
+    let callback_message = if self.icon_data.flags.0 & NIF_MESSAGE.0 != 0 {
       Some(self.icon_data.callback_message)
     } else {
       None
@@ -140,7 +140,7 @@ impl ShellTrayMessage {
       guid,
       tooltip,
       icon,
-      callback,
+      callback_message,
       version,
     }
   }
@@ -161,7 +161,7 @@ pub struct IconEventData {
   pub guid: Option<uuid::Uuid>,
   pub tooltip: Option<String>,
   pub icon: Option<RgbaImage>,
-  pub callback: Option<u32>,
+  pub callback_message: Option<u32>,
   pub version: Option<u32>,
 }
 

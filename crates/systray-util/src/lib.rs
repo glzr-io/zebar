@@ -6,7 +6,7 @@ mod window;
 
 pub use error::*;
 pub use systray::*;
-pub(crate) use tray_spy::*;
+pub use tray_spy::*;
 pub(crate) use util::*;
 pub(crate) use window::*;
 
