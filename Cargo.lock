@@ -5732,14 +5732,13 @@ dependencies = [
 name = "systray-util"
 version = "0.0.0"
 dependencies = [
- "base64 0.22.1",
  "image",
  "serde",
- "serde_json",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
  "windows 0.58.0",
  "windows-core 0.58.0",
 ]

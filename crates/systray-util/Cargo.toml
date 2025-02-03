@@ -15,14 +15,13 @@ name = "systray-util"
 path = "src/main.rs"
 
 [dependencies]
-base64 = "0.22"
 image = { version = "0.25", features = ["serde"] }
 serde = { workspace = true }
-serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = { workspace = true }
+uuid = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-core = { workspace = true }

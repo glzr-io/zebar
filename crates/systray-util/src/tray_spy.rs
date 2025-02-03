@@ -7,7 +7,8 @@ use windows::Win32::{
   System::DataExchange::COPYDATASTRUCT,
   UI::{
     Shell::{
-      NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW_0,
+      NIF_GUID, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE,
+      NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW_0,
       NOTIFY_ICON_DATA_FLAGS, NOTIFY_ICON_INFOTIP_FLAGS,
       NOTIFY_ICON_MESSAGE, NOTIFY_ICON_STATE,
     },
@@ -56,7 +57,7 @@ struct NOTIFYICONDATAW {
   state: NOTIFY_ICON_STATE,
   state_mask: NOTIFY_ICON_STATE,
   size_info: [u16; 256],
-  union: NOTIFYICONDATAW_0,
+  anonymous: NOTIFYICONDATAW_0,
   info_title: [u16; 64],
   info_flags: NOTIFY_ICON_INFOTIP_FLAGS,
   guid_item: windows_core::GUID,
@@ -90,13 +91,57 @@ impl ShellTrayMessage {
   }
 
   fn icon_data(&self) -> crate::Result<IconEventData> {
+    let icon = if self.icon_data.flags.0 & NIF_ICON.0 != 0 {
+      Some(Util::icon_to_image(self.icon_data.icon)?)
+    } else {
+      None
+    };
+
+    let guid = if self.icon_data.flags.0 & NIF_GUID.0 != 0 {
+      Some(uuid::Uuid::from_u128(self.icon_data.guid_item.to_u128()))
+    } else {
+      None
+    };
+
+    let tooltip = if !self.icon_data.tooltip.is_empty()
+      && self.icon_data.flags.0 & NIF_TIP.0 != 0
+    {
+      Some(String::from_utf16_lossy(&self.icon_data.tooltip))
+    } else {
+      None
+    };
+
+    let (window_handle, uid) = if self.icon_data.window_handle != 0 {
+      (
+        Some(self.icon_data.window_handle as isize),
+        Some(self.icon_data.uid),
+      )
+    } else {
+      (None, None)
+    };
+
+    let callback = if self.icon_data.flags.0 & NIF_MESSAGE.0 != 0 {
+      Some(self.icon_data.callback_message)
+    } else {
+      None
+    };
+
+    let version = if unsafe { self.icon_data.anonymous.uVersion } > 0
+      && unsafe { self.icon_data.anonymous.uVersion } <= 4
+    {
+      Some(unsafe { self.icon_data.anonymous.uVersion })
+    } else {
+      None
+    };
+
     let icon_data = IconEventData {
-      uid: Some(self.icon_data.uid),
-      window_handle: Some(self.icon_data.window_handle as isize),
-      tooltip: Some(String::from_utf16_lossy(&self.icon_data.tooltip)),
-      icon: Some(Util::icon_to_image(self.icon_data.icon)?),
-      callback: Some(self.icon_data.callback_message),
-      version: Some(self.version),
+      uid,
+      window_handle,
+      guid,
+      tooltip,
+      icon,
+      callback,
+      version,
     };
 
     Ok(icon_data)
@@ -105,16 +150,17 @@ impl ShellTrayMessage {
 
 /// Events emitted by the spy window.
 #[derive(Debug)]
-pub(crate) enum TrayEvent {
+pub enum TrayEvent {
   IconAdd(IconEventData),
   IconUpdate(IconEventData),
   IconRemove(IconEventData),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct IconEventData {
+pub struct IconEventData {
   pub uid: Option<u32>,
   pub window_handle: Option<isize>,
+  pub guid: Option<uuid::Uuid>,
   pub tooltip: Option<String>,
   pub icon: Option<RgbaImage>,
   pub callback: Option<u32>,
@@ -222,14 +268,10 @@ impl TraySpy {
       return LRESULT(0);
     };
 
-    tracing::info!("COPYDATASTRUCT: {:?}", copy_data);
-
     match copy_data.dwData {
       1 if !copy_data.lpData.is_null() => {
         let tray_message =
           unsafe { &*copy_data.lpData.cast::<ShellTrayMessage>() };
-
-        tracing::info!("Processing tray data.");
 
         let event_tx =
           TRAY_EVENT_TX.get().expect("Tray event sender not set.");

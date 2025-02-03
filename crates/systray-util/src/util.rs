@@ -1,27 +1,24 @@
 use std::{
-  mem::MaybeUninit, os::windows::io::AsRawHandle, ptr::addr_of_mut,
-  thread::JoinHandle,
+  os::windows::io::AsRawHandle, ptr::addr_of_mut, thread::JoinHandle,
 };
 
 use image::RgbaImage;
 use windows::Win32::{
-  Foundation::{BOOL, HANDLE, HWND, LPARAM, POINT, WPARAM},
+  Foundation::{HANDLE, HWND, LPARAM, POINT, WPARAM},
   Graphics::Gdi::{
-    DeleteObject, GetBitmapBits, GetDC, GetDIBits, GetObjectW, ReleaseDC,
-    BITMAP, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP,
-    HGDIOBJ,
+    DeleteObject, GetDC, GetDIBits, GetObjectW, ReleaseDC, BITMAP,
+    BITMAPINFO, BITMAPINFOHEADER, DIB_RGB_COLORS,
   },
   System::Threading::GetThreadId,
   UI::WindowsAndMessaging::{
-    CreateWindowExW, DispatchMessageW, EnumWindows, FindWindowExW,
-    FindWindowW, GetClassNameW, GetCursorPos, GetIconInfo, GetMessageW,
-    PostThreadMessageW, RegisterClassW, TranslateMessage, CS_HREDRAW,
-    CS_VREDRAW, CW_USEDEFAULT, HICON, ICONINFO, MSG, WINDOW_EX_STYLE,
-    WM_QUIT, WNDCLASSW, WNDPROC, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
-    WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW,
+    CreateWindowExW, DispatchMessageW, FindWindowExW, FindWindowW,
+    GetCursorPos, GetIconInfo, GetMessageW, PostThreadMessageW,
+    RegisterClassW, TranslateMessage, CS_HREDRAW, CS_VREDRAW,
+    CW_USEDEFAULT, HICON, ICONINFO, MSG, WM_QUIT, WNDCLASSW, WNDPROC,
+    WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW,
   },
 };
-use windows_core::{w, PCWSTR, PWSTR};
+use windows_core::PCWSTR;
 
 pub type WindowProcedure = WNDPROC;
 

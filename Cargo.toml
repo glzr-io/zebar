@@ -8,6 +8,7 @@ serde_json = { version = "1", features = ["raw_value"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
 windows-core = "0.58"
 windows = { version = "0.58", features = [
   "Foundation",

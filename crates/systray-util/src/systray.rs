@@ -15,7 +15,7 @@ use windows::Win32::{
 
 use crate::{TrayEvent, TraySpy, Util};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IconEvent {
   HoverEnter,
   HoverLeave,
@@ -25,48 +25,27 @@ pub enum IconEvent {
   MiddleClick,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StableId {
   HandleUid(isize, u32),
-  Guid(windows_core::GUID),
+  Guid(uuid::Uuid),
 }
 
 impl ToString for StableId {
   fn to_string(&self) -> String {
     match self {
       StableId::HandleUid(handle, uid) => format!("{}:{}", handle, uid),
-      StableId::Guid(guid) => format!("{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}",
-        guid.data1,
-        guid.data2,
-        guid.data3,
-        guid.data4[0],
-        guid.data4[1],
-        guid.data4[2],
-        guid.data4[3],
-        guid.data4[4],
-        guid.data4[5],
-        guid.data4[6],
-        guid.data4[7],
-      ),
+      StableId::Guid(guid) => guid.to_string(),
     }
   }
 }
 
-impl serde::Serialize for StableId {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: serde::Serializer,
-  {
-    self.to_string().serialize(serializer)
-  }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SystrayIcon {
   pub stable_id: StableId,
   pub uid: Option<u32>,
   pub window_handle: Option<isize>,
-  pub guid: Option<windows_core::GUID>,
+  pub guid: Option<uuid::Uuid>,
   pub tooltip: String,
   pub icon: image::RgbaImage,
   pub callback: u32,
@@ -126,24 +105,16 @@ impl Systray {
   fn on_event(&mut self, event: TrayEvent) -> Option<TrayEvent> {
     match &event {
       TrayEvent::IconAdd(icon_data) => {
-        tracing::info!(
-          "New icon added: {} ({})",
-          icon_data.tooltip,
-          icon_data.uid
-        );
-        self.icons.insert(icon_data.uid, icon_data.clone());
+        tracing::info!("New icon added: {:?}", icon_data);
+        // self.icons.insert(icon_data.uid, icon_data.clone());
       }
       TrayEvent::IconUpdate(icon_data) => {
-        tracing::info!(
-          "Icon modified: {} ({})",
-          icon_data.tooltip,
-          icon_data.uid
-        );
-        self.icons.insert(icon_data.uid, icon_data.clone());
+        tracing::info!("Icon modified: {:?}", icon_data);
+        // self.icons.insert(icon_data.uid, icon_data.clone());
       }
-      TrayEvent::IconRemove(uid) => {
-        tracing::info!("Icon removed: {:#x}", uid);
-        self.icons.remove(uid);
+      TrayEvent::IconRemove(icon_data) => {
+        tracing::info!("Icon removed: {:?}", icon_data);
+        // self.icons.remove(icon_data.uid);
       }
     }
 
@@ -209,32 +180,32 @@ impl Systray {
     icon: &SystrayIcon,
     message: u32,
   ) -> crate::Result<()> {
-    // The wparam is the mouse position for version > 3 (with the low and
-    // high word being the x and y-coordinates respectively), and the UID
-    // for version <= 3.
-    let wparam = if icon.version > 3 {
-      let cursor_pos = Util::cursor_position()?;
-      Util::make_lparam(cursor_pos.0 as i16, cursor_pos.1 as i16) as u32
-    } else {
-      icon.uid
-    };
+    // // The wparam is the mouse position for version > 3 (with the low
+    // and // high word being the x and y-coordinates respectively),
+    // and the UID // for version <= 3.
+    // let wparam = if icon.version > 3 {
+    //   let cursor_pos = Util::cursor_position()?;
+    //   Util::make_lparam(cursor_pos.0 as i16, cursor_pos.1 as i16) as u32
+    // } else {
+    //   icon.uid
+    // };
 
-    // The high word for the lparam is the UID for version > 3, and 0 for
-    // version <= 3. The low word is always the message.
-    let lparam = if icon.version > 3 {
-      Util::make_lparam(message as i16, 0)
-    } else {
-      Util::make_lparam(message as i16, icon.uid as i16)
-    };
+    // // The high word for the lparam is the UID for version > 3, and 0
+    // for // version <= 3. The low word is always the message.
+    // let lparam = if icon.version > 3 {
+    //   Util::make_lparam(message as i16, 0)
+    // } else {
+    //   Util::make_lparam(message as i16, icon.uid as i16)
+    // };
 
-    unsafe {
-      SendNotifyMessageW(
-        HWND(icon.window_handle as _),
-        icon.callback,
-        WPARAM(wparam as _),
-        LPARAM(lparam as _),
-      )
-    }?;
+    // unsafe {
+    //   SendNotifyMessageW(
+    //     HWND(icon.window_handle as _),
+    //     icon.callback,
+    //     WPARAM(wparam as _),
+    //     LPARAM(lparam as _),
+    //   )
+    // }?;
 
     Ok(())
   }
