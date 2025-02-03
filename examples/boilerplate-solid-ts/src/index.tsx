@@ -64,11 +64,26 @@ function App() {
             <img
               class="systray-icon"
               src={icon.iconUrl}
-              onClick={() => output.systray.onLeftClick(icon.id)}
-              onContextMenu={() => output.systray.onRightClick(icon.id)}
-              onMouseEnter={() => output.systray.onHoverEnter(icon.id)}
-              onMouseLeave={() => output.systray.onHoverLeave(icon.id)}
-              onMouseMove={() => output.systray.onHoverMove(icon.id)}
+              onClick={e => {
+                e.preventDefault();
+                output.systray.onLeftClick(icon.id);
+              }}
+              onContextMenu={e => {
+                e.preventDefault();
+                output.systray.onRightClick(icon.id);
+              }}
+              onMouseEnter={e => {
+                e.preventDefault();
+                output.systray.onHoverEnter(icon.id);
+              }}
+              onMouseLeave={e => {
+                e.preventDefault();
+                output.systray.onHoverLeave(icon.id);
+              }}
+              onMouseMove={e => {
+                e.preventDefault();
+                output.systray.onHoverMove(icon.id);
+              }}
             />
           ))}
         </div>

@@ -5,8 +5,8 @@ fn main() -> systray_util::Result<()> {
 
   let mut systray = Systray::new()?;
 
-  while let Some(event) = systray.events_blocking() {
-    println!("Event: {:?}", event);
+  while let Some(_) = systray.events_blocking() {
+    println!("Event emitted");
   }
 
   Ok(())

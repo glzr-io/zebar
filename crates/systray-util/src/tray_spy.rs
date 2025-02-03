@@ -60,7 +60,7 @@ pub struct NOTIFYICONDATAW {
   pub szInfoTitle: [u16; 64],
   pub dwInfoFlags: NOTIFY_ICON_INFOTIP_FLAGS,
   pub guidItem: windows_core::GUID,
-  pub hBalloonIcon: HICON,
+  pub hBalloonIcon: u32,
 }
 
 #[repr(C)]
@@ -258,9 +258,20 @@ impl TraySpy {
         let icon_identifier =
           unsafe { &*copy_data.lpData.cast::<WINNOTIFYICONIDENTIFIER>() };
 
-        tracing::info!("icon identifier {:?}", icon_identifier);
+        // TODO: Error handling.
+        let cursor_pos = Util::cursor_position().unwrap();
 
-        LRESULT(0)
+        match icon_identifier.dwMessage {
+          1 => LRESULT(Util::make_lparam(
+            cursor_pos.0 as i16,
+            cursor_pos.0 as i16,
+          ) as _),
+          2 => LRESULT(Util::make_lparam(
+            cursor_pos.1 as i16 + 1,
+            cursor_pos.1 as i16 + 1,
+          ) as _),
+          _ => LRESULT(0),
+        }
       }
       _ => Self::forward_message(hwnd, msg, wparam, lparam),
     }
