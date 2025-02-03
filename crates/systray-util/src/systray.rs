@@ -2,6 +2,7 @@ use std::{
   collections::HashMap,
   fmt::{self, Display},
   io::Cursor,
+  str::FromStr,
 };
 
 use windows::Win32::{
@@ -44,6 +45,29 @@ impl Display for StableId {
   }
 }
 
+impl FromStr for StableId {
+  type Err = crate::Error;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    // Try parsing as handle and uid (format: "handle:uid").
+    if let Some((handle_str, uid_str)) = s.split_once(':') {
+      return Ok(StableId::HandleUid(
+        handle_str
+          .parse()
+          .map_err(|_| crate::Error::InvalidStableId)?,
+        uid_str.parse().map_err(|_| crate::Error::InvalidStableId)?,
+      ));
+    }
+
+    // Try parsing as a guid.
+    if let Ok(guid) = uuid::Uuid::parse_str(s) {
+      return Ok(StableId::Guid(guid));
+    }
+
+    Err(crate::Error::InvalidStableId)
+  }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SystrayIcon {
   /// Identifier for the icon. Will not change for the lifetime of the
@@ -77,8 +101,8 @@ pub struct SystrayIcon {
   /// Tooltip to show for the icon on hover.
   pub tooltip: String,
 
-  /// Icon image.
-  pub icon: Option<image::RgbaImage>,
+  /// Handle to the icon bitmap.
+  pub icon_handle: Option<isize>,
 
   /// Application-defined message identifier.
   ///
@@ -90,19 +114,24 @@ pub struct SystrayIcon {
 }
 
 impl SystrayIcon {
-  /// Converts the icon to a PNG byte vector.
-  pub fn to_png(&self) -> crate::Result<Option<Vec<u8>>> {
-    let Some(icon) = &self.icon else {
-      return Ok(None);
-    };
+  /// Converts the icon to a `RgbaImage`.
+  pub fn to_image(&self) -> crate::Result<image::RgbaImage> {
+    let icon_handle =
+      self.icon_handle.ok_or(crate::Error::IconNotFound)?;
 
+    Util::icon_to_image(icon_handle)
+  }
+
+  /// Converts the icon to a PNG byte vector.
+  pub fn to_png(&self) -> crate::Result<Vec<u8>> {
     let mut png_bytes: Vec<u8> = Vec::new();
 
-    icon
+    self
+      .to_image()?
       .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
       .map_err(|_| crate::Error::IconConversionFailed)?;
 
-    Ok(Some(png_bytes))
+    Ok(png_bytes)
   }
 }
 
@@ -174,7 +203,7 @@ impl Systray {
               .tooltip
               .clone()
               .unwrap_or(found_icon.tooltip.clone()),
-            icon: icon_data.icon.clone().or(found_icon.icon.clone()),
+            icon_handle: icon_data.icon_handle.or(found_icon.icon_handle),
             callback_message: icon_data
               .callback_message
               .or(found_icon.callback_message),
@@ -205,7 +234,7 @@ impl Systray {
               .tooltip
               .clone()
               .unwrap_or_else(|| "".to_string()),
-            icon: icon_data.icon.clone(),
+            icon_handle: icon_data.icon_handle,
             callback_message: icon_data.callback_message,
             version: icon_data.version,
           };

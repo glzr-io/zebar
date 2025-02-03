@@ -52,7 +52,7 @@ struct NotifyIconData {
   uid: u32,
   flags: NOTIFY_ICON_DATA_FLAGS,
   callback_message: u32,
-  icon: u32,
+  icon_handle: u32,
   tooltip: [u16; 128],
   state: NOTIFY_ICON_STATE,
   state_mask: NOTIFY_ICON_STATE,
@@ -61,7 +61,7 @@ struct NotifyIconData {
   info_title: [u16; 64],
   info_flags: NOTIFY_ICON_INFOTIP_FLAGS,
   guid_item: windows_core::GUID,
-  balloon_icon: u32,
+  balloon_icon_handle: u32,
 }
 
 #[repr(C)]
@@ -89,8 +89,8 @@ impl ShellTrayMessage {
   }
 
   fn icon_data(&self) -> IconEventData {
-    let icon = if self.icon_data.flags.0 & NIF_ICON.0 != 0 {
-      Util::icon_to_image(self.icon_data.icon).ok()
+    let icon_handle = if self.icon_data.flags.0 & NIF_ICON.0 != 0 {
+      Some(self.icon_data.icon_handle as isize)
     } else {
       None
     };
@@ -139,7 +139,7 @@ impl ShellTrayMessage {
       window_handle,
       guid,
       tooltip,
-      icon,
+      icon_handle,
       callback_message,
       version,
     }
@@ -160,7 +160,7 @@ pub struct IconEventData {
   pub window_handle: Option<isize>,
   pub guid: Option<uuid::Uuid>,
   pub tooltip: Option<String>,
-  pub icon: Option<RgbaImage>,
+  pub icon_handle: Option<isize>,
   pub callback_message: Option<u32>,
   pub version: Option<u32>,
 }

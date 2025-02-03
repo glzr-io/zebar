@@ -125,7 +125,7 @@ impl Util {
   }
 
   /// Converts a Windows icon to a sendable image.
-  pub fn icon_to_image(icon: u32) -> crate::Result<RgbaImage> {
+  pub fn icon_to_image(icon: isize) -> crate::Result<RgbaImage> {
     let mut icon_info = ICONINFO::default();
     unsafe { GetIconInfo(HICON(icon as _), &mut icon_info) }?;
     unsafe { DeleteObject(icon_info.hbmMask) }.ok()?;

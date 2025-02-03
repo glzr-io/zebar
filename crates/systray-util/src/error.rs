@@ -28,6 +28,9 @@ pub enum Error {
 
   #[error("Unable to send event to icon.")]
   InoperableIcon,
+
+  #[error("Invalid stable ID for icon.")]
+  InvalidStableId,
 }
 
 impl Serialize for Error {

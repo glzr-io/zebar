@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use systray_util::{IconEvent, IconEventData, Systray};
+use systray_util::{IconEvent, Systray, SystrayIcon};
 
 use crate::providers::{
   CommonProviderState, Provider, ProviderFunction,
@@ -14,23 +14,23 @@ pub struct SystrayProviderConfig {}
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SystrayOutput {
-  pub icons: Vec<SystrayIcon>,
+  pub icons: Vec<SystrayOutputIcon>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SystrayIcon {
+pub struct SystrayOutputIcon {
   pub id: String,
   pub tooltip: String,
   pub icon_bytes: Vec<u8>,
 }
 
-impl TryFrom<IconEventData> for SystrayIcon {
+impl TryFrom<SystrayIcon> for SystrayOutputIcon {
   type Error = anyhow::Error;
 
-  fn try_from(icon: IconEventData) -> Result<Self, Self::Error> {
-    Ok(SystrayIcon {
-      id: icon.uid.to_string(),
+  fn try_from(icon: SystrayIcon) -> Result<Self, Self::Error> {
+    Ok(SystrayOutputIcon {
+      id: icon.stable_id.to_string(),
       tooltip: icon.tooltip.clone(),
       icon_bytes: icon.to_png()?,
     })
@@ -38,16 +38,16 @@ impl TryFrom<IconEventData> for SystrayIcon {
 }
 
 pub struct SystrayProvider {
-  config: SystrayProviderConfig,
+  _config: SystrayProviderConfig,
   common: CommonProviderState,
 }
 
 impl SystrayProvider {
   pub fn new(
-    config: SystrayProviderConfig,
+    _config: SystrayProviderConfig,
     common: CommonProviderState,
   ) -> SystrayProvider {
-    SystrayProvider { config, common }
+    SystrayProvider { _config, common }
   }
 
   fn handle_function(
@@ -55,30 +55,18 @@ impl SystrayProvider {
     function: SystrayFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
     match &function {
-      SystrayFunction::IconHoverEnter(args) => systray.send_icon_event(
-        args.icon_id.parse::<u32>()?,
-        IconEvent::HoverEnter,
-      ),
-      SystrayFunction::IconHoverLeave(args) => systray.send_icon_event(
-        args.icon_id.parse::<u32>()?,
-        IconEvent::HoverLeave,
-      ),
-      SystrayFunction::IconHoverMove(args) => systray.send_icon_event(
-        args.icon_id.parse::<u32>()?,
-        IconEvent::HoverMove,
-      ),
-      SystrayFunction::IconLeftClick(args) => systray.send_icon_event(
-        args.icon_id.parse::<u32>()?,
-        IconEvent::LeftClick,
-      ),
-      SystrayFunction::IconRightClick(args) => systray.send_icon_event(
-        args.icon_id.parse::<u32>()?,
-        IconEvent::RightClick,
-      ),
-      SystrayFunction::IconMiddleClick(args) => systray.send_icon_event(
-        args.icon_id.parse::<u32>()?,
-        IconEvent::MiddleClick,
-      ),
+      SystrayFunction::IconHoverEnter(args) => systray
+        .send_icon_event(args.icon_id.parse()?, IconEvent::HoverEnter),
+      SystrayFunction::IconHoverLeave(args) => systray
+        .send_icon_event(args.icon_id.parse()?, IconEvent::HoverLeave),
+      SystrayFunction::IconHoverMove(args) => systray
+        .send_icon_event(args.icon_id.parse()?, IconEvent::HoverMove),
+      SystrayFunction::IconLeftClick(args) => systray
+        .send_icon_event(args.icon_id.parse()?, IconEvent::LeftClick),
+      SystrayFunction::IconRightClick(args) => systray
+        .send_icon_event(args.icon_id.parse()?, IconEvent::RightClick),
+      SystrayFunction::IconMiddleClick(args) => systray
+        .send_icon_event(args.icon_id.parse()?, IconEvent::MiddleClick),
     }?;
 
     Ok(ProviderFunctionResponse::Null)
@@ -107,7 +95,7 @@ impl Provider for SystrayProvider {
             icons: systray
               .icons()
               .into_iter()
-              .filter_map(|icon| SystrayIcon::try_from(icon).ok())
+              .filter_map(|icon| SystrayOutputIcon::try_from(icon).ok())
               .collect(),
           }));
         }
