@@ -260,25 +260,16 @@ impl TraySpy {
     let event_tx =
       TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-    let tray =
-      Util::find_tray_window(window).ok_or(crate::Error::TrayNotFound)?;
-
-    let tray_toolbar = Util::find_tray_toolbar_window(tray)
-      .ok_or(crate::Error::TrayNotFound)?;
-
-    for icon in Self::initial_tray_icons(tray_toolbar)? {
-      event_tx
-        .send(TrayEvent::IconAdd(icon))
-        .expect("Failed to send tray event.");
-    }
-
-    let overflow_toolbar = Util::find_overflow_toolbar_window()
-      .ok_or(crate::Error::TrayNotFound)?;
-
-    for icon in Self::initial_tray_icons(overflow_toolbar)? {
-      event_tx
-        .send(TrayEvent::IconAdd(icon))
-        .expect("Failed to send tray event.");
+    if let Ok(icons) = Self::initial_tray_icons(window) {
+      for icon in icons {
+        event_tx
+          .send(TrayEvent::IconAdd(icon))
+          .expect("Failed to send tray event.");
+      }
+    } else {
+      tracing::warn!(
+        "Failed to retrieve initial tray icons. This is expected on W11."
+      );
     }
 
     Self::refresh_icons()?;
@@ -395,10 +386,21 @@ impl TraySpy {
   }
 
   pub fn initial_tray_icons(
-    // window_handle: isize,
+    window_handle: isize,
     toolbar: isize,
   ) -> crate::Result<Vec<IconEventData>> {
     tracing::info!("Finding initial tray icons.");
+
+    let tray = Util::find_tray_window(window_handle)
+      .ok_or(crate::Error::TrayNotFound)?;
+
+    let tray_toolbar = Util::find_tray_toolbar_window(tray)
+      .ok_or(crate::Error::TrayNotFound)?;
+
+    let overflow_toolbar = Util::find_overflow_toolbar_window()
+      .ok_or(crate::Error::TrayNotFound)?;
+
+    let toolbars = vec![tray_toolbar, overflow_toolbar];
 
     // Get button count.
     let count = unsafe {
