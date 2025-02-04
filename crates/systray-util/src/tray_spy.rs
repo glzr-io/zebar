@@ -4,13 +4,17 @@ use tokio::sync::mpsc;
 use windows::{
   core::Error,
   Win32::{
-    Foundation::{CloseHandle, HANDLE, HWND, LPARAM, LRESULT, WPARAM},
+    Foundation::{
+      CloseHandle, HANDLE, HWND, INVALID_HANDLE_VALUE, LPARAM, LRESULT,
+      WPARAM,
+    },
     System::{
       DataExchange::COPYDATASTRUCT,
       Diagnostics::Debug::ReadProcessMemory,
       Memory::{
-        VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE,
-        PAGE_READWRITE,
+        CreateFileMappingW, MapViewOfFile, UnmapViewOfFile,
+        VirtualAllocEx, VirtualFreeEx, FILE_MAP_ALL_ACCESS, MEM_COMMIT,
+        MEM_RELEASE, PAGE_EXECUTE_READWRITE, PAGE_READWRITE,
       },
       Threading::{OpenProcess, PROCESS_ALL_ACCESS},
     },
@@ -22,12 +26,11 @@ use windows::{
         NOTIFY_ICON_MESSAGE, NOTIFY_ICON_STATE,
       },
       WindowsAndMessaging::{
-        DefWindowProcW, FindWindowExW, FindWindowW,
-        GetWindowThreadProcessId, PostMessageW, RegisterWindowMessageW,
-        SendMessageW, SendNotifyMessageW, SetTimer, SetWindowPos,
-        HWND_BROADCAST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE,
-        SWP_NOSIZE, WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER,
-        WM_USER,
+        DefWindowProcW, GetWindowThreadProcessId, PostMessageW,
+        RegisterWindowMessageW, SendMessageTimeoutW, SendMessageW,
+        SendNotifyMessageW, SetTimer, SetWindowPos, HWND_BROADCAST,
+        HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+        WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
       },
     },
   },
@@ -260,17 +263,24 @@ impl TraySpy {
     let event_tx =
       TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-    if let Ok(icons) = Self::initial_tray_icons(window) {
-      for icon in icons {
-        event_tx
-          .send(TrayEvent::IconAdd(icon))
-          .expect("Failed to send tray event.");
-      }
-    } else {
+    if let Err(e) = Self::initial_tray_icons(window) {
       tracing::warn!(
-        "Failed to retrieve initial tray icons. This is expected on W11."
-      );
-    }
+        "Failed to retrieve initial tray icons. This is expected on W11. {:?}",
+        e
+      )
+    };
+
+    // if let Ok(icons) = Self::initial_tray_icons(window) {
+    //   for icon in icons {
+    //     event_tx
+    //       .send(TrayEvent::IconAdd(icon))
+    //       .expect("Failed to send tray event.");
+    //   }
+    // } else  {
+    //   tracing::warn!(
+    //     "Failed to retrieve initial tray icons. This is expected on
+    // W11."   );
+    // }
 
     Self::refresh_icons()?;
 
@@ -387,76 +397,112 @@ impl TraySpy {
 
   pub fn initial_tray_icons(
     window_handle: isize,
-    toolbar: isize,
   ) -> crate::Result<Vec<IconEventData>> {
     tracing::info!("Finding initial tray icons.");
 
     let tray = Util::find_tray_window(window_handle)
       .ok_or(crate::Error::TrayNotFound)?;
 
-    let tray_toolbar = Util::find_tray_toolbar_window(tray)
-      .ok_or(crate::Error::TrayNotFound)?;
+    let toolbars = [
+      Util::find_tray_toolbar_window(tray),
+      Util::find_overflow_toolbar_window(),
+    ];
 
-    let overflow_toolbar = Util::find_overflow_toolbar_window()
-      .ok_or(crate::Error::TrayNotFound)?;
-
-    let toolbars = vec![tray_toolbar, overflow_toolbar];
-
-    // Get button count.
-    let count = unsafe {
-      SendMessageW(HWND(toolbar as _), TB_BUTTONCOUNT, None, None)
-    }
-    .0 as i32;
-
-    tracing::info!("Found {} buttons in toolbar.", count);
-
-    if count < 1 {
-      return Ok(vec![]);
-    }
-
-    // Get process handle
-    let mut process_id = 0u32;
-    unsafe {
-      GetWindowThreadProcessId(
-        HWND(toolbar as _),
-        Some(&mut process_id as *mut u32),
-      );
-    }
-
-    let process =
-      unsafe { OpenProcess(PROCESS_ALL_ACCESS, false, process_id) }?;
-
-    // Allocate memory in target process
-    let buffer = unsafe {
-      VirtualAllocEx(
-        process,
+    println!("Creating file mapping...");
+    let handle = unsafe {
+      CreateFileMappingW(
+        INVALID_HANDLE_VALUE,
         None,
-        mem::size_of::<TbButton>(),
-        MEM_COMMIT,
-        PAGE_READWRITE,
+        // PAGE_READWRITE,
+        PAGE_EXECUTE_READWRITE,
+        0,
+        std::mem::size_of::<TbButton>() as u32,
+        // w!("Global\\TrayIconSharedMem"),
+        None,
+      )
+    }?;
+
+    println!("Done file mapping...");
+
+    if handle.is_invalid() {
+      panic!("fjdsaifjsai");
+    }
+
+    let view = unsafe {
+      MapViewOfFile(
+        handle,
+        FILE_MAP_ALL_ACCESS,
+        0,
+        0,
+        std::mem::size_of::<TbButton>(),
       )
     };
 
-    if buffer.is_null() {
-      return Err(crate::Error::Windows(Error::from_win32()));
+    if view.Value.is_null() {
+      panic!("aaaaaafjdsaifjsai");
     }
 
     let mut icons = Vec::new();
 
-    // Read each button
-    for i in 0..count {
-      if let Some(icon_data) =
-        Self::get_button_icon_data(process, buffer, toolbar, i as usize)?
-      {
+    let message = b"Hello from shared memory! This is a test pattern to verify memory writes.";
+
+    unsafe {
+      std::ptr::copy_nonoverlapping(
+        message.as_ptr(),
+        view.Value.cast(),
+        message.len(),
+      );
+    }
+
+    for toolbar in toolbars.into_iter().flatten() {
+      // Get number of tray icons.
+      let count = unsafe {
+        SendMessageW(HWND(toolbar as _), TB_BUTTONCOUNT, None, None)
+      }
+      .0 as usize;
+
+      tracing::info!("Found {} buttons in toolbar.", count);
+
+      // Read each button
+      for index in 0..count {
+        // Get button info with timeout.
+        unsafe {
+          SendMessageW(
+            HWND(toolbar as _),
+            TB_GETBUTTON,
+            WPARAM(index),
+            LPARAM(view.Value as isize),
+          )
+        };
+
+        // Read shared memory containing the button data.
+        let shared = unsafe { &*(view.Value as *const TbButton) };
+        tracing::info!("Found shared!!! {:?}", shared);
+        let tray_item = unsafe { &*(shared.data as *const TrayItem) };
+
+        tracing::info!("Found icon!!! {:?}", tray_item);
+
+        let icon_data = IconEventData {
+          uid: Some(tray_item.uid),
+          window_handle: Some(tray_item.hwnd),
+          guid: Some(uuid::Uuid::from_u128(tray_item.guid_item.to_u128())),
+          tooltip: Some(
+            String::from_utf16_lossy(&tray_item.icon_text)
+              .trim_end_matches('\0')
+              .to_string(),
+          ),
+          icon_handle: Some(tray_item.icon_handle),
+          callback_message: Some(tray_item.callback_message),
+          version: Some(tray_item.version),
+        };
+
         icons.push(icon_data);
       }
     }
 
-    // Cleanup.
-    unsafe { VirtualFreeEx(process, buffer, 0, MEM_RELEASE) }?;
-    unsafe { CloseHandle(process) }?;
+    let _ = unsafe { UnmapViewOfFile(view) };
+    tracing::info!("Retrieved {} icons from system tray.", icons.len());
 
-    tracing::debug!("Retrieved {} icons from system tray", icons.len());
     Ok(icons)
   }
 
