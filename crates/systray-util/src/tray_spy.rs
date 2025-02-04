@@ -4,17 +4,13 @@ use tokio::sync::mpsc;
 use windows::{
   core::Error,
   Win32::{
-    Foundation::{
-      CloseHandle, HANDLE, HWND, INVALID_HANDLE_VALUE, LPARAM, LRESULT,
-      WPARAM,
-    },
+    Foundation::{CloseHandle, HANDLE, HWND, LPARAM, LRESULT, WPARAM},
     System::{
       DataExchange::COPYDATASTRUCT,
       Diagnostics::Debug::ReadProcessMemory,
       Memory::{
-        CreateFileMappingW, MapViewOfFile, UnmapViewOfFile,
-        VirtualAllocEx, VirtualFreeEx, FILE_MAP_ALL_ACCESS, MEM_COMMIT,
-        MEM_RELEASE, PAGE_EXECUTE_READWRITE, PAGE_READWRITE,
+        VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE,
+        PAGE_READWRITE,
       },
       Threading::{OpenProcess, PROCESS_ALL_ACCESS},
     },
@@ -27,10 +23,10 @@ use windows::{
       },
       WindowsAndMessaging::{
         DefWindowProcW, GetWindowThreadProcessId, PostMessageW,
-        RegisterWindowMessageW, SendMessageTimeoutW, SendMessageW,
-        SendNotifyMessageW, SetTimer, SetWindowPos, HWND_BROADCAST,
-        HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
-        WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
+        RegisterWindowMessageW, SendMessageW, SendNotifyMessageW,
+        SetTimer, SetWindowPos, HWND_BROADCAST, HWND_TOPMOST,
+        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WM_ACTIVATEAPP,
+        WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
       },
     },
   },
@@ -81,43 +77,55 @@ struct NotifyIconData {
 
 #[repr(C)]
 #[derive(Debug)]
-struct WINNOTIFYICONIDENTIFIER {
-  dwMagic: i32,
-  dwMessage: i32,
-  cbSize: i32,
-  dwPadding: i32,
-  hWnd: u32,
-  uID: u32,
-  guidItem: windows_core::GUID,
+struct NotifyIconIdentifier {
+  magic_number: i32,
+  message: i32,
+  callback_size: i32,
+  padding: i32,
+  window_handle: u32,
+  uid: u32,
+  guid_item: windows_core::GUID,
 }
 
-impl ShellTrayMessage {
-  fn tray_event(&self) -> Option<TrayEvent> {
-    match NOTIFY_ICON_MESSAGE(self.message_type) {
-      NIM_ADD => Some(TrayEvent::IconAdd(self.icon_data())),
-      NIM_MODIFY | NIM_SETVERSION => {
-        Some(TrayEvent::IconUpdate(self.icon_data()))
-      }
-      NIM_DELETE => Some(TrayEvent::IconRemove(self.icon_data())),
-      _ => None,
-    }
-  }
+/// Events emitted by the spy window.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TrayEvent {
+  IconAdd(IconEventData),
+  IconUpdate(IconEventData),
+  IconRemove(IconEventData),
+}
 
-  fn icon_data(&self) -> IconEventData {
-    let icon_handle = if self.icon_data.flags.0 & NIF_ICON.0 != 0 {
-      Some(self.icon_data.icon_handle as isize)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IconEventData {
+  pub uid: Option<u32>,
+  pub window_handle: Option<isize>,
+  pub guid: Option<uuid::Uuid>,
+  pub tooltip: Option<String>,
+  pub icon_handle: Option<isize>,
+  pub callback_message: Option<u32>,
+  pub version: Option<u32>,
+}
+
+impl From<NotifyIconData> for IconEventData {
+  fn from(icon_data: NotifyIconData) -> Self {
+    let icon_handle = if icon_data.icon_handle != 0
+      && icon_data.flags.0 & NIF_ICON.0 != 0
+    {
+      Some(icon_data.icon_handle as isize)
     } else {
       None
     };
 
-    let guid = if self.icon_data.flags.0 & NIF_GUID.0 != 0 {
-      Some(uuid::Uuid::from_u128(self.icon_data.guid_item.to_u128()))
+    let guid = if icon_data.guid_item != windows_core::GUID::default()
+      && icon_data.flags.0 & NIF_GUID.0 != 0
+    {
+      Some(uuid::Uuid::from_u128(icon_data.guid_item.to_u128()))
     } else {
       None
     };
 
-    let tooltip = if self.icon_data.flags.0 & NIF_TIP.0 != 0 {
-      let tooltip_str = String::from_utf16_lossy(&self.icon_data.tooltip)
+    let tooltip = if icon_data.flags.0 & NIF_TIP.0 != 0 {
+      let tooltip_str = String::from_utf16_lossy(&icon_data.tooltip)
         .replace(['\0', '\r'], "")
         .to_string();
 
@@ -126,25 +134,22 @@ impl ShellTrayMessage {
       None
     };
 
-    let (window_handle, uid) = if self.icon_data.window_handle != 0 {
-      (
-        Some(self.icon_data.window_handle as isize),
-        Some(self.icon_data.uid),
-      )
+    let (window_handle, uid) = if icon_data.window_handle != 0 {
+      (Some(icon_data.window_handle as isize), Some(icon_data.uid))
     } else {
       (None, None)
     };
 
-    let callback_message = if self.icon_data.flags.0 & NIF_MESSAGE.0 != 0 {
-      Some(self.icon_data.callback_message)
+    let callback_message = if icon_data.flags.0 & NIF_MESSAGE.0 != 0 {
+      Some(icon_data.callback_message)
     } else {
       None
     };
 
-    let version = if unsafe { self.icon_data.anonymous.uVersion } > 0
-      && unsafe { self.icon_data.anonymous.uVersion } <= 4
+    let version = if unsafe { icon_data.anonymous.uVersion } > 0
+      && unsafe { icon_data.anonymous.uVersion } <= 4
     {
-      Some(unsafe { self.icon_data.anonymous.uVersion })
+      Some(unsafe { icon_data.anonymous.uVersion })
     } else {
       None
     };
@@ -161,23 +166,34 @@ impl ShellTrayMessage {
   }
 }
 
-/// Events emitted by the spy window.
-#[derive(Debug)]
-pub enum TrayEvent {
-  IconAdd(IconEventData),
-  IconUpdate(IconEventData),
-  IconRemove(IconEventData),
-}
+impl From<TrayItem> for IconEventData {
+  fn from(tray_item: TrayItem) -> Self {
+    let icon_handle = if tray_item.icon_handle != 0 {
+      Some(tray_item.icon_handle as isize)
+    } else {
+      None
+    };
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct IconEventData {
-  pub uid: Option<u32>,
-  pub window_handle: Option<isize>,
-  pub guid: Option<uuid::Uuid>,
-  pub tooltip: Option<String>,
-  pub icon_handle: Option<isize>,
-  pub callback_message: Option<u32>,
-  pub version: Option<u32>,
+    let guid = if tray_item.guid_item != windows_core::GUID::default() {
+      Some(uuid::Uuid::from_u128(tray_item.guid_item.to_u128()))
+    } else {
+      None
+    };
+
+    let tooltip = String::from_utf16_lossy(&tray_item.icon_text)
+      .replace(['\0', '\r'], "")
+      .to_string();
+
+    IconEventData {
+      uid: Some(tray_item.uid),
+      window_handle: Some(tray_item.hwnd),
+      guid,
+      tooltip: Some(tooltip),
+      icon_handle,
+      callback_message: Some(tray_item.callback_message),
+      version: Some(tray_item.version),
+    }
+  }
 }
 
 #[repr(C)]
@@ -337,7 +353,21 @@ impl TraySpy {
         let event_tx =
           TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-        if let Some(event) = tray_message.tray_event() {
+        let tray_event =
+          match NOTIFY_ICON_MESSAGE(tray_message.message_type) {
+            NIM_ADD => {
+              Some(TrayEvent::IconAdd(tray_message.icon_data.into()))
+            }
+            NIM_MODIFY | NIM_SETVERSION => {
+              Some(TrayEvent::IconUpdate(tray_message.icon_data.into()))
+            }
+            NIM_DELETE => {
+              Some(TrayEvent::IconRemove(tray_message.icon_data.into()))
+            }
+            _ => None,
+          };
+
+        if let Some(event) = tray_event {
           event_tx.send(event).expect("Failed to send tray event.");
         }
 
@@ -345,12 +375,12 @@ impl TraySpy {
       }
       3 if !copy_data.lpData.is_null() => {
         let icon_identifier =
-          unsafe { &*copy_data.lpData.cast::<WINNOTIFYICONIDENTIFIER>() };
+          unsafe { &*copy_data.lpData.cast::<NotifyIconIdentifier>() };
 
         // TODO: Error handling.
         let cursor_pos = Util::cursor_position().unwrap();
 
-        match icon_identifier.dwMessage {
+        match icon_identifier.message {
           1 => LRESULT(Util::pack_i32(
             cursor_pos.0 as i16,
             cursor_pos.0 as i16,
@@ -401,19 +431,19 @@ impl TraySpy {
       Util::find_overflow_toolbar_window(),
     ];
 
-    // Get process handle.
-    let mut process_id = 0u32;
+    // Get process handle of tray window.
+    let mut process_id = u32::default();
     unsafe {
       GetWindowThreadProcessId(HWND(tray as _), Some(&mut process_id));
     }
 
-    let process =
+    let tray_process =
       unsafe { OpenProcess(PROCESS_ALL_ACCESS, false, process_id) }?;
 
     // Allocate memory in target process.
     let buffer = unsafe {
       VirtualAllocEx(
-        process,
+        tray_process,
         None,
         mem::size_of::<TbButton>(),
         MEM_COMMIT,
@@ -438,75 +468,30 @@ impl TraySpy {
 
       // Read each button.
       for index in 0..count {
-        // Get button info with timeout.
-        unsafe {
-          SendMessageW(
-            HWND(toolbar as _),
-            TB_GETBUTTON,
-            WPARAM(index),
-            LPARAM(buffer as isize),
-          )
-        };
-
-        // Read shared memory containing the button data.
-        let mut button: TbButton = unsafe { mem::zeroed() };
-        unsafe {
-          ReadProcessMemory(
-            process,
-            buffer,
-            &mut button as *mut _ as _,
-            mem::size_of::<TbButton>(),
-            None,
-          )
-        }?;
-
-        let mut tray_item: TrayItem = unsafe { mem::zeroed() };
-        unsafe {
-          ReadProcessMemory(
-            process,
-            button.data as _,
-            &mut tray_item as *mut _ as _,
-            mem::size_of::<TrayItem>(),
-            None,
-          )
-        }?;
-
-        tracing::info!("Found icon!!! {:?}", tray_item);
-
-        let icon_data = IconEventData {
-          uid: Some(tray_item.uid),
-          window_handle: Some(tray_item.hwnd),
-          guid: Some(uuid::Uuid::from_u128(tray_item.guid_item.to_u128())),
-          tooltip: Some(
-            String::from_utf16_lossy(&tray_item.icon_text)
-              .trim_end_matches('\0')
-              .to_string(),
-          ),
-          icon_handle: Some(tray_item.icon_handle),
-          callback_message: Some(tray_item.callback_message),
-          version: Some(tray_item.version),
-        };
-
-        icons.push(icon_data);
+        if let Ok(icon) =
+          Self::read_tray_icon(tray_process, buffer, toolbar, index)
+        {
+          icons.push(icon);
+        }
       }
     }
 
     // Cleanup.
-    let _ = unsafe { VirtualFreeEx(process, buffer, 0, MEM_RELEASE) };
-    let _ = unsafe { CloseHandle(process) };
+    let _ = unsafe { VirtualFreeEx(tray_process, buffer, 0, MEM_RELEASE) };
+    let _ = unsafe { CloseHandle(tray_process) };
 
     tracing::info!("Retrieved {} icons from system tray.", icons.len());
 
     Ok(icons)
   }
 
-  fn get_button_icon_data(
-    process: HANDLE,
+  fn read_tray_icon(
+    tray_process: HANDLE,
     buffer: *mut c_void,
     toolbar: isize,
     index: usize,
-  ) -> windows::core::Result<Option<IconEventData>> {
-    // Send TB_GETBUTTON message
+  ) -> crate::Result<IconEventData> {
+    // Get button info via a taskbar message.
     unsafe {
       SendMessageW(
         HWND(toolbar as _),
@@ -516,54 +501,31 @@ impl TraySpy {
       )
     };
 
-    // Read button data
-    let mut button: TbButton = unsafe { mem::zeroed() };
-    let mut bytes_read = 0;
-    let result = unsafe {
+    // Read shared memory containing the taskbar button data.
+    let mut button: TbButton = unsafe { std::mem::zeroed() };
+    unsafe {
       ReadProcessMemory(
-        process,
+        tray_process,
         buffer,
-        &mut button as *mut _ as *mut c_void,
-        mem::size_of::<TbButton>(),
-        Some(&mut bytes_read),
+        &mut button as *mut _ as _,
+        std::mem::size_of::<TbButton>(),
+        None,
       )
     }?;
 
-    if bytes_read == 0 || button.data == 0 {
-      return Ok(None);
-    }
-
-    // Read tray item data
-    let mut tray_item: TrayItem = unsafe { mem::zeroed() };
-    let mut bytes_read = 0;
-    let result = unsafe {
+    // Read shared memory containing the tray icon data.
+    let mut tray_item: TrayItem = unsafe { std::mem::zeroed() };
+    unsafe {
       ReadProcessMemory(
-        process,
-        button.data as *mut c_void,
-        &mut tray_item as *mut _ as *mut c_void,
-        mem::size_of::<TrayItem>(),
-        Some(&mut bytes_read),
+        tray_process,
+        button.data as _,
+        &mut tray_item as *mut _ as _,
+        std::mem::size_of::<TrayItem>(),
+        None,
       )
     }?;
 
-    if bytes_read == 0 {
-      return Ok(None);
-    }
-
-    // Convert to IconEventData
-    Ok(Some(IconEventData {
-      uid: Some(tray_item.uid),
-      window_handle: Some(tray_item.hwnd),
-      guid: Some(uuid::Uuid::from_u128(tray_item.guid_item.to_u128())),
-      tooltip: Some(
-        String::from_utf16_lossy(&tray_item.icon_text)
-          .trim_end_matches('\0')
-          .to_string(),
-      ),
-      icon_handle: Some(tray_item.icon_handle),
-      callback_message: Some(tray_item.callback_message),
-      version: Some(tray_item.version),
-    }))
+    Ok(tray_item.into())
   }
 
   /// Whether a message should be forwarded to the real tray window.
