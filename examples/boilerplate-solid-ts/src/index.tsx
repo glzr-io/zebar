@@ -1,6 +1,6 @@
 /* @refresh reload */
 import './index.css';
-import { render } from 'solid-js/web';
+import { For, render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import * as zebar from 'zebar';
 
@@ -60,32 +60,34 @@ function App() {
       )}
       {output.systray && (
         <div class="chip">
-          {output.systray.icons.map(icon => (
-            <img
-              class="systray-icon"
-              src={icon.iconUrl}
-              onClick={e => {
-                e.preventDefault();
-                output.systray.onLeftClick(icon.id);
-              }}
-              onContextMenu={e => {
-                e.preventDefault();
-                output.systray.onRightClick(icon.id);
-              }}
-              onMouseEnter={e => {
-                e.preventDefault();
-                output.systray.onHoverEnter(icon.id);
-              }}
-              onMouseLeave={e => {
-                e.preventDefault();
-                output.systray.onHoverLeave(icon.id);
-              }}
-              onMouseMove={e => {
-                e.preventDefault();
-                output.systray.onHoverMove(icon.id);
-              }}
-            />
-          ))}
+          <For each={output.systray.icons}>
+            {icon => (
+              <img
+                class="systray-icon"
+                src={icon.iconUrl}
+                onClick={e => {
+                  e.preventDefault();
+                  output.systray.onLeftClick(icon.id);
+                }}
+                onContextMenu={e => {
+                  e.preventDefault();
+                  output.systray.onRightClick(icon.id);
+                }}
+                onMouseEnter={e => {
+                  e.preventDefault();
+                  output.systray.onHoverEnter(icon.id);
+                }}
+                onMouseLeave={e => {
+                  e.preventDefault();
+                  output.systray.onHoverLeave(icon.id);
+                }}
+                onMouseMove={e => {
+                  e.preventDefault();
+                  output.systray.onHoverMove(icon.id);
+                }}
+              />
+            )}
+          </For>
         </div>
       )}
     </div>

@@ -263,24 +263,17 @@ impl TraySpy {
     let event_tx =
       TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-    if let Err(e) = Self::initial_tray_icons(window) {
+    if let Ok(icons) = Self::initial_tray_icons(window) {
+      for icon in icons {
+        if let Err(err) = event_tx.send(TrayEvent::IconAdd(icon)) {
+          tracing::error!("Failed to send tray event: {:?}", err);
+        }
+      }
+    } else {
       tracing::warn!(
-        "Failed to retrieve initial tray icons. This is expected on W11. {:?}",
-        e
-      )
-    };
-
-    // if let Ok(icons) = Self::initial_tray_icons(window) {
-    //   for icon in icons {
-    //     event_tx
-    //       .send(TrayEvent::IconAdd(icon))
-    //       .expect("Failed to send tray event.");
-    //   }
-    // } else  {
-    //   tracing::warn!(
-    //     "Failed to retrieve initial tray icons. This is expected on
-    // W11."   );
-    // }
+        "Failed to retrieve initial tray icons. This is expected on W11."
+      );
+    }
 
     Self::refresh_icons()?;
 
@@ -408,51 +401,31 @@ impl TraySpy {
       Util::find_overflow_toolbar_window(),
     ];
 
-    println!("Creating file mapping...");
-    let handle = unsafe {
-      CreateFileMappingW(
-        INVALID_HANDLE_VALUE,
-        None,
-        // PAGE_READWRITE,
-        PAGE_EXECUTE_READWRITE,
-        0,
-        std::mem::size_of::<TbButton>() as u32,
-        // w!("Global\\TrayIconSharedMem"),
-        None,
-      )
-    }?;
-
-    println!("Done file mapping...");
-
-    if handle.is_invalid() {
-      panic!("fjdsaifjsai");
+    // Get process handle.
+    let mut process_id = 0u32;
+    unsafe {
+      GetWindowThreadProcessId(HWND(tray as _), Some(&mut process_id));
     }
 
-    let view = unsafe {
-      MapViewOfFile(
-        handle,
-        FILE_MAP_ALL_ACCESS,
-        0,
-        0,
-        std::mem::size_of::<TbButton>(),
+    let process =
+      unsafe { OpenProcess(PROCESS_ALL_ACCESS, false, process_id) }?;
+
+    // Allocate memory in target process.
+    let buffer = unsafe {
+      VirtualAllocEx(
+        process,
+        None,
+        mem::size_of::<TbButton>(),
+        MEM_COMMIT,
+        PAGE_READWRITE,
       )
     };
 
-    if view.Value.is_null() {
-      panic!("aaaaaafjdsaifjsai");
+    if buffer.is_null() {
+      return Err(crate::Error::Windows(Error::from_win32()));
     }
 
     let mut icons = Vec::new();
-
-    let message = b"Hello from shared memory! This is a test pattern to verify memory writes.";
-
-    unsafe {
-      std::ptr::copy_nonoverlapping(
-        message.as_ptr(),
-        view.Value.cast(),
-        message.len(),
-      );
-    }
 
     for toolbar in toolbars.into_iter().flatten() {
       // Get number of tray icons.
@@ -463,7 +436,7 @@ impl TraySpy {
 
       tracing::info!("Found {} buttons in toolbar.", count);
 
-      // Read each button
+      // Read each button.
       for index in 0..count {
         // Get button info with timeout.
         unsafe {
@@ -471,14 +444,32 @@ impl TraySpy {
             HWND(toolbar as _),
             TB_GETBUTTON,
             WPARAM(index),
-            LPARAM(view.Value as isize),
+            LPARAM(buffer as isize),
           )
         };
 
         // Read shared memory containing the button data.
-        let shared = unsafe { &*(view.Value as *const TbButton) };
-        tracing::info!("Found shared!!! {:?}", shared);
-        let tray_item = unsafe { &*(shared.data as *const TrayItem) };
+        let mut button: TbButton = unsafe { mem::zeroed() };
+        unsafe {
+          ReadProcessMemory(
+            process,
+            buffer,
+            &mut button as *mut _ as _,
+            mem::size_of::<TbButton>(),
+            None,
+          )
+        }?;
+
+        let mut tray_item: TrayItem = unsafe { mem::zeroed() };
+        unsafe {
+          ReadProcessMemory(
+            process,
+            button.data as _,
+            &mut tray_item as *mut _ as _,
+            mem::size_of::<TrayItem>(),
+            None,
+          )
+        }?;
 
         tracing::info!("Found icon!!! {:?}", tray_item);
 
@@ -500,7 +491,10 @@ impl TraySpy {
       }
     }
 
-    let _ = unsafe { UnmapViewOfFile(view) };
+    // Cleanup.
+    let _ = unsafe { VirtualFreeEx(process, buffer, 0, MEM_RELEASE) };
+    let _ = unsafe { CloseHandle(process) };
+
     tracing::info!("Retrieved {} icons from system tray.", icons.len());
 
     Ok(icons)
