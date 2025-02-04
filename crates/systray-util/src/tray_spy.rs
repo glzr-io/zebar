@@ -178,6 +178,7 @@ pub struct IconEventData {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 struct TbButton {
   bitmap: i32,
   command_id: i32,
@@ -378,42 +379,33 @@ impl TraySpy {
     Ok(())
   }
 
-  pub fn get_initial_tray_icons() -> crate::Result<Vec<IconEventData>> {
-    tracing::info!("Finding system tray windows...");
-    let mut icons = Vec::new();
-    
+  pub fn find_tray_window() -> crate::Result<HWND> {
     // Find toolbar window
     let tray = unsafe { FindWindowW(w!("Shell_TrayWnd"), None) }?;
     tracing::info!("Found Shell_TrayWnd: {:?}", tray.0);
-    
-    let notify = unsafe {
-        FindWindowExW(
-            tray,  // We're passing the HWND directly
-            HWND(std::ptr::null_mut()),
-            w!("TrayNotifyWnd"),
-            None,
-        )
-    }?;
+
+    let notify =
+      unsafe { FindWindowExW(tray, None, w!("TrayNotifyWnd"), None) }?;
+
     tracing::info!("Found TrayNotifyWnd: {:?}", notify.0);
-    
-    let pager = unsafe {
-        FindWindowExW(
-            notify,  // Using the HWND from previous find
-            HWND(std::ptr::null_mut()),
-            w!("SysPager"),
-            None,
-        )
-    }?;
+
+    let pager =
+      unsafe { FindWindowExW(notify, None, w!("SysPager"), None) }?;
+
     tracing::info!("Found SysPager: {:?}", pager.0);
-    
-    let toolbar = unsafe {
-        FindWindowExW(
-            pager,  // Using the HWND from previous find
-            HWND(std::ptr::null_mut()),
-            w!("ToolbarWindow32"),
-            None,
-        )
-    }?;
+
+    let toolbar =
+      unsafe { FindWindowExW(pager, None, w!("ToolbarWindow32"), None) }?;
+
+    Ok(toolbar)
+  }
+
+  pub fn get_initial_tray_icons() -> crate::Result<Vec<IconEventData>> {
+    tracing::info!("Finding system tray windows...");
+    let mut icons = Vec::new();
+
+    let toolbar = Self::find_tray_window()?;
+
     tracing::info!("Found ToolbarWindow32: {:?}", toolbar.0);
 
     // Get button count
