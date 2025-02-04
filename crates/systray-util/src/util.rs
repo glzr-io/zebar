@@ -211,8 +211,7 @@ impl Util {
       .ok_or(crate::Error::IconConversionFailed)
   }
 
-  /// Finds the Windows tray window, optionally ignoring a specific window
-  /// handle.
+  /// Finds the Windows tray window, ignoring a specific window handle.
   pub fn find_tray_window(hwnd_ignore: isize) -> Option<isize> {
     let mut taskbar_hwnd =
       unsafe { FindWindowW(w!("Shell_TrayWnd"), None) }.ok()?;
@@ -234,8 +233,9 @@ impl Util {
     Some(taskbar_hwnd.0 as isize)
   }
 
-  /// Finds the Windows toolbar within the given tray window.
-  pub fn find_toolbar_window(tray_handle: isize) -> Option<isize> {
+  /// Finds the toolbar window (contains tray icons) within the given tray
+  /// window.
+  pub fn find_tray_toolbar_window(tray_handle: isize) -> Option<isize> {
     let notify = unsafe {
       FindWindowExW(
         HWND(tray_handle as _),
@@ -251,6 +251,20 @@ impl Util {
 
     let toolbar =
       unsafe { FindWindowExW(pager, None, w!("ToolbarWindow32"), None) }
+        .ok()?;
+
+    Some(toolbar.0 as isize)
+  }
+
+  /// Finds the toolbar window (contains tray icons) for overflowed icons.
+  /// This is the window accessed via the chevron button in the Windows
+  /// taskbar.
+  pub fn find_overflow_toolbar_window() -> Option<isize> {
+    let notify =
+      unsafe { FindWindowW(w!("NotifyIconOverflowWindow"), None) }.ok()?;
+
+    let toolbar =
+      unsafe { FindWindowExW(notify, None, w!("ToolbarWindow32"), None) }
         .ok()?;
 
     Some(toolbar.0 as isize)

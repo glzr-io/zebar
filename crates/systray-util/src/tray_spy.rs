@@ -260,7 +260,22 @@ impl TraySpy {
     let event_tx =
       TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-    for icon in Self::initial_tray_icons(window)? {
+    let tray =
+      Util::find_tray_window(window).ok_or(crate::Error::TrayNotFound)?;
+
+    let tray_toolbar = Util::find_tray_toolbar_window(tray)
+      .ok_or(crate::Error::TrayNotFound)?;
+
+    for icon in Self::initial_tray_icons(tray_toolbar)? {
+      event_tx
+        .send(TrayEvent::IconAdd(icon))
+        .expect("Failed to send tray event.");
+    }
+
+    let overflow_toolbar = Util::find_overflow_toolbar_window()
+      .ok_or(crate::Error::TrayNotFound)?;
+
+    for icon in Self::initial_tray_icons(overflow_toolbar)? {
       event_tx
         .send(TrayEvent::IconAdd(icon))
         .expect("Failed to send tray event.");
@@ -380,15 +395,10 @@ impl TraySpy {
   }
 
   pub fn initial_tray_icons(
-    window_handle: isize,
+    // window_handle: isize,
+    toolbar: isize,
   ) -> crate::Result<Vec<IconEventData>> {
     tracing::info!("Finding initial tray icons.");
-
-    let tray = Util::find_tray_window(window_handle)
-      .ok_or(crate::Error::TrayNotFound)?;
-
-    let toolbar =
-      Util::find_toolbar_window(tray).ok_or(crate::Error::TrayNotFound)?;
 
     // Get button count.
     let count = unsafe {
