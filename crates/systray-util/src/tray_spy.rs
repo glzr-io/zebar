@@ -257,16 +257,16 @@ impl TraySpy {
     // SimpleClassicTheme.Taskbar project for potential implementation.
     unsafe { SetTimer(HWND(window as _), 1, 100, None) };
 
-    // Self::refresh_icons()?;
-    let initial_icons = Self::initial_tray_icons(window)?;
     let event_tx =
       TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
-    for icon in initial_icons {
+    for icon in Self::initial_tray_icons(window)? {
       event_tx
         .send(TrayEvent::IconAdd(icon))
         .expect("Failed to send tray event.");
     }
+
+    Self::refresh_icons()?;
 
     Util::run_message_loop();
 
@@ -342,11 +342,11 @@ impl TraySpy {
         let cursor_pos = Util::cursor_position().unwrap();
 
         match icon_identifier.dwMessage {
-          1 => LRESULT(Util::make_lparam(
+          1 => LRESULT(Util::pack_i32(
             cursor_pos.0 as i16,
             cursor_pos.0 as i16,
           ) as _),
-          2 => LRESULT(Util::make_lparam(
+          2 => LRESULT(Util::pack_i32(
             cursor_pos.1 as i16 + 1,
             cursor_pos.1 as i16 + 1,
           ) as _),
@@ -390,14 +390,9 @@ impl TraySpy {
     let toolbar =
       Util::find_toolbar_window(tray).ok_or(crate::Error::TrayNotFound)?;
 
-    // Get button count
+    // Get button count.
     let count = unsafe {
-      SendMessageW(
-        HWND(toolbar as _),
-        TB_BUTTONCOUNT,
-        WPARAM(0),
-        LPARAM(0),
-      )
+      SendMessageW(HWND(toolbar as _), TB_BUTTONCOUNT, None, None)
     }
     .0 as i32;
 
@@ -439,19 +434,15 @@ impl TraySpy {
     // Read each button
     for i in 0..count {
       if let Some(icon_data) =
-        Self::get_button_icon_data(process, buffer, toolbar, i as usize)
-          .map_err(|e| crate::Error::Windows(e))?
+        Self::get_button_icon_data(process, buffer, toolbar, i as usize)?
       {
         icons.push(icon_data);
       }
     }
 
-    // Cleanup
-    unsafe {
-      VirtualFreeEx(process, buffer, 0, MEM_RELEASE)
-        .map_err(|e| crate::Error::Windows(e))?;
-      CloseHandle(process).map_err(|e| crate::Error::Windows(e))?;
-    }
+    // Cleanup.
+    unsafe { VirtualFreeEx(process, buffer, 0, MEM_RELEASE) }?;
+    unsafe { CloseHandle(process) }?;
 
     tracing::debug!("Retrieved {} icons from system tray", icons.len());
     Ok(icons)

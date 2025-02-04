@@ -346,7 +346,7 @@ impl Systray {
     // for version <= 3.
     let wparam = if version.is_some_and(|version| version > 3) {
       let cursor_pos = Util::cursor_position()?;
-      Util::make_lparam(cursor_pos.0 as i16, cursor_pos.1 as i16) as u32
+      Util::pack_i32(cursor_pos.0 as i16, cursor_pos.1 as i16) as u32
     } else {
       uid
     };
@@ -354,9 +354,9 @@ impl Systray {
     // The high word for the lparam is the UID for version > 3, and 0 for
     // version <= 3. The low word is always the message.
     let lparam = if version.is_some_and(|version| version > 3) {
-      Util::make_lparam(message as i16, 0)
+      Util::pack_i32(message as i16, 0)
     } else {
-      Util::make_lparam(message as i16, uid as i16)
+      Util::pack_i32(message as i16, uid as i16)
     };
 
     unsafe {

@@ -111,9 +111,11 @@ impl Util {
     string.encode_utf16().chain(std::iter::once(0)).collect()
   }
 
-  /// Creates an `LPARAM` from low-order and high-order words. This is
-  /// equivalent to the Win32 `MAKELPARAM` macro.
-  pub fn make_lparam(low: i16, high: i16) -> i32 {
+  /// Packs two 16-bit values into a 32-bit value. This is commonly used
+  /// for `WPARAM` and `LPARAM` values.
+  ///
+  /// Equivalent to the Win32 `MAKELPARAM` and `MAKEWPARAM` macros.
+  pub fn pack_i32(low: i16, high: i16) -> i32 {
     low as i32 | ((high as i32) << 16)
   }
 
@@ -253,9 +255,4 @@ impl Util {
 
     Some(toolbar.0 as isize)
   }
-}
-
-struct FindRealTrayInfo {
-  spy_window: HWND,
-  result_window: HWND,
 }
