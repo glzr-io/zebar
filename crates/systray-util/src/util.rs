@@ -18,7 +18,7 @@ use windows::Win32::{
     WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW,
   },
 };
-use windows_core::PCWSTR;
+use windows_core::{w, PCWSTR};
 
 pub type WindowProcedure = WNDPROC;
 
@@ -211,19 +211,9 @@ impl Util {
 
   /// Finds the Windows tray window, optionally ignoring a specific window
   /// handle.
-  pub fn tray_window(hwnd_ignore: isize) -> Option<isize> {
-    let mut taskbar_hwnd = unsafe {
-      FindWindowW(
-        windows::core::PCWSTR::from_raw(
-          "Shell_TrayWnd\0"
-            .encode_utf16()
-            .collect::<Vec<_>>()
-            .as_ptr(),
-        ),
-        windows::core::PCWSTR::null(),
-      )
-    }
-    .ok()?;
+  pub fn find_tray_window(hwnd_ignore: isize) -> Option<isize> {
+    let mut taskbar_hwnd =
+      unsafe { FindWindowW(w!("Shell_TrayWnd"), None) }.ok()?;
 
     if hwnd_ignore != 0 {
       while taskbar_hwnd == HWND(hwnd_ignore as _) {
@@ -231,13 +221,8 @@ impl Util {
           FindWindowExW(
             HWND::default(),
             taskbar_hwnd,
-            windows::core::PCWSTR::from_raw(
-              "Shell_TrayWnd\0"
-                .encode_utf16()
-                .collect::<Vec<_>>()
-                .as_ptr(),
-            ),
-            windows::core::PCWSTR::null(),
+            w!("Shell_TrayWnd"),
+            None,
           )
         }
         .ok()?;
@@ -245,6 +230,28 @@ impl Util {
     }
 
     Some(taskbar_hwnd.0 as isize)
+  }
+
+  /// Finds the Windows toolbar within the given tray window.
+  pub fn find_toolbar_window(tray_handle: isize) -> Option<isize> {
+    let notify = unsafe {
+      FindWindowExW(
+        HWND(tray_handle as _),
+        None,
+        w!("TrayNotifyWnd"),
+        None,
+      )
+    }
+    .ok()?;
+
+    let pager =
+      unsafe { FindWindowExW(notify, None, w!("SysPager"), None) }.ok()?;
+
+    let toolbar =
+      unsafe { FindWindowExW(pager, None, w!("ToolbarWindow32"), None) }
+        .ok()?;
+
+    Some(toolbar.0 as isize)
   }
 }
 

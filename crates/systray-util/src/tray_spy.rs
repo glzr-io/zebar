@@ -258,7 +258,7 @@ impl TraySpy {
     unsafe { SetTimer(HWND(window as _), 1, 100, None) };
 
     // Self::refresh_icons()?;
-    let initial_icons = Self::get_initial_tray_icons()?;
+    let initial_icons = Self::initial_tray_icons(window)?;
     let event_tx =
       TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
@@ -379,56 +379,45 @@ impl TraySpy {
     Ok(())
   }
 
-  pub fn find_tray_window() -> crate::Result<HWND> {
-    // Find toolbar window
-    let tray = unsafe { FindWindowW(w!("Shell_TrayWnd"), None) }?;
-    tracing::info!("Found Shell_TrayWnd: {:?}", tray.0);
+  pub fn initial_tray_icons(
+    window_handle: isize,
+  ) -> crate::Result<Vec<IconEventData>> {
+    tracing::info!("Finding initial tray icons.");
 
-    let notify =
-      unsafe { FindWindowExW(tray, None, w!("TrayNotifyWnd"), None) }?;
-
-    tracing::info!("Found TrayNotifyWnd: {:?}", notify.0);
-
-    let pager =
-      unsafe { FindWindowExW(notify, None, w!("SysPager"), None) }?;
-
-    tracing::info!("Found SysPager: {:?}", pager.0);
+    let tray = Util::find_tray_window(window_handle)
+      .ok_or(crate::Error::TrayNotFound)?;
 
     let toolbar =
-      unsafe { FindWindowExW(pager, None, w!("ToolbarWindow32"), None) }?;
-
-    Ok(toolbar)
-  }
-
-  pub fn get_initial_tray_icons() -> crate::Result<Vec<IconEventData>> {
-    tracing::info!("Finding system tray windows...");
-    let mut icons = Vec::new();
-
-    let toolbar = Self::find_tray_window()?;
-
-    tracing::info!("Found ToolbarWindow32: {:?}", toolbar.0);
+      Util::find_toolbar_window(tray).ok_or(crate::Error::TrayNotFound)?;
 
     // Get button count
     let count = unsafe {
-      SendMessageW(toolbar, TB_BUTTONCOUNT, WPARAM(0), LPARAM(0))
+      SendMessageW(
+        HWND(toolbar as _),
+        TB_BUTTONCOUNT,
+        WPARAM(0),
+        LPARAM(0),
+      )
     }
     .0 as i32;
 
-    tracing::info!("Found {} buttons in toolbar", count);
+    tracing::info!("Found {} buttons in toolbar.", count);
 
     if count < 1 {
-      return Ok(icons);
+      return Ok(vec![]);
     }
 
     // Get process handle
     let mut process_id = 0u32;
     unsafe {
-      GetWindowThreadProcessId(toolbar, Some(&mut process_id as *mut u32));
+      GetWindowThreadProcessId(
+        HWND(toolbar as _),
+        Some(&mut process_id as *mut u32),
+      );
     }
 
     let process =
-      unsafe { OpenProcess(PROCESS_ALL_ACCESS, false, process_id) }
-        .map_err(|e| crate::Error::Windows(e))?;
+      unsafe { OpenProcess(PROCESS_ALL_ACCESS, false, process_id) }?;
 
     // Allocate memory in target process
     let buffer = unsafe {
@@ -444,6 +433,8 @@ impl TraySpy {
     if buffer.is_null() {
       return Err(crate::Error::Windows(Error::from_win32()));
     }
+
+    let mut icons = Vec::new();
 
     // Read each button
     for i in 0..count {
@@ -469,13 +460,13 @@ impl TraySpy {
   fn get_button_icon_data(
     process: HANDLE,
     buffer: *mut c_void,
-    toolbar: HWND,
+    toolbar: isize,
     index: usize,
   ) -> windows::core::Result<Option<IconEventData>> {
     // Send TB_GETBUTTON message
     unsafe {
       SendMessageW(
-        toolbar,
+        HWND(toolbar as _),
         TB_GETBUTTON,
         WPARAM(index),
         LPARAM(buffer as isize),
@@ -553,7 +544,7 @@ impl TraySpy {
       msg
     );
 
-    let Some(real_tray) = Util::tray_window(hwnd.0 as isize) else {
+    let Some(real_tray) = Util::find_tray_window(hwnd.0 as isize) else {
       tracing::warn!("No real tray found.");
       return unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) };
     };

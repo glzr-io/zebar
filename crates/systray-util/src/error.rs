@@ -8,6 +8,9 @@ pub enum Error {
   #[error(transparent)]
   Windows(#[from] windows::core::Error),
 
+  #[error("Cast error")]
+  CastError(#[from] std::num::TryFromIntError),
+
   #[error("Creation of message window failed.")]
   MessageWindowCreationFailed,
 
@@ -16,9 +19,6 @@ pub enum Error {
 
   #[error("Invalid `COPYDATASTRUCT`.")]
   CopyDataInvalid,
-
-  #[error("Cast error")]
-  CastError(#[from] std::num::TryFromIntError),
 
   #[error("Icon conversion failed.")]
   IconConversionFailed,
@@ -30,7 +30,10 @@ pub enum Error {
   InoperableIcon,
 
   #[error("Invalid stable ID for icon.")]
-  InvalidStableId,
+  InvalidIconId,
+
+  #[error("Tray not found.")]
+  TrayNotFound,
 }
 
 impl Serialize for Error {

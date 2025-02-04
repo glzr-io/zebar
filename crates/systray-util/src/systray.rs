@@ -54,8 +54,8 @@ impl FromStr for StableId {
       return Ok(StableId::HandleUid(
         handle_str
           .parse()
-          .map_err(|_| crate::Error::InvalidStableId)?,
-        uid_str.parse().map_err(|_| crate::Error::InvalidStableId)?,
+          .map_err(|_| crate::Error::InvalidIconId)?,
+        uid_str.parse().map_err(|_| crate::Error::InvalidIconId)?,
       ));
     }
 
@@ -64,7 +64,7 @@ impl FromStr for StableId {
       return Ok(StableId::Guid(guid));
     }
 
-    Err(crate::Error::InvalidStableId)
+    Err(crate::Error::InvalidIconId)
   }
 }
 
