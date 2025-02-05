@@ -9,11 +9,6 @@ edition = "2021"
 [lib]
 path = "src/lib.rs"
 
-# TODO: Remove this after testing.
-[[bin]]
-name = "systray-util"
-path = "src/main.rs"
-
 [dependencies]
 image = { version = "0.25", features = ["serde"] }
 serde = { workspace = true }

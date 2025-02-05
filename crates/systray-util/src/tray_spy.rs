@@ -370,8 +370,13 @@ impl TraySpy {
         let icon_identifier =
           unsafe { &*copy_data.lpData.cast::<NotifyIconIdentifier>() };
 
-        // TODO: Error handling.
-        let cursor_pos = Util::cursor_position().unwrap();
+        let cursor_pos = match Util::cursor_position() {
+          Ok(pos) => pos,
+          Err(_) => {
+            tracing::error!("Failed to get cursor position.");
+            return Self::forward_message(hwnd, msg, wparam, lparam)
+          }
+        };
 
         match icon_identifier.message {
           1 => LRESULT(Util::pack_i32(
