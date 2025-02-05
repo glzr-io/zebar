@@ -71,6 +71,7 @@ Through the `zebar` NPM package, Zebar exposes various system information via re
 - [media](#Media)
 - [memory](#Memory)
 - [network](#Network)
+- [systray](#Systray)
 - [weather](#Weather)
 
 ### Audio
@@ -408,6 +409,26 @@ No config options.
 | `siUnit`   | Unit of the converted bytes in according to the SI standard. KB, MB, ...    | `string`    |
 | `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
 | `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
+
+### Systray 
+
+#### Config
+No config options.
+#### Outputs
+
+| Variable          | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `icons`         | All Windows taskbar system tray icons.  | `SystrayIcon[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Related Types
+
+#### SystrayIcon
+| Variable          | Description | Return type |
+| ----------------- | ----------- | ----------- |
+| `id`         | ID of the icon. |  `string`    |
+| `iconBytes`         | Icon pixel array. |  `number[]`    |
+| `iconBlob`         | Icon in memory. |  `Blob`    |
+| `iconUrl`         | Icon URL ready to be be referenced in `<img>` components.  |  `string`    |
 
 
 ### Weather
