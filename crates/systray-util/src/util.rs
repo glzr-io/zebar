@@ -217,6 +217,13 @@ impl Util {
       return Err(windows::core::Error::from_win32().into());
     }
 
+    // Masks are a legacy way of handling transparency before alpha
+    // channels became standard.  Either white/black is used to
+    // represent transparency. Modern icons will have partial transparency
+    // throughout the icon from anti-aliasing
+    let is_mask_based =
+      color_buffer.chunks_exact(4).all(|chunk| chunk[3] == 0);
+
     // Combine color and mask data. We also need to convert BGR to RGB,
     // meaning that the red and blue channels get swapped.
     for (index, chunk) in color_buffer.chunks_exact_mut(4).enumerate() {
@@ -225,18 +232,14 @@ impl Util {
 
       // Swap BGR to RGB.
       chunk.swap(0, 2);
-
-      // If pixel is masked (mask alpha is white/255), make it
-      // transparent. If pixel has no alpha, but has color, make it
-      // opaque.
-      if mask_alpha == 255 {
-        // Make pixel transparent.
-        chunk[3] = 0;
-      } else if chunk[3] == 0
-        && (chunk[0] != 0 || chunk[1] != 0 || chunk[2] != 0)
-      {
-        // Make pixel opaque.
-        chunk[3] = 255;
+      if is_mask_based {
+        if mask_alpha == 255 {
+          // Make pixel transparent.
+          chunk[3] = 0;
+        } else if chunk[0] != 0 || chunk[1] != 0 || chunk[2] != 0 {
+          // Make pixel solid.
+          chunk[3] = 255;
+        }
       }
     }
 
