@@ -130,7 +130,6 @@ impl Util {
   pub fn icon_to_image(icon: isize) -> crate::Result<RgbaImage> {
     let mut icon_info = ICONINFO::default();
     unsafe { GetIconInfo(HICON(icon as _), &mut icon_info) }?;
-    unsafe { DeleteObject(icon_info.hbmMask) }.ok()?;
 
     let mut bitmap = BITMAP::default();
     let bitmap_res = unsafe {
@@ -142,8 +141,10 @@ impl Util {
     };
 
     if bitmap_res == 0 {
+      let error = windows::core::Error::from_win32();
+      unsafe { DeleteObject(icon_info.hbmMask) }.ok()?;
       unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
-      return Err(windows::core::Error::from_win32().into());
+      return Err(error.into());
     }
 
     let width_u32 = u32::try_from(bitmap.bmWidth)?;
@@ -151,17 +152,23 @@ impl Util {
     let width_usize = usize::try_from(bitmap.bmWidth)?;
     let height_usize = usize::try_from(bitmap.bmHeight)?;
 
-    let mut buffer: Vec<u8> = Vec::with_capacity(
-      width_usize
-        .checked_mul(height_usize)
-        .and_then(|size| size.checked_mul(4))
-        .ok_or(crate::Error::IconConversionFailed)?,
-    );
+    let buffer_size = width_usize
+      .checked_mul(height_usize)
+      .and_then(|size| size.checked_mul(4))
+      .ok_or(crate::Error::IconConversionFailed)?;
+
+    // For most icons, we only need the color bitmap. However, certain
+    // icons (e.g. the NVIDIA settings app) require both mask and color
+    // bitmaps.
+    let mut color_buffer = vec![0u8; buffer_size];
+    let mut mask_buffer = vec![0u8; buffer_size];
 
     let dc = unsafe { GetDC(None) };
     if dc.is_invalid() {
+      let error = windows::core::Error::from_win32();
+      unsafe { DeleteObject(icon_info.hbmMask) }.ok()?;
       unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
-      return Err(windows::core::Error::from_win32().into());
+      return Err(error.into());
     }
 
     let mut bi = BITMAPINFO {
@@ -176,38 +183,64 @@ impl Util {
       ..Default::default()
     };
 
-    let result = unsafe {
+    // Get color bitmap data.
+    let color_result = unsafe {
       GetDIBits(
         dc,
         icon_info.hbmColor,
         0,
         height_u32,
-        Some(buffer.as_mut_ptr().cast()),
+        Some(color_buffer.as_mut_ptr().cast()),
         addr_of_mut!(bi).cast(),
         DIB_RGB_COLORS,
       )
     };
 
-    if result == 0 {
-      unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
-      unsafe { ReleaseDC(None, dc) };
+    // Get mask bitmap data.
+    let mask_result = unsafe {
+      GetDIBits(
+        dc,
+        icon_info.hbmMask,
+        0,
+        height_u32,
+        Some(mask_buffer.as_mut_ptr().cast()),
+        addr_of_mut!(bi).cast(),
+        DIB_RGB_COLORS,
+      )
+    };
+
+    unsafe { ReleaseDC(None, dc) };
+    unsafe { DeleteObject(icon_info.hbmMask) }.ok()?;
+    unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
+
+    if color_result == 0 || mask_result == 0 {
       return Err(windows::core::Error::from_win32().into());
     }
 
-    unsafe { buffer.set_len(buffer.capacity()) };
-    unsafe { ReleaseDC(None, dc) };
-    unsafe { DeleteObject(icon_info.hbmColor) }.ok()?;
+    // Combine color and mask data. We also need to convert BGR to RGB,
+    // meaning that the red and blue channels get swapped.
+    for (index, chunk) in color_buffer.chunks_exact_mut(4).enumerate() {
+      // Get mask bit (every 4th byte since we're reading as 32-bit).
+      let mask_alpha = mask_buffer[index * 4];
 
-    // Convert BGR to RGB. The red and blue channels get swapped.
-    for chunk in buffer.chunks_exact_mut(4) {
-      let [blue, _, red, _] = chunk else {
-        unreachable!()
-      };
+      // Swap BGR to RGB.
+      chunk.swap(0, 2);
 
-      std::mem::swap(blue, red);
+      // If pixel is masked (mask alpha is white/255), make it
+      // transparent. If pixel has no alpha, but has color, make it
+      // opaque.
+      if mask_alpha == 255 {
+        // Make pixel transparent.
+        chunk[3] = 0;
+      } else if chunk[3] == 0
+        && (chunk[0] != 0 || chunk[1] != 0 || chunk[2] != 0)
+      {
+        // Make pixel opaque.
+        chunk[3] = 255;
+      }
     }
 
-    RgbaImage::from_vec(width_u32, height_u32, buffer)
+    RgbaImage::from_vec(width_u32, height_u32, color_buffer)
       .ok_or(crate::Error::IconConversionFailed)
   }
 
