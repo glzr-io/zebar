@@ -17,7 +17,7 @@ pub struct SystrayOutput {
   pub icons: Vec<SystrayOutputIcon>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SystrayOutputIcon {
   pub id: String,
@@ -34,6 +34,16 @@ impl TryFrom<SystrayIcon> for SystrayOutputIcon {
       tooltip: icon.tooltip.clone(),
       icon_bytes: icon.to_png()?,
     })
+  }
+}
+
+impl std::fmt::Debug for SystrayOutputIcon {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "SystrayOutputIcon {{ id: {}, tooltip: {} }}",
+      self.id, self.tooltip
+    )
   }
 }
 

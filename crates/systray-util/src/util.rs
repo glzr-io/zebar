@@ -245,13 +245,16 @@ impl Util {
       )
     }
     .ok()?;
+    tracing::info!("Found TrayNotifyWnd: {:?}", notify);
 
     let pager =
       unsafe { FindWindowExW(notify, None, w!("SysPager"), None) }.ok()?;
+    tracing::info!("Found SysPager: {:?}", pager);
 
     let toolbar =
       unsafe { FindWindowExW(pager, None, w!("ToolbarWindow32"), None) }
         .ok()?;
+    tracing::info!("Found ToolbarWindow32: {:?}", toolbar);
 
     Some(toolbar.0 as isize)
   }
