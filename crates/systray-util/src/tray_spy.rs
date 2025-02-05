@@ -152,9 +152,13 @@ impl From<NotifyIconData> for IconEventData {
     };
 
     let tooltip = if icon_data.flags.0 & NIF_TIP.0 != 0 {
-      let tooltip_str = String::from_utf16_lossy(&icon_data.tooltip)
-        .replace(['\0', '\r'], "")
-        .to_string();
+      let tooltip_len =
+        icon_data.tooltip.iter().position(|&c| c == 0).unwrap_or(0);
+
+      let tooltip_str =
+        String::from_utf16_lossy(&icon_data.tooltip[..tooltip_len])
+          .replace('\r', "")
+          .to_string();
 
       (!tooltip_str.is_empty()).then_some(tooltip_str)
     } else {
@@ -207,9 +211,13 @@ impl From<TbButtonItem> for IconEventData {
       None
     };
 
-    let tooltip = String::from_utf16_lossy(&tb_item.icon_text)
-      .replace(['\0', '\r'], "")
-      .to_string();
+    let tooltip_len =
+      tb_item.icon_text.iter().position(|&c| c == 0).unwrap_or(0);
+
+    let tooltip =
+      String::from_utf16_lossy(&tb_item.icon_text[..tooltip_len])
+        .replace('\r', "")
+        .to_string();
 
     IconEventData {
       uid: Some(tb_item.uid),
@@ -301,18 +309,7 @@ impl TraySpy {
     match msg {
       WM_TIMER => {
         // Regain tray priority.
-        let _ = unsafe {
-          SetWindowPos(
-            hwnd,
-            HWND_TOPMOST,
-            0,
-            0,
-            0,
-            0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-          )
-        };
-
+        let _ = Self::bring_to_top(hwnd);
         LRESULT(0)
       }
       WM_COPYDATA => Self::handle_copy_data(hwnd, msg, wparam, lparam),
@@ -388,6 +385,23 @@ impl TraySpy {
       }
       _ => Self::forward_message(hwnd, msg, wparam, lparam),
     }
+  }
+
+  /// Brings the spy window to the top of the z-order.
+  fn bring_to_top(window_handle: HWND) -> crate::Result<()> {
+    unsafe {
+      SetWindowPos(
+        window_handle,
+        HWND_TOPMOST,
+        0,
+        0,
+        0,
+        0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+      )
+    }?;
+
+    Ok(())
   }
 
   /// Refreshes the icons of the tray.
