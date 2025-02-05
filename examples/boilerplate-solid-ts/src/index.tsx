@@ -65,6 +65,7 @@ function App() {
               <img
                 class="systray-icon"
                 src={icon.iconUrl}
+                title={icon.tooltip}
                 onClick={e => {
                   e.preventDefault();
                   output.systray.onLeftClick(icon.id);
@@ -72,18 +73,6 @@ function App() {
                 onContextMenu={e => {
                   e.preventDefault();
                   output.systray.onRightClick(icon.id);
-                }}
-                onMouseEnter={e => {
-                  e.preventDefault();
-                  output.systray.onHoverEnter(icon.id);
-                }}
-                onMouseLeave={e => {
-                  e.preventDefault();
-                  output.systray.onHoverLeave(icon.id);
-                }}
-                onMouseMove={e => {
-                  e.preventDefault();
-                  output.systray.onHoverMove(icon.id);
                 }}
               />
             )}
