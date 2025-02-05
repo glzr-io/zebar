@@ -11,9 +11,10 @@ use windows::Win32::{
     Controls::{WM_MOUSEHOVER, WM_MOUSELEAVE},
     Shell::{NIN_POPUPCLOSE, NIN_POPUPOPEN, NIN_SELECT},
     WindowsAndMessaging::{
-      IsWindow, SendNotifyMessageW, WM_CONTEXTMENU, WM_LBUTTONDOWN,
-      WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE,
-      WM_RBUTTONDOWN, WM_RBUTTONUP,
+      AllowSetForegroundWindow, GetWindowThreadProcessId, IsWindow,
+      SendNotifyMessageW, WM_CONTEXTMENU, WM_LBUTTONDOWN, WM_LBUTTONUP,
+      WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE, WM_RBUTTONDOWN,
+      WM_RBUTTONUP,
     },
   },
 };
@@ -333,18 +334,40 @@ impl Systray {
       return Err(crate::Error::InoperableIcon);
     }
 
+    let is_mouse_click = matches!(
+      action,
+      SystrayIconAction::LeftClick
+        | SystrayIconAction::RightClick
+        | SystrayIconAction::MiddleClick
+    );
+
+    // For mouse clicks, there is often a menu that appears after the
+    // click. Allow the notify icon to gain focus so that the menu can be
+    // dismissed after clicking outside.
+    if is_mouse_click {
+      let mut proc_id = u32::default();
+      unsafe {
+        GetWindowThreadProcessId(
+          HWND(window_handle as _),
+          Some(&mut proc_id),
+        )
+      };
+
+      let _ = unsafe { AllowSetForegroundWindow(proc_id) };
+    }
+
     let wm_messages = match action {
       SystrayIconAction::LeftClick => vec![WM_LBUTTONDOWN, WM_LBUTTONUP],
-      SystrayIconAction::RightClick => vec![WM_RBUTTONDOWN, WM_RBUTTONUP],
+      SystrayIconAction::RightClick => {
+        vec![WM_RBUTTONDOWN, WM_RBUTTONUP]
+      }
       SystrayIconAction::MiddleClick => {
-        vec![WM_MBUTTONDOWN, WM_MBUTTONUP, WM_CONTEXTMENU]
+        vec![WM_MBUTTONDOWN, WM_MBUTTONUP]
       }
       SystrayIconAction::HoverEnter => vec![WM_MOUSEHOVER],
       SystrayIconAction::HoverLeave => vec![WM_MOUSELEAVE],
       SystrayIconAction::HoverMove => vec![WM_MOUSEMOVE],
     };
-
-    // TODO: Allow icon hwnd to gain focus for left/right/middle clicks.
 
     for wm_message in wm_messages {
       Self::notify_icon(
@@ -356,13 +379,15 @@ impl Systray {
       )?;
     }
 
-    // This is documented as version 4, but Explorer does this for version
-    // 3 as well
+    // Additional messages are sent for version 4 and above. Explorer sends
+    // these for version 3 as well though, so we do the same.
+    // Ref: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyicona#remarks
     if icon.version.is_some_and(|version| version >= 3) {
-      let nin_message = match action {
+      let v3_message = match action {
         SystrayIconAction::HoverEnter => NIN_POPUPOPEN,
         SystrayIconAction::HoverLeave => NIN_POPUPCLOSE,
         SystrayIconAction::LeftClick => NIN_SELECT,
+        SystrayIconAction::RightClick => WM_CONTEXTMENU,
         _ => return Ok(()),
       };
 
@@ -371,7 +396,7 @@ impl Systray {
         callback,
         uid,
         icon.version,
-        nin_message,
+        v3_message,
       )?;
     }
 
@@ -399,9 +424,9 @@ impl Systray {
     // The high word for the lparam is the UID for version > 3, and 0 for
     // version <= 3. The low word is always the message.
     let lparam = if version.is_some_and(|version| version > 3) {
-      Util::pack_i32(message as i16, 0)
-    } else {
       Util::pack_i32(message as i16, uid as i16)
+    } else {
+      Util::pack_i32(message as i16, 0)
     };
 
     unsafe {
