@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use systray_util::{IconEvent, Systray, SystrayIcon};
+use systray_util::{Systray, SystrayIcon, SystrayIconAction};
 
 use crate::providers::{
   CommonProviderState, Provider, ProviderFunction,
@@ -66,17 +66,19 @@ impl SystrayProvider {
   ) -> anyhow::Result<ProviderFunctionResponse> {
     match &function {
       SystrayFunction::IconHoverEnter(args) => systray
-        .send_icon_event(args.icon_id.parse()?, IconEvent::HoverEnter),
+        .send_action(args.icon_id.parse()?, SystrayIconAction::HoverEnter),
       SystrayFunction::IconHoverLeave(args) => systray
-        .send_icon_event(args.icon_id.parse()?, IconEvent::HoverLeave),
+        .send_action(args.icon_id.parse()?, SystrayIconAction::HoverLeave),
       SystrayFunction::IconHoverMove(args) => systray
-        .send_icon_event(args.icon_id.parse()?, IconEvent::HoverMove),
+        .send_action(args.icon_id.parse()?, SystrayIconAction::HoverMove),
       SystrayFunction::IconLeftClick(args) => systray
-        .send_icon_event(args.icon_id.parse()?, IconEvent::LeftClick),
+        .send_action(args.icon_id.parse()?, SystrayIconAction::LeftClick),
       SystrayFunction::IconRightClick(args) => systray
-        .send_icon_event(args.icon_id.parse()?, IconEvent::RightClick),
-      SystrayFunction::IconMiddleClick(args) => systray
-        .send_icon_event(args.icon_id.parse()?, IconEvent::MiddleClick),
+        .send_action(args.icon_id.parse()?, SystrayIconAction::RightClick),
+      SystrayFunction::IconMiddleClick(args) => systray.send_action(
+        args.icon_id.parse()?,
+        SystrayIconAction::MiddleClick,
+      ),
     }?;
 
     Ok(ProviderFunctionResponse::Null)

@@ -20,16 +20,12 @@ use windows::Win32::{
 
 use crate::{IconEventData, TrayEvent, TraySpy, Util};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum IconEvent {
-  HoverEnter,
-  HoverLeave,
-  HoverMove,
-  LeftClick,
-  RightClick,
-  MiddleClick,
-}
-
+/// Identifier for a systray icon.
+///
+/// A systray icon is either identified by a (window handle + uid) or
+/// its guid. Since a systray icon can be updated to also include a
+/// guid or window handle/uid later on, a stable ID is useful for
+/// consistently identifying an icon.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum StableId {
   HandleUid(isize, u32),
@@ -135,6 +131,29 @@ impl SystrayIcon {
   }
 }
 
+/// Events that can be emitted by `Systray`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SystrayEvent {
+  IconAdd(SystrayIcon),
+  IconUpdate(SystrayIcon),
+  IconRemove(StableId),
+}
+
+/// Actions that can be performed on a `SystrayIcon`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SystrayIconAction {
+  HoverEnter,
+  HoverLeave,
+  HoverMove,
+  LeftClick,
+  RightClick,
+  MiddleClick,
+}
+
+/// A system tray manager.
+///
+/// Manages a collection of `SystrayIcon`s and allows sending actions
+/// to them.
 #[derive(Debug)]
 pub struct Systray {
   icons: HashMap<StableId, SystrayIcon>,
@@ -142,6 +161,7 @@ pub struct Systray {
 }
 
 impl Systray {
+  /// Creates a new `Systray` instance.
   pub fn new() -> crate::Result<Self> {
     let (_spy, event_rx) = TraySpy::new()?;
 
@@ -151,10 +171,12 @@ impl Systray {
     })
   }
 
+  /// Returns all icons managed by the `Systray`.
   pub fn icons(&self) -> Vec<SystrayIcon> {
     self.icons.values().cloned().collect()
   }
 
+  /// Returns the icon with the given handle and uid.
   pub fn icon_by_handle(
     &self,
     handle: isize,
@@ -163,27 +185,43 @@ impl Systray {
     self.icons.get(&StableId::HandleUid(handle, uid))
   }
 
+  /// Returns the icon with the given guid.
   pub fn icon_by_guid(&self, guid: uuid::Uuid) -> Option<&SystrayIcon> {
     self.icons.get(&StableId::Guid(guid))
   }
 
-  pub async fn events(&mut self) -> Option<TrayEvent> {
-    if let Some(event) = self.event_rx.recv().await {
-      self.on_event(event)
-    } else {
-      None
-    }
+  /// Returns the icon with the given stable ID.
+  pub fn icon_by_id(&self, id: StableId) -> Option<&SystrayIcon> {
+    self.icons.get(&id)
   }
 
-  pub fn events_blocking(&mut self) -> Option<TrayEvent> {
-    if let Some(event) = self.event_rx.blocking_recv() {
-      self.on_event(event)
-    } else {
-      None
+  /// Returns the next event from the `Systray`.
+  pub async fn events(&mut self) -> Option<SystrayEvent> {
+    while let Some(event) = self.event_rx.recv().await {
+      if let Some(event) = self.on_event(event) {
+        return Some(event);
+      }
     }
+
+    None
   }
 
-  fn on_event(&mut self, event: TrayEvent) -> Option<TrayEvent> {
+  /// Returns the next event from the `Systray` (synchronously).
+  pub fn events_blocking(&mut self) -> Option<SystrayEvent> {
+    while let Some(event) = self.event_rx.blocking_recv() {
+      if let Some(event) = self.on_event(event) {
+        return Some(event);
+      }
+    }
+
+    None
+  }
+
+  /// Handles an event from the `Systray`.
+  ///
+  /// Returns `None` if the event should be ignored (e.g. if an icon that
+  /// doesn't exist was removed).
+  fn on_event(&mut self, event: TrayEvent) -> Option<SystrayEvent> {
     match &event {
       TrayEvent::IconAdd(icon_data) | TrayEvent::IconUpdate(icon_data) => {
         tracing::info!("Icon modified or added: {:?}", icon_data);
@@ -212,7 +250,9 @@ impl Systray {
 
           self
             .icons
-            .insert(found_icon.stable_id.clone(), updated_icon);
+            .insert(found_icon.stable_id.clone(), updated_icon.clone());
+
+          Some(SystrayEvent::IconUpdate(updated_icon))
         } else {
           // Icon doesn't exist yet, so add new icon.
           let stable_id = if let Some(guid) = icon_data.guid {
@@ -222,7 +262,7 @@ impl Systray {
           {
             StableId::HandleUid(handle, uid)
           } else {
-            return Some(event);
+            return None;
           };
 
           let icon = SystrayIcon {
@@ -239,7 +279,8 @@ impl Systray {
             version: icon_data.version,
           };
 
-          self.icons.insert(icon.stable_id.clone(), icon);
+          self.icons.insert(icon.stable_id.clone(), icon.clone());
+          Some(SystrayEvent::IconAdd(icon))
         }
       }
       TrayEvent::IconRemove(icon_data) => {
@@ -250,11 +291,12 @@ impl Systray {
 
         if let Some(icon_id) = icon_id {
           self.icons.remove(&icon_id);
+          Some(SystrayEvent::IconRemove(icon_id))
+        } else {
+          None
         }
       }
     }
-
-    Some(event)
   }
 
   fn find_icon(&self, icon_data: &IconEventData) -> Option<&SystrayIcon> {
@@ -267,11 +309,13 @@ impl Systray {
       })
   }
 
-  pub fn send_icon_event(
+  /// Sends an action to the systray icon.
+  pub fn send_action(
     &mut self,
     icon_id: StableId,
-    event: IconEvent,
+    action: SystrayIconAction,
   ) -> crate::Result<()> {
+    tracing::info!("Sending icon action: {:?}", self.icons);
     let icon =
       self.icons.get(&icon_id).ok_or(crate::Error::IconNotFound)?;
 
@@ -289,15 +333,15 @@ impl Systray {
       return Err(crate::Error::InoperableIcon);
     }
 
-    let wm_messages = match event {
-      IconEvent::LeftClick => vec![WM_LBUTTONDOWN, WM_LBUTTONUP],
-      IconEvent::RightClick => vec![WM_RBUTTONDOWN, WM_RBUTTONUP],
-      IconEvent::MiddleClick => {
+    let wm_messages = match action {
+      SystrayIconAction::LeftClick => vec![WM_LBUTTONDOWN, WM_LBUTTONUP],
+      SystrayIconAction::RightClick => vec![WM_RBUTTONDOWN, WM_RBUTTONUP],
+      SystrayIconAction::MiddleClick => {
         vec![WM_MBUTTONDOWN, WM_MBUTTONUP, WM_CONTEXTMENU]
       }
-      IconEvent::HoverEnter => vec![WM_MOUSEHOVER],
-      IconEvent::HoverLeave => vec![WM_MOUSELEAVE],
-      IconEvent::HoverMove => vec![WM_MOUSEMOVE],
+      SystrayIconAction::HoverEnter => vec![WM_MOUSEHOVER],
+      SystrayIconAction::HoverLeave => vec![WM_MOUSELEAVE],
+      SystrayIconAction::HoverMove => vec![WM_MOUSEMOVE],
     };
 
     // TODO: Allow icon hwnd to gain focus for left/right/middle clicks.
@@ -315,10 +359,10 @@ impl Systray {
     // This is documented as version 4, but Explorer does this for version
     // 3 as well
     if icon.version.is_some_and(|version| version >= 3) {
-      let nin_message = match event {
-        IconEvent::HoverEnter => NIN_POPUPOPEN,
-        IconEvent::HoverLeave => NIN_POPUPCLOSE,
-        IconEvent::LeftClick => NIN_SELECT,
+      let nin_message = match action {
+        SystrayIconAction::HoverEnter => NIN_POPUPOPEN,
+        SystrayIconAction::HoverLeave => NIN_POPUPCLOSE,
+        SystrayIconAction::LeftClick => NIN_SELECT,
         _ => return Ok(()),
       };
 
@@ -334,6 +378,7 @@ impl Systray {
     Ok(())
   }
 
+  /// Sends a message to the systray icon window.
   fn notify_icon(
     window_handle: isize,
     callback: u32,

@@ -1,4 +1,4 @@
-use std::{mem, os::raw::c_void, sync::OnceLock, thread::JoinHandle};
+use std::{os::raw::c_void, sync::OnceLock, thread::JoinHandle};
 
 use tokio::sync::mpsc;
 use windows::{
@@ -15,6 +15,7 @@ use windows::{
       Threading::{OpenProcess, PROCESS_ALL_ACCESS},
     },
     UI::{
+      Controls::TBBUTTON,
       Shell::{
         NIF_GUID, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE,
         NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW_0,
@@ -40,6 +41,9 @@ use crate::Util;
 /// For use with window procedure.
 static TRAY_EVENT_TX: OnceLock<mpsc::UnboundedSender<TrayEvent>> =
   OnceLock::new();
+
+const TB_BUTTONCOUNT: u32 = WM_USER + 24;
+const TB_GETBUTTON: u32 = WM_USER + 23;
 
 /// Tray message sent to `Shell_TrayWnd` and intercepted by our spy window.
 #[repr(C)]
@@ -87,16 +91,39 @@ struct NotifyIconIdentifier {
   guid_item: windows_core::GUID,
 }
 
+/// Response from `ToolbarWindow32` with `TB_GETBUTTON` message.
+///
+/// Only available on Windows 10, since tray windows are XAML islands in
+/// Windows 11.
+#[repr(C)]
+#[derive(Debug)]
+struct TbButtonItem {
+  window_handle: isize,
+  uid: u32,
+  callback_message: u32,
+  state: u32,
+  version: u32,
+  icon_handle: isize,
+  icon_demote_timer_id: isize,
+  user_pref: u32,
+  last_sound_time: u32,
+  exe_name: [u16; 260],
+  icon_text: [u16; 260],
+  num_seconds: u32,
+  guid_item: windows_core::GUID,
+}
+
 /// Events emitted by the spy window.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TrayEvent {
+#[allow(clippy::enum_variant_names)]
+pub(crate) enum TrayEvent {
   IconAdd(IconEventData),
   IconUpdate(IconEventData),
   IconRemove(IconEventData),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct IconEventData {
+pub(crate) struct IconEventData {
   pub uid: Option<u32>,
   pub window_handle: Option<isize>,
   pub guid: Option<uuid::Uuid>,
@@ -166,68 +193,35 @@ impl From<NotifyIconData> for IconEventData {
   }
 }
 
-impl From<TrayItem> for IconEventData {
-  fn from(tray_item: TrayItem) -> Self {
-    let icon_handle = if tray_item.icon_handle != 0 {
-      Some(tray_item.icon_handle as isize)
+impl From<TbButtonItem> for IconEventData {
+  fn from(tb_item: TbButtonItem) -> Self {
+    let icon_handle = if tb_item.icon_handle != 0 {
+      Some(tb_item.icon_handle)
     } else {
       None
     };
 
-    let guid = if tray_item.guid_item != windows_core::GUID::default() {
-      Some(uuid::Uuid::from_u128(tray_item.guid_item.to_u128()))
+    let guid = if tb_item.guid_item != windows_core::GUID::default() {
+      Some(uuid::Uuid::from_u128(tb_item.guid_item.to_u128()))
     } else {
       None
     };
 
-    let tooltip = String::from_utf16_lossy(&tray_item.icon_text)
+    let tooltip = String::from_utf16_lossy(&tb_item.icon_text)
       .replace(['\0', '\r'], "")
       .to_string();
 
     IconEventData {
-      uid: Some(tray_item.uid),
-      window_handle: Some(tray_item.hwnd),
+      uid: Some(tb_item.uid),
+      window_handle: Some(tb_item.window_handle),
       guid,
       tooltip: Some(tooltip),
       icon_handle,
-      callback_message: Some(tray_item.callback_message),
-      version: Some(tray_item.version),
+      callback_message: Some(tb_item.callback_message),
+      version: Some(tb_item.version),
     }
   }
 }
-
-#[repr(C)]
-#[derive(Debug)]
-struct TbButton {
-  bitmap: i32,
-  command_id: i32,
-  state: u8,
-  style: u8,
-  reserved: [u8; 6],
-  data: usize,
-  string_ptr: isize,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-struct TrayItem {
-  hwnd: isize,
-  uid: u32,
-  callback_message: u32,
-  state: u32,
-  version: u32,
-  icon_handle: isize,
-  icon_demote_timer_id: isize,
-  user_pref: u32,
-  last_sound_time: u32,
-  exe_name: [u16; 260],
-  icon_text: [u16; 260],
-  num_seconds: u32,
-  guid_item: windows_core::GUID,
-}
-
-const TB_BUTTONCOUNT: u32 = WM_USER + 24;
-const TB_GETBUTTON: u32 = WM_USER + 23;
 
 /// A window that spies on system tray icon messages and broadcasts events.
 pub(crate) struct TraySpy {
@@ -291,7 +285,7 @@ impl TraySpy {
       );
     }
 
-    Self::refresh_icons()?;
+    // Self::refresh_icons()?;
 
     Util::run_message_loop();
 
@@ -445,7 +439,7 @@ impl TraySpy {
       VirtualAllocEx(
         tray_process,
         None,
-        mem::size_of::<TbButton>(),
+        std::mem::size_of::<TBBUTTON>(),
         MEM_COMMIT,
         PAGE_READWRITE,
       )
@@ -502,25 +496,25 @@ impl TraySpy {
     };
 
     // Read shared memory containing the taskbar button data.
-    let mut button: TbButton = unsafe { std::mem::zeroed() };
+    let mut button: TBBUTTON = unsafe { std::mem::zeroed() };
     unsafe {
       ReadProcessMemory(
         tray_process,
         buffer,
         &mut button as *mut _ as _,
-        std::mem::size_of::<TbButton>(),
+        std::mem::size_of::<TBBUTTON>(),
         None,
       )
     }?;
 
     // Read shared memory containing the tray icon data.
-    let mut tray_item: TrayItem = unsafe { std::mem::zeroed() };
+    let mut tray_item: TbButtonItem = unsafe { std::mem::zeroed() };
     unsafe {
       ReadProcessMemory(
         tray_process,
-        button.data as _,
+        button.dwData as _,
         &mut tray_item as *mut _ as _,
-        std::mem::size_of::<TrayItem>(),
+        std::mem::size_of::<TbButtonItem>(),
         None,
       )
     }?;
