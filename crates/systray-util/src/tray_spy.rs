@@ -281,6 +281,8 @@ impl TraySpy {
     let event_tx =
       TRAY_EVENT_TX.get().expect("Tray event sender not set.");
 
+    Self::refresh_icons()?;
+
     if let Ok(icons) = Self::initial_tray_icons(window) {
       for icon in icons {
         if let Err(err) = event_tx.send(TrayEvent::IconAdd(icon)) {
@@ -292,8 +294,6 @@ impl TraySpy {
         "Failed to retrieve initial tray icons. This is expected on W11."
       );
     }
-
-    // Self::refresh_icons()?;
 
     Util::run_message_loop();
 
@@ -357,6 +357,8 @@ impl TraySpy {
             }
             _ => None,
           };
+
+        tracing::info!("Tray event: {:?}", tray_event);
 
         if let Some(event) = tray_event {
           event_tx.send(event).expect("Failed to send tray event.");
