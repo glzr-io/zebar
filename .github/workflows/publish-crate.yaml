@@ -1,0 +1,43 @@
+name: Publish crate
+
+on:
+  workflow_dispatch:
+    inputs:
+      crate-name:
+        type: choice
+        description: The name of the crate to publish.
+        options:
+          - systray-util
+          - shell-util
+      crate-version:
+        type: string
+        description: The version of the crate to publish.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17
+        with:
+          toolchain: nightly
+
+      - uses: swatinem/rust-cache@9bdad043e88c75890e36ad3bbc8d27f0090dd609
+
+      - name: Update version
+        shell: bash
+        run: |
+          CARGO_TOML="crates/${{ inputs.crate-name }}/Cargo.toml"
+          sed -i "s/^version = \".*\"/version = \"${{ inputs.crate-version }}\"/" $CARGO_TOML
+          echo "Updated version in Cargo.toml to ${{ inputs.crate-version }}"
+          cat $CARGO_TOML
+
+      - name: Publish crate
+        run: cargo publish -p ${{ inputs.crate-name }} --all-features --allow-dirty
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
