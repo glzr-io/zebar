@@ -1,43 +1,36 @@
 use std::{
   collections::HashMap,
-  ops::Mul,
-  sync::{Arc, Mutex, OnceLock},
-  time::Duration,
+  time::{Duration, Instant},
 };
 
+use anyhow::Context;
+use crossbeam::channel::{self, at, never};
 use serde::{Deserialize, Serialize};
-use tokio::{
-  sync::mpsc::{self},
-  task,
-};
-use tracing::debug;
+use tracing::{debug, info};
 use windows::Win32::{
   Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
   Media::Audio::{
-    eMultimedia, eRender, EDataFlow, ERole,
+    eAll, eCapture, eMultimedia, eRender, EDataFlow, ERole,
     Endpoints::{
       IAudioEndpointVolume, IAudioEndpointVolumeCallback,
       IAudioEndpointVolumeCallback_Impl,
     },
-    IMMDevice, IMMDeviceEnumerator, IMMNotificationClient,
-    IMMNotificationClient_Impl, MMDeviceEnumerator, DEVICE_STATE,
-    DEVICE_STATE_ACTIVE,
+    IMMDevice, IMMDeviceEnumerator, IMMEndpoint, IMMNotificationClient,
+    IMMNotificationClient_Impl, MMDeviceEnumerator,
+    AUDIO_VOLUME_NOTIFICATION_DATA, DEVICE_STATE, DEVICE_STATE_ACTIVE,
   },
-  System::Com::{
-    CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
-    STGM_READ,
-  },
+  System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ},
   UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY},
 };
-use windows_core::PCWSTR;
+use windows_core::{Interface, GUID, HSTRING, PCWSTR};
 
-use crate::providers::{
-  CommonProviderState, Provider, ProviderEmitter, RuntimeType,
+use crate::{
+  common::windows::COM_INIT,
+  providers::{
+    AudioFunction, CommonProviderState, Provider, ProviderFunction,
+    ProviderFunctionResponse, ProviderInputMsg, RuntimeType,
+  },
 };
-
-static PROVIDER_TX: OnceLock<ProviderEmitter> = OnceLock::new();
-
-static AUDIO_STATE: OnceLock<Arc<Mutex<AudioOutput>>> = OnceLock::new();
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -45,240 +38,78 @@ pub struct AudioProviderConfig {}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AudioDevice {
-  pub name: String,
-  pub device_id: String,
-  pub volume: u32,
-  pub is_default: bool,
+pub struct AudioOutput {
+  pub playback_devices: Vec<AudioDevice>,
+  pub recording_devices: Vec<AudioDevice>,
+  pub all_devices: Vec<AudioDevice>,
+  pub default_playback_device: Option<AudioDevice>,
+  pub default_recording_device: Option<AudioDevice>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AudioOutput {
-  pub playback_devices: Vec<AudioDevice>,
-  pub default_playback_device: Option<AudioDevice>,
+pub struct AudioDevice {
+  pub name: String,
+  pub device_id: String,
+  pub device_type: DeviceType,
+  pub volume: u32,
+  pub is_default_playback: bool,
+  pub is_default_recording: bool,
 }
 
-impl AudioOutput {
-  fn new() -> Self {
-    Self {
-      playback_devices: Vec::new(),
-      default_playback_device: None,
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DeviceType {
+  Playback,
+  Recording,
+}
+
+impl From<EDataFlow> for DeviceType {
+  fn from(flow: EDataFlow) -> Self {
+    match flow {
+      flow if flow == eCapture => Self::Recording,
+      _ => Self::Playback,
     }
   }
 }
 
+impl From<DeviceType> for EDataFlow {
+  fn from(device_type: DeviceType) -> Self {
+    match device_type {
+      DeviceType::Playback => eRender,
+      DeviceType::Recording => eCapture,
+    }
+  }
+}
+
+/// Events that can be emitted from audio state changes.
+#[derive(Debug)]
+enum AudioEvent {
+  DeviceAdded(String),
+  DeviceRemoved(String),
+  DefaultDeviceChanged(String, DeviceType),
+  VolumeChanged(String, f32),
+}
+
+/// Holds the state of an audio device.
 #[derive(Clone)]
-struct DeviceInfo {
+struct DeviceState {
   name: String,
-  endpoint_volume: IAudioEndpointVolume,
-}
-
-#[derive(Clone)]
-#[windows::core::implement(
-  IMMNotificationClient,
-  IAudioEndpointVolumeCallback
-)]
-struct MediaDeviceEventHandler {
-  enumerator: IMMDeviceEnumerator,
-  device_state: Arc<Mutex<HashMap<String, DeviceInfo>>>,
-  current_device: String,
-  update_tx: mpsc::Sender<(String, u32)>,
-}
-
-impl MediaDeviceEventHandler {
-  fn new(
-    enumerator: IMMDeviceEnumerator,
-    update_tx: mpsc::Sender<(String, u32)>,
-  ) -> Self {
-    Self {
-      enumerator,
-      device_state: Arc::new(Mutex::new(HashMap::new())),
-      current_device: String::new(),
-      update_tx,
-    }
-  }
-
-  fn get_device_name(device: &IMMDevice) -> windows::core::Result<String> {
-    unsafe {
-      let store: IPropertyStore = device.OpenPropertyStore(STGM_READ)?;
-      let value = store.GetValue(&PKEY_Device_FriendlyName)?;
-      Ok(value.to_string())
-    }
-  }
-
-  fn get_device_info(
-    &self,
-    device: &IMMDevice,
-  ) -> windows::core::Result<AudioDevice> {
-    unsafe {
-      let device_id = device.GetId()?.to_string()?;
-      let mut device_state = self.device_state.lock().unwrap();
-
-      if !device_state.contains_key(&device_id) {
-        let new_device = self.register_new_device(device)?;
-        device_state.insert(device_id.clone(), new_device);
-      }
-
-      let device_info = device_state.get(&device_id).unwrap();
-      let is_default = self.is_default_device(&device_id)?;
-      let volume = device_info
-        .endpoint_volume
-        .GetMasterVolumeLevelScalar()
-        .unwrap_or(0.0)
-        .mul(100.0)
-        .round() as u32;
-
-      Ok(AudioDevice {
-        device_id,
-        name: device_info.name.clone(),
-        volume,
-        is_default,
-      })
-    }
-  }
-
-  fn register_new_device(
-    &self,
-    device: &IMMDevice,
-  ) -> windows::core::Result<DeviceInfo> {
-    unsafe {
-      let device_name = Self::get_device_name(device)?;
-      let endpoint_volume: IAudioEndpointVolume =
-        device.Activate(CLSCTX_ALL, None)?;
-
-      let mut handler = self.clone();
-      handler.current_device = device.GetId()?.to_string()?;
-      endpoint_volume.RegisterControlChangeNotify(
-        &IAudioEndpointVolumeCallback::from(handler),
-      )?;
-
-      Ok(DeviceInfo {
-        name: device_name,
-        endpoint_volume,
-      })
-    }
-  }
-
-  fn is_default_device(
-    &self,
-    device_id: &str,
-  ) -> windows::core::Result<bool> {
-    unsafe {
-      let default = self
-        .enumerator
-        .GetDefaultAudioEndpoint(eRender, eMultimedia)?;
-      let default_id = default.GetId()?.to_string()?;
-      Ok(default_id == device_id)
-    }
-  }
-
-  fn enumerate_devices(&self) -> windows::core::Result<()> {
-    unsafe {
-      let collection = self
-        .enumerator
-        .EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
-
-      let mut devices = Vec::new();
-      let mut default_device = None;
-
-      // Get info for all active devices.
-      for i in 0..collection.GetCount()? {
-        if let Ok(device) = collection.Item(i) {
-          let info = self.get_device_info(&device)?;
-          if info.is_default {
-            default_device = Some(info.clone());
-          }
-          devices.push(info);
-        }
-      }
-
-      if let Some(state) = AUDIO_STATE.get() {
-        let mut audio_state = state.lock().unwrap();
-        audio_state.playback_devices = devices;
-        audio_state.default_playback_device = default_device;
-      }
-
-      AudioProvider::emit_volume();
-      Ok(())
-    }
-  }
-}
-
-impl Drop for MediaDeviceEventHandler {
-  fn drop(&mut self) {
-    unsafe {
-      let device_state = self.device_state.lock().unwrap();
-      for (_, device_info) in device_state.iter() {
-        let _ = device_info.endpoint_volume.UnregisterControlChangeNotify(
-          &IAudioEndpointVolumeCallback::from(self.clone()),
-        );
-      }
-    }
-  }
-}
-
-impl IAudioEndpointVolumeCallback_Impl for MediaDeviceEventHandler_Impl {
-  fn OnNotify(
-    &self,
-    data: *mut windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA,
-  ) -> windows::core::Result<()> {
-    if let Some(data) = unsafe { data.as_ref() } {
-      let device_id = self.current_device.clone();
-      let volume = data.fMasterVolume.mul(100.0).round() as u32;
-
-      let _ = self.update_tx.blocking_send((device_id, volume));
-    }
-    Ok(())
-  }
-}
-
-impl IMMNotificationClient_Impl for MediaDeviceEventHandler_Impl {
-  fn OnDefaultDeviceChanged(
-    &self,
-    data_flow: EDataFlow,
-    role: ERole,
-    _default_device_id: &PCWSTR,
-  ) -> windows::core::Result<()> {
-    if data_flow == eRender && role == eMultimedia {
-      self.enumerate_devices()?;
-    }
-    Ok(())
-  }
-
-  fn OnDeviceStateChanged(
-    &self,
-    _device_id: &PCWSTR,
-    _new_state: DEVICE_STATE,
-  ) -> windows::core::Result<()> {
-    self.enumerate_devices()
-  }
-
-  fn OnDeviceAdded(
-    &self,
-    _device_id: &PCWSTR,
-  ) -> windows::core::Result<()> {
-    self.enumerate_devices()
-  }
-
-  fn OnDeviceRemoved(
-    &self,
-    _device_id: &PCWSTR,
-  ) -> windows::core::Result<()> {
-    self.enumerate_devices()
-  }
-
-  fn OnPropertyValueChanged(
-    &self,
-    _device_id: &PCWSTR,
-    _key: &PROPERTYKEY,
-  ) -> windows::core::Result<()> {
-    Ok(())
-  }
+  device_id: String,
+  device_type: DeviceType,
+  volume: u32,
+  com_volume: IAudioEndpointVolume,
+  com_volume_callback: IAudioEndpointVolumeCallback,
 }
 
 pub struct AudioProvider {
   common: CommonProviderState,
+  com_enumerator: Option<IMMDeviceEnumerator>,
+  default_playback_id: Option<String>,
+  default_recording_id: Option<String>,
+  device_states: HashMap<String, DeviceState>,
+  event_tx: channel::Sender<AudioEvent>,
+  event_rx: channel::Receiver<AudioEvent>,
 }
 
 impl AudioProvider {
@@ -286,87 +117,373 @@ impl AudioProvider {
     _config: AudioProviderConfig,
     common: CommonProviderState,
   ) -> Self {
-    Self { common }
-  }
+    let (event_tx, event_rx) = channel::unbounded();
 
-  fn emit_volume() {
-    if let Some(tx) = PROVIDER_TX.get() {
-      let output = AUDIO_STATE.get().unwrap().lock().unwrap().clone();
-      tx.emit_output(Ok(output));
+    Self {
+      common,
+      com_enumerator: None,
+      default_playback_id: None,
+      default_recording_id: None,
+      device_states: HashMap::new(),
+      event_tx,
+      event_rx,
     }
   }
 
-  fn handle_volume_updates(mut rx: mpsc::Receiver<(String, u32)>) {
-    const PROCESS_DELAY: Duration = Duration::from_millis(50);
-    let mut latest_updates = HashMap::new();
+  /// Main entry point.
+  fn start(&mut self) -> anyhow::Result<()> {
+    COM_INIT.with(|_| {
+      let com_enumerator: IMMDeviceEnumerator = unsafe {
+        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+      }?;
 
-    while let Some((device_id, volume)) = rx.blocking_recv() {
-      latest_updates.insert(device_id, volume);
+      // Note that this would sporadically segfault if we didn't keep a
+      // separate variable for `IMMNotificationClient` when registering the
+      // callback. Something funky with lifetimes and the COM API's.
+      let com_device_callback: IMMNotificationClient = DeviceCallback {
+        event_tx: self.event_tx.clone(),
+      }
+      .into();
 
-      // Collect any additional pending updates without waiting.
-      while let Ok((device_id, volume)) = rx.try_recv() {
-        latest_updates.insert(device_id, volume);
+      // Register device add/remove callback.
+      unsafe {
+        com_enumerator
+          .RegisterEndpointNotificationCallback(&com_device_callback)
+      }?;
+
+      self.com_enumerator = Some(com_enumerator);
+
+      // Update device list and default device IDs.
+      for com_device in self.active_devices()? {
+        self.add_device(com_device)?;
       }
 
-      // Brief delay to collect more potential updates.
-      std::thread::sleep(PROCESS_DELAY);
+      self.default_playback_id =
+        self.default_device_id(&DeviceType::Playback)?;
+      self.default_recording_id =
+        self.default_device_id(&DeviceType::Recording)?;
 
-      // Process all collected updates.
-      if let Some(state) = AUDIO_STATE.get() {
-        {
-          let mut output = state.lock().unwrap();
-          for (device_id, volume) in latest_updates.drain() {
-            debug!(
-              "Updating volume to {} for device: {}",
-              volume, device_id
-            );
+      // Emit initial output.
+      self.emit_output();
 
-            // Update device in the devices list.
-            if let Some(device) = output
-              .playback_devices
-              .iter_mut()
-              .find(|d| d.device_id == device_id)
-            {
-              device.volume = volume;
-            }
+      // Audio events (especially volume changes) can be frequent, so we
+      // batch the emissions together.
+      let mut last_emit = Instant::now();
+      let mut pending_emission = false;
+      const BATCH_DELAY: Duration = Duration::from_millis(25);
 
-            // Update default device if it matches.
-            if let Some(default_device) =
-              &mut output.default_playback_device
-            {
-              if default_device.device_id == device_id {
-                default_device.volume = volume;
+      // Listen to audio-related events.
+      loop {
+        let batch_timer = match pending_emission {
+          true => at(last_emit + BATCH_DELAY),
+          false => never(),
+        };
+
+        crossbeam::select! {
+          recv(self.event_rx) -> event => {
+            if let Ok(event) = event {
+              debug!("Got audio event: {:?}", event);
+
+              if let Err(err) = self.handle_event(event) {
+                tracing::warn!("Error handling audio event: {}", err);
+              }
+
+              // Check whether we should emit immediately or mark as pending.
+              if last_emit.elapsed() >= BATCH_DELAY {
+                self.emit_output();
+                last_emit = Instant::now();
+              } else {
+                pending_emission = true;
               }
             }
           }
+          recv(self.common.input.sync_rx) -> input => {
+            match input {
+              Ok(ProviderInputMsg::Stop) => {
+                break;
+              }
+              Ok(ProviderInputMsg::Function(
+                ProviderFunction::Audio(audio_function),
+                sender,
+              )) => {
+                let res = self.handle_function(audio_function).map_err(|err| err.to_string());
+                sender.send(res).unwrap();
+              }
+              _ => {}
+            }
+          }
+          recv(batch_timer) -> _ => {
+            if pending_emission {
+              self.emit_output();
+              last_emit = Instant::now();
+              pending_emission = false;
+            }
+          }
         }
+      }
 
-        Self::emit_volume();
+      Ok(())
+    })
+  }
+
+  /// Enumerates active devices of all device types.
+  fn active_devices(&self) -> anyhow::Result<Vec<IMMDevice>> {
+    let collection = unsafe {
+      self
+        .com_enumerator
+        .as_ref()
+        .context("Device enumerator not initialized.")?
+        .EnumAudioEndpoints(eAll, DEVICE_STATE_ACTIVE)
+    }?;
+
+    let count = unsafe { collection.GetCount() }?;
+    let devices = (0..count)
+      .filter_map(|i| unsafe { collection.Item(i).ok() })
+      .collect::<Vec<_>>();
+
+    Ok(devices)
+  }
+
+  /// Gets the friendly name of a device.
+  ///
+  /// Returns a string (e.g. `Headphones (WH-1000XM3 Stereo)`).
+  fn device_name(&self, com_device: &IMMDevice) -> anyhow::Result<String> {
+    let store: IPropertyStore =
+      unsafe { com_device.OpenPropertyStore(STGM_READ) }?;
+
+    let friendly_name =
+      unsafe { store.GetValue(&PKEY_Device_FriendlyName)?.to_string() };
+
+    Ok(friendly_name)
+  }
+
+  /// Registers volume callbacks for a device.
+  fn register_volume_callback(
+    &self,
+    com_device: &IMMDevice,
+    device_id: String,
+  ) -> anyhow::Result<(IAudioEndpointVolume, IAudioEndpointVolumeCallback)>
+  {
+    let com_volume = unsafe {
+      com_device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
+    }?;
+
+    let com_volume_callback: IAudioEndpointVolumeCallback =
+      VolumeCallback {
+        device_id,
+        event_tx: self.event_tx.clone(),
+      }
+      .into();
+
+    unsafe {
+      com_volume.RegisterControlChangeNotify(&com_volume_callback)
+    }?;
+
+    Ok((com_volume, com_volume_callback))
+  }
+
+  /// Emits an `AudioOutput` update through the provider's emitter.
+  fn emit_output(&mut self) {
+    let mut output = AudioOutput {
+      playback_devices: Vec::new(),
+      recording_devices: Vec::new(),
+      all_devices: Vec::new(),
+      default_playback_device: None,
+      default_recording_device: None,
+    };
+
+    for (id, state) in &self.device_states {
+      let device = AudioDevice {
+        name: state.name.clone(),
+        device_id: state.device_id.clone(),
+        device_type: state.device_type.clone(),
+        volume: state.volume,
+        is_default_playback: self.default_playback_id.as_ref() == Some(id),
+        is_default_recording: self.default_recording_id.as_ref()
+          == Some(id),
+      };
+
+      output.all_devices.push(device.clone());
+
+      match device.device_type {
+        DeviceType::Playback => {
+          output.playback_devices.push(device.clone());
+
+          if self.default_playback_id.as_ref() == Some(id) {
+            output.default_playback_device = Some(device.clone());
+          }
+        }
+        DeviceType::Recording => {
+          output.recording_devices.push(device.clone());
+
+          if self.default_recording_id.as_ref() == Some(id) {
+            output.default_recording_device = Some(device.clone());
+          }
+        }
+      }
+    }
+
+    self.common.emitter.emit_output(Ok(output));
+  }
+
+  /// Gets the default device ID for the given device type.
+  ///
+  /// Note that a device can have multiple roles (i.e. multimedia,
+  /// communications, and console). The device with the multimedia role is
+  /// typically seen as the default.
+  fn default_device_id(
+    &self,
+    device_type: &DeviceType,
+  ) -> anyhow::Result<Option<String>> {
+    let default_device = unsafe {
+      self
+        .com_enumerator
+        .as_ref()
+        .context("Device enumerator not initialized.")?
+        .GetDefaultAudioEndpoint(
+          EDataFlow::from(device_type.clone()),
+          eMultimedia,
+        )
+    }
+    .ok();
+
+    let device_id = default_device
+      .and_then(|device| unsafe { device.GetId().ok() })
+      .and_then(|id| unsafe { id.to_string().ok() });
+
+    Ok(device_id)
+  }
+
+  /// Adds a device by its ID.
+  fn add_device_by_id(&mut self, device_id: &str) -> anyhow::Result<()> {
+    let com_device = unsafe {
+      self
+        .com_enumerator
+        .as_ref()
+        .context("Device enumerator not initialized.")?
+        .GetDevice(&HSTRING::from(device_id))
+    }?;
+
+    self.add_device(com_device)
+  }
+
+  /// Adds a device by its COM object.
+  fn add_device(&mut self, com_device: IMMDevice) -> anyhow::Result<()> {
+    let device_id = unsafe { com_device.GetId()?.to_string() }?;
+    info!("Adding new audio device: {}", device_id);
+
+    let device_type = DeviceType::from(unsafe {
+      com_device.cast::<IMMEndpoint>()?.GetDataFlow()
+    }?);
+
+    let (com_volume, com_volume_callback) =
+      self.register_volume_callback(&com_device, device_id.clone())?;
+
+    let volume = unsafe { com_volume.GetMasterVolumeLevelScalar() }?;
+
+    let device_state = DeviceState {
+      name: self.device_name(&com_device)?,
+      device_id: device_id.clone(),
+      device_type: device_type.clone(),
+      volume: (volume * 100.0).round() as u32,
+      com_volume,
+      com_volume_callback,
+    };
+
+    self.device_states.insert(device_id, device_state);
+
+    Ok(())
+  }
+
+  /// Removes a device that is no longer active.
+  ///
+  /// Deregisters volume callback and removes device from state.
+  fn remove_device(&mut self, device_id: &str) -> anyhow::Result<()> {
+    if let Some(state) = self.device_states.remove(device_id) {
+      info!("Audio device removed: {}", device_id);
+
+      unsafe {
+        state.com_volume.UnregisterControlChangeNotify(
+          &IAudioEndpointVolumeCallback::from(state.com_volume_callback),
+        )
+      }?;
+    }
+
+    Ok(())
+  }
+
+  /// Handles an audio event.
+  fn handle_event(&mut self, event: AudioEvent) -> anyhow::Result<()> {
+    match event {
+      AudioEvent::DeviceAdded(device_id) => {
+        self.add_device_by_id(&device_id)?;
+      }
+      AudioEvent::DeviceRemoved(device_id) => {
+        self.remove_device(&device_id)?;
+      }
+      AudioEvent::DefaultDeviceChanged(device_id, device_type) => {
+        match device_type {
+          DeviceType::Playback => {
+            self.default_playback_id = Some(device_id);
+          }
+          DeviceType::Recording => {
+            self.default_recording_id = Some(device_id);
+          }
+        }
+      }
+      AudioEvent::VolumeChanged(device_id, new_volume) => {
+        if let Some(state) = self.device_states.get_mut(&device_id) {
+          state.volume = (new_volume * 100.0).round() as u32;
+        }
+      }
+    }
+
+    Ok(())
+  }
+
+  /// Handles an incoming audio provider function call.
+  fn handle_function(
+    &mut self,
+    function: AudioFunction,
+  ) -> anyhow::Result<ProviderFunctionResponse> {
+    match function {
+      AudioFunction::SetVolume(args) => {
+        // Get target device - use specified ID or default playback
+        // device.
+        let device_state = if let Some(id) = &args.device_id {
+          self
+            .device_states
+            .get(id)
+            .context("Specified device not found.")?
+        } else {
+          self
+            .default_playback_id
+            .as_ref()
+            .and_then(|id| self.device_states.get(id))
+            .context("No active playback device.")?
+        };
+
+        unsafe {
+          device_state.com_volume.SetMasterVolumeLevelScalar(
+            args.volume / 100.,
+            &GUID::zeroed(),
+          )
+        }?;
+
+        Ok(ProviderFunctionResponse::Null)
       }
     }
   }
+}
 
-  fn create_audio_manager(
-    update_tx: mpsc::Sender<(String, u32)>,
-  ) -> anyhow::Result<()> {
-    unsafe {
-      let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-      let enumerator: IMMDeviceEnumerator =
-        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
-      let handler =
-        MediaDeviceEventHandler::new(enumerator.clone(), update_tx);
+impl Drop for AudioProvider {
+  fn drop(&mut self) {
+    let device_ids =
+      self.device_states.keys().cloned().collect::<Vec<_>>();
 
-      handler.enumerate_devices()?;
-
-      let device_notification_callback =
-        IMMNotificationClient::from(handler.clone());
-      enumerator.RegisterEndpointNotificationCallback(
-        &device_notification_callback,
-      )?;
-
-      loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-      }
+    // Ensure volume callbacks are deregistered.
+    for device_id in device_ids {
+      let _ = self.remove_device(&device_id);
     }
   }
 }
@@ -377,22 +494,112 @@ impl Provider for AudioProvider {
   }
 
   fn start_sync(&mut self) {
-    PROVIDER_TX
-      .set(self.common.emitter.clone())
-      .expect("Error setting provider tx in audio provider");
-
-    AUDIO_STATE
-      .set(Arc::new(Mutex::new(AudioOutput::new())))
-      .expect("Error setting initial audio state");
-
-    // Create a channel for volume updates.
-    let (update_tx, update_rx) = mpsc::channel(100);
-
-    // Spawn task for handling volume updates.
-    task::spawn_blocking(move || Self::handle_volume_updates(update_rx));
-
-    if let Err(err) = Self::create_audio_manager(update_tx) {
+    if let Err(err) = self.start() {
+      tracing::error!("Error starting audio provider: {}", err);
       self.common.emitter.emit_output::<AudioOutput>(Err(err));
     }
+  }
+}
+
+/// Callback handler for volume notifications.
+///
+/// Each device has a volume callback that is used to notify when the
+/// volume changes.
+#[derive(Clone)]
+#[windows::core::implement(IAudioEndpointVolumeCallback)]
+struct VolumeCallback {
+  device_id: String,
+  event_tx: channel::Sender<AudioEvent>,
+}
+
+impl IAudioEndpointVolumeCallback_Impl for VolumeCallback_Impl {
+  fn OnNotify(
+    &self,
+    data: *mut AUDIO_VOLUME_NOTIFICATION_DATA,
+  ) -> windows::core::Result<()> {
+    if let Some(data) = unsafe { data.as_ref() } {
+      let _ = self.event_tx.send(AudioEvent::VolumeChanged(
+        self.device_id.clone(),
+        data.fMasterVolume,
+      ));
+    }
+
+    Ok(())
+  }
+}
+
+/// Callback handler for device change notifications.
+///
+/// This is used to detect when new devices are added or removed, and when
+/// the default device changes.
+#[windows::core::implement(IMMNotificationClient)]
+struct DeviceCallback {
+  event_tx: channel::Sender<AudioEvent>,
+}
+
+impl IMMNotificationClient_Impl for DeviceCallback_Impl {
+  fn OnDeviceAdded(
+    &self,
+    device_id: &PCWSTR,
+  ) -> windows::core::Result<()> {
+    if let Ok(id) = unsafe { device_id.to_string() } {
+      let _ = self.event_tx.send(AudioEvent::DeviceAdded(id.clone()));
+    }
+
+    Ok(())
+  }
+
+  fn OnDeviceRemoved(
+    &self,
+    device_id: &PCWSTR,
+  ) -> windows::core::Result<()> {
+    if let Ok(id) = unsafe { device_id.to_string() } {
+      let _ = self.event_tx.send(AudioEvent::DeviceRemoved(id));
+    }
+
+    Ok(())
+  }
+
+  fn OnDeviceStateChanged(
+    &self,
+    device_id: &PCWSTR,
+    new_state: DEVICE_STATE,
+  ) -> windows::core::Result<()> {
+    if let Ok(id) = unsafe { device_id.to_string() } {
+      let event = match new_state {
+        DEVICE_STATE_ACTIVE => AudioEvent::DeviceAdded(id),
+        _ => AudioEvent::DeviceRemoved(id),
+      };
+
+      let _ = self.event_tx.send(event);
+    }
+
+    Ok(())
+  }
+
+  fn OnDefaultDeviceChanged(
+    &self,
+    flow: EDataFlow,
+    role: ERole,
+    default_device_id: &PCWSTR,
+  ) -> windows::core::Result<()> {
+    if role == eMultimedia {
+      if let Ok(id) = unsafe { default_device_id.to_string() } {
+        let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
+          id,
+          DeviceType::from(flow),
+        ));
+      }
+    }
+
+    Ok(())
+  }
+
+  fn OnPropertyValueChanged(
+    &self,
+    _device_id: &PCWSTR,
+    _key: &PROPERTYKEY,
+  ) -> windows::core::Result<()> {
+    Ok(())
   }
 }

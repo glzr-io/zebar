@@ -90,6 +90,14 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
+  /// How network requests should be cached.
+  #[serde(default)]
+  pub caching: WidgetCaching,
+
+  /// Privileges for the widget.
+  #[serde(default)]
+  pub privileges: WidgetPrivileges,
+
   /// Where to place the widget. Add alias for `defaultPlacements` for
   /// compatibility with v2.3.0 and earlier.
   #[serde(alias = "defaultPlacements")]
@@ -102,6 +110,35 @@ pub enum ZOrder {
   BottomMost,
   Normal,
   TopMost,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct WidgetCaching {
+  /// Default duration to cache network resources for (in seconds).
+  pub default_duration: u32,
+
+  /// Custom cache rules.
+  pub rules: Vec<WidgetCachingRule>,
+}
+
+impl Default for WidgetCaching {
+  fn default() -> Self {
+    Self {
+      default_duration: 604800,
+      rules: Vec::new(),
+    }
+  }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetCachingRule {
+  /// URL regex pattern to match.
+  pub url_regex: String,
+
+  /// Duration to cache the matched requests for (in seconds).
+  pub duration: u32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -165,6 +202,23 @@ pub enum MonitorSelection {
   Secondary,
   Index(usize),
   Name(String),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetPrivileges {
+  /// Shell commands that the widget is allowed to run.
+  pub shell_commands: Vec<ShellPrivilege>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellPrivilege {
+  /// Program name (if in PATH) or full path to the program.
+  pub program: String,
+
+  /// Arguments to pass to the program.
+  pub args_regex: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
@@ -562,6 +616,20 @@ impl Config {
       .strip_prefix(&self.config_dir)
       .unwrap_or(&config_path)
       .into()
+  }
+
+  /// Formats a widget's config path for display.
+  ///
+  /// Returns relative path without the `.zebar.json` suffix (e.g.
+  /// `starter/vanilla`).
+  pub fn formatted_widget_path(&self, config_path: &PathBuf) -> String {
+    let path = self.to_relative_path(config_path).to_unicode_string();
+
+    // Ensure path delimiters are forward slashes on Windows.
+    #[cfg(windows)]
+    let path = path.replace('\\', "/");
+
+    path.strip_suffix(".zebar.json").unwrap_or(&path).into()
   }
 
   /// Returns the widget config at the given path.

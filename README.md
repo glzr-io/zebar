@@ -85,9 +85,16 @@ No config options.
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `defaultPlaybackDevice`         | Default audio playback device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `defaultRecordingDevice`         | Default audio recording device.        | `AudioDevice \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `playbackDevices`         | All audio playback devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `recordingDevices`         | All audio recording devices.        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allDevices`         | All audio devices (both playback and recording).        | `AudioDevice[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
-#### Return types
+| Function   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setVolume` | Sets the volume of an audio device. Changes the volume of the default playback device, unless `SetVolumeOptions.deviceId` is specified. <br><br> **Parameters:**<br> - `volume`: _`number`_ Volume as a % of maximum volume. Returned value is between `0` and `100`. <br> - `options`: _`SetVolumeOptions \| undefined`_ Additional options.<br>  | `Promise<void>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Related types
 
 #### `AudioDevice`
 
@@ -96,7 +103,15 @@ No config options.
 | `deviceId`         | Device ID. | `string` |
 | `name`      | Friendly display name of device. | `string` |
 | `volume`    | Volume as a % of maximum volume. Returned value is between `0` and `100`. | `number` |
-| `isDefault` | `true` if the device is selected as the default playback device.| `boolean` |
+| `type` | Type of the device. | `'playback' \| 'recording'` |
+| `isDefaultPlayback` | `true` if the device is selected as the default playback device.| `boolean` |
+| `isDefaultRecording` | `true` if the device is selected as the default recording device.| `boolean` |
+
+#### `SetVolumeOptions`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `deviceId`         | Device ID to set the volume of. | `string \| undefined` |
 
 ### Battery
 
@@ -144,7 +159,7 @@ No config options.
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `formatting`         | Formatting of the current date into a custom string format. Affects the output of [`formatted`](#outputs-2). <br><br>Refer to [table of tokens](https://moment.github.io/luxon/#/formatting?id=table-of-tokens) for available date/time tokens. <br><br> **Examples:**<br> <br> - `'yyyy LLL dd'` -> `2023 Feb 13`<br> - `"HH 'hours and' mm 'minutes'"` -> `20 hours and 55 minutes` | `string`    | `EEE	d MMM t`       |
+| `formatting`         | Formatting of the current date into a custom string format. Affects the output of [`formatted`](#outputs-2). <br><br>Refer to [table of tokens](https://moment.github.io/luxon/#/formatting?id=table-of-tokens) for available date/time tokens. <br><br> **Examples:**<br> - `'yyyy LLL dd'` -> `2023 Feb 13`<br> - `"HH 'hours and' mm 'minutes'"` -> `20 hours and 55 minutes` | `string`    | `EEE	d MMM t`       |
 | `timezone`         | Either a UTC offset (eg. `UTC+8`) or an IANA timezone (eg. `America/New_York`). Affects the output of [`formatted`](#outputs-2).<br><br> A full list of available IANA timezones can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List).| `string`    | `local`       |
 | `locale`           | An ISO-639-1 locale, which is either a 2-letter language code (eg. `en`) or a 4-letter language + country code (eg. `en-gb`). Affects the output of [`formatted`](#outputs-2).<br><br> A full list of ISO-639-1 locales can be found [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes#Table).  | `string`    |       |
 | `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `1000`        |
@@ -172,7 +187,7 @@ No config options.
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `disks`         | Available disks on the system.        | `Disk[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 
-#### Return types
+#### Related types
 
 #### `Disk`
 
@@ -233,11 +248,12 @@ No config options.
 | `currentMonitor` | Monitor that is nearest to this Zebar widget.        | `Monitor` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `focusedContainer` | Container that currently has focus (on any monitor).        | `Container` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 | `tilingDirection` | Tiling direction of the focused container.        | `TilingDirection` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
-| `bindingModes` | Active binding modes;        | `BindingModeConfig[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `bindingModes` | Active binding modes.        | `BindingModeConfig[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `isPaused` | Whether the WM is paused. | `boolean` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 | Function   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `runCommand` | Invokes a WM command. <br><br> **Examples:**<br> <br> - `runCommand("focus --workspace 1")`<br> - `runCommand("set-floating", containerId)`<br> <br> **Parameters:**<br> <br> - `command`: _`string`_ WM command to run (e.g. `"focus --workspace 1"`).<br> - `subjectContainerId`: _`string \| undefined`_ (Optional) ID of container to use as subject. If not provided, this defaults to the currently focused container. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `runCommand` | Invokes a WM command. <br><br> **Examples:**<br> - `runCommand("focus --workspace 1")`<br> - `runCommand("set-floating", containerId)`<br> <br> **Parameters:**<br> - `command`: _`string`_ WM command to run (e.g. `"focus --workspace 1"`).<br> - `subjectContainerId`: _`string \| undefined`_ (Optional) ID of container to use as subject. If not provided, this defaults to the currently focused container. | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
 ## Host
 
@@ -275,64 +291,6 @@ No config options.
 | `approxCountry`   | TODO        | `string`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `approxLatitude`  | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
 | `approxLongitude` | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-
-### Memory
-
-#### Config
-
-| Option             | Description                                        | Option type | Default value |
-| ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
-
-#### Outputs
-
-| Variable      | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `usage`       | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `freeMemory`  | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `usedMemory`  | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `totalMemory` | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `freeSwap`    | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `usedSwap`    | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `totalSwap`   | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-
-### Network
-
-#### Config
-
-| Option             | Description                                        | Option type | Default value |
-| ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
-
-#### Outputs
-
-| Variable           | Description                            | Return type          | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------ | -------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defaultInterface` | TODO                                   | `NetworkInterface`   | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `defaultGateway`   | TODO                                   | `Gateway`            | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `interfaces`       | TODO                                   | `NetworkInterface[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-| `traffic`          | Returns the network traffic per second. | `NetworkTraffic`     | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
-
-#### Return types
-
-#### `NetworkTraffic`
-
-| Variable           | Description                   | Return type             |
-| ------------------ | ----------------------------- | ----------------------- |
-| `received`         | Received bytes per second.    | `DataSizeMeasure` |
-| `transmitted`      | Transmitted bytes per second. | `DataSizeMeasure` |
-| `totalReceived`    | Total received bytes.         | `DataSizeMeasure` |
-| `totalTransmitted` | Total transmitted bytes.      | `DataSizeMeasure` |
-
-#### `DataSizeMeasure`
-
-| Variable   | Description                                                                 | Return type |
-| ---------- | --------------------------------------------------------------------------- | ----------- |
-| `bytes`    | Raw byte value.                                                             | `number`    |
-| `siValue`  | Bytes converted in according to the SI standard. 1000 bytes in a kilobyte.  | `number`    |
-| `siUnit`   | Unit of the converted bytes in according to the SI standard. KB, MB, ...    | `string`    |
-| `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
-| `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
 
 ### Keyboard
 
@@ -376,25 +334,98 @@ No config options.
 
 | Variable            | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `session`         | Currently playing media session.        | `MediaSession \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `currentSession`         | Currently playing media session.        | `MediaSession \| null`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `allSessions`         | All active media sessions.        | `MediaSession[]`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
 
-#### Return types
+| Function   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `play` | Plays the media session. Affects the current media session, unless `MediaControlOptions.sessionId` is specified. <br><br> **Parameters:**<br>`options`: _`MediaControlOptions \| undefined`_ Additional options.<br>  | `Promise<void>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `pause` | Pauses the media session. Affects the current media session, unless `MediaControlOptions.sessionId` is specified. <br><br> **Parameters:**<br>`options`: _`MediaControlOptions \| undefined`_ Additional options.<br>  | `Promise<void>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `togglePlayPause` | Toggles between playing/pausing the media session. Affects the current media session, unless `MediaControlOptions.sessionId` is specified. <br><br> **Parameters:**<br>`options`: _`MediaControlOptions \| undefined`_ Additional options.<br>  | `Promise<void>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `next` | Skips to the next track. Affects the current media session, unless `MediaControlOptions.sessionId` is specified. <br><br> **Parameters:**<br>`options`: _`MediaControlOptions \| undefined`_ Additional options.<br>  | `Promise<void>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+| `previous` | Skips to the previous track. Affects the current media session, unless `MediaControlOptions.sessionId` is specified. <br><br> **Parameters:**<br>`options`: _`MediaControlOptions \| undefined`_ Additional options.<br>  | `Promise<void>`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"> |
+
+#### Related types
 
 #### `MediaSession`
 
 | Variable           | Description                   | Return type             |
 | ------------------ | ----------------------------- | ----------------------- |
-| `title`         | TODO    | `string` |
-| `artist`      | TODO | `string \| null` |
-| `albumTitle`    | TODO         | `string \| null` |
-| `albumArtist` | TODO      | `string \| null` |
-| `trackNumber` | TODO      | `number` |
-| `startTime` | TODO      | `number` |
-| `endTime` | TODO      | `number` |
-| `position` | TODO      | `number` |
-| `isPlaying` | TODO      | `boolean` |
+| `sessionId`         | Unique identifier for the media session.    | `string` |
+| `title`         | Title of the media session.    | `string` |
+| `artist`      | Artist of the media session. | `string \| null` |
+| `albumTitle`    | Album title of the media session.         | `string \| null` |
+| `albumArtist` | Artist of the album (may differ from track artist). | `string \| null` |
+| `trackNumber` | Position of the track within its album.      | `number` |
+| `startTime` | Timestamp (in seconds) where playback begins.      | `number` |
+| `endTime` | Timestamp (in seconds) where playback ends.      | `number` |
+| `position` | Timestamp (in seconds) of current playback position.      | `number` |
+| `isPlaying` | Whether the media session is currently playing.      | `boolean` |
+| `isCurrentSession` | Whether this is the currently active session (i.e. `currentSession`).      | `boolean` |
+
+#### `MediaControlOptions`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `sessionId`         | ID of the session to control. If `undefined`, the current session is used. | `string \| undefined` |
+
+### Memory
+
+#### Config
+
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+
+#### Outputs
+
+| Variable      | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `usage`       | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `freeMemory`  | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `usedMemory`  | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `totalMemory` | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `freeSwap`    | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `usedSwap`    | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `totalSwap`   | TODO        | `number`    | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+### Network
+
+#### Config
+
+| Option             | Description                                        | Option type | Default value |
+| ------------------ | -------------------------------------------------- | ----------- | ------------- |
+| `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `5000`        |
+
+#### Outputs
+
+| Variable           | Description                            | Return type          | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------ | -------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultInterface` | TODO                                   | `NetworkInterface`   | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `defaultGateway`   | TODO                                   | `Gateway`            | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `interfaces`       | TODO                                   | `NetworkInterface[]` | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+| `traffic`          | Returns the network traffic per second. | `NetworkTraffic`     | <img src="https://github.com/glzr-io/zebar/assets/34844898/568e90c8-cd32-49a5-a17f-ab233d41f1aa" alt="microsoft icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/005a0760-da9d-460e-b533-9b2aba7f5c03" alt="apple icon" width="24"><img src="https://github.com/glzr-io/zebar/assets/34844898/1c5d91b1-879f-42a6-945e-912a11daebb4" alt="linux icon" width="24"> |
+
+#### Related types
+
+#### `NetworkTraffic`
+
+| Variable           | Description                   | Return type             |
+| ------------------ | ----------------------------- | ----------------------- |
+| `received`         | Received bytes per second.    | `DataSizeMeasure` |
+| `transmitted`      | Transmitted bytes per second. | `DataSizeMeasure` |
+| `totalReceived`    | Total received bytes.         | `DataSizeMeasure` |
+| `totalTransmitted` | Total transmitted bytes.      | `DataSizeMeasure` |
 
 #### `DataSizeMeasure`
+
+| Variable   | Description                                                                 | Return type |
+| ---------- | --------------------------------------------------------------------------- | ----------- |
+| `bytes`    | Raw byte value.                                                             | `number`    |
+| `siValue`  | Bytes converted in according to the SI standard. 1000 bytes in a kilobyte.  | `number`    |
+| `siUnit`   | Unit of the converted bytes in according to the SI standard. KB, MB, ...    | `string`    |
+| `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
+| `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
 
 
 ### Weather

@@ -57,13 +57,24 @@ function App() {
 
   return (
     <div class="app">
+      {output.audio?.defaultPlaybackDevice && (
+        <div class="chip">
+          {output.audio.defaultPlaybackDevice.name}-
+          {output.audio.defaultPlaybackDevice.volume}
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="2"
+            value={output.audio.defaultPlaybackDevice.volume}
+            onChange={e => output.audio.setVolume(e.target.valueAsNumber)}
+          />
+        </div>
+      )}
       <div class="chip">
-        {output.audio?.defaultPlaybackDevice?.name} -
-        {output.audio?.defaultPlaybackDevice?.volume}
-      </div>
-      <div class="chip">
-        Media: {output.media?.session?.title} -
-        {output.media?.session?.artist}
+        Media: {output.media?.currentSession?.title}-
+        {output.media?.currentSession?.artist}
+        <button onClick={() => output.media?.togglePlayPause()}>⏯</button>
       </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
       {iconUrl() && (

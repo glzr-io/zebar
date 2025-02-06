@@ -4,6 +4,7 @@
   "scripts": {
     "build": "npm run tauri build -- --verbose",
     "dev": "npm run tauri dev -- -- -- startup --config-dir=../../examples",
+    "dev:local": "npm run tauri dev -- -- -- startup",
     "format": "cargo fmt",
     "lint": "cargo fmt --check",
     "tauri": "tauri"

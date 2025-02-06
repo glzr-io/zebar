@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use serde::{ser::SerializeStruct, Serialize};
 use tauri::{AppHandle, Emitter};
 use tokio::{
@@ -58,27 +58,54 @@ pub struct ProviderEmitter {
 
   /// Hash of the provider's config.
   config_hash: String,
+
+  /// Previous emission from the provider.
+  prev_emission: Option<ProviderEmission>,
 }
 
 impl ProviderEmitter {
-  /// Emits an output from a provider.
-  pub fn emit_output<T>(&self, output: anyhow::Result<T>)
-  where
-    T: Into<ProviderOutput>,
-  {
-    let send_res = self.emit_tx.send(ProviderEmission {
-      config_hash: self.config_hash.clone(),
-      result: output.map(Into::into).map_err(|err| err.to_string()),
-    });
+  fn emit(&self, emission: ProviderEmission) {
+    let send_res = self.emit_tx.send(emission);
 
     if let Err(err) = send_res {
       tracing::error!("Error sending provider result: {:?}", err);
     }
   }
+
+  /// Emits an output from a provider.
+  pub fn emit_output<T>(&self, output: anyhow::Result<T>)
+  where
+    T: Into<ProviderOutput>,
+  {
+    self.emit(ProviderEmission {
+      config_hash: self.config_hash.clone(),
+      result: output.map(Into::into).map_err(|err| err.to_string()),
+    });
+  }
+
+  /// Emits an output from a provider and prevents duplicate emissions by
+  /// caching the previous emission.
+  ///
+  /// Note that this won't share the same cache if the `ProviderEmitter`
+  /// is cloned.
+  pub fn emit_output_cached<T>(&mut self, output: anyhow::Result<T>)
+  where
+    T: Into<ProviderOutput>,
+  {
+    let emission = ProviderEmission {
+      config_hash: self.config_hash.clone(),
+      result: output.map(Into::into).map_err(|err| err.to_string()),
+    };
+
+    if self.prev_emission.as_ref() != Some(&emission) {
+      self.prev_emission = Some(emission.clone());
+      self.emit(emission);
+    }
+  }
 }
 
 /// Emission from a provider.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderEmission {
   /// Hash of the provider's config.
@@ -191,6 +218,7 @@ impl ProviderManager {
       emitter: ProviderEmitter {
         emit_tx: self.emit_tx.clone(),
         config_hash: config_hash.clone(),
+        prev_emission: None,
       },
       sysinfo: self.sysinfo.clone(),
     };
@@ -217,64 +245,79 @@ impl ProviderManager {
     config_hash: String,
     common: CommonProviderState,
   ) -> anyhow::Result<(task::JoinHandle<()>, RuntimeType)> {
-    let mut provider: Box<dyn Provider> = match config {
-      #[cfg(windows)]
-      ProviderConfig::Audio(config) => {
-        Box::new(AudioProvider::new(config, common))
+    let runtime_type = match config {
+      ProviderConfig::Ip(..) | ProviderConfig::Weather(..) => {
+        RuntimeType::Async
       }
-      ProviderConfig::Battery(config) => {
-        Box::new(BatteryProvider::new(config, common))
-      }
-      ProviderConfig::Cpu(config) => {
-        Box::new(CpuProvider::new(config, common))
-      }
-      #[cfg(windows)]
-      ProviderConfig::FocusedWindow(config) => {
-        Box::new(FocusedWindowProvider::new(config, common))
-      }
-      ProviderConfig::Host(config) => {
-        Box::new(HostProvider::new(config, common))
-      }
-      ProviderConfig::Ip(config) => {
-        Box::new(IpProvider::new(config, common))
-      }
-      #[cfg(windows)]
-      ProviderConfig::Komorebi(config) => {
-        Box::new(KomorebiProvider::new(config, common))
-      }
-      #[cfg(windows)]
-      ProviderConfig::Media(config) => {
-        Box::new(MediaProvider::new(config, common))
-      }
-      ProviderConfig::Memory(config) => {
-        Box::new(MemoryProvider::new(config, common))
-      }
-      ProviderConfig::Disk(config) => {
-        Box::new(DiskProvider::new(config, common))
-      }
-      ProviderConfig::Network(config) => {
-        Box::new(NetworkProvider::new(config, common))
-      }
-      ProviderConfig::Weather(config) => {
-        Box::new(WeatherProvider::new(config, common))
-      }
-      #[cfg(windows)]
-      ProviderConfig::Keyboard(config) => {
-        Box::new(KeyboardProvider::new(config, common))
-      }
-      #[allow(unreachable_patterns)]
-      _ => bail!("Provider not supported on this operating system."),
+      _ => RuntimeType::Sync,
     };
 
     // Spawn the provider's task based on its runtime type.
-    let runtime_type = provider.runtime_type();
     let task_handle = match &runtime_type {
       RuntimeType::Async => task::spawn(async move {
-        provider.start_async().await;
+        match config {
+          ProviderConfig::Ip(config) => {
+            let mut provider = IpProvider::new(config, common);
+            provider.start_async().await;
+          }
+          ProviderConfig::Weather(config) => {
+            let mut provider = WeatherProvider::new(config, common);
+            provider.start_async().await;
+          }
+          _ => unreachable!(),
+        }
+
         info!("Provider stopped: {}", config_hash);
       }),
       RuntimeType::Sync => task::spawn_blocking(move || {
-        provider.start_sync();
+        match config {
+          #[cfg(windows)]
+          ProviderConfig::Audio(config) => {
+            let mut provider = AudioProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Battery(config) => {
+            let mut provider = BatteryProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Cpu(config) => {
+            let mut provider = CpuProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Host(config) => {
+            let mut provider = HostProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Komorebi(config) => {
+            let mut provider = KomorebiProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Media(config) => {
+            let mut provider = MediaProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Memory(config) => {
+            let mut provider = MemoryProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Disk(config) => {
+            let mut provider = DiskProvider::new(config, common);
+            provider.start_sync();
+          }
+          ProviderConfig::Network(config) => {
+            let mut provider = NetworkProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Keyboard(config) => {
+            let mut provider = KeyboardProvider::new(config, common);
+            provider.start_sync();
+          }
+          _ => unreachable!(),
+        }
+
         info!("Provider stopped: {}", config_hash);
       }),
     };
@@ -291,6 +334,11 @@ impl ProviderManager {
     config_hash: String,
     function: ProviderFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
+    info!(
+      "Calling provider function: {:?} for: {}",
+      function, config_hash
+    );
+
     let provider_refs = self.provider_refs.lock().await;
     let provider_ref = provider_refs
       .get(&config_hash)

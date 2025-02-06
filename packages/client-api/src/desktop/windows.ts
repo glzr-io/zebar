@@ -4,7 +4,7 @@ import { desktopCommands } from './desktop-commands';
 
 export type ZOrder = 'bottom_most' | 'top_most' | 'normal';
 
-export interface Window {
+export interface WidgetWindow {
   /**
    * The underlying Tauri window.
    */
@@ -19,7 +19,7 @@ export interface Window {
 /**
  * Gets the window of the current widget.
  */
-export function currentWindow(): Window {
+export function currentWindow(): WidgetWindow {
   return {
     get tauri() {
       return getCurrentWindow();

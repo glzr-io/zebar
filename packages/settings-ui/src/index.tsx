@@ -1,15 +1,16 @@
 /* @refresh reload */
 import './index.css';
-import { Route, Router } from '@solidjs/router';
+import { HashRouter, Route } from '@solidjs/router';
 import { render } from 'solid-js/web';
 
 import { WidgetConfigs } from './configs/WidgetConfigs';
 
 render(
   () => (
-    <Router>
+    <HashRouter>
       <Route path="/" component={WidgetConfigs} />
-    </Router>
+      <Route path="/widget/:path" component={WidgetConfigs} />
+    </HashRouter>
   ),
   document.getElementById('root')!,
 );

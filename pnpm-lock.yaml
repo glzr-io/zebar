@@ -42,12 +42,9 @@ importers:
       '@tauri-apps/plugin-dialog':
         specifier: 2.0.0
         version: 2.0.0
-      '@tauri-apps/plugin-shell':
-        specifier: 2.0.0
-        version: 2.0.0
       glazewm:
-        specifier: 1.6.0
-        version: 1.6.0
+        specifier: 1.7.0
+        version: 1.7.0
       luxon:
         specifier: 3.4.4
         version: 3.4.4
@@ -80,8 +77,8 @@ importers:
   packages/settings-ui:
     dependencies:
       '@glzr/components':
-        specifier: 1.0.2
-        version: 1.0.2(solid-js@1.9.3)
+        specifier: 1.1.0
+        version: 1.1.0(solid-js@1.9.3)
       '@solidjs/router':
         specifier: 0.14.8
         version: 0.14.8(solid-js@1.9.3)
@@ -734,8 +731,8 @@ packages:
   '@floating-ui/utils@0.2.8':
     resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
 
-  '@glzr/components@1.0.2':
-    resolution: {integrity: sha512-lpnj/mn05tMciI9TQH57VjyM5VdHpA14HHM89sCbpvMVYOxzI67DU+UxnjhWyLG5Ea7RX1sBUS2iR9fcmAsh7Q==}
+  '@glzr/components@1.1.0':
+    resolution: {integrity: sha512-KTsF5TumJMwvieJlLFnvpfZAK5ehavJRNsK9/0mTazE2qlR9b0yxUiNeP8/m8oZRhpXUajyVFocE+O8JVEfyuA==}
     peerDependencies:
       solid-js: '>=1.7.0'
 
@@ -1111,9 +1108,6 @@ packages:
   '@tauri-apps/plugin-dialog@2.0.0':
     resolution: {integrity: sha512-ApNkejXP2jpPBSifznPPcHTXxu9/YaRW+eJ+8+nYwqp0lLUtebFHG4QhxitM43wwReHE81WAV1DQ/b+2VBftOA==}
 
-  '@tauri-apps/plugin-shell@2.0.0':
-    resolution: {integrity: sha512-OpW2+ycgJLrEoZityWeWYk+6ZWP9VyiAfbO+N/O8VfLkqyOym8kXh7odKDfINx9RAotkSGBtQM4abyKfJDkcUg==}
-
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
 
@@ -1410,8 +1404,8 @@ packages:
   git-hooks-list@3.1.0:
     resolution: {integrity: sha512-LF8VeHeR7v+wAbXqfgRlTSX/1BJR9Q1vEMR8JAz1cEg6GX07+zyj3sAdDvYjj/xnlIfVuGgj4qBei1K3hKH+PA==}
 
-  glazewm@1.6.0:
-    resolution: {integrity: sha512-JHDuL0Fda9NQVm0mJap8XsBNAatWhAOJj6HBy7nzrXvj4wUkKdbytI0LLGDUm/aLOYeT+XqdLJpH7HImggr5ig==}
+  glazewm@1.7.0:
+    resolution: {integrity: sha512-UWwtO4OZMOytA3KS70xihxJLqGJxtLE3XUnhLxrAgbXhIhy/0B4yF4RX3dEETozeB0sUbCnWc0a5KY8saErm2A==}
     engines: {node: '>=12'}
     peerDependencies:
       ws: '*'
@@ -2631,7 +2625,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.8': {}
 
-  '@glzr/components@1.0.2(solid-js@1.9.3)':
+  '@glzr/components@1.1.0(solid-js@1.9.3)':
     dependencies:
       '@corvu/drawer': 0.2.2(solid-js@1.9.3)
       '@corvu/resizable': 0.2.3(solid-js@1.9.3)
@@ -2953,10 +2947,6 @@ snapshots:
       '@tauri-apps/cli-win32-x64-msvc': 2.0.3
 
   '@tauri-apps/plugin-dialog@2.0.0':
-    dependencies:
-      '@tauri-apps/api': 2.0.2
-
-  '@tauri-apps/plugin-shell@2.0.0':
     dependencies:
       '@tauri-apps/api': 2.0.2
 
@@ -3311,7 +3301,7 @@ snapshots:
 
   git-hooks-list@3.1.0: {}
 
-  glazewm@1.6.0:
+  glazewm@1.7.0:
     dependencies:
       tslib: 2.6.1
 

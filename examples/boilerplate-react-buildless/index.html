@@ -4,14 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Base styles for better consistency across platforms (aka. CSS reset). -->
-    <link rel="stylesheet" type="text/css" href="../normalize.css" />
-
     <!-- Custom styles. -->
     <link rel="stylesheet" type="text/css" href="./styles.css" />
-
-    <!-- Add empty favicon to suppress not found errors. -->
-    <link rel="icon" href="data:;" />
 
     <!-- Allows React to be run buildless via "text/babel" script below. -->
     <script
@@ -37,6 +31,7 @@
         memory: { type: 'memory' },
         weather: { type: 'weather' },
         media: { type: 'media' },
+        audio: { type: 'audio' },
       });
 
       createRoot(document.getElementById('root')).render(<App />);
@@ -50,9 +45,28 @@
 
         return (
           <div className="app">
-            <div class="chip">
-              Media: {output.media?.session?.title} -
-              {output.media?.session?.artist}
+            {output.audio?.defaultPlaybackDevice && (
+              <div className="chip">
+                {output.audio.defaultPlaybackDevice.name}-
+                {output.audio.defaultPlaybackDevice.volume}
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="2"
+                  value={output.audio.defaultPlaybackDevice.volume}
+                  onChange={e =>
+                    output.audio.setVolume(e.target.valueAsNumber)
+                  }
+                />
+              </div>
+            )}
+            <div className="chip">
+              Media: {output.media?.currentSession?.title}-
+              {output.media?.currentSession?.artist}
+              <button onClick={() => output.media?.togglePlayPause()}>
+                ⏯
+              </button>
             </div>
             <div className="chip">CPU usage: {output.cpu?.usage}</div>
             <div className="chip">

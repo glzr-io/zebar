@@ -12,6 +12,7 @@ use crate::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
     ProviderManager,
   },
+  shell_state::{ShellCommandArgs, ShellState},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -147,4 +148,53 @@ pub fn set_skip_taskbar(
     .map_err(|err| err.to_string())?;
 
   Ok(())
+}
+
+#[tauri::command]
+pub async fn shell_exec(
+  program: String,
+  args: ShellCommandArgs,
+  options: shell_util::CommandOptions,
+  window: Window,
+  shell_state: State<'_, ShellState>,
+) -> anyhow::Result<shell_util::ShellExecOutput, String> {
+  let widget_id = window.label();
+  shell_state
+    .exec(&widget_id, &program, args, &options)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn shell_spawn(
+  program: String,
+  args: ShellCommandArgs,
+  options: shell_util::CommandOptions,
+  window: Window,
+  shell_state: State<'_, ShellState>,
+) -> anyhow::Result<shell_util::ProcessId, String> {
+  let widget_id = window.label();
+  shell_state
+    .spawn(&widget_id, &program, args, &options)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn shell_write(
+  pid: shell_util::ProcessId,
+  buffer: shell_util::Buffer,
+  shell_state: State<'_, ShellState>,
+) -> anyhow::Result<(), String> {
+  shell_state
+    .write(pid, buffer)
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn shell_kill(
+  pid: shell_util::ProcessId,
+  shell_state: State<'_, ShellState>,
+) -> anyhow::Result<(), String> {
+  shell_state.kill(pid).map_err(|err| err.to_string())
 }

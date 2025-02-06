@@ -22,13 +22,13 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
     "dev": "npm run build -- --watch src",
+    "dev:local": "npm run build -- --watch src",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@tauri-apps/api": "2.0.2",
     "@tauri-apps/plugin-dialog": "2.0.0",
-    "@tauri-apps/plugin-shell": "2.0.0",
-    "glazewm": "1.6.0",
+    "glazewm": "1.7.0",
     "luxon": "3.4.4",
     "zod": "3.22.4"
   },

@@ -4,7 +4,11 @@
   "description": "Widget capabilities",
   "windows": ["widget-*"],
   "remote": {
-    "urls": ["http://asset.localhost", "asset://localhost"]
+    "urls": [
+      "http://asset.localhost",
+      "asset://localhost",
+      "http://127.0.0.1:6124"
+    ]
   },
   "permissions": [
     "core:app:default",
@@ -24,6 +28,7 @@
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-resizable",
     "core:window:allow-set-position",
-    "core:window:allow-set-size"
+    "core:window:allow-set-size",
+    "core:window:allow-set-title"
   ]
 }

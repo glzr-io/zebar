@@ -2,6 +2,7 @@ import { join } from '@tauri-apps/api/path';
 
 import { desktopCommands } from './desktop-commands';
 import type { WidgetPlacement } from '~/config';
+import { currentWindow, type WidgetWindow } from './windows';
 
 export interface Widget {
   /**
@@ -18,6 +19,11 @@ export interface Widget {
    * Absolute path to the widget's HTML file.
    */
   htmlPath: string;
+
+  /**
+   * The window of the widget.
+   */
+  window: WidgetWindow;
 }
 
 function getWidgetState(): Widget {
@@ -41,6 +47,7 @@ export function currentWidget(): Widget {
     id: state.id,
     configPath: state.configPath,
     htmlPath: state.htmlPath,
+    window: currentWindow(),
   };
 }
 
@@ -72,7 +79,10 @@ export async function startWidget(
  *
  * Config path is relative within the Zebar config directory.
  */
-export async function startPreset(configPath: string, presetName: string) {
+export async function startWidgetPreset(
+  configPath: string,
+  presetName: string,
+) {
   // Ensure the config path ends with '.zebar.json'.
   const filePath = configPath.endsWith('.zebar.json')
     ? configPath

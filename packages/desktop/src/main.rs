@@ -1,41 +1,43 @@
 // Prevent additional console window on Windows in release mode.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![feature(async_closure)]
 #![feature(iterator_try_collect)]
 
 use std::{env, sync::Arc};
 
 use clap::Parser;
-use cli::MonitorType;
-use config::{MonitorSelection, WidgetPlacement};
-use providers::ProviderEmission;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
 use tokio::{sync::mpsc, task};
 use tracing::{error, info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
-use widget_factory::WidgetOpenOptions;
 
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
-  cli::{Cli, CliCommand, QueryArgs},
-  config::Config,
+  asset_server::setup_asset_server,
+  cli::{Cli, CliCommand, MonitorType, QueryArgs},
+  config::{Config, MonitorSelection, WidgetPlacement},
   monitor_state::MonitorState,
-  providers::ProviderManager,
+  providers::{ProviderEmission, ProviderManager},
+  shell_state::ShellState,
   sys_tray::SysTray,
-  widget_factory::WidgetFactory,
+  widget_factory::{WidgetFactory, WidgetOpenOptions},
 };
 
+mod asset_server;
 mod cli;
 mod commands;
 mod common;
 mod config;
 mod monitor_state;
 mod providers;
+mod shell_state;
 mod sys_tray;
 mod widget_factory;
+
+#[macro_use]
+extern crate rocket;
 
 /// Main entry point for the application.
 ///
@@ -91,7 +93,11 @@ async fn main() -> anyhow::Result<()> {
       commands::unlisten_provider,
       commands::call_provider_function,
       commands::set_always_on_top,
-      commands::set_skip_taskbar
+      commands::set_skip_taskbar,
+      commands::shell_exec,
+      commands::shell_spawn,
+      commands::shell_write,
+      commands::shell_kill,
     ])
     .build(tauri::generate_context!())?;
 
@@ -161,6 +167,8 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   // guaranteed to be one of the open commands here.
   setup_single_instance(app, widget_factory.clone())?;
 
+  setup_asset_server();
+
   // Prevent windows from showing up in the dock on MacOS.
   #[cfg(target_os = "macos")]
   app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -170,8 +178,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     .asset_protocol_scope()
     .allow_directory(&config.config_dir, true)?;
 
-  app.handle().plugin(tauri_plugin_shell::init())?;
-  app.handle().plugin(tauri_plugin_http::init())?;
+  app.manage(ShellState::new(app.handle(), widget_factory.clone()));
   app.handle().plugin(tauri_plugin_dialog::init())?;
 
   // Initialize `ProviderManager` in Tauri state.
@@ -221,14 +228,14 @@ fn listen_events(
       let res = tokio::select! {
         Ok(widget_state) = widget_open_rx.recv() => {
           info!("Widget opened.");
-          tray.refresh().await;
-          app_handle.emit("widget-opened", widget_state);
+          let _ = tray.refresh().await;
+          let _ = app_handle.emit("widget-opened", widget_state);
           Ok(())
         },
         Ok(widget_id) = widget_close_rx.recv() => {
           info!("Widget closed.");
-          tray.refresh().await;
-          app_handle.emit("widget-closed", widget_id);
+          let _ = tray.refresh().await;
+          let _ = app_handle.emit("widget-closed", widget_id);
           Ok(())
         },
         Ok(_) = settings_change_rx.recv() => {
@@ -316,7 +323,7 @@ async fn open_widgets_by_cli_command(
         )
         .await
     }
-    CliCommand::StartPreset(args) => {
+    CliCommand::StartWidgetPreset(args) => {
       widget_factory
         .start_widget(
           &args.config_path,
