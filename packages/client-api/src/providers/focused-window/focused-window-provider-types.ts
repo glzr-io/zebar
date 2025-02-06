@@ -6,7 +6,9 @@ export interface FocusedWindowProviderConfig {
 
 export interface FocusedWindowOutput {
   title: string;
-  icon: string;
+  iconBytes: number[];
+  iconBlob: Blob;
+  iconURL: string;
 }
 
 export type FocusedWindowProvider = Provider<

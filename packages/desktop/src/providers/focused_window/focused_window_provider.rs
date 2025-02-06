@@ -1,7 +1,6 @@
 use std::{ffi::c_void, io::Cursor, sync::OnceLock};
 
 use async_trait::async_trait;
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 use image::{ImageBuffer, ImageFormat, Rgba};
 use serde::{Deserialize, Serialize};
 use windows::{
@@ -49,13 +48,21 @@ const ICON_SIZE: i32 = 32;
 #[serde(rename_all = "camelCase")]
 pub struct FocusedWindowProviderConfig {}
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FocusedWindowOutput {
   pub title: String,
-  pub icon: String,
+  pub icon_bytes: Vec<u8>,
 }
 
+impl std::fmt::Debug for FocusedWindowOutput {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("FocusedWindowOutput")
+      .field("title", &self.title)
+      .field("icon_bytes", &self.icon_bytes.get(0..30))
+      .finish()
+  }
+}
 pub struct FocusedWindowProvider {
   common: CommonProviderState,
 }
@@ -70,7 +77,7 @@ impl FocusedWindowProvider {
 
   unsafe fn get_foreground_window_icon(
     hwnd: HWND,
-  ) -> Result<String, Error> {
+  ) -> Result<Vec<u8>, Error> {
     // Try standard window icon first
     if let Some(b64) = Self::extract_standard_icon(hwnd) {
       return Ok(b64);
@@ -86,7 +93,7 @@ impl FocusedWindowProvider {
     Err(Error::new(E_FAIL, "Failed to extract icon"))
   }
 
-  unsafe fn extract_standard_icon(hwnd: HWND) -> Option<String> {
+  unsafe fn extract_standard_icon(hwnd: HWND) -> Option<Vec<u8>> {
     let hicon =
       SendMessageW(hwnd, WM_GETICON, WPARAM(ICON_BIG as usize), LPARAM(0));
     let hicon = if hicon.0 != 0 {
@@ -128,7 +135,7 @@ impl FocusedWindowProvider {
     }
   }
 
-  unsafe fn extract_uwp_icon(aumid: &str) -> Option<String> {
+  unsafe fn extract_uwp_icon(aumid: &str) -> Option<Vec<u8>> {
     let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
     let shell_path = format!("shell:AppsFolder\\{}", aumid);
 
@@ -213,7 +220,7 @@ impl FocusedWindowProvider {
     bitmap: HBITMAP,
     width: u32,
     height: u32,
-  ) -> Option<String> {
+  ) -> Option<Vec<u8>> {
     // Get bitmap data
     let mut bmi = BITMAPINFO {
       bmiHeader: BITMAPINFOHEADER {
@@ -265,7 +272,7 @@ impl FocusedWindowProvider {
       ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, pixels)?;
     image_buffer.write_to(&mut cursor, ImageFormat::Png).ok()?;
 
-    Some(BASE64_STANDARD.encode(&png_data))
+    Some(png_data)
   }
 
   unsafe fn emit_window_info(hwnd: HWND, emitter: &ProviderEmitter) {
@@ -285,8 +292,8 @@ impl FocusedWindowProvider {
         return Err(anyhow::Error::msg("Empty title"));
       }
 
-      if let Ok(icon) = Self::get_foreground_window_icon(hwnd) {
-        Ok(FocusedWindowOutput { title, icon })
+      if let Ok(icon_bytes) = Self::get_foreground_window_icon(hwnd) {
+        Ok(FocusedWindowOutput { title, icon_bytes })
       } else {
         Err(anyhow::Error::msg("Failed to extract icon"))
       }

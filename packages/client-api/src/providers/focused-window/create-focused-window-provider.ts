@@ -23,7 +23,17 @@ export function createFocusedWindowProvider(
         if ('error' in result) {
           queue.error(result.error);
         } else {
-          queue.output(result.output);
+          const iconBlob = new Blob(
+            [new Uint8Array(result.output.iconBytes)],
+            {
+              type: 'image/png',
+            },
+          );
+          queue.output({
+            ...result.output,
+            iconBlob,
+            iconURL: URL.createObjectURL(iconBlob),
+          });
         }
       },
     );
