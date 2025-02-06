@@ -1,12 +1,13 @@
-/* @refresh reload */
 import './index.css';
 import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import * as zebar from 'zebar';
+import { createSignal, createEffect } from 'solid-js';
 
 const providers = zebar.createProviderGroup({
   audio: { type: 'audio' },
   cpu: { type: 'cpu' },
+  focusedWindow: { type: 'focusedWindow' },
   battery: { type: 'battery' },
   memory: { type: 'memory' },
   weather: { type: 'weather' },
@@ -18,7 +19,9 @@ render(() => <App />, document.getElementById('root')!);
 function App() {
   const [output, setOutput] = createStore(providers.outputMap);
 
-  providers.onOutput(outputMap => setOutput(outputMap));
+  providers.onOutput(outputMap => {
+    setOutput(outputMap);
+  });
 
   return (
     <div class="app">
@@ -42,6 +45,16 @@ function App() {
         <button onClick={() => output.media?.togglePlayPause()}>⏯</button>
       </div>
       <div class="chip">CPU usage: {output.cpu?.usage}</div>
+      <div class="chip">
+        Focused window:
+        <img
+          height="20"
+          width="20"
+          src={output.focusedWindow?.iconURL}
+          alt="icon"
+        />
+        {output.focusedWindow?.title}
+      </div>
       <div class="chip">
         Battery charge: {output.battery?.chargePercent}
       </div>

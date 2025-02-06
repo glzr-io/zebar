@@ -18,6 +18,7 @@ async-trait = "0.1"
 base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 crossbeam = "0.8"
+image = "0.25.5"
 netdev = "0.24"
 regex = "1"
 reqwest = { version = "0.11", features = ["json"] }
@@ -53,6 +54,9 @@ windows = { version = "0.58", features = [
   "Win32_Media",
   "Win32_Media_Audio",
   "Win32_Media_Audio_Endpoints",
+  "Win32_Storage",
+  "Win32_Storage_Packaging",
+  "Win32_Storage_Packaging_Appx",
   "Win32_System_Console",
   "Win32_System_SystemServices",
   "Win32_UI_Input_KeyboardAndMouse",
