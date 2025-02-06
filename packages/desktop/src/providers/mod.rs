@@ -3,6 +3,7 @@ mod audio;
 mod battery;
 mod cpu;
 mod disk;
+#[cfg(windows)]
 mod focused_window;
 mod host;
 mod ip;
