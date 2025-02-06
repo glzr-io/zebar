@@ -65,19 +65,29 @@ impl SystrayProvider {
     function: SystrayFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
     match &function {
-      SystrayFunction::IconHoverEnter(args) => systray
-        .send_action(args.icon_id.parse()?, SystrayIconAction::HoverEnter),
-      SystrayFunction::IconHoverLeave(args) => systray
-        .send_action(args.icon_id.parse()?, SystrayIconAction::HoverLeave),
-      SystrayFunction::IconHoverMove(args) => systray
-        .send_action(args.icon_id.parse()?, SystrayIconAction::HoverMove),
-      SystrayFunction::IconLeftClick(args) => systray
-        .send_action(args.icon_id.parse()?, SystrayIconAction::LeftClick),
-      SystrayFunction::IconRightClick(args) => systray
-        .send_action(args.icon_id.parse()?, SystrayIconAction::RightClick),
+      SystrayFunction::IconHoverEnter(args) => systray.send_action(
+        &args.icon_id.parse()?,
+        &SystrayIconAction::HoverEnter,
+      ),
+      SystrayFunction::IconHoverLeave(args) => systray.send_action(
+        &args.icon_id.parse()?,
+        &SystrayIconAction::HoverLeave,
+      ),
+      SystrayFunction::IconHoverMove(args) => systray.send_action(
+        &args.icon_id.parse()?,
+        &SystrayIconAction::HoverMove,
+      ),
+      SystrayFunction::IconLeftClick(args) => systray.send_action(
+        &args.icon_id.parse()?,
+        &SystrayIconAction::LeftClick,
+      ),
+      SystrayFunction::IconRightClick(args) => systray.send_action(
+        &args.icon_id.parse()?,
+        &SystrayIconAction::RightClick,
+      ),
       SystrayFunction::IconMiddleClick(args) => systray.send_action(
-        args.icon_id.parse()?,
-        SystrayIconAction::MiddleClick,
+        &args.icon_id.parse()?,
+        &SystrayIconAction::MiddleClick,
       ),
     }?;
 

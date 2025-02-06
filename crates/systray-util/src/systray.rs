@@ -357,12 +357,12 @@ impl Systray {
   /// Sends an action to the systray icon.
   pub fn send_action(
     &mut self,
-    icon_id: StableId,
-    action: SystrayIconAction,
+    icon_id: &StableId,
+    action: &SystrayIconAction,
   ) -> crate::Result<()> {
     tracing::info!("Sending icon action: {:?}", self.icons);
     let icon =
-      self.icons.get(&icon_id).ok_or(crate::Error::IconNotFound)?;
+      self.icons.get(icon_id).ok_or(crate::Error::IconNotFound)?;
 
     // Early return if we don't have the required fields.
     let window_handle =
