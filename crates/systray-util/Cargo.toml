@@ -1,9 +1,10 @@
 [package]
 name = "systray-util"
 version = "0.0.0"
-authors = ["you"]
-license = ""
-repository = ""
+authors = ["Glzr Software Pte. Ltd."]
+description = "A library for monitoring and interacting with system tray icons on Windows 10 and 11."
+license = "MIT"
+repository = "https://github.com/glzr-io/zebar"
 edition = "2021"
 
 [lib]

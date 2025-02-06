@@ -1,9 +1,10 @@
 [package]
 name = "shell-util"
 version = "0.0.0"
-authors = ["you"]
-license = ""
-repository = ""
+authors = ["Glzr Software Pte. Ltd."]
+description = "A cross-platform library for executing shell commands."
+license = "MIT"
+repository = "https://github.com/glzr-io/zebar"
 edition = "2021"
 
 [dependencies]
