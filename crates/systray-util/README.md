@@ -1,6 +1,11 @@
-# systray-util
+# systray-util · [![Crates.io](https://img.shields.io/crates/v/systray-util.svg)](https://crates.io/crates/systray-util)
 
 A library for Windows 10 and 11 for monitoring and interacting with native system tray icons.
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/aae2f02e-54a5-4ff0-bb43-364de86c8c80" alt="demo">
+  <p><i>Demo of <code>systray-util</code> used for recreating the system tray in Zebar's <code>systray</code> provider.</i></p>
+</div>
 
 ## Example usage
 
