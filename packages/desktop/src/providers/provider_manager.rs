@@ -284,6 +284,11 @@ impl ProviderManager {
             let mut provider = CpuProvider::new(config, common);
             provider.start_sync();
           }
+          #[cfg(windows)]
+          ProviderConfig::FocusedWindow(config) => {
+            let mut provider = FocusedWindowProvider::new(config, common);
+            provider.start_sync();
+          }
           ProviderConfig::Host(config) => {
             let mut provider = HostProvider::new(config, common);
             provider.start_sync();
