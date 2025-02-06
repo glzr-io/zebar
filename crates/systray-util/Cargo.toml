@@ -1,0 +1,23 @@
+[package]
+name = "systray-util"
+version = "0.0.0"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+image = { version = "0.25", features = ["serde"] }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-core = { workspace = true }
+windows = { workspace = true }

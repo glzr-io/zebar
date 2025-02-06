@@ -65,6 +65,11 @@ import type {
   DiskProvider,
   DiskProviderConfig,
 } from './disk/disk-provider-types';
+import { createSystrayProvider } from './systray/create-systray-provider';
+import type {
+  SystrayProviderConfig,
+  SystrayProvider,
+} from './systray/systray-provider-types';
 
 export interface ProviderConfigMap {
   audio: AudioProviderConfig;
@@ -81,6 +86,7 @@ export interface ProviderConfigMap {
   weather: WeatherProviderConfig;
   keyboard: KeyboardProviderConfig;
   disk: DiskProviderConfig;
+  systray: SystrayProviderConfig;
 }
 
 export interface ProviderMap {
@@ -98,6 +104,7 @@ export interface ProviderMap {
   weather: WeatherProvider;
   keyboard: KeyboardProvider;
   disk: DiskProvider;
+  systray: SystrayProvider;
 }
 
 export type ProviderType = keyof ProviderConfigMap;
@@ -149,6 +156,8 @@ export function createProvider<T extends ProviderConfig>(
       return createKeyboardProvider(config) as any;
     case 'disk':
       return createDiskProvider(config) as any;
+    case 'systray':
+      return createSystrayProvider(config) as any;
     default:
       throw new Error('Not a supported provider type.');
   }

@@ -18,6 +18,8 @@ mod provider_config;
 mod provider_function;
 mod provider_manager;
 mod provider_output;
+#[cfg(windows)]
+mod systray;
 mod weather;
 
 pub use provider::*;

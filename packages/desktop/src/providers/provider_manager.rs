@@ -13,6 +13,7 @@ use tracing::info;
 use super::{
   audio::AudioProvider, keyboard::KeyboardProvider,
   komorebi::KomorebiProvider, media::MediaProvider,
+  systray::SystrayProvider,
 };
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
@@ -248,6 +249,8 @@ impl ProviderManager {
       ProviderConfig::Ip(..) | ProviderConfig::Weather(..) => {
         RuntimeType::Async
       }
+      #[cfg(windows)]
+      ProviderConfig::Systray(..) => RuntimeType::Async,
       _ => RuntimeType::Sync,
     };
 
@@ -261,6 +264,11 @@ impl ProviderManager {
           }
           ProviderConfig::Weather(config) => {
             let mut provider = WeatherProvider::new(config, common);
+            provider.start_async().await;
+          }
+          #[cfg(windows)]
+          ProviderConfig::Systray(config) => {
+            let mut provider = SystrayProvider::new(config, common);
             provider.start_async().await;
           }
           _ => unreachable!(),

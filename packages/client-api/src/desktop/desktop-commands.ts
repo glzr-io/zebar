@@ -23,7 +23,10 @@ export const desktopCommands = {
   shellKill,
 };
 
-export type ProviderFunction = AudioFunction | MediaFunction;
+export type ProviderFunction =
+  | AudioFunction
+  | MediaFunction
+  | SystrayFunction;
 
 export interface AudioFunction {
   type: 'audio';
@@ -42,6 +45,22 @@ export interface MediaFunction {
     name: 'play' | 'pause' | 'toggle_play_pause' | 'next' | 'previous';
     args: {
       sessionId?: string;
+    };
+  };
+}
+
+export interface SystrayFunction {
+  type: 'systray';
+  function: {
+    name:
+      | 'icon_hover_enter'
+      | 'icon_hover_leave'
+      | 'icon_hover_move'
+      | 'icon_left_click'
+      | 'icon_right_click'
+      | 'icon_middle_click';
+    args: {
+      iconId: string;
     };
   };
 }

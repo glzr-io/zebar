@@ -3,7 +3,7 @@ use serde::Serialize;
 #[cfg(windows)]
 use super::{
   audio::AudioOutput, keyboard::KeyboardOutput, komorebi::KomorebiOutput,
-  media::MediaOutput,
+  media::MediaOutput, systray::SystrayOutput,
 };
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, disk::DiskOutput,
@@ -40,6 +40,8 @@ pub enum ProviderOutput {
   Memory(MemoryOutput),
   Disk(DiskOutput),
   Network(NetworkOutput),
+  #[cfg(windows)]
+  Systray(SystrayOutput),
   Weather(WeatherOutput),
   #[cfg(windows)]
   Keyboard(KeyboardOutput),
@@ -61,5 +63,6 @@ impl_provider_output! {
   Audio(AudioOutput),
   Komorebi(KomorebiOutput),
   Media(MediaOutput),
-  Keyboard(KeyboardOutput)
+  Keyboard(KeyboardOutput),
+  Systray(SystrayOutput),
 }

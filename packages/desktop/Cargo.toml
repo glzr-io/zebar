@@ -38,29 +38,13 @@ tauri-plugin-single-instance = "2.0"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-uuid = { version = "1", features = ["v4"] }
+uuid = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+systray-util = { path = "../../crates/systray-util" }
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
-windows-core = "0.58"
-windows = { version = "0.58", features = [
-  "Foundation",
-  "Foundation_Collections",
-  "implement",
-  "Media_Control",
-  "Win32_Devices_FunctionDiscovery",
-  "Win32_Globalization",
-  "Win32_Media",
-  "Win32_Media_Audio",
-  "Win32_Media_Audio_Endpoints",
-  "Win32_System_Console",
-  "Win32_System_SystemServices",
-  "Win32_UI_Input_KeyboardAndMouse",
-  "Win32_UI_Shell_PropertiesSystem",
-  "Win32_UI_TextServices",
-  "Win32_UI_WindowsAndMessaging",
-  "Win32_NetworkManagement_WiFi",
-] }
+windows-core = { workspace = true }
+windows = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"

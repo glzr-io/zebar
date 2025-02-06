@@ -1,6 +1,6 @@
 /* @refresh reload */
 import './index.css';
-import { render } from 'solid-js/web';
+import { For, render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import * as zebar from 'zebar';
 
@@ -11,6 +11,7 @@ const providers = zebar.createProviderGroup({
   memory: { type: 'memory' },
   weather: { type: 'weather' },
   media: { type: 'media' },
+  systray: { type: 'systray' },
 });
 
 render(() => <App />, document.getElementById('root')!);
@@ -36,17 +37,48 @@ function App() {
           />
         </div>
       )}
-      <div class="chip">
-        Media: {output.media?.currentSession?.title}-
-        {output.media?.currentSession?.artist}
-        <button onClick={() => output.media?.togglePlayPause()}>⏯</button>
-      </div>
-      <div class="chip">CPU usage: {output.cpu?.usage}</div>
-      <div class="chip">
-        Battery charge: {output.battery?.chargePercent}
-      </div>
-      <div class="chip">Memory usage: {output.memory?.usage}</div>
-      <div class="chip">Weather temp: {output.weather?.celsiusTemp}</div>
+      {output.media?.currentSession && (
+        <div class="chip">
+          Media: {output.media.currentSession.title}-
+          {output.media.currentSession.artist}
+          <button onClick={() => output.media?.togglePlayPause()}>
+            ⏯
+          </button>
+        </div>
+      )}
+      {output.cpu && <div class="chip">CPU usage: {output.cpu.usage}</div>}
+      {output.battery && (
+        <div class="chip">
+          Battery charge: {output.battery.chargePercent}
+        </div>
+      )}
+      {output.memory && (
+        <div class="chip">Memory usage: {output.memory.usage}</div>
+      )}
+      {output.weather && (
+        <div class="chip">Weather temp: {output.weather.celsiusTemp}</div>
+      )}
+      {output.systray && (
+        <div class="chip">
+          <For each={output.systray.icons}>
+            {icon => (
+              <img
+                class="systray-icon"
+                src={icon.iconUrl}
+                title={icon.tooltip}
+                onClick={e => {
+                  e.preventDefault();
+                  output.systray.onLeftClick(icon.id);
+                }}
+                onContextMenu={e => {
+                  e.preventDefault();
+                  output.systray.onRightClick(icon.id);
+                }}
+              />
+            )}
+          </For>
+        </div>
+      )}
     </div>
   );
 }
