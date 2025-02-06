@@ -5,6 +5,7 @@ use std::{
   str::FromStr,
 };
 
+pub use image::ImageFormat;
 use windows::Win32::{
   Foundation::{HWND, LPARAM, WPARAM},
   UI::{
@@ -101,6 +102,9 @@ pub struct SystrayIcon {
   /// Handle to the icon bitmap.
   pub icon_handle: Option<isize>,
 
+  /// Icon image.
+  pub icon_image: Option<image::RgbaImage>,
+
   /// Application-defined message identifier.
   ///
   /// Used to send messages to the window that contains the icon.
@@ -111,24 +115,21 @@ pub struct SystrayIcon {
 }
 
 impl SystrayIcon {
-  /// Converts the icon to a `RgbaImage`.
-  pub fn to_image(&self) -> crate::Result<image::RgbaImage> {
-    let icon_handle =
-      self.icon_handle.ok_or(crate::Error::IconNotFound)?;
-
-    Util::icon_to_image(icon_handle)
-  }
-
-  /// Converts the icon to a PNG byte vector.
-  pub fn to_png(&self) -> crate::Result<Vec<u8>> {
-    let mut png_bytes: Vec<u8> = Vec::new();
+  /// Converts the icon image to a byte vector of the given image format.
+  pub fn to_image_format(
+    &self,
+    format: ImageFormat,
+  ) -> crate::Result<Vec<u8>> {
+    let mut bytes: Vec<u8> = Vec::new();
 
     self
-      .to_image()?
-      .write_to(&mut Cursor::new(&mut png_bytes), image::ImageFormat::Png)
+      .icon_image
+      .as_ref()
+      .ok_or(crate::Error::InoperableIcon)?
+      .write_to(&mut Cursor::new(&mut bytes), format)
       .map_err(|_| crate::Error::IconConversionFailed)?;
 
-    Ok(png_bytes)
+    Ok(bytes)
   }
 }
 
@@ -227,44 +228,66 @@ impl Systray {
       TrayEvent::IconAdd(icon_data) | TrayEvent::IconUpdate(icon_data) => {
         tracing::info!("Icon modified or added: {:?}", icon_data);
 
-        let found_icon = self.find_icon(icon_data);
+        let found_icon_id =
+          self.find_icon(icon_data).map(|icon| icon.stable_id.clone());
 
+        let found_icon = match found_icon_id {
+          Some(id) => self.icons.get_mut(&id),
+          None => None,
+        };
+
+        // Update the icon in-place if found.
         if let Some(found_icon) = found_icon {
-          // Update existing icon with new data.
-          let updated_icon = SystrayIcon {
-            stable_id: found_icon.stable_id.clone(),
-            uid: icon_data.uid.or(found_icon.uid),
-            window_handle: icon_data
-              .window_handle
-              .or(found_icon.window_handle),
-            guid: icon_data.guid.or(found_icon.guid),
-            tooltip: icon_data
-              .tooltip
-              .clone()
-              .unwrap_or(found_icon.tooltip.clone()),
-            icon_handle: icon_data.icon_handle.or(found_icon.icon_handle),
-            callback_message: icon_data
-              .callback_message
-              .or(found_icon.callback_message),
-            version: icon_data.version.or(found_icon.version),
-          };
+          if let Some(uid) = icon_data.uid {
+            found_icon.uid = Some(uid);
+          }
 
-          self
-            .icons
-            .insert(found_icon.stable_id.clone(), updated_icon.clone());
+          if let Some(window_handle) = icon_data.window_handle {
+            found_icon.window_handle = Some(window_handle);
+          }
 
-          Some(SystrayEvent::IconUpdate(updated_icon))
+          if let Some(guid) = icon_data.guid {
+            found_icon.guid = Some(guid);
+          }
+
+          if let Some(tooltip) = &icon_data.tooltip {
+            found_icon.tooltip = tooltip.clone();
+          }
+
+          if let Some(icon_handle) = icon_data.icon_handle {
+            // Avoid re-reading the icon image if it's the same as the
+            // existing icon.
+            if found_icon.icon_handle != Some(icon_handle) {
+              found_icon.icon_handle = Some(icon_handle);
+              found_icon.icon_image =
+                Util::icon_to_image(icon_handle).ok();
+            }
+          }
+
+          if let Some(callback_message) = icon_data.callback_message {
+            found_icon.callback_message = Some(callback_message);
+          }
+
+          if let Some(version) = icon_data.version {
+            found_icon.version = Some(version);
+          }
+
+          Some(SystrayEvent::IconUpdate(found_icon.clone()))
         } else {
-          // Icon doesn't exist yet, so add new icon.
-          let stable_id = if let Some(guid) = icon_data.guid {
-            StableId::Guid(guid)
-          } else if let (Some(handle), Some(uid)) =
-            (icon_data.window_handle, icon_data.uid)
-          {
-            StableId::HandleUid(handle, uid)
-          } else {
-            return None;
-          };
+          // Icon doesn't exist yet, so add new icon. Skip icons that
+          // cannot be identified.
+          let stable_id = icon_data.guid.map(StableId::Guid).or({
+            match (icon_data.window_handle, icon_data.uid) {
+              (Some(handle), Some(uid)) => {
+                Some(StableId::HandleUid(handle, uid))
+              }
+              _ => None,
+            }
+          })?;
+
+          let icon_image = icon_data
+            .icon_handle
+            .and_then(|icon_handle| Util::icon_to_image(icon_handle).ok());
 
           let icon = SystrayIcon {
             stable_id,
@@ -276,6 +299,7 @@ impl Systray {
               .clone()
               .unwrap_or_else(|| "".to_string()),
             icon_handle: icon_data.icon_handle,
+            icon_image,
             callback_message: icon_data.callback_message,
             version: icon_data.version,
           };

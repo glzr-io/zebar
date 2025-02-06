@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use systray_util::{Systray, SystrayIcon, SystrayIconAction};
+use systray_util::{ImageFormat, Systray, SystrayIcon, SystrayIconAction};
 
 use crate::providers::{
   CommonProviderState, Provider, ProviderFunction,
@@ -32,7 +32,7 @@ impl TryFrom<SystrayIcon> for SystrayOutputIcon {
     Ok(SystrayOutputIcon {
       id: icon.stable_id.to_string(),
       tooltip: icon.tooltip.clone(),
-      icon_bytes: icon.to_png()?,
+      icon_bytes: icon.to_image_format(ImageFormat::Png)?,
     })
   }
 }
