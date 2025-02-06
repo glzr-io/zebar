@@ -246,9 +246,11 @@ impl ProviderManager {
     common: CommonProviderState,
   ) -> anyhow::Result<(task::JoinHandle<()>, RuntimeType)> {
     let runtime_type = match config {
-      ProviderConfig::Ip(..)
-      | ProviderConfig::Weather(..)
-      | ProviderConfig::Systray(..) => RuntimeType::Async,
+      ProviderConfig::Ip(..) | ProviderConfig::Weather(..) => {
+        RuntimeType::Async
+      }
+      #[cfg(windows)]
+      ProviderConfig::Systray(..) => RuntimeType::Async,
       _ => RuntimeType::Sync,
     };
 
