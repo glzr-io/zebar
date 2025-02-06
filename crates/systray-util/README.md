@@ -5,11 +5,13 @@ A library for Windows 10 and 11 for monitoring and interacting with native syste
 ## Example usage
 
 ```rust
+use systray_util::{Systray, SystrayEvent, SystrayIconAction};
+
 fn main() -> systray_util::Result<()> {
   let mut systray = Systray::new()?;
 
   // Alternatively use `systray.events().await` to get async events for use
-  // with a Tokio runtime.
+  // with a tokio runtime.
   while let Some(event) = systray.events_blocking() {
     match event {
       SystrayEvent::IconAdd(icon) => {
@@ -33,17 +35,39 @@ fn main() -> systray_util::Result<()> {
 }
 ```
 
+The `examples/` directory contains sample implementations demonstrating basic usage:
+
+```shell
+# Run the synchronous example.
+cargo run -p systray-util --example sync
+
+# Run the asynchronous (tokio) example.
+cargo run -p systray-util --example async
+```
+
 ## Technical overview
 
-Uses a "spy" window that intercepts system tray messages directed to `Shell_TrayWnd`. This is done by creating a hidden window with the same class name as `Shell_TrayWnd` and processing `WM_COPYDATA` messages that contain tray icon data (additions, updates, removals).
+This library uses a "spy" window to monitor system tray updates. It works by:
 
-When a 3rd-party application uses `Shell_NotifyIcon` to add, update, or remove a tray icon, the code inside `Shell32.dll` sends a `WM_COPYDATA` message to the Windows taskbar window. It does this by calling `FindWindow` and looking for a window with the class name of `Shell_TrayWnd`.
+1. Creating a hidden window that mimics the Windows taskbar by using the `Shell_TrayWnd` class name.
+2. Intercepting `WM_COPYDATA` messages intended for the taskbar that contain system tray icon data.
+3. Processing these messages to track icon additions, updates, and removals.
+4. Forwarding the original messages to the real `Shell_TrayWnd` to avoid disrupting the native system tray.
+
+When applications use the Windows API [`Shell_NotifyIcon`](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyiconw) to manage their tray icons, `Shell32.dll` broadcasts `WM_COPYDATA` messages to any window with the `Shell_TrayWnd` class name (found via `FindWindow`). Our spy window receives these same messages, allowing us to monitor all system tray activity.
 
 ### `WM_COPYDATA` messages
 
-- `1`: Appbar messages. Invoked via `SHAppBarMessage`.
-    - Affects the position of shell flyouts (e.g. volume and wifi flyouts) and fullscreen behavior of windows.
-- `2`: Tray update messages: tray icon additions, updates, and removals. Invoked via `Shell_NotifyIcon`.
-    - Necessary for detection of tray icons.
-- `3`: Icon position requests. Invoked via `Shell_NotifyIconGetRect`.
-    - Affects the position of dropdowns for some tray icons (e.g. OneDrive).
+The following are the three types of messages sent to `Shell_TrayWnd`, identified by their `dwData` value in the `WM_COPYDATA` structure:
+
+- **`1`: Appbar Messages** (triggered by [`SHAppBarMessage`](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shappbarmessage))
+
+These messages affect the registration of appbar windows, which in turn affects the behavior of shell flyouts (e.g. volume and wifi flyouts) and fullscreen behavior of windows.
+
+- **`2`: Tray Icon Updates** (triggered by [`Shell_NotifyIcon`](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyiconw))
+
+These messages contain tray icon data for additions, updates, and removals.
+
+- **`3`: Icon Position Requests** (triggered by [`Shell_NotifyIconGetRect`](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyicongetrect))
+
+These messages are used to determine tray icon positions. Not very widely used - they affect the context menu position for some applications like OneDrive.
