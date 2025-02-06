@@ -76,10 +76,8 @@ impl Util {
 
     loop {
       if unsafe { GetMessageW(&mut msg, None, 0, 0) }.as_bool() {
-        unsafe {
-          TranslateMessage(&msg);
-          DispatchMessageW(&msg);
-        }
+        let _ = unsafe { TranslateMessage(&msg) };
+        unsafe { DispatchMessageW(&msg) };
       } else {
         break;
       }

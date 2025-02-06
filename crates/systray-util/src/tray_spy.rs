@@ -232,6 +232,7 @@ impl From<TbButtonItem> for IconEventData {
 }
 
 /// A window that spies on system tray icon messages and broadcasts events.
+#[derive(Debug)]
 pub(crate) struct TraySpy {
   window_thread: Option<JoinHandle<()>>,
 }
@@ -358,7 +359,7 @@ impl TraySpy {
             _ => None,
           };
 
-        tracing::info!("Tray event: {:?}", tray_event);
+        tracing::debug!("Tray event: {:?}", tray_event);
 
         if let Some(event) = tray_event {
           event_tx.send(event).expect("Failed to send tray event.");
@@ -374,7 +375,7 @@ impl TraySpy {
           Ok(pos) => pos,
           Err(_) => {
             tracing::error!("Failed to get cursor position.");
-            return Self::forward_message(hwnd, msg, wparam, lparam)
+            return Self::forward_message(hwnd, msg, wparam, lparam);
           }
         };
 
@@ -558,7 +559,7 @@ impl TraySpy {
     wparam: WPARAM,
     lparam: LPARAM,
   ) -> LRESULT {
-    tracing::info!(
+    tracing::debug!(
       "Forwarding msg: {:#x} - {} to real tray window.",
       msg,
       msg
@@ -574,6 +575,16 @@ impl TraySpy {
       unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
     } else {
       unsafe { SendMessageW(HWND(real_tray as _), msg, wparam, lparam) }
+    }
+  }
+}
+
+impl Drop for TraySpy {
+  fn drop(&mut self) {
+    if let Some(window_thread) = self.window_thread.take() {
+      if let Err(err) = Util::kill_message_loop(&window_thread) {
+        tracing::warn!("Failed to kill message loop: {:?}", err);
+      }
     }
   }
 }

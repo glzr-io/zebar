@@ -66,7 +66,7 @@ impl FromStr for StableId {
   }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct SystrayIcon {
   /// Identifier for the icon. Will not change for the lifetime of the
   /// icon.
@@ -114,6 +114,24 @@ pub struct SystrayIcon {
   pub version: Option<u32>,
 }
 
+// Debug implementation for `SystrayIcon`. Icon image is a large
+// buffer, so we trim it in the debug output.
+impl std::fmt::Debug for SystrayIcon {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("SystrayIcon")
+      .field("stable_id", &self.stable_id)
+      .field("uid", &self.uid)
+      .field("window_handle", &self.window_handle)
+      .field("guid", &self.guid)
+      .field("tooltip", &self.tooltip)
+      .field("icon_handle", &self.icon_handle)
+      .field("icon_image", &self.icon_image.as_ref().map(|_| "..."))
+      .field("callback_message", &self.callback_message)
+      .field("version", &self.version)
+      .finish()
+  }
+}
+
 impl SystrayIcon {
   /// Converts the icon image to a byte vector of the given image format.
   pub fn to_image_format(
@@ -159,6 +177,7 @@ pub enum SystrayIconAction {
 #[derive(Debug)]
 pub struct Systray {
   icons: HashMap<StableId, SystrayIcon>,
+  _spy: TraySpy,
   event_rx: tokio::sync::mpsc::UnboundedReceiver<TrayEvent>,
 }
 
@@ -169,6 +188,7 @@ impl Systray {
 
     Ok(Systray {
       icons: HashMap::new(),
+      _spy,
       event_rx,
     })
   }
