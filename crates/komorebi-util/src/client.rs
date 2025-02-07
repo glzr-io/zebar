@@ -22,13 +22,19 @@ impl KomorebiClient {
   /// specified socket.
   ///
   /// Returns an error if the socket connection fails
-  pub fn new(socket_name: String) -> crate::Result<Self> {
-    let socket = komorebi_client::subscribe(&socket_name)
+  pub fn new(socket_name: &str) -> crate::Result<Self> {
+    let socket = komorebi_client::subscribe(socket_name)
       .map_err(Error::SocketInitialization)?;
 
     let (output_tx, output_rx) = mpsc::channel(100);
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    Self::listen_socket(socket_name, socket, output_tx, shutdown_rx);
+
+    Self::listen_socket(
+      socket_name.to_string(),
+      socket,
+      output_tx,
+      shutdown_rx,
+    );
 
     Ok(KomorebiClient {
       output_rx,
@@ -36,14 +42,14 @@ impl KomorebiClient {
     })
   }
 
-  /// Returns the latest state from Komorebi.
-  pub async fn output(&self) -> crate::Result<KomorebiOutput> {
-    self.output_rx.recv().await.map_err(Error::StreamRead)
+  /// Returns the latest output from Komorebi socket.
+  pub async fn output(&mut self) -> crate::Result<KomorebiOutput> {
+    self.output_rx.recv().await.ok_or(Error::SocketRead)?
   }
 
-  /// Returns the latest state from Komorebi.
-  pub fn output_blocking(&self) -> crate::Result<KomorebiOutput> {
-    self.output_rx.blocking_recv().map_err(Error::StreamRead)
+  /// Returns the latest output from Komorebi socket.
+  pub fn output_blocking(&mut self) -> crate::Result<KomorebiOutput> {
+    self.output_rx.blocking_recv().ok_or(Error::SocketRead)?
   }
 
   /// Listens for socket messages on a separate thread.
@@ -51,7 +57,7 @@ impl KomorebiClient {
     socket_name: String,
     socket: UnixListener,
     output_tx: mpsc::Sender<crate::Result<KomorebiOutput>>,
-    shutdown_rx: oneshot::Receiver<()>,
+    mut shutdown_rx: oneshot::Receiver<()>,
   ) {
     std::thread::spawn(move || {
       for incoming in socket.incoming() {
@@ -71,7 +77,9 @@ impl KomorebiClient {
 
               // Attempt to reconnect to Komorebi every 15s.
               while komorebi_client::send_message(
-                &SocketMessage::AddSubscriberSocket(socket_name.clone()),
+                &SocketMessage::AddSubscriberSocket(
+                  socket_name.to_string(),
+                ),
               )
               .is_err()
               {
@@ -89,12 +97,12 @@ impl KomorebiClient {
                 serde_json::from_str::<Notification>(&str)
                   .map_err(Error::OutputParse)
               })
-              .map(|notification| notification.state.into());
+              .map(|notification| (&notification.state).into());
 
             let _ = output_tx.blocking_send(result);
           }
           Err(_) => {
-            let _ = output_tx.blocking_send(Err(Error::StreamRead));
+            let _ = output_tx.blocking_send(Err(Error::SocketRead));
           }
         }
       }

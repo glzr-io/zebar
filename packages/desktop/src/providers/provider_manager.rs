@@ -250,7 +250,9 @@ impl ProviderManager {
         RuntimeType::Async
       }
       #[cfg(windows)]
-      ProviderConfig::Systray(..) => RuntimeType::Async,
+      ProviderConfig::Systray(..) | ProviderConfig::Komorebi(..) => {
+        RuntimeType::Async
+      }
       _ => RuntimeType::Sync,
     };
 
@@ -269,6 +271,10 @@ impl ProviderManager {
           #[cfg(windows)]
           ProviderConfig::Systray(config) => {
             let mut provider = SystrayProvider::new(config, common);
+            provider.start_async().await;
+          }
+          ProviderConfig::Komorebi(config) => {
+            let mut provider = KomorebiProvider::new(config, common);
             provider.start_async().await;
           }
           _ => unreachable!(),
@@ -293,11 +299,6 @@ impl ProviderManager {
           }
           ProviderConfig::Host(config) => {
             let mut provider = HostProvider::new(config, common);
-            provider.start_sync();
-          }
-          #[cfg(windows)]
-          ProviderConfig::Komorebi(config) => {
-            let mut provider = KomorebiProvider::new(config, common);
             provider.start_sync();
           }
           #[cfg(windows)]

@@ -8,8 +8,8 @@ pub enum Error {
   #[error("Failed to parse output: {0}")]
   OutputParse(#[from] serde_json::Error),
 
-  #[error("Failed to read stream.")]
-  StreamRead,
+  #[error("Failed to read next output from socket.")]
+  SocketRead,
 
   #[error("Invalid UTF-8 in buffer: {0}")]
   InvalidUtf8(#[from] std::string::FromUtf8Error),

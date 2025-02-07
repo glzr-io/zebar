@@ -1,10 +1,10 @@
-use komorebi_util::{Client, KomorebiOutput};
+use komorebi_util::KomorebiClient;
 
 #[tokio::main]
 async fn main() -> komorebi_util::Result<()> {
-  let client = Client::new()?;
+  let mut client = KomorebiClient::new("zebar.sock")?;
 
-  while let Some(output) = client.output().await {
+  while let Ok(output) = client.output().await {
     println!("Output: {:?}", output);
   }
 
