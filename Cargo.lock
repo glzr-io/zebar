@@ -2888,6 +2888,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "komorebi-util"
+version = "0.0.0"
+dependencies = [
+ "komorebi-client",
+ "serde",
+ "thiserror 2.0.11",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "kqueue"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7825,7 +7836,7 @@ dependencies = [
  "clap",
  "cocoa 0.25.0",
  "crossbeam",
- "komorebi-client",
+ "komorebi-util",
  "netdev",
  "regex",
  "reqwest 0.11.27",

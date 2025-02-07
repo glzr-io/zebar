@@ -1,0 +1,15 @@
+[package]
+name = "komorebi-util"
+version = "0.0.0"
+authors = ["Glzr Software Pte. Ltd."]
+description = "A library for interacting with Komorebi."
+license = "MIT"
+repository = "https://github.com/glzr-io/zebar"
+edition = "2021"
+
+[dependencies]
+komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }

@@ -42,7 +42,7 @@ uuid = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 systray-util = { path = "../../crates/systray-util" }
-komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
+komorebi-util = { path = "../../crates/komorebi-util" }
 windows-core = { workspace = true }
 windows = { workspace = true }
 
