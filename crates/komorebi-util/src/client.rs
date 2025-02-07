@@ -4,14 +4,15 @@ use std::{
 };
 
 use komorebi_client::{Notification, SocketMessage, UnixListener};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 use crate::{Error, KomorebiOutput};
 
 /// A client that connects to and interacts with Komorebi via IPC on a Unix
 /// socket.
 pub struct KomorebiClient {
-  state_rx: mpsc::Receiver<Result<KomorebiOutput, Error>>,
+  output_rx: mpsc::Receiver<Result<KomorebiOutput, Error>>,
+  shutdown_tx: Option<oneshot::Sender<()>>,
 }
 
 impl KomorebiClient {
@@ -25,30 +26,40 @@ impl KomorebiClient {
     let socket = komorebi_client::subscribe(&socket_name)
       .map_err(Error::SocketInitialization)?;
 
-    let (state_tx, state_rx) = mpsc::channel(100);
-    Self::listen_socket(socket_name, socket, state_tx);
+    let (output_tx, output_rx) = mpsc::channel(100);
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    Self::listen_socket(socket_name, socket, output_tx, shutdown_rx);
 
-    Ok(KomorebiClient { state_rx })
+    Ok(KomorebiClient {
+      output_rx,
+      shutdown_tx: Some(shutdown_tx),
+    })
   }
 
   /// Returns the latest state from Komorebi.
   pub async fn output(&self) -> crate::Result<KomorebiOutput> {
-    self.state_rx.recv().await.map_err(Error::StreamRead)
+    self.output_rx.recv().await.map_err(Error::StreamRead)
   }
 
   /// Returns the latest state from Komorebi.
   pub async fn output_blocking(&self) -> crate::Result<KomorebiOutput> {
-    self.state_rx.recv().map_err(Error::StreamRead)
+    self.output_rx.recv().map_err(Error::StreamRead)
   }
 
   /// Listens for socket messages on a separate thread.
   fn listen_socket(
     socket_name: String,
     socket: UnixListener,
-    tx: mpsc::Sender<crate::Result<KomorebiOutput>>,
+    output_tx: mpsc::Sender<crate::Result<KomorebiOutput>>,
+    shutdown_rx: oneshot::Receiver<()>,
   ) {
     std::thread::spawn(move || {
       for incoming in socket.incoming() {
+        // Check whether we should stop listening for incoming messages.
+        if shutdown_rx.try_recv().is_ok() {
+          break;
+        }
+
         match incoming {
           Ok(stream) => {
             let mut buffer = Vec::new();
@@ -80,13 +91,35 @@ impl KomorebiClient {
               })
               .map(|notification| notification.state.into());
 
-            let _ = tx.blocking_send(result);
+            let _ = output_tx.blocking_send(result);
           }
           Err(_) => {
-            let _ = tx.blocking_send(Err(Error::StreamRead));
+            let _ = output_tx.blocking_send(Err(Error::StreamRead));
           }
         }
       }
     });
+  }
+
+  /// Stops the client and its background listener thread.
+  ///
+  /// Returns `KomorebiError::AlreadyStopped` if the client was already
+  /// stopped.
+  pub fn stop(&mut self) -> crate::Result<()> {
+    if let Some(shutdown_tx) = self.shutdown_tx.take() {
+      // Ignore send errors - if receiver is dropped, thread is already
+      // stopped
+      let _ = shutdown_tx.send(());
+      Ok(())
+    } else {
+      Err(Error::AlreadyStopped)
+    }
+  }
+}
+
+impl Drop for KomorebiClient {
+  fn drop(&mut self) {
+    // Attempt to stop the client if it hasn't been stopped already.
+    let _ = self.stop();
   }
 }

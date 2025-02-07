@@ -13,6 +13,9 @@ pub enum Error {
 
   #[error("Invalid UTF-8 in buffer: {0}")]
   InvalidUtf8(#[from] std::string::FromUtf8Error),
+
+  #[error("Komorebi client already stopped.")]
+  AlreadyStopped,
 }
 
 impl Serialize for Error {
