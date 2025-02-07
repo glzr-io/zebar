@@ -1,5 +1,15 @@
-use komorebi_client::{Axis, DefaultLayout, Layout, Rect};
+use komorebi_client::{
+  Axis, Container, DefaultLayout, Layout, Monitor, Notification, Rect,
+  SocketMessage, UnixListener, Window, Workspace,
+};
 use serde::Serialize;
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KomorebiOutput {
+  pub all_monitors: Vec<KomorebiMonitor>,
+  pub focused_monitor_index: usize,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

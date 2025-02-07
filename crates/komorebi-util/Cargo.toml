@@ -10,6 +10,7 @@ edition = "2021"
 [dependencies]
 komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.28" }
 serde = { workspace = true }
+serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
