@@ -42,8 +42,8 @@ impl KomorebiClient {
   }
 
   /// Returns the latest state from Komorebi.
-  pub async fn output_blocking(&self) -> crate::Result<KomorebiOutput> {
-    self.output_rx.recv().map_err(Error::StreamRead)
+  pub fn output_blocking(&self) -> crate::Result<KomorebiOutput> {
+    self.output_rx.blocking_recv().map_err(Error::StreamRead)
   }
 
   /// Listens for socket messages on a separate thread.
@@ -87,7 +87,7 @@ impl KomorebiClient {
               .map_err(Error::InvalidUtf8)
               .and_then(|str| {
                 serde_json::from_str::<Notification>(&str)
-                  .map_err(Error::NotificationParse)
+                  .map_err(Error::OutputParse)
               })
               .map(|notification| notification.state.into());
 
