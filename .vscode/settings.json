@@ -1,8 +1,5 @@
 {
   "files.associations": {
     "**/packages/settings-ui/**/*.css": "tailwindcss"
-  },
-  "rust-analyzer.cargo.extraEnv": {
-    "MACOSX_DEPLOYMENT_TARGET": "14.6"
   }
 }
