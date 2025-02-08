@@ -9,8 +9,6 @@ edition = "2021"
 
 [dependencies]
 dirs = "6"
-komorebi-client = { path = "../../../komorebi/komorebi-client" }
-# komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.33" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
