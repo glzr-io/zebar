@@ -9,6 +9,7 @@ on:
         options:
           - systray-util
           - shell-util
+          - komorebi-util
       crate-version:
         type: string
         description: The version of the crate to publish.
@@ -27,7 +28,7 @@ jobs:
         with:
           toolchain: nightly
 
-      - uses: swatinem/rust-cache@9bdad043e88c75890e36ad3bbc8d27f0090dd609
+      - uses: swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3
 
       - name: Update version
         shell: bash

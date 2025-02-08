@@ -51,7 +51,7 @@ jobs:
           toolchain: nightly
           targets: ${{ matrix.rust-targets }}
 
-      - uses: swatinem/rust-cache@9bdad043e88c75890e36ad3bbc8d27f0090dd609
+      - uses: swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3
         with:
           shared-key: ${{ matrix.tauri-target }}-${{ hashFiles('Cargo.lock') }}
 
