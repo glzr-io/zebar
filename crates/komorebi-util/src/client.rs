@@ -1,10 +1,12 @@
 use std::{
-  io::{BufReader, Read},
+  io::{BufReader, Read, Write},
   time::Duration,
 };
 
 use komorebi_client::{SocketMessage, UnixListener};
+use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
+use uds_windows::UnixStream;
 
 use crate::{Error, KomorebiOutput};
 
@@ -23,8 +25,7 @@ impl KomorebiClient {
   ///
   /// Returns an error if the socket connection fails
   pub fn new(socket_name: &str) -> crate::Result<Self> {
-    let socket = komorebi_client::subscribe(socket_name)
-      .map_err(Error::SocketInitialization)?;
+    let socket = Self::create_socket(socket_name)?;
 
     let (output_tx, output_rx) = mpsc::channel(100);
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -50,6 +51,36 @@ impl KomorebiClient {
   /// Returns the latest output from Komorebi socket.
   pub fn output_blocking(&mut self) -> crate::Result<KomorebiOutput> {
     self.output_rx.blocking_recv().ok_or(Error::SocketRead)?
+  }
+
+  /// Creates a socket and sends a message to Komorebi to subscribe to it.
+  fn create_socket(socket_name: &str) -> crate::Result<UnixListener> {
+    let data_dir = dirs::data_local_dir()
+      .map(|dir| dir.join("komorebi"))
+      .ok_or(Error::DataDir)?;
+
+    let listener_socket = data_dir.join(socket_name);
+
+    if let Err(err) = std::fs::remove_file(&listener_socket) {
+      if err.kind() != std::io::ErrorKind::NotFound {
+        return Err(Error::SocketInitialization(err));
+      }
+    }
+
+    let listener = UnixListener::bind(&listener_socket)?;
+
+    let msg_socket = data_dir.join("komorebi.sock");
+    let mut msg_stream = UnixStream::connect(msg_socket)?;
+
+    let add_subscriber_msg = serde_json::to_string(&json!({
+      "type": "AddSubscriberSocket",
+      "content": socket_name.to_string(),
+    }))?;
+
+    msg_stream.set_write_timeout(Some(Duration::from_secs(1)))?;
+    msg_stream.write_all(add_subscriber_msg.as_bytes())?;
+
+    Ok(listener)
   }
 
   /// Listens for socket messages on a separate thread.

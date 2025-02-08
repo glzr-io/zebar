@@ -16,6 +16,9 @@ pub enum Error {
 
   #[error("Komorebi client has already been stopped.")]
   AlreadyStopped,
+
+  #[error("Failed to get data directory.")]
+  DataDir,
 }
 
 impl Serialize for Error {

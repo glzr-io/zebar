@@ -227,6 +227,7 @@ impl<'de> Deserialize<'de> for KomorebiLayout {
     }
 
     let layout = Layout::deserialize(deserializer)?;
+
     Ok(match layout {
       Layout::Default(layout) => match layout {
         DefaultLayout::Bsp => KomorebiLayout::Bsp,

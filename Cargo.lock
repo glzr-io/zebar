@@ -3595,12 +3595,14 @@ dependencies = [
 name = "komorebi-util"
 version = "0.0.0"
 dependencies = [
+ "dirs 6.0.0",
  "komorebi-client",
  "serde",
  "serde_json",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
+ "uds_windows",
 ]
 
 [[package]]
