@@ -3,10 +3,9 @@ use std::{
   time::Duration,
 };
 
-use komorebi_client::{SocketMessage, UnixListener};
 use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
-use uds_windows::UnixStream;
+use uds_windows::{UnixListener, UnixStream};
 
 use crate::{Error, KomorebiOutput};
 
@@ -20,22 +19,13 @@ pub struct KomorebiClient {
 impl KomorebiClient {
   /// Creates a `KomorebiClient` instance.
   ///
-  /// The client will immediately begin listening for state changes on the
+  /// The client will immediately begin listening for outputs on the
   /// specified socket.
-  ///
-  /// Returns an error if the socket connection fails
   pub fn new(socket_name: &str) -> crate::Result<Self> {
-    let socket = Self::create_socket(socket_name)?;
-
     let (output_tx, output_rx) = mpsc::channel(100);
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
-    Self::listen_socket(
-      socket_name.to_string(),
-      socket,
-      output_tx,
-      shutdown_rx,
-    );
+    Self::subscribe(socket_name.to_string(), output_tx, shutdown_rx);
 
     Ok(KomorebiClient {
       output_rx,
@@ -83,56 +73,77 @@ impl KomorebiClient {
     Ok(listener)
   }
 
+  /// Attempts to create a socket with retry logic.
+  fn create_socket_with_retry(
+    socket_name: &str,
+    shutdown_rx: &mut oneshot::Receiver<()>,
+  ) -> Option<UnixListener> {
+    loop {
+      match Self::create_socket(socket_name) {
+        Ok(socket) => return Some(socket),
+        Err(err) => {
+          tracing::debug!(
+            "Failed to connect to Komorebi: {}. Retrying in 15s...",
+            err
+          );
+
+          std::thread::sleep(Duration::from_secs(15));
+
+          // Check for shutdown signal during retry attempts.
+          if shutdown_rx.try_recv().is_ok() {
+            return None;
+          }
+        }
+      }
+    }
+  }
+
   /// Listens for socket messages on a separate thread.
-  fn listen_socket(
+  fn subscribe(
     socket_name: String,
-    socket: UnixListener,
     output_tx: mpsc::Sender<crate::Result<KomorebiOutput>>,
     mut shutdown_rx: oneshot::Receiver<()>,
   ) {
     std::thread::spawn(move || {
-      for incoming in socket.incoming() {
-        // Check whether we should stop listening for incoming messages.
-        if shutdown_rx.try_recv().is_ok() {
-          break;
-        }
+      loop {
+        // Attempt to create or recreate socket
+        let Some(socket) =
+          Self::create_socket_with_retry(&socket_name, &mut shutdown_rx)
+        else {
+          // Shutdown signal received during connection attempt.
+          return;
+        };
 
-        match incoming {
-          Ok(stream) => {
-            let mut buffer = Vec::new();
-            let mut reader = BufReader::new(stream);
+        for incoming in socket.incoming() {
+          // Check whether we should stop listening for incoming messages.
+          if shutdown_rx.try_recv().is_ok() {
+            return;
+          }
 
-            // Shutdown signal has been received.
-            if matches!(reader.read_to_end(&mut buffer), Ok(0)) {
-              tracing::debug!("Komorebi shutdown received.");
+          match incoming {
+            Ok(stream) => {
+              let mut buffer = Vec::new();
+              let mut reader = BufReader::new(stream);
 
-              // Attempt to reconnect to Komorebi every 15s.
-              while komorebi_client::send_message(
-                &SocketMessage::AddSubscriberSocket(
-                  socket_name.to_string(),
-                ),
-              )
-              .is_err()
-              {
-                std::thread::sleep(Duration::from_secs(15));
+              // Shutdown signal has been received.
+              if matches!(reader.read_to_end(&mut buffer), Ok(0)) {
+                tracing::debug!("Komorebi shutdown received.");
+                break;
               }
 
-              // Successfully reconnected to Komorebi. Continue listening.
-              continue;
+              // Transform and emit state.
+              let result = String::from_utf8(buffer)
+                .map_err(Error::InvalidUtf8)
+                .and_then(|str| {
+                  serde_json::from_str::<KomorebiOutput>(&str)
+                    .map_err(Error::OutputParse)
+                });
+
+              let _ = output_tx.blocking_send(result);
             }
-
-            // Transform and emit state.
-            let result = String::from_utf8(buffer)
-              .map_err(Error::InvalidUtf8)
-              .and_then(|str| {
-                serde_json::from_str::<KomorebiOutput>(&str)
-                  .map_err(Error::OutputParse)
-              });
-
-            let _ = output_tx.blocking_send(result);
-          }
-          Err(_) => {
-            let _ = output_tx.blocking_send(Err(Error::SocketRead));
+            Err(_) => {
+              let _ = output_tx.blocking_send(Err(Error::SocketRead));
+            }
           }
         }
       }
