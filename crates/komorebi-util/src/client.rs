@@ -3,7 +3,7 @@ use std::{
   time::Duration,
 };
 
-use komorebi_client::{Notification, SocketMessage, UnixListener};
+use komorebi_client::{SocketMessage, UnixListener};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{Error, KomorebiOutput};
@@ -94,10 +94,9 @@ impl KomorebiClient {
             let result = String::from_utf8(buffer)
               .map_err(Error::InvalidUtf8)
               .and_then(|str| {
-                serde_json::from_str::<Notification>(&str)
+                serde_json::from_str::<KomorebiOutput>(&str)
                   .map_err(Error::OutputParse)
-              })
-              .map(|notification| (&notification.state).into());
+              });
 
             let _ = output_tx.blocking_send(result);
           }

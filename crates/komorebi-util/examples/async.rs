@@ -4,8 +4,14 @@ use komorebi_util::KomorebiClient;
 async fn main() -> komorebi_util::Result<()> {
   let mut client = KomorebiClient::new("zebar.sock")?;
 
-  while let Ok(output) = client.output().await {
-    println!("Output: {:?}", output);
+  loop {
+    match client.output().await {
+      Ok(output) => println!("Output: {:?}", output),
+      Err(e) => {
+        println!("Error: {:?}", e);
+        break;
+      }
+    }
   }
 
   Ok(())

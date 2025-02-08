@@ -26,6 +26,9 @@
       "wix": {
         "template": "./installer.wxs"
       }
+    },
+    "macOS": {
+      "minimumSystemVersion": "14.6"
     }
   },
   "app": {
