@@ -273,6 +273,7 @@ impl ProviderManager {
             let mut provider = SystrayProvider::new(config, common);
             provider.start_async().await;
           }
+          #[cfg(windows)]
           ProviderConfig::Komorebi(config) => {
             let mut provider = KomorebiProvider::new(config, common);
             provider.start_async().await;
