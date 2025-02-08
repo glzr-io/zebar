@@ -1,0 +1,17 @@
+[package]
+name = "komorebi-util"
+version = "0.0.0"
+authors = ["Glzr Software Pte. Ltd."]
+description = "A library for interacting with Komorebi."
+license = "MIT"
+repository = "https://github.com/glzr-io/zebar"
+edition = "2021"
+
+[dependencies]
+dirs = "6"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+uds_windows = "1"
