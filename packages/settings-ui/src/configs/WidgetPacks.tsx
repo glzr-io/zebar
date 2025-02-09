@@ -40,7 +40,7 @@ import {
 } from '@tabler/icons-solidjs';
 import { For } from 'solid-js';
 
-import { useWidgetPacks } from '~/common';
+import { useUserPacks } from '~/common';
 
 export function WidgetPacks() {
   const {
@@ -48,9 +48,9 @@ export function WidgetPacks() {
     widgetStates,
     updateWidgetConfig,
     togglePreset,
-    installedPacks,
+    communityPacks,
     localPacks,
-  } = useWidgetPacks();
+  } = useUserPacks();
 
   const handleDeletePack = (packName, isLocal) => {
     // TODO
@@ -185,7 +185,7 @@ export function WidgetPacks() {
       <Tabs defaultValue="installed" class="w-full">
         <TabsList>
           <TabsTrigger value="installed">
-            Installed ({installedPacks.length})
+            Installed ({communityPacks.length})
           </TabsTrigger>
           <TabsTrigger value="local">
             Local ({localPacks.length})
@@ -193,7 +193,7 @@ export function WidgetPacks() {
         </TabsList>
 
         <TabsContent value="installed" class="mt-6">
-          <For each={installedPacks()}>
+          <For each={communityPacks()}>
             {pack => <WidgetPackCard pack={pack} isLocal={false} />}
           </For>
         </TabsContent>

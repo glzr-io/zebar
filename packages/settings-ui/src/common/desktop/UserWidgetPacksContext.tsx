@@ -4,13 +4,14 @@ import { listen, type Event } from '@tauri-apps/api/event';
 import { createResource } from 'solid-js';
 import type { Widget, WidgetConfig } from 'zebar';
 
-const installedPacksMock = [
+const communityPacksMock = [
   {
     id: 'system-monitor',
     name: 'System Monitor',
     author: 'Zebar Team',
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
+    tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
     widgets: [
       { id: 'cpu-usage', name: 'CPU Usage' },
       { id: 'memory-usage', name: 'Memory Usage' },
@@ -23,6 +24,7 @@ const installedPacksMock = [
     author: 'Weather Team',
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
+    tags: ['weather', 'forecast', 'current'],
     widgets: [
       { id: 'current-weather', name: 'Current Weather' },
       { id: 'forecast', name: 'Weekly Forecast' },
@@ -38,6 +40,7 @@ const localPacksMock = [
     description: 'Personal collection of widgets',
     version: '0.1.0',
     widgets: [{ id: 'todo-list', name: 'Todo List' }],
+    tags: ['todo', 'list', 'custom'],
   },
 ];
 
@@ -50,8 +53,8 @@ type WidgetPack = {
   widgets: { id: string; name: string }[];
 };
 
-type UserWidgetPacksContextState = {
-  installedPacks: Resource<WidgetPack[]>;
+type UserPacksContextState = {
+  communityPacks: Resource<WidgetPack[]>;
   localPacks: Resource<WidgetPack[]>;
   widgetConfigs: Resource<Record<string, WidgetConfig>>;
   widgetStates: Resource<Record<string, Widget>>;
@@ -62,12 +65,11 @@ type UserWidgetPacksContextState = {
   togglePreset: (configPath: string, presetName: string) => Promise<void>;
 };
 
-const UserWidgetPacksContext =
-  createContext<UserWidgetPacksContextState>();
+const UserPacksContext = createContext<UserPacksContextState>();
 
-export function UserWidgetPacksProvider(props: { children: JSX.Element }) {
-  // TODO: Fetch installed packs from the backend.
-  const [installedPacks] = createResource(async () => installedPacksMock);
+export function UserPacksProvider(props: { children: JSX.Element }) {
+  // TODO: Fetch installed community packs from the backend.
+  const [communityPacks] = createResource(async () => communityPacksMock);
 
   // TODO: Fetch local packs from the backend.
   const [localPacks] = createResource(async () => localPacksMock);
@@ -139,8 +141,8 @@ export function UserWidgetPacksProvider(props: { children: JSX.Element }) {
     }
   }
 
-  const store: UserWidgetPacksContextState = {
-    installedPacks,
+  const store: UserPacksContextState = {
+    communityPacks,
     localPacks,
     widgetConfigs,
     widgetStates,
@@ -149,18 +151,18 @@ export function UserWidgetPacksProvider(props: { children: JSX.Element }) {
   };
 
   return (
-    <UserWidgetPacksContext.Provider value={store}>
+    <UserPacksContext.Provider value={store}>
       {props.children}
-    </UserWidgetPacksContext.Provider>
+    </UserPacksContext.Provider>
   );
 }
 
-export function useWidgetPacks() {
-  const context = useContext(UserWidgetPacksContext);
+export function useUserPacks() {
+  const context = useContext(UserPacksContext);
 
   if (!context) {
     throw new Error(
-      '`useWidgetPacks` must be used within a `UserWidgetPacksProvider`.',
+      '`useUserPacks` must be used within a `UserPacksProvider`.',
     );
   }
 

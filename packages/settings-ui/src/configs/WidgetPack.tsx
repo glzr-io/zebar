@@ -18,13 +18,13 @@ import {
 } from 'solid-js';
 
 import { WidgetConfigForm } from './WidgetConfigForm';
-import { useWidgetPacks } from '~/common';
+import { useUserPacks } from '~/common';
 
 export function WidgetPack() {
   const params = useParams();
 
   const { widgetConfigs, widgetStates, updateWidgetConfig, togglePreset } =
-    useWidgetPacks();
+    useUserPacks();
 
   const selectedConfigPath = createMemo(() => atob(params.path));
 

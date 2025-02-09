@@ -8,7 +8,7 @@ import {
 } from '@tabler/icons-solidjs';
 
 import { SidebarItem } from './SidebarItem';
-import { useWidgetPacks } from '../desktop/UserWidgetPacksContext';
+import { useUserPacks } from '../desktop/UserWidgetPacksContext';
 
 export interface SidebarProps {
   initialSize: number;
@@ -18,7 +18,7 @@ export interface SidebarProps {
 export function Sidebar(props: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = createSignal(false);
 
-  const { installedPacks, localPacks } = useWidgetPacks();
+  const { communityPacks: installedPacks, localPacks } = useUserPacks();
 
   return (
     <ResizablePanel

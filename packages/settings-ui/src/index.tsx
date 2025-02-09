@@ -3,12 +3,12 @@ import './index.css';
 import { HashRouter, Navigate, Route } from '@solidjs/router';
 import { render } from 'solid-js/web';
 
-import { AppLayout, UserWidgetPacksProvider } from './common';
+import { AppLayout, UserPacksProvider } from './common';
 import { WidgetPack, WidgetPacks } from './configs';
 
 render(
   () => (
-    <UserWidgetPacksProvider>
+    <UserPacksProvider>
       <AppLayout>
         <HashRouter>
           <Route
@@ -19,7 +19,7 @@ render(
           <Route path="/widget-packs/:path" component={WidgetPack} />
         </HashRouter>
       </AppLayout>
-    </UserWidgetPacksProvider>
+    </UserPacksProvider>
   ),
   document.getElementById('root')!,
 );
