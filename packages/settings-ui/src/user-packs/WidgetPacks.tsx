@@ -1,5 +1,7 @@
 import {
   Button,
+  Dialog,
+  DialogTrigger,
   Tabs,
   TabsContent,
   TabsList,
@@ -10,6 +12,10 @@ import { For } from 'solid-js';
 
 import { useUserPacks } from '~/common';
 import { WidgetPackCard } from './WidgetPackCard';
+import {
+  CreateWidgetPackDialog,
+  CreateWidgetPackForm,
+} from './dialogs/CreateWidgetPackDialog';
 
 export function WidgetPacks() {
   const {
@@ -25,15 +31,24 @@ export function WidgetPacks() {
     // TODO
   }
 
+  function handleCreatePack(pack: CreateWidgetPackForm) {
+    // TODO
+  }
+
   return (
     <div class="container mx-auto p-6">
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Widget Packs</h1>
         <div class="flex gap-2">
-          <Button variant="outline">
-            <IconFolderPlus class="mr-2 h-4 w-4" />
-            Create New Pack
-          </Button>
+          <Dialog>
+            <DialogTrigger>
+              <Button variant="outline">
+                <IconFolderPlus class="mr-2 h-4 w-4" />
+                Create New Pack
+              </Button>
+            </DialogTrigger>
+            <CreateWidgetPackDialog onSubmit={handleCreatePack} />
+          </Dialog>
 
           <Button variant="outline">
             <IconBrandGithub class="mr-2 h-4 w-4" />

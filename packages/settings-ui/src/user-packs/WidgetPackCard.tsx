@@ -27,6 +27,7 @@ import {
 } from '@tabler/icons-solidjs';
 
 import { WidgetPack } from '~/common';
+import { DeleteWidgetPackDialog } from './dialogs/DeleteWidgetPackDialog';
 
 export interface WidgetPackCardProps {
   pack: WidgetPack;
@@ -80,24 +81,10 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
                   <IconTrash class="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Widget Pack</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete "{props.pack.name}"?
-                    This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogClose>Cancel</AlertDialogClose>
-                  <AlertDialogAction
-                    onClick={() => props.onDelete(props.pack.id)}
-                    class="bg-red-500 hover:bg-red-600"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
+              <DeleteWidgetPackDialog
+                pack={props.pack}
+                onDelete={props.onDelete}
+              />
             </AlertDialog>
           </div>
         </div>
