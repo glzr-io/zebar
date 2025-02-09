@@ -11,6 +11,7 @@ const communityPacksMock = [
     author: 'Zebar Team',
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
+    license: 'MIT',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
     widgets: [
       { id: 'cpu-usage', name: 'CPU Usage' },
@@ -24,6 +25,7 @@ const communityPacksMock = [
     author: 'Weather Team',
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
+    license: 'MIT',
     tags: ['weather', 'forecast', 'current'],
     widgets: [
       { id: 'current-weather', name: 'Current Weather' },
@@ -39,18 +41,21 @@ const localPacksMock = [
     author: 'me',
     description: 'Personal collection of widgets',
     version: '0.1.0',
+    license: 'MIT',
     widgets: [{ id: 'todo-list', name: 'Todo List' }],
     tags: ['todo', 'list', 'custom'],
   },
 ];
 
-type WidgetPack = {
+export type WidgetPack = {
   id: string;
   name: string;
   author: string;
   description: string;
   version: string;
   widgets: { id: string; name: string }[];
+  license: string;
+  tags: string[];
 };
 
 type UserPacksContextState = {
