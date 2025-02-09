@@ -1,6 +1,6 @@
 import { Button, TextField } from '@glzr/components';
 import { A } from '@solidjs/router';
-import { IconDownload, IconEye, IconSearch } from '@tabler/icons-solidjs';
+import { IconDownload, IconEye } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { createMemo } from 'solid-js';
 
@@ -46,22 +46,16 @@ export function CommunityPacks() {
           </p>
         </div>
 
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div class="relative">
-            <IconSearch class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-
-            <Field of={filterQueryForm} path="search">
-              {inputProps => (
-                <TextField
-                  id="search"
-                  placeholder="Search widget packs..."
-                  class="pl-8 w-full sm:w-[300px]"
-                  {...inputProps()}
-                />
-              )}
-            </Field>
-          </div>
-        </div>
+        <Field of={filterQueryForm} path="search">
+          {inputProps => (
+            <TextField
+              id="search"
+              placeholder="Search widget packs..."
+              class="w-full sm:w-[300px]"
+              {...inputProps()}
+            />
+          )}
+        </Field>
 
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredPacks().map(pack => (
@@ -83,14 +77,22 @@ export function CommunityPacks() {
                       by {pack.author}
                     </p>
                   </div>
-                  <div class="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" class="h-8 w-8">
-                      <IconEye class="h-4 w-4" />
-                      <span class="sr-only">Preview</span>
-                    </Button>
+                  <div class="flex items-center gap-2">
                     <Button variant="ghost" size="icon" class="h-8 w-8">
                       <IconDownload class="h-4 w-4" />
                       <span class="sr-only">Install</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="h-8 w-8"
+                      onClick={e => {
+                        e.preventDefault();
+                        communityPacks.startPreview(pack);
+                      }}
+                    >
+                      <IconEye class="h-4 w-4" />
+                      <span class="sr-only">Preview</span>
                     </Button>
                   </div>
                 </div>

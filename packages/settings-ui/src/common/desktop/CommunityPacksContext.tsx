@@ -1,4 +1,11 @@
-import { createContext, type JSX, Resource, useContext } from 'solid-js';
+import {
+  Accessor,
+  createContext,
+  createSignal,
+  type JSX,
+  Resource,
+  useContext,
+} from 'solid-js';
 import { createResource } from 'solid-js';
 
 import { WidgetPack } from './UserPacksContext';
@@ -43,6 +50,9 @@ const communityPacksMock = [
 
 type CommunityPacksContextState = {
   all: Resource<WidgetPack[]>;
+  previewPack: Accessor<WidgetPack | null>;
+  startPreview: (pack: WidgetPack) => void;
+  stopPreview: () => void;
 };
 
 const CommunityPacksContext = createContext<CommunityPacksContextState>();
@@ -53,8 +63,23 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
     initialValue: [],
   });
 
+  const [previewPack, setPreviewPack] = createSignal<WidgetPack | null>(
+    null,
+  );
+
+  function startPreview(pack: WidgetPack) {
+    setPreviewPack(pack);
+  }
+
+  function stopPreview() {
+    setPreviewPack(null);
+  }
+
   const store: CommunityPacksContextState = {
     all,
+    previewPack,
+    startPreview,
+    stopPreview,
   };
 
   return (

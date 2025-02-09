@@ -3,16 +3,19 @@ import {
   ResizableHandle,
   ResizablePanel,
 } from '@glzr/components';
-import { createSignal, type JSX } from 'solid-js';
+import { createSignal, Show, type JSX } from 'solid-js';
 import { RouteSectionProps } from '@solidjs/router';
 
 import { Sidebar } from './Sidebar';
+import { PreviewBar } from './PreviewBar';
+import { useCommunityPacks } from '~/common';
 
 export interface AppLayoutProps {
   children: JSX.Element;
 }
 
 export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
+  const communityPacks = useCommunityPacks();
   const [sizes, setSizes] = createSignal<number[]>([0.2, 0.8]);
 
   return (
@@ -29,6 +32,12 @@ export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
           {props.children}
         </ResizablePanel>
       </Resizable>
+
+      <Show when={communityPacks.previewPack()}>
+        {pack => (
+          <PreviewBar pack={pack()} onStop={communityPacks.stopPreview} />
+        )}
+      </Show>
     </>
   );
 }
