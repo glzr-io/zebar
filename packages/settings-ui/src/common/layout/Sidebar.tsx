@@ -8,7 +8,7 @@ import {
 } from '@tabler/icons-solidjs';
 
 import { SidebarItem } from './SidebarItem';
-import { useUserPacks } from '../desktop/UserWidgetPacksContext';
+import { useUserPacks } from '~/common';
 
 export interface SidebarProps {
   initialSize: number;

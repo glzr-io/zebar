@@ -10,9 +10,7 @@ import {
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
 
-export type CreateWidgetPackForm = {
-  name: string;
-};
+import { CreateWidgetPackForm } from '~/common';
 
 export interface CreateWidgetPackDialogProps {
   onSubmit: (pack: CreateWidgetPackForm) => void;

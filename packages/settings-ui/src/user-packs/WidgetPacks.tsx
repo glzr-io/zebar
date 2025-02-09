@@ -12,28 +12,10 @@ import { For } from 'solid-js';
 
 import { useUserPacks } from '~/common';
 import { WidgetPackCard } from './WidgetPackCard';
-import {
-  CreateWidgetPackDialog,
-  CreateWidgetPackForm,
-} from './dialogs/CreateWidgetPackDialog';
+import { CreateWidgetPackDialog } from './dialogs/CreateWidgetPackDialog';
 
 export function WidgetPacks() {
-  const {
-    widgetConfigs,
-    widgetStates,
-    updateWidgetConfig,
-    togglePreset,
-    communityPacks,
-    localPacks,
-  } = useUserPacks();
-
-  function handleDeletePack(packId: string) {
-    // TODO
-  }
-
-  function handleCreatePack(pack: CreateWidgetPackForm) {
-    // TODO
-  }
+  const userPacks = useUserPacks();
 
   return (
     <div class="container mx-auto p-6">
@@ -47,7 +29,7 @@ export function WidgetPacks() {
                 Create New Pack
               </Button>
             </DialogTrigger>
-            <CreateWidgetPackDialog onSubmit={handleCreatePack} />
+            <CreateWidgetPackDialog onSubmit={userPacks.createPack} />
           </Dialog>
 
           <Button variant="outline">
@@ -60,32 +42,32 @@ export function WidgetPacks() {
       <Tabs defaultValue="installed" class="w-full">
         <TabsList>
           <TabsTrigger value="installed">
-            Installed ({communityPacks.length})
+            Installed ({userPacks.communityPacks()?.length})
           </TabsTrigger>
           <TabsTrigger value="local">
-            Local ({localPacks.length})
+            Local ({userPacks.localPacks()?.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="installed" class="mt-6">
-          <For each={communityPacks()}>
+          <For each={userPacks.communityPacks()}>
             {pack => (
               <WidgetPackCard
                 pack={pack}
                 isLocal={false}
-                onDelete={handleDeletePack}
+                onDelete={userPacks.deletePack}
               />
             )}
           </For>
         </TabsContent>
 
         <TabsContent value="local" class="mt-6">
-          <For each={localPacks()}>
+          <For each={userPacks.localPacks()}>
             {pack => (
               <WidgetPackCard
                 pack={pack}
                 isLocal={true}
-                onDelete={handleDeletePack}
+                onDelete={userPacks.deletePack}
               />
             )}
           </For>

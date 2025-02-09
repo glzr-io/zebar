@@ -58,11 +58,17 @@ export type WidgetPack = {
   tags: string[];
 };
 
+export type CreateWidgetPackForm = {
+  name: string;
+};
+
 type UserPacksContextState = {
   communityPacks: Resource<WidgetPack[]>;
   localPacks: Resource<WidgetPack[]>;
   widgetConfigs: Resource<Record<string, WidgetConfig>>;
   widgetStates: Resource<Record<string, Widget>>;
+  createPack: (pack: CreateWidgetPackForm) => void;
+  deletePack: (packId: string) => void;
   updateWidgetConfig: (
     configPath: string,
     newConfig: WidgetConfig,
@@ -146,6 +152,14 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     }
   }
 
+  async function createPack(pack: CreateWidgetPackForm) {
+    // TODO
+  }
+
+  async function deletePack(packId: string) {
+    // TODO
+  }
+
   const store: UserPacksContextState = {
     communityPacks,
     localPacks,
@@ -153,6 +167,8 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     widgetStates,
     updateWidgetConfig,
     togglePreset,
+    createPack,
+    deletePack,
   };
 
   return (
