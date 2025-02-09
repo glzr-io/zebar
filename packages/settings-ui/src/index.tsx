@@ -4,7 +4,7 @@ import { HashRouter, Navigate, Route } from '@solidjs/router';
 import { render } from 'solid-js/web';
 
 import { AppLayout, UserPacksProvider } from './common';
-import { WidgetPack, WidgetPacks } from './configs';
+import { WidgetPack, WidgetPacks } from './user-packs';
 
 render(
   () => (
@@ -13,10 +13,10 @@ render(
         <HashRouter>
           <Route
             path="/"
-            component={() => <Navigate href="/widget-packs" />}
+            component={() => <Navigate href="/user-packs" />}
           />
-          <Route path="/widget-packs" component={WidgetPacks} />
-          <Route path="/widget-packs/:path" component={WidgetPack} />
+          <Route path="/user-packs" component={WidgetPacks} />
+          <Route path="/user-packs/:path" component={WidgetPack} />
         </HashRouter>
       </AppLayout>
     </UserPacksProvider>
