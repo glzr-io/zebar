@@ -51,6 +51,7 @@ export type WidgetPack = {
   id: string;
   name: string;
   author: string;
+  galleryUrls?: string[];
   description: string;
   version: string;
   widgets: { id: string; name: string }[];

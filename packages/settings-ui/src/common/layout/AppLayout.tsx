@@ -4,13 +4,15 @@ import {
   ResizablePanel,
 } from '@glzr/components';
 import { createSignal, type JSX } from 'solid-js';
+import { RouteSectionProps } from '@solidjs/router';
+
 import { Sidebar } from './Sidebar';
 
 export interface AppLayoutProps {
   children: JSX.Element;
 }
 
-export function AppLayout(props: AppLayoutProps) {
+export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
   const [sizes, setSizes] = createSignal<number[]>([0.2, 0.8]);
 
   return (

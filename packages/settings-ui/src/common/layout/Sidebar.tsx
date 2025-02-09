@@ -1,11 +1,12 @@
 import { Button, cn, ResizablePanel, Separator } from '@glzr/components';
-import { createSignal, For } from 'solid-js';
 import {
   IconChevronDown,
   IconChevronsLeft,
   IconPackage,
   IconWorldSearch,
 } from '@tabler/icons-solidjs';
+import { A } from '@solidjs/router';
+import { createSignal, For } from 'solid-js';
 
 import { SidebarItem } from './SidebarItem';
 import { useUserPacks } from '~/common';
@@ -64,7 +65,9 @@ export function Sidebar(props: SidebarProps) {
         tooltip="Browse Community"
         variant="ghost"
       >
-        <div class="truncate">Browse Community</div>
+        <A href="/community">
+          <div class="truncate">Browse Community</div>
+        </A>
       </SidebarItem>
 
       {!isCollapsed() && (
