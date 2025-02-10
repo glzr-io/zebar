@@ -1,6 +1,7 @@
 import {
   Accessor,
   createContext,
+  createMemo,
   createSignal,
   type JSX,
   Resource,
@@ -9,6 +10,7 @@ import {
 import { createResource } from 'solid-js';
 
 import { WidgetPack } from './UserPacksContext';
+import { useParams } from '@solidjs/router';
 
 const communityPacksMock = [
   {
@@ -49,24 +51,40 @@ const communityPacksMock = [
 ];
 
 type CommunityPacksContextState = {
-  all: Resource<WidgetPack[]>;
+  allPacks: Resource<WidgetPack[]>;
+  selectedPack: Resource<WidgetPack>;
   previewPack: Accessor<WidgetPack | null>;
+  install: (pack: WidgetPack) => void;
+  selectPack: (packId: string) => void;
   startPreview: (pack: WidgetPack) => void;
   stopPreview: () => void;
-  install: (pack: WidgetPack) => void;
 };
 
 const CommunityPacksContext = createContext<CommunityPacksContextState>();
 
 export function CommunityPacksProvider(props: { children: JSX.Element }) {
   // TODO: Fetch community packs from the backend.
-  const [all] = createResource(async () => communityPacksMock, {
+  const [allPacks] = createResource(async () => communityPacksMock, {
     initialValue: [],
+  });
+
+  const [selectedPackId, setSelectedPackId] = createSignal<string | null>(
+    null,
+  );
+
+  // TODO: Fetch community pack from the backend.
+  const [selectedPack] = createResource(async () => {
+    const packId = selectedPackId();
+    return allPacks().find(pack => pack.id === packId) || null;
   });
 
   const [previewPack, setPreviewPack] = createSignal<WidgetPack | null>(
     null,
   );
+
+  function selectPack(packId: string) {
+    setSelectedPackId(packId);
+  }
 
   function install(pack: WidgetPack) {
     // TODO
@@ -81,11 +99,13 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
   }
 
   const store: CommunityPacksContextState = {
-    all,
+    allPacks,
+    selectedPack,
     previewPack,
     startPreview,
     stopPreview,
     install,
+    selectPack,
   };
 
   return (

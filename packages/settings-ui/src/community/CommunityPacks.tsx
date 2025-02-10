@@ -18,7 +18,7 @@ export function CommunityPacks() {
   });
 
   const filteredPacks = createMemo(() =>
-    communityPacks.all().filter(pack => {
+    communityPacks.allPacks().filter(pack => {
       const searchQuery = filterQueryForm.value.search;
 
       const matchesSearch =
@@ -60,7 +60,7 @@ export function CommunityPacks() {
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredPacks().map(pack => (
             <div class="group relative">
-              <A href={`/widgets/${pack.id}`} class="block">
+              <A href={`/community/${pack.id}`} class="block">
                 <div class="overflow-hidden rounded-lg aspect-[3/2] bg-muted">
                   <img
                     src={pack.galleryUrls[0] || '/placeholder.svg'}

@@ -8,7 +8,7 @@ import {
   CommunityPacksProvider,
   UserPacksProvider,
 } from './common';
-import { CommunityPacks } from './community';
+import { CommunityPacks, CommunityPack } from './community';
 import { WidgetPack, WidgetPacks } from './user-packs';
 
 render(
@@ -23,6 +23,7 @@ render(
           <Route path="/user-packs" component={WidgetPacks} />
           <Route path="/user-packs/:path" component={WidgetPack} />
           <Route path="/community" component={CommunityPacks} />
+          <Route path="/community/:id" component={CommunityPack} />
         </HashRouter>
       </CommunityPacksProvider>
     </UserPacksProvider>
