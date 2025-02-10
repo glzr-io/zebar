@@ -78,7 +78,15 @@ export function CommunityPacks() {
                     </p>
                   </div>
                   <div class="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" class="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="h-8 w-8"
+                      onClick={e => {
+                        e.preventDefault();
+                        communityPacks.install(pack);
+                      }}
+                    >
                       <IconDownload class="h-4 w-4" />
                       <span class="sr-only">Install</span>
                     </Button>

@@ -53,6 +53,7 @@ type CommunityPacksContextState = {
   previewPack: Accessor<WidgetPack | null>;
   startPreview: (pack: WidgetPack) => void;
   stopPreview: () => void;
+  install: (pack: WidgetPack) => void;
 };
 
 const CommunityPacksContext = createContext<CommunityPacksContextState>();
@@ -67,6 +68,10 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
     null,
   );
 
+  function install(pack: WidgetPack) {
+    // TODO
+  }
+
   function startPreview(pack: WidgetPack) {
     setPreviewPack(pack);
   }
@@ -80,6 +85,7 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
     previewPack,
     startPreview,
     stopPreview,
+    install,
   };
 
   return (
