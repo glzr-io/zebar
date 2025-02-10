@@ -2,6 +2,7 @@ import { Button, cn, ResizablePanel, Separator } from '@glzr/components';
 import {
   IconChevronDown,
   IconChevronsLeft,
+  IconHome,
   IconPackage,
   IconWorldSearch,
 } from '@tabler/icons-solidjs';
@@ -58,6 +59,17 @@ export function Sidebar(props: SidebarProps) {
       </div>
 
       <Separator />
+
+      <SidebarItem
+        isCollapsed={isCollapsed()}
+        icon={<IconHome class="size-6" />}
+        tooltip="Home"
+        variant="ghost"
+      >
+        <A href="/">
+          <div class="truncate">Home</div>
+        </A>
+      </SidebarItem>
 
       <SidebarItem
         isCollapsed={isCollapsed()}

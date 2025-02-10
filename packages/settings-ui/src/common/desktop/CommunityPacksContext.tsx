@@ -62,11 +62,20 @@ type CommunityPacksContextState = {
 
 const CommunityPacksContext = createContext<CommunityPacksContextState>();
 
+// TODO: Remove once API calls are implemented.
+function wait(timeout: number) {
+  return new Promise(resolve => setTimeout(resolve, timeout));
+}
+
 export function CommunityPacksProvider(props: { children: JSX.Element }) {
   // TODO: Fetch community packs from the backend.
-  const [allPacks] = createResource(async () => communityPacksMock, {
-    initialValue: [],
-  });
+  const [allPacks] = createResource(
+    async () => {
+      await wait(2000);
+      return communityPacksMock;
+    },
+    { initialValue: [] },
+  );
 
   const [selectedPackId, setSelectedPackId] = createSignal<string | null>(
     null,
@@ -76,6 +85,7 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
   const [selectedPack] = createResource(
     () => selectedPackId() && allPacks(),
     async () => {
+      await wait(2000);
       return allPacks().find(pack => pack.id === selectedPackId()) || null;
     },
   );
