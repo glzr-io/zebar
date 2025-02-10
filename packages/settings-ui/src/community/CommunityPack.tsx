@@ -28,9 +28,7 @@ export function CommunityPack() {
 
   const [currentImageIndex, setCurrentImageIndex] = createSignal(0);
 
-  createEffect(() => {
-    communityPacks.selectPack(params.id);
-  });
+  createEffect(() => communityPacks.selectPack(params.id));
 
   function nextImage(selectedPack: WidgetPack) {
     setCurrentImageIndex(prev =>

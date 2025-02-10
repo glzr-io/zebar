@@ -73,10 +73,12 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
   );
 
   // TODO: Fetch community pack from the backend.
-  const [selectedPack] = createResource(async () => {
-    const packId = selectedPackId();
-    return allPacks().find(pack => pack.id === packId) || null;
-  });
+  const [selectedPack] = createResource(
+    () => selectedPackId() && allPacks(),
+    async () => {
+      return allPacks().find(pack => pack.id === selectedPackId()) || null;
+    },
+  );
 
   const [previewPack, setPreviewPack] = createSignal<WidgetPack | null>(
     null,
