@@ -105,9 +105,6 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
           <p>
             <strong>Widgets:</strong> {props.pack.widgets.length}
           </p>
-          <p>
-            <strong>License:</strong> {props.pack.license}
-          </p>
         </div>
       </CardContent>
     </Card>
