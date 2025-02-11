@@ -8,12 +8,13 @@
     "dev:local": "vite"
   },
   "dependencies": {
-    "@glzr/components": "1.1.0",
+    "@glzr/components": "1.2.0",
     "@solidjs/router": "0.14.8",
     "@tabler/icons-solidjs": "3.19.0",
     "@tauri-apps/api": "2.0.2",
     "smorf": "1.2.1",
     "solid-js": "1.9.3",
+    "solid-markdown": "2.0.14",
     "zebar": "^2.0.0"
   },
   "devDependencies": {

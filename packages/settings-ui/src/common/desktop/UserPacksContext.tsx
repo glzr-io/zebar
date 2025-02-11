@@ -59,7 +59,7 @@ export type WidgetPack = {
 export type WidgetPackVersion = {
   versionNumber: string;
   releaseNotes: string;
-  commitHash: string;
+  commitSha: string;
   repoUrl: string;
   publishDate: Date;
 };

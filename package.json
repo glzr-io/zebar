@@ -8,7 +8,6 @@
   "scripts": {
     "build": "pnpm run -r build",
     "dev": "pnpm run --filter zebar build && pnpm run --parallel dev",
-    "dev:local": "pnpm run --filter zebar build && pnpm run --parallel dev:local",
     "format": "prettier --write . && pnpm run -r format",
     "lint": "prettier --check . && pnpm run -r lint"
   },

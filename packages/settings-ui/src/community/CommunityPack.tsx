@@ -144,29 +144,8 @@ export function CommunityPack() {
               </div>
             </div>
 
-            {/* Header */}
-            {/* <div class="flex items-start justify-between">
-              <div class="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    communityPacks.startPreview(selectedPack())
-                  }
-                >
-                  <IconEye class="mr-2 h-4 w-4" />
-                  Preview
-                </Button>
-                <Button
-                  onClick={() => communityPacks.install(selectedPack())}
-                >
-                  <IconDownload class="mr-2 h-4 w-4" />
-                  Install
-                </Button>
-              </div>
-            </div> */}
-
             <div class="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-8">
-              {/* Action buttons and repo - full width on mobile, sidebar on desktop */}
+              {/* Action buttons and repo - full width on mobile, sidebar on desktop. */}
               <div class="space-y-4 md:order-2 md:col-start-2">
                 <div class="flex flex-col gap-2">
                   <Button
@@ -218,7 +197,7 @@ export function CommunityPack() {
                 </Card>
               </div>
 
-              {/* Left side with TabsList */}
+              {/* Left side with tab list. */}
               <div class="md:row-span-2">
                 {/* Content */}
                 <Tabs defaultValue="readme" class="space-y-6">
@@ -277,7 +256,7 @@ export function CommunityPack() {
                           </div>
                           <div class="text-sm text-muted-foreground">
                             <code class="px-2 py-1 rounded-md bg-muted">
-                              {version.commitHash}
+                              {version.commitSha}
                             </code>
                           </div>
                         </div>

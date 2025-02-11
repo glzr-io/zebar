@@ -1,0 +1,31 @@
+name: Zebar publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version-number:
+        type: string
+        description: The version number to publish.
+        required: true
+  release:
+    types: [published]
+
+jobs:
+  zebar-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TODO: Use templating for build command.
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        uses: glzr-io/zebar-publish@main
+        with:
+          version: ${{ github.event.release.tag_name || inputs.version-number }}
+          commit-sha: ${{ github.event.release.commit.sha }}
+          release-notes: ${{ github.event.release.body }}
+          release-url: ${{ github.event.release.url }}
+          github-token: ${{ github.token }}

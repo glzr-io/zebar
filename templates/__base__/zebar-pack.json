@@ -1,0 +1,8 @@
+{
+  "$schema": "https://github.com/glzr-io/zebar/raw/v2.7.0/resources/pack-schema.json",
+  "name": "%PACK_NAME%",
+  "description": "%PACK_DESCRIPTION%",
+  "tags": ["desktop", "widget"],
+  "galleryImages": ["./resources/gallery-image.png"],
+  "widgets": %WIDGETS%
+}
