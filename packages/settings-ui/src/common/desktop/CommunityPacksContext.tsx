@@ -30,6 +30,26 @@ const communityPacksMock = [
       { id: 'memory-usage', name: 'Memory Usage' },
       { id: 'disk-space', name: 'Disk Space' },
     ],
+    versions: [
+      {
+        versionNumber: '2.1.0',
+        publishDate: new Date('2024-01-15'),
+        commitHash: '8f62a3d',
+        releaseNotes: 'Added dark mode support and new KPI cards',
+      },
+      {
+        versionNumber: '2.0.1',
+        publishDate: new Date('2023-12-20'),
+        commitHash: '3e7b9c2',
+        releaseNotes: 'Fixed responsive layout issues',
+      },
+      {
+        versionNumber: '2.0.0',
+        publishDate: new Date('2023-12-01'),
+        commitHash: '1a2b3c4',
+        releaseNotes: 'Major redesign and performance improvements',
+      },
+    ],
   },
   {
     id: 'weather-widgets',
@@ -46,6 +66,26 @@ const communityPacksMock = [
     widgets: [
       { id: 'current-weather', name: 'Current Weather' },
       { id: 'forecast', name: 'Weekly Forecast' },
+    ],
+    versions: [
+      {
+        versionNumber: '2.1.0',
+        publishDate: new Date('2024-01-15'),
+        commitHash: '8f62a3d',
+        releaseNotes: 'Added dark mode support and new KPI cards',
+      },
+      {
+        versionNumber: '2.0.1',
+        publishDate: new Date('2023-12-20'),
+        commitHash: '3e7b9c2',
+        releaseNotes: 'Fixed responsive layout issues',
+      },
+      {
+        versionNumber: '2.0.0',
+        publishDate: new Date('2023-12-01'),
+        commitHash: '1a2b3c4',
+        releaseNotes: 'Major redesign and performance improvements',
+      },
     ],
   },
 ];

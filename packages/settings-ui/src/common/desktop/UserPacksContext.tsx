@@ -52,11 +52,19 @@ export type WidgetPack = {
   name: string;
   author: string;
   galleryUrls?: string[];
+  versions?: WidgetPackVersion[];
   description: string;
   version: string;
   widgets: { id: string; name: string }[];
   license: string;
   tags: string[];
+};
+
+export type WidgetPackVersion = {
+  versionNumber: string;
+  releaseNotes: string;
+  commitHash: string;
+  publishDate: Date;
 };
 
 export type CreateWidgetPackForm = {

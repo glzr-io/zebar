@@ -28,7 +28,7 @@ export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
 
         <ResizableHandle withHandle />
 
-        <ResizablePanel initialSize={sizes()[1]}>
+        <ResizablePanel initialSize={sizes()[1]} class="overflow-auto">
           {props.children}
         </ResizablePanel>
       </Resizable>
