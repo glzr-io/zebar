@@ -1,7 +1,6 @@
 import {
   Accessor,
   createContext,
-  createMemo,
   createSignal,
   type JSX,
   Resource,
@@ -10,14 +9,13 @@ import {
 import { createResource } from 'solid-js';
 
 import { WidgetPack } from './UserPacksContext';
-import { useParams } from '@solidjs/router';
 
 const communityPacksMock = [
   {
     id: 'system-monitor',
     name: 'System Monitor',
     author: 'Zebar Team',
-    galleryUrls: [
+    previewUrls: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],
@@ -57,7 +55,7 @@ const communityPacksMock = [
     id: 'weather-widgets',
     name: 'Weather Pack',
     author: 'Weather Team',
-    galleryUrls: [
+    previewUrls: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],

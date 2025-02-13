@@ -7,7 +7,10 @@ use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
-  config::{Config, WidgetConfig, WidgetPlacement},
+  config::{
+    Config, CreateWidgetArgs, CreateWidgetPackArgs, WidgetConfig,
+    WidgetPlacement,
+  },
   providers::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
     ProviderManager,
@@ -81,6 +84,26 @@ pub async fn update_widget_config(
   config
     .update_widget_config(&PathBuf::from(config_path), new_config)
     .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn create_widget_pack_config(
+  args: CreateWidgetPackArgs,
+  config: State<'_, Arc<Config>>,
+) -> anyhow::Result<(), String> {
+  config
+    .create_widget_pack_config(args)
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn create_widget_config(
+  args: CreateWidgetArgs,
+  config: State<'_, Arc<Config>>,
+) -> anyhow::Result<(), String> {
+  config
+    .create_widget_config(args)
     .map_err(|err| err.to_string())
 }
 

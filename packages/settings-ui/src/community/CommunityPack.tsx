@@ -41,13 +41,13 @@ export function CommunityPack() {
 
   function nextImage(selectedPack: WidgetPack) {
     setCurrentImageIndex(prev =>
-      prev === selectedPack.galleryUrls.length - 1 ? 0 : prev + 1,
+      prev === selectedPack.previewUrls.length - 1 ? 0 : prev + 1,
     );
   }
 
   function previousImage(selectedPack: WidgetPack) {
     setCurrentImageIndex(prev =>
-      prev === 0 ? selectedPack.galleryUrls.length - 1 : prev - 1,
+      prev === 0 ? selectedPack.previewUrls.length - 1 : prev - 1,
     );
   }
 
@@ -110,7 +110,7 @@ export function CommunityPack() {
             <div class="relative aspect-[2/1] w-full overflow-hidden rounded-lg bg-muted">
               <img
                 src={
-                  selectedPack().galleryUrls[currentImageIndex()] ||
+                  selectedPack().previewUrls[currentImageIndex()] ||
                   '/placeholder.svg'
                 }
                 alt={`${selectedPack().name} preview ${currentImageIndex() + 1}`}
@@ -135,7 +135,7 @@ export function CommunityPack() {
                 </Button>
               </div>
               <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {selectedPack().galleryUrls.map((_, index) => (
+                {selectedPack().previewUrls.map((_, index) => (
                   <button
                     class={`h-1.5 w-1.5 rounded-full ${index === currentImageIndex() ? 'bg-white' : 'bg-white/50'}`}
                     onClick={() => setCurrentImageIndex(index)}

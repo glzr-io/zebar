@@ -11,9 +11,7 @@
           "--manifest-path=./packages/desktop/Cargo.toml",
           "--no-default-features"
         ]
-      },
-      "args": ["startup", "--config-dir=./examples"],
-      "cwd": "${workspaceFolder}"
+      }
     },
     {
       "type": "lldb",
@@ -25,9 +23,7 @@
           "--release",
           "--manifest-path=./packages/desktop/Cargo.toml"
         ]
-      },
-      "args": ["startup", "--config-dir=./examples"],
-      "cwd": "${workspaceFolder}"
+      }
     }
   ]
 }

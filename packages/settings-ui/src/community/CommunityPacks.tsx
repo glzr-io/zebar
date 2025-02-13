@@ -59,7 +59,7 @@ export function CommunityPacks() {
             <A href={`/community/${pack.id}`} class="block">
               <div class="overflow-hidden rounded-lg aspect-[3/2] bg-muted">
                 <img
-                  src={pack.galleryUrls[0] || '/placeholder.svg'}
+                  src={pack.previewUrls[0] || '/placeholder.svg'}
                   alt={`Preview of ${pack.name}`}
                   width={600}
                   height={400}

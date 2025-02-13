@@ -253,6 +253,30 @@ impl DockEdge {
   }
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateWidgetPackArgs {
+  pub name: String,
+  pub description: String,
+  pub tags: Vec<String>,
+  pub preview_images: Vec<String>,
+  pub widgets: Vec<CreateWidgetArgs>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateWidgetArgs {
+  pub name: String,
+  pub frontend: FrontendTemplate,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FrontendTemplate {
+  ReactBuildless,
+  SolidTypescript,
+}
+
 #[derive(Debug)]
 pub struct Config {
   /// Handle to the Tauri application.
@@ -462,7 +486,7 @@ impl Config {
   ) -> anyhow::Result<()> {
     let starter_path = app_handle
       .path()
-      .resolve("../../examples", BaseDirectory::Resource)
+      .resolve("../../templates", BaseDirectory::Resource)
       .context("Unable to resolve starter config resource.")?;
 
     info!(
@@ -670,6 +694,64 @@ impl Config {
         .arg(self.config_dir.clone())
         .spawn()?;
     }
+
+    Ok(())
+  }
+
+  pub fn create_widget_pack_config(
+    &self,
+    args: CreateWidgetPackArgs,
+  ) -> anyhow::Result<()> {
+    // Create the pack directory within the config directory.
+    let pack_dir = self.config_dir.join(&args.name);
+    fs::create_dir_all(&pack_dir)?;
+
+    let template_dir = self
+      .app_handle
+      .path()
+      .resolve("../../templates/pack-template", BaseDirectory::Resource)
+      .context("Unable to resolve pack template resource.")?;
+
+    info!(
+      "Copying pack template from {} to {}",
+      template_dir.display(),
+      pack_dir.display()
+    );
+
+    // Copy template files.
+    copy_dir_all(&template_dir, &pack_dir, false)?;
+
+    // Initialize git repository. Ignore errors.
+    let _ = std::process::Command::new("git")
+      .arg("init")
+      .current_dir(&pack_dir)
+      .output();
+
+    Ok(())
+  }
+
+  pub fn create_widget_config(
+    &self,
+    args: CreateWidgetArgs,
+  ) -> anyhow::Result<()> {
+    // Create the pack directory within the config directory.
+    let pack_dir = self.config_dir.join(&args.name);
+    fs::create_dir_all(&pack_dir)?;
+
+    let template_dir = self
+      .app_handle
+      .path()
+      .resolve("../../templates/__base__", BaseDirectory::Resource)
+      .context("Unable to resolve base template resource.")?;
+
+    info!(
+      "Copying base template from {} to {}",
+      template_dir.display(),
+      pack_dir.display()
+    );
+
+    // Copy template files.
+    copy_dir_all(&template_dir, &pack_dir, false)?;
 
     Ok(())
   }

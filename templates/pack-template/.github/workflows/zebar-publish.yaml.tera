@@ -17,15 +17,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # TODO: Use templating for build command.
+      {% if inputs.build_command %}
       - name: Build
-        run: npm run build
+        run: {{ inputs.build_command }}
 
+      {% endif %}
       - name: Publish
         uses: glzr-io/zebar-publish@main
         with:
+      {% raw %}
           version: ${{ github.event.release.tag_name || inputs.version-number }}
           commit-sha: ${{ github.event.release.commit.sha }}
           release-notes: ${{ github.event.release.body }}
           release-url: ${{ github.event.release.url }}
           github-token: ${{ github.token }}
+      {% endraw %}

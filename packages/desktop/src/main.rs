@@ -89,6 +89,8 @@ async fn main() -> anyhow::Result<()> {
       commands::start_preset,
       commands::stop_preset,
       commands::update_widget_config,
+      commands::create_widget_pack_config,
+      commands::create_widget_config,
       commands::listen_provider,
       commands::unlisten_provider,
       commands::call_provider_function,

@@ -48,7 +48,7 @@ export type WidgetPack = {
   id: string;
   name: string;
   author: string;
-  galleryUrls?: string[];
+  previewUrls?: string[];
   versions?: WidgetPackVersion[];
   description: string;
   version: string;

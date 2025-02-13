@@ -35,6 +35,7 @@ tauri = { version = "2", features = [
 ] }
 tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
+tera = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
