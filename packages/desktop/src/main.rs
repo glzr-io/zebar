@@ -4,6 +4,7 @@
 
 use std::{env, sync::Arc};
 
+use app_settings::AppSettings;
 use clap::Parser;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
@@ -25,6 +26,7 @@ use crate::{
   widget_factory::{WidgetFactory, WidgetOpenOptions},
 };
 
+mod app_settings;
 mod asset_server;
 mod cli;
 mod commands;
@@ -148,8 +150,13 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     _ => None,
   };
 
+  // Initialize `AppSettings` in Tauri state.
+  let app_settings =
+    Arc::new(AppSettings::new(app.handle(), config_dir_override)?);
+  app.manage(app_settings.clone());
+
   // Initialize `Config` in Tauri state.
-  let config = Arc::new(Config::new(app.handle(), config_dir_override)?);
+  let config = Arc::new(Config::new(app.handle(), app_settings.clone())?);
   app.manage(config.clone());
 
   // Initialize `MonitorState` in Tauri state.
@@ -159,6 +166,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   // Initialize `WidgetFactory` in Tauri state.
   let widget_factory = Arc::new(WidgetFactory::new(
     app.handle(),
+    app_settings.clone(),
     config.clone(),
     monitor_state.clone(),
   ));
@@ -178,7 +186,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   // Allow assets to be resolved from the config directory.
   app
     .asset_protocol_scope()
-    .allow_directory(&config.config_dir, true)?;
+    .allow_directory(&app_settings.config_dir, true)?;
 
   app.manage(ShellState::new(app.handle(), widget_factory.clone()));
   app.handle().plugin(tauri_plugin_dialog::init())?;
@@ -191,12 +199,17 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   open_widgets_by_cli_command(cli, widget_factory.clone()).await?;
 
   // Add application icon to system tray.
-  let tray =
-    SysTray::new(app.handle(), config.clone(), widget_factory.clone())
-      .await?;
+  let tray = SysTray::new(
+    app.handle(),
+    app_settings.clone(),
+    config.clone(),
+    widget_factory.clone(),
+  )
+  .await?;
 
   listen_events(
     app.handle(),
+    app_settings,
     config,
     monitor_state,
     widget_factory,
@@ -208,8 +221,11 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   Ok(())
 }
 
+/// Listens for events and updates state accordingly.
+#[allow(clippy::too_many_arguments)]
 fn listen_events(
   app_handle: &AppHandle,
+  app_settings: Arc<AppSettings>,
   config: Arc<Config>,
   monitor_state: Arc<MonitorState>,
   widget_factory: Arc<WidgetFactory>,
@@ -220,7 +236,7 @@ fn listen_events(
   let app_handle = app_handle.clone();
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
   let mut widget_close_rx = widget_factory.close_tx.subscribe();
-  let mut settings_change_rx = config.settings_change_tx.subscribe();
+  let mut settings_change_rx = app_settings.settings_change_tx.subscribe();
   let mut monitors_change_rx = monitor_state.change_tx.subscribe();
   let mut widget_configs_change_rx =
     config.widget_configs_change_tx.subscribe();

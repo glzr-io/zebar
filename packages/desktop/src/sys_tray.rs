@@ -15,8 +15,9 @@ use tokio::task;
 use tracing::{error, info};
 
 use crate::{
+  app_settings::{AppSettings, StartupConfig},
   common::PathExt,
-  config::{Config, StartupConfig, WidgetConfig, WidgetPreset},
+  config::{Config, WidgetConfig, WidgetPreset},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -115,6 +116,7 @@ impl FromStr for MenuEvent {
 /// System tray icon for Zebar.
 pub struct SysTray {
   app_handle: AppHandle,
+  app_settings: Arc<AppSettings>,
   config: Arc<Config>,
   widget_factory: Arc<WidgetFactory>,
   tray_icon: Option<TrayIcon>,
@@ -124,11 +126,13 @@ impl SysTray {
   /// Creates a new system tray icon for Zebar.
   pub async fn new(
     app_handle: &AppHandle,
+    app_settings: Arc<AppSettings>,
     config: Arc<Config>,
     widget_factory: Arc<WidgetFactory>,
   ) -> anyhow::Result<SysTray> {
     let mut sys_tray = Self {
       app_handle: app_handle.clone(),
+      app_settings,
       config,
       widget_factory,
       tray_icon: None,
@@ -150,6 +154,7 @@ impl SysTray {
       .menu(&self.create_tray_menu().await?)
       .tooltip(tooltip)
       .on_menu_event({
+        let app_settings = self.app_settings.clone();
         let config = self.config.clone();
         let widget_factory = self.widget_factory.clone();
 
@@ -158,6 +163,7 @@ impl SysTray {
             Self::handle_menu_event(
               menu_event,
               app_handle.clone(),
+              app_settings.clone(),
               config.clone(),
               widget_factory.clone(),
             );
@@ -172,6 +178,7 @@ impl SysTray {
         .show_menu_on_left_click(false)
         .on_tray_icon_event({
           let app_handle = self.app_handle.clone();
+          let app_settings = self.app_settings.clone();
           let config = self.config.clone();
           let widget_factory = self.widget_factory.clone();
 
@@ -185,6 +192,7 @@ impl SysTray {
               Self::handle_menu_event(
                 MenuEvent::OpenSettings,
                 app_handle.clone(),
+                app_settings.clone(),
                 config.clone(),
                 widget_factory.clone(),
               );
@@ -220,7 +228,8 @@ impl SysTray {
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
     let widget_configs = self.config.widget_configs().await;
     let widget_states = self.widget_factory.states_by_path().await;
-    let startup_configs = self.config.startup_configs_by_path().await?;
+    let startup_configs =
+      self.app_settings.startup_configs_by_path().await?;
 
     let configs_menu = self.create_configs_menu(
       &widget_configs,
@@ -288,6 +297,7 @@ impl SysTray {
   fn handle_menu_event(
     event: MenuEvent,
     app_handle: AppHandle,
+    app_settings: Arc<AppSettings>,
     config: Arc<Config>,
     widget_factory: Arc<WidgetFactory>,
   ) {
@@ -295,11 +305,14 @@ impl SysTray {
       info!("Received tray menu event: {:?}", event);
 
       let event_res = match event {
-        MenuEvent::ShowConfigFolder => config
+        MenuEvent::ShowConfigFolder => app_settings
           .open_config_dir()
           .context("Failed to open config folder."),
         MenuEvent::ReloadConfigs => {
           widget_factory.clear_cache();
+
+          // TODO: Error handling.
+          let _ = app_settings.reload().await;
           config.reload().await
         }
         MenuEvent::OpenSettings => {
@@ -329,8 +342,10 @@ impl SysTray {
           preset,
           path,
         } => match enable {
-          true => config.add_startup_config(&path, &preset).await,
-          false => config.remove_startup_config(&path, &preset).await,
+          true => app_settings.add_startup_config(&path, &preset).await,
+          false => {
+            app_settings.remove_startup_config(&path, &preset).await
+          }
         },
       };
 

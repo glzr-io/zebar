@@ -7,63 +7,17 @@ use std::{
 
 use anyhow::Context;
 use clap::ValueEnum;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
 use tracing::{error, info};
 
-use crate::common::{
-  copy_dir_all, has_extension, read_and_parse_json, LengthValue, PathExt,
+use crate::{
+  app_settings::AppSettings,
+  common::{
+    copy_dir_all, has_extension, read_and_parse_json, LengthValue, PathExt,
+  },
 };
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SettingsConfig {
-  /// JSON schema URL to validate the settings file.
-  #[serde(rename = "$schema")]
-  schema: Option<String>,
-
-  /// Widget configs to be launched on startup.
-  pub startup_configs: Vec<StartupConfig>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StartupConfig {
-  /// Relative path to widget configs to launch on startup.
-  pub path: PathBuf,
-
-  /// Preset name within the widget config.
-  pub preset: String,
-}
-
-// Deserializer that handles `StartupConfig` objects and string format from
-// v2.3.0 and earlier.
-impl<'de> Deserialize<'de> for StartupConfig {
-  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrObject {
-      String(String),
-      Object { path: PathBuf, preset: String },
-    }
-
-    let value = StringOrObject::deserialize(deserializer)?;
-
-    Ok(match value {
-      StringOrObject::String(s) => StartupConfig {
-        path: PathBuf::from(s),
-        preset: "default".to_string(),
-      },
-      StringOrObject::Object { path, preset } => {
-        StartupConfig { path, preset }
-      }
-    })
-  }
-}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -282,18 +236,11 @@ pub struct Config {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
 
-  /// Directory where config files are stored.
-  pub config_dir: PathBuf,
-
-  /// Global settings.
-  pub settings: Arc<Mutex<SettingsConfig>>,
+  /// Reference to `AppSettings`.
+  app_settings: Arc<AppSettings>,
 
   /// List of widget configs.
   pub widget_configs: Arc<Mutex<HashMap<PathBuf, WidgetConfig>>>,
-
-  _settings_change_rx: broadcast::Receiver<SettingsConfig>,
-
-  pub settings_change_tx: broadcast::Sender<SettingsConfig>,
 
   _widget_configs_change_rx:
     broadcast::Receiver<HashMap<PathBuf, WidgetConfig>>,
@@ -308,30 +255,18 @@ impl Config {
   /// Returns a new `Config` instance.
   pub fn new(
     app_handle: &AppHandle,
-    config_dir_override: Option<PathBuf>,
+    app_settings: Arc<AppSettings>,
   ) -> anyhow::Result<Self> {
-    let config_dir = match config_dir_override {
-      Some(dir) => dir,
-      None => app_handle
-        .path()
-        .resolve(".glzr/zebar", BaseDirectory::Home)
-        .context("Unable to get home directory.")?,
-    };
+    let widget_configs =
+      Self::read_widget_configs(&app_settings.config_dir)?;
 
-    let settings = Self::read_settings_or_init(app_handle, &config_dir)?;
-    let widget_configs = Self::read_widget_configs(&config_dir)?;
-
-    let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
     let (widget_configs_change_tx, _widget_configs_change_rx) =
       broadcast::channel(16);
 
     Ok(Self {
       app_handle: app_handle.clone(),
-      config_dir: config_dir.to_absolute()?,
-      settings: Arc::new(Mutex::new(settings)),
+      app_settings,
       widget_configs: Arc::new(Mutex::new(widget_configs)),
-      _settings_change_rx,
-      settings_change_tx,
       _widget_configs_change_rx,
       widget_configs_change_tx,
     })
@@ -339,76 +274,15 @@ impl Config {
 
   /// Re-evaluates config files within the config directory.
   pub async fn reload(&self) -> anyhow::Result<()> {
-    let new_settings =
-      Self::read_settings_or_init(&self.app_handle, &self.config_dir)?;
-    let new_widget_configs = Self::read_widget_configs(&self.config_dir)?;
-
-    {
-      let mut settings = self.settings.lock().await;
-      *settings = new_settings.clone();
-    }
+    let new_widget_configs =
+      Self::read_widget_configs(&self.app_settings.config_dir)?;
 
     {
       let mut widget_configs = self.widget_configs.lock().await;
       *widget_configs = new_widget_configs.clone();
     }
 
-    self.settings_change_tx.send(new_settings)?;
     self.widget_configs_change_tx.send(new_widget_configs)?;
-
-    Ok(())
-  }
-
-  /// Reads the global settings file or initializes it with the starter.
-  ///
-  /// Returns the parsed `SettingsConfig`.
-  fn read_settings_or_init(
-    app_handle: &AppHandle,
-    dir: &PathBuf,
-  ) -> anyhow::Result<SettingsConfig> {
-    let settings = Self::read_settings(&dir)?;
-
-    match settings {
-      Some(settings) => Ok(settings),
-      None => {
-        Self::create_from_examples(app_handle, dir)?;
-
-        Self::read_settings(&dir)?
-          .context("Failed to create settings config.")
-      }
-    }
-  }
-
-  /// Reads the global settings file.
-  ///
-  /// Returns the parsed `SettingsConfig` if found.
-  fn read_settings(
-    dir: &PathBuf,
-  ) -> anyhow::Result<Option<SettingsConfig>> {
-    let settings_path = dir.join("settings.json");
-
-    match settings_path.exists() {
-      false => Ok(None),
-      true => read_and_parse_json(&settings_path),
-    }
-  }
-
-  /// Writes to the global settings file.
-  async fn write_settings(
-    &self,
-    new_settings: SettingsConfig,
-  ) -> anyhow::Result<()> {
-    let settings_path = self.config_dir.join("settings.json");
-
-    fs::write(
-      &settings_path,
-      serde_json::to_string_pretty(&new_settings)? + "\n",
-    )?;
-
-    let mut settings = self.settings.lock().await;
-    *settings = new_settings.clone();
-
-    self.settings_change_tx.send(new_settings)?;
 
     Ok(())
   }
@@ -475,71 +349,8 @@ impl Config {
     Ok((abs_path, config))
   }
 
-  /// Initializes settings and widget configs at the given path.
-  ///
-  /// `settings.json` is initialized with either `starter/vanilla` or
-  /// `starter/with-glazewm` as startup config. Widget configs are
-  /// initialized from `examples/` directory.
-  fn create_from_examples(
-    app_handle: &AppHandle,
-    config_dir: &PathBuf,
-  ) -> anyhow::Result<()> {
-    let starter_path = app_handle
-      .path()
-      .resolve("../../templates", BaseDirectory::Resource)
-      .context("Unable to resolve starter config resource.")?;
-
-    info!(
-      "Copying starter configs from {} to {}.",
-      starter_path.display(),
-      config_dir.display()
-    );
-
-    copy_dir_all(&starter_path, config_dir, false)?;
-
-    let default_settings = SettingsConfig {
-      schema: Some("https://github.com/glzr-io/zebar/raw/v2.4.0/resources/settings-schema.json".into()),
-      startup_configs: vec![StartupConfig {
-        path: match is_app_installed("glazewm") {
-          true => "starter/with-glazewm.zebar.json".into(),
-          false => "starter/vanilla.zebar.json".into(),
-        },
-        preset: "default".into(),
-      }],
-    };
-
-    let settings_path = config_dir.join("settings.json");
-    fs::write(
-      &settings_path,
-      serde_json::to_string_pretty(&default_settings)? + "\n",
-    )?;
-
-    Ok(())
-  }
-
   pub async fn widget_configs(&self) -> HashMap<PathBuf, WidgetConfig> {
     self.widget_configs.lock().await.clone()
-  }
-
-  /// Returns the widget configs to open on startup.
-  pub async fn startup_configs(&self) -> Vec<StartupConfig> {
-    self.settings.lock().await.startup_configs.clone()
-  }
-
-  /// Returns the widget configs to open on startup.
-  pub async fn startup_configs_by_path(
-    &self,
-  ) -> anyhow::Result<HashMap<PathBuf, StartupConfig>> {
-    self
-      .startup_configs()
-      .await
-      .into_iter()
-      .map(|config| {
-        self
-          .to_absolute_path(&config.path)
-          .map(|abs_path| (abs_path, config))
-      })
-      .collect()
   }
 
   /// Updates the widget config at the given path.
@@ -577,77 +388,15 @@ impl Config {
     Ok(())
   }
 
-  /// Adds the given config to be launched on startup.
-  ///
-  /// Config path can be either absolute or relative.
-  pub async fn add_startup_config(
-    &self,
-    config_path: &PathBuf,
-    preset_name: &str,
-  ) -> anyhow::Result<()> {
-    let mut new_settings = { self.settings.lock().await.clone() };
-
-    let startup_config = StartupConfig {
-      path: self.to_relative_path(config_path),
-      preset: preset_name.to_string(),
-    };
-
-    if new_settings.startup_configs.contains(&startup_config) {
-      return Ok(());
-    }
-
-    new_settings.startup_configs.push(startup_config);
-    self.write_settings(new_settings).await
-  }
-
-  /// Removes the given config from being launched on startup.
-  ///
-  /// Config path can be either absolute or relative.
-  pub async fn remove_startup_config(
-    &self,
-    config_path: &PathBuf,
-    preset_name: &str,
-  ) -> anyhow::Result<()> {
-    let mut new_settings = { self.settings.lock().await.clone() };
-    let rel_path = self.to_relative_path(config_path);
-
-    new_settings.startup_configs.retain(|config| {
-      config.path != rel_path || config.preset != preset_name
-    });
-
-    self.write_settings(new_settings).await
-  }
-
-  /// Joins the given path with the config directory path.
-  ///
-  /// Returns an absolute path.
-  pub fn to_absolute_path(
-    &self,
-    config_path: &PathBuf,
-  ) -> anyhow::Result<PathBuf> {
-    match config_path.is_absolute() {
-      false => self.config_dir.join(config_path).to_absolute(),
-      // Ensure path is canonicalized even if already absolute.
-      true => config_path.to_absolute(),
-    }
-  }
-
-  /// Strips the config directory path from the given path.
-  ///
-  /// Returns a relative path.
-  pub fn to_relative_path(&self, config_path: &PathBuf) -> PathBuf {
-    config_path
-      .strip_prefix(&self.config_dir)
-      .unwrap_or(&config_path)
-      .into()
-  }
-
   /// Formats a widget's config path for display.
   ///
   /// Returns relative path without the `.zebar.json` suffix (e.g.
   /// `starter/vanilla`).
   pub fn formatted_widget_path(&self, config_path: &PathBuf) -> String {
-    let path = self.to_relative_path(config_path).to_unicode_string();
+    let path = self
+      .app_settings
+      .to_relative_path(config_path)
+      .to_unicode_string();
 
     // Ensure path delimiters are forward slashes on Windows.
     #[cfg(windows)]
@@ -663,7 +412,7 @@ impl Config {
     &self,
     config_path: &PathBuf,
   ) -> Option<(PathBuf, WidgetConfig)> {
-    let abs_path = self.to_absolute_path(config_path).ok()?;
+    let abs_path = self.app_settings.to_absolute_path(config_path).ok()?;
 
     let widget_configs = self.widget_configs.lock().await;
     let config = widget_configs.get(&abs_path)?;
@@ -671,39 +420,12 @@ impl Config {
     Some((abs_path, config.clone()))
   }
 
-  /// Opens the config directory in the OS-dependent file explorer.
-  pub fn open_config_dir(&self) -> anyhow::Result<()> {
-    #[cfg(target_os = "windows")]
-    {
-      std::process::Command::new("explorer")
-        .arg(self.config_dir.clone())
-        .spawn()?;
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-      std::process::Command::new("open")
-        .arg(self.config_dir.clone())
-        .arg("-R")
-        .spawn()?;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-      std::process::Command::new("xdg-open")
-        .arg(self.config_dir.clone())
-        .spawn()?;
-    }
-
-    Ok(())
-  }
-
   pub fn create_widget_pack_config(
     &self,
     args: CreateWidgetPackArgs,
   ) -> anyhow::Result<()> {
     // Create the pack directory within the config directory.
-    let pack_dir = self.config_dir.join(&args.name);
+    let pack_dir = self.app_settings.config_dir.join(&args.name);
     fs::create_dir_all(&pack_dir)?;
 
     let template_dir = self
@@ -735,7 +457,7 @@ impl Config {
     args: CreateWidgetArgs,
   ) -> anyhow::Result<()> {
     // Create the pack directory within the config directory.
-    let pack_dir = self.config_dir.join(&args.name);
+    let pack_dir = self.app_settings.config_dir.join(&args.name);
     fs::create_dir_all(&pack_dir)?;
 
     let template_dir = self
@@ -754,29 +476,6 @@ impl Config {
     copy_dir_all(&template_dir, &pack_dir, false)?;
 
     Ok(())
-  }
-}
-
-/// Checks if an application is installed and available in the system PATH.
-///
-/// Returns `true` if the application is found in PATH, `false` otherwise.
-fn is_app_installed(app_name: &str) -> bool {
-  #[cfg(target_os = "windows")]
-  {
-    std::process::Command::new("where")
-      .arg(app_name)
-      .output()
-      .map(|output| output.status.success())
-      .unwrap_or(false)
-  }
-
-  #[cfg(any(target_os = "macos", target_os = "linux"))]
-  {
-    std::process::Command::new("which")
-      .arg(app_name)
-      .output()
-      .map(|output| output.status.success())
-      .unwrap_or(false)
   }
 }
 

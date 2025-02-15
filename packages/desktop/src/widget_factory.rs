@@ -25,6 +25,7 @@ use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
+  app_settings::AppSettings,
   asset_server::create_init_url,
   common::PathExt,
   config::{
@@ -39,6 +40,9 @@ use crate::{
 pub struct WidgetFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
+
+  /// Reference to `AppSettings`.
+  app_settings: Arc<AppSettings>,
 
   _close_rx: broadcast::Receiver<String>,
 
@@ -152,6 +156,7 @@ impl WidgetFactory {
   /// Creates a new `WidgetFactory` instance.
   pub fn new(
     app_handle: &AppHandle,
+    app_settings: Arc<AppSettings>,
     config: Arc<Config>,
     monitor_state: Arc<MonitorState>,
   ) -> Self {
@@ -160,6 +165,7 @@ impl WidgetFactory {
 
     Self {
       app_handle: app_handle.clone(),
+      app_settings,
       _close_rx,
       close_tx,
       config,
@@ -488,7 +494,7 @@ impl WidgetFactory {
 
   /// Opens presets that are configured to be launched on startup.
   pub async fn startup(&self) -> anyhow::Result<()> {
-    let startup_configs = self.config.startup_configs().await;
+    let startup_configs = self.app_settings.startup_configs().await;
 
     for startup_config in startup_configs {
       self
