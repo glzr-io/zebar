@@ -220,7 +220,7 @@ impl AppSettings {
   /// Config path can be either absolute or relative.
   pub async fn add_startup_config(
     &self,
-    config_path: &PathBuf,
+    config_path: &Path,
     preset_name: &str,
   ) -> anyhow::Result<()> {
     let mut new_settings = { self.value.lock().await.clone() };

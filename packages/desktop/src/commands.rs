@@ -93,7 +93,7 @@ pub async fn create_widget_pack_config(
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<(), String> {
   config
-    .create_widget_pack_config(args)
+    .create_widget_pack(args)
     .map_err(|err| err.to_string())
 }
 
@@ -102,9 +102,7 @@ pub async fn create_widget_config(
   args: CreateWidgetArgs,
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<(), String> {
-  config
-    .create_widget_config(args)
-    .map_err(|err| err.to_string())
+  config.create_widget(args).map_err(|err| err.to_string())
 }
 
 #[tauri::command]

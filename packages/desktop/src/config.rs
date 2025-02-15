@@ -1,7 +1,7 @@
 use std::{
   collections::HashMap,
   fs::{self},
-  path::PathBuf,
+  path::{Path, PathBuf},
   sync::Arc,
 };
 
@@ -15,7 +15,8 @@ use tracing::{error, info};
 use crate::{
   app_settings::AppSettings,
   common::{
-    copy_dir_all, has_extension, read_and_parse_json, LengthValue, PathExt,
+    copy_dir_all, has_extension, read_and_parse_json, visit_deep,
+    LengthValue, PathExt,
   },
 };
 
@@ -211,6 +212,7 @@ impl DockEdge {
 #[serde(rename_all = "camelCase")]
 pub struct CreateWidgetPackArgs {
   pub name: String,
+  pub directory: PathBuf,
   pub description: String,
   pub tags: Vec<String>,
   pub preview_images: Vec<String>,
@@ -221,6 +223,7 @@ pub struct CreateWidgetPackArgs {
 #[serde(rename_all = "camelCase")]
 pub struct CreateWidgetArgs {
   pub name: String,
+  pub pack_directory: PathBuf,
   pub frontend: FrontendTemplate,
 }
 
@@ -420,14 +423,10 @@ impl Config {
     Some((abs_path, config.clone()))
   }
 
-  pub fn create_widget_pack_config(
+  pub fn create_widget_pack(
     &self,
     args: CreateWidgetPackArgs,
   ) -> anyhow::Result<()> {
-    // Create the pack directory within the config directory.
-    let pack_dir = self.app_settings.config_dir.join(&args.name);
-    fs::create_dir_all(&pack_dir)?;
-
     let template_dir = self
       .app_handle
       .path()
@@ -437,11 +436,17 @@ impl Config {
     info!(
       "Copying pack template from {} to {}",
       template_dir.display(),
-      pack_dir.display()
+      args.directory.display()
     );
 
-    // Copy template files.
+    // Create a sub-directory for the pack within the config directory and
+    // copy template files.
+    let pack_dir = self.app_settings.config_dir.join(&args.directory);
     copy_dir_all(&template_dir, &pack_dir, false)?;
+
+    for widget in args.widgets {
+      self.create_widget(widget)?;
+    }
 
     // Initialize git repository. Ignore errors.
     let _ = std::process::Command::new("git")
@@ -452,7 +457,34 @@ impl Config {
     Ok(())
   }
 
-  pub fn create_widget_config(
+  fn run_template(
+    &self,
+    template_dir: &Path,
+    context: &HashMap<String, String>,
+  ) -> anyhow::Result<()> {
+    let context = tera::Context::from_serialize(context)?;
+
+    // Run Tera template engine on all files with `.tera` extension.
+    visit_deep(template_dir, &|entry| {
+      if let Some(name) = entry.file_name().to_str() {
+        if name.ends_with(".tera") {
+          let path = entry.path();
+          let contents = fs::read_to_string(&path).unwrap();
+
+          if let Ok(result) =
+            tera::Tera::one_off(&contents, &context, true)
+          {
+            fs::write(&path, result).unwrap();
+          }
+
+          let file_name = name.replace(".tera", "");
+          let _ = fs::rename(&path, path.with_file_name(file_name));
+        }
+      }
+    })
+  }
+
+  pub fn create_widget(
     &self,
     args: CreateWidgetArgs,
   ) -> anyhow::Result<()> {

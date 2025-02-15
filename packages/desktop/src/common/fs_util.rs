@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+  fs::{self, DirEntry},
+  path::{Path, PathBuf},
+};
 
 use anyhow::Context;
 use serde::de::DeserializeOwned;
@@ -20,7 +23,7 @@ pub fn read_and_parse_json<T: DeserializeOwned>(
 }
 
 /// Returns whether the path has the given extension.
-pub fn has_extension(path: &PathBuf, extension: &str) -> bool {
+pub fn has_extension(path: &Path, extension: &str) -> bool {
   path
     .file_name()
     .and_then(|name| name.to_str())
@@ -34,20 +37,44 @@ pub fn has_extension(path: &PathBuf, extension: &str) -> bool {
 /// Optionally replaces existing files in the destination directory if
 /// `override_existing` is `true`.
 pub fn copy_dir_all(
-  src_dir: &PathBuf,
-  dest_dir: &PathBuf,
+  src_dir: &Path,
+  dest_dir: &Path,
   override_existing: bool,
 ) -> anyhow::Result<()> {
-  fs::create_dir_all(&dest_dir)?;
+  fs::create_dir_all(dest_dir)?;
 
-  for entry in fs::read_dir(src_dir)? {
-    let entry = entry?;
+  visit_deep(src_dir, &|entry| {
     let dest_path = dest_dir.join(entry.file_name());
 
-    if entry.file_type()?.is_dir() {
-      copy_dir_all(&entry.path(), &dest_path, override_existing)?;
-    } else if override_existing || !dest_path.exists() {
-      fs::copy(entry.path(), dest_path)?;
+    if override_existing || !dest_path.exists() {
+      if let Err(err) = fs::copy(entry.path(), dest_path) {
+        error!("Failed to copy file: {}", err);
+      }
+    }
+  })
+}
+
+/// Recursively visit files in a directory.
+///
+/// The callback is invoked for each entry in the directory.
+pub fn visit_deep(
+  dir: &Path,
+  callback: &dyn Fn(&DirEntry),
+) -> anyhow::Result<()> {
+  if dir.is_dir() {
+    let read_dir = std::fs::read_dir(dir).with_context(|| {
+      format!("Failed to read directory {}.", dir.display())
+    })?;
+
+    for entry in read_dir {
+      let entry = entry?;
+      let path = entry.path();
+
+      if path.is_dir() {
+        visit_deep(&path, callback)?;
+      } else {
+        callback(&entry);
+      }
     }
   }
 
