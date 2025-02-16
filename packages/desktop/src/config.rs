@@ -1,24 +1,27 @@
 use std::{
   collections::HashMap,
   fs::{self},
-  path::{Path, PathBuf},
+  path::PathBuf,
   sync::Arc,
 };
 
 use anyhow::Context;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use tauri::{path::BaseDirectory, AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::sync::{broadcast, Mutex};
 use tracing::{error, info};
 
 use crate::{
-  app_settings::AppSettings,
-  common::{
-    copy_dir_all, has_extension, read_and_parse_json, visit_deep,
-    LengthValue, PathExt,
-  },
+  app_settings::{AppSettings, FrontendTemplate, TemplateResource},
+  common::{has_extension, read_and_parse_json, LengthValue, PathExt},
 };
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackConfig {
+  pub widgets: Vec<PathBuf>,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -223,15 +226,9 @@ pub struct CreateWidgetPackArgs {
 #[serde(rename_all = "camelCase")]
 pub struct CreateWidgetArgs {
   pub name: String,
+  pub directory: PathBuf,
   pub pack_directory: PathBuf,
   pub frontend: FrontendTemplate,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum FrontendTemplate {
-  ReactBuildless,
-  SolidTypescript,
 }
 
 #[derive(Debug)]
@@ -427,22 +424,14 @@ impl Config {
     &self,
     args: CreateWidgetPackArgs,
   ) -> anyhow::Result<()> {
-    let template_dir = self
-      .app_handle
-      .path()
-      .resolve("../../templates/pack-template", BaseDirectory::Resource)
-      .context("Unable to resolve pack template resource.")?;
-
-    info!(
-      "Copying pack template from {} to {}",
-      template_dir.display(),
-      args.directory.display()
-    );
-
-    // Create a sub-directory for the pack within the config directory and
-    // copy template files.
     let pack_dir = self.app_settings.config_dir.join(&args.directory);
-    copy_dir_all(&template_dir, &pack_dir, false)?;
+
+    self.app_settings.init_template(
+      TemplateResource::Pack,
+      &pack_dir,
+      // TODO: Add template variables.
+      &HashMap::new(),
+    )?;
 
     for widget in args.widgets {
       self.create_widget(widget)?;
@@ -457,55 +446,32 @@ impl Config {
     Ok(())
   }
 
-  fn run_template(
-    &self,
-    template_dir: &Path,
-    context: &HashMap<String, String>,
-  ) -> anyhow::Result<()> {
-    let context = tera::Context::from_serialize(context)?;
-
-    // Run Tera template engine on all files with `.tera` extension.
-    visit_deep(template_dir, &|entry| {
-      if let Some(name) = entry.file_name().to_str() {
-        if name.ends_with(".tera") {
-          let path = entry.path();
-          let contents = fs::read_to_string(&path).unwrap();
-
-          if let Ok(result) =
-            tera::Tera::one_off(&contents, &context, true)
-          {
-            fs::write(&path, result).unwrap();
-          }
-
-          let file_name = name.replace(".tera", "");
-          let _ = fs::rename(&path, path.with_file_name(file_name));
-        }
-      }
-    })
-  }
-
+  /// Creates a new widget from a template.
+  ///
+  /// Adds a new entry to the pack config and copies the appropriate
+  /// frontend template (e.g. React, Solid) to the widget's sub-directory.
   pub fn create_widget(
     &self,
     args: CreateWidgetArgs,
   ) -> anyhow::Result<()> {
-    // Create the pack directory within the config directory.
     let pack_dir = self.app_settings.config_dir.join(&args.name);
-    fs::create_dir_all(&pack_dir)?;
+    let widget_dir = pack_dir.join(&args.directory);
 
-    let template_dir = self
-      .app_handle
-      .path()
-      .resolve("../../templates/__base__", BaseDirectory::Resource)
-      .context("Unable to resolve base template resource.")?;
+    self.app_settings.init_template(
+      TemplateResource::Widget(args.frontend),
+      &widget_dir,
+      &HashMap::new(),
+    )?;
 
-    info!(
-      "Copying base template from {} to {}",
-      template_dir.display(),
-      pack_dir.display()
-    );
+    // Add widget to pack config.
+    let mut pack_config = read_and_parse_json::<PackConfig>(&pack_dir)?;
+    pack_config.widgets.push(widget_dir);
 
-    // Copy template files.
-    copy_dir_all(&template_dir, &pack_dir, false)?;
+    // Write the updated pack config to file.
+    fs::write(
+      pack_dir.join("zebar-pack.json"),
+      serde_json::to_string_pretty(&pack_config)? + "\n",
+    )?;
 
     Ok(())
   }

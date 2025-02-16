@@ -10,7 +10,9 @@ use serde::{Deserialize, Deserializer, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
 
-use crate::common::{read_and_parse_json, PathExt};
+use crate::common::{
+  copy_dir_all, read_and_parse_json, visit_deep, PathExt,
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -61,8 +63,30 @@ impl<'de> Deserialize<'de> for StartupConfig {
   }
 }
 
+/// Represents templates that can be initialized from the `templates/`
+/// directory.
+#[derive(Debug)]
+pub enum TemplateResource {
+  /// Template for creating a new widget pack.
+  Pack,
+
+  /// Template for creating a new widget with specified frontend
+  /// framework.
+  Widget(FrontendTemplate),
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FrontendTemplate {
+  ReactBuildless,
+  SolidTypescript,
+}
+
 #[derive(Debug)]
 pub struct AppSettings {
+  /// Handle to the Tauri application.
+  app_handle: AppHandle,
+
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
@@ -92,6 +116,7 @@ impl AppSettings {
     let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
 
     Ok(Self {
+      app_handle: app_handle.clone(),
       config_dir: config_dir.to_absolute()?,
       value: Arc::new(Mutex::new(settings)),
       _settings_change_rx,
@@ -305,6 +330,70 @@ impl AppSettings {
     }
 
     Ok(())
+  }
+
+  /// Copies and processes a template to the destination directory.
+  pub fn init_template(
+    &self,
+    template: TemplateResource,
+    dest_dir: &Path,
+    context: &HashMap<String, String>,
+  ) -> anyhow::Result<()> {
+    // Determine source template path based on template type.
+    let template_path = match template {
+      TemplateResource::Pack => "pack-template",
+      TemplateResource::Widget(frontend) => match frontend {
+        FrontendTemplate::ReactBuildless => {
+          "widget-templates/react-buildless"
+        }
+        FrontendTemplate::SolidTypescript => "widget-templates/solid-ts",
+      },
+    };
+
+    // Resolve the full path to template directory.
+    let template_dir = self
+      .app_handle
+      .path()
+      .resolve(
+        format!("../../templates/{}", template_path),
+        BaseDirectory::Resource,
+      )
+      .with_context(|| {
+        format!("Unable to resolve {} template resource.", template_path)
+      })?;
+
+    tracing::info!(
+      "Copying template from {} to {}",
+      template_dir.display(),
+      dest_dir.display()
+    );
+
+    // Copy all template files.
+    copy_dir_all(&template_dir, dest_dir, false)?;
+
+    let context = tera::Context::from_serialize(context)?;
+
+    // Run Tera template engine on all files with a `.tera` extension.
+    visit_deep(dest_dir, &|entry| {
+      if let Some(file_name) = entry.file_name().to_str() {
+        if file_name.ends_with(".tera") {
+          let path = entry.path();
+
+          if let Ok(contents) = fs::read_to_string(&path) {
+            // Render the template using Tera.
+            if let Ok(result) =
+              tera::Tera::one_off(&contents, &context, true)
+            {
+              let _ = fs::write(&path, result);
+            }
+
+            // Remove `.tera` extension from processed files.
+            let file_name = file_name.replace(".tera", "");
+            let _ = fs::rename(&path, path.with_file_name(file_name));
+          }
+        }
+      }
+    })
   }
 }
 
