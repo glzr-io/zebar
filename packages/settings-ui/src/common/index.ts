@@ -1,4 +1,4 @@
-export * from './desktop/CommunityPacksContext';
+export * from './desktop/MarketplacePacksContext';
 export * from './desktop/UserPacksContext';
 export * from './layout/AppLayout';
 export * from './layout/Sidebar';

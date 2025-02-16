@@ -8,7 +8,7 @@ import {
   MarketplacePacksProvider,
   UserPacksProvider,
 } from './common';
-import { Marketplace, MarketplacePack } from './community';
+import { Marketplace, MarketplacePack } from './marketplace';
 import { WidgetPack, WidgetPacks } from './user-packs';
 
 render(
