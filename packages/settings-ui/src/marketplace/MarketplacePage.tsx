@@ -10,7 +10,7 @@ type FilterQuery = {
   search: string;
 };
 
-export function Marketplace() {
+export function MarketplacePage() {
   const communityPacks = useMarketplacePacks();
 
   const filterQueryForm = createForm<FilterQuery>({

@@ -14,7 +14,7 @@ import { useUserPacks } from '~/common';
 import { WidgetPackCard } from './WidgetPackCard';
 import { CreateWidgetPackDialog } from './dialogs/CreateWidgetPackDialog';
 
-export function WidgetPacks() {
+export function WidgetPacksPage() {
   const userPacks = useUserPacks();
 
   return (

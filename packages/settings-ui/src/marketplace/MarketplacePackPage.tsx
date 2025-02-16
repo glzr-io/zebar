@@ -31,7 +31,7 @@ import { createEffect, createSignal, Show } from 'solid-js';
 
 import { useMarketplacePacks, WidgetPack } from '~/common';
 
-export function MarketplacePack() {
+export function MarketplacePackPage() {
   const params = useParams();
   const communityPacks = useMarketplacePacks();
 

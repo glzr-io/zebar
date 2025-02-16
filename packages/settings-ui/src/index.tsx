@@ -8,21 +8,21 @@ import {
   MarketplacePacksProvider,
   UserPacksProvider,
 } from './common';
-import { Marketplace, MarketplacePack } from './marketplace';
-import { WidgetPack, WidgetPacks } from './user-packs';
+import { MarketplacePage, MarketplacePackPage } from './marketplace';
+import { WidgetPage, WidgetPacksPage } from './user-packs';
 
 render(
   () => (
     <UserPacksProvider>
       <MarketplacePacksProvider>
         <HashRouter root={AppLayout}>
-          <Route path="/" component={WidgetPacks} />
-          <Route path="/packs/:packId" component={WidgetPack} />
-          <Route path="/packs/:packId/:widgetId" component={WidgetPack} />
-          <Route path="/marketplace" component={Marketplace} />
+          <Route path="/" component={WidgetPacksPage} />
+          <Route path="/packs/:packId" component={WidgetPage} />
+          <Route path="/packs/:packId/:widgetId" component={WidgetPage} />
+          <Route path="/marketplace" component={MarketplacePage} />
           <Route
             path="/marketplace/packs/:id"
-            component={MarketplacePack}
+            component={MarketplacePackPage}
           />
         </HashRouter>
       </MarketplacePacksProvider>

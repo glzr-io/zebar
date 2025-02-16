@@ -20,7 +20,7 @@ import {
 import { WidgetConfigForm } from './WidgetConfigForm';
 import { useUserPacks } from '~/common';
 
-export function WidgetPack() {
+export function WidgetPage() {
   const params = useParams();
 
   const { widgetConfigs, widgetStates, updateWidgetConfig, togglePreset } =

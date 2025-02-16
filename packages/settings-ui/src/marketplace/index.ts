@@ -1,2 +1,2 @@
-export * from './Marketplace';
-export * from './MarketplacePack';
+export * from './MarketplacePage';
+export * from './MarketplacePackPage';
