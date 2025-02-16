@@ -1,2 +1,2 @@
-export * from './CommunityPacks';
-export * from './CommunityPack';
+export * from './Marketplace';
+export * from './MarketplacePack';

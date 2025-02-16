@@ -10,7 +10,7 @@ import { createResource } from 'solid-js';
 
 import { WidgetPack } from './UserPacksContext';
 
-const communityPacksMock = [
+const marketplacePacksMock = [
   {
     id: 'system-monitor',
     name: 'System Monitor',
@@ -92,7 +92,7 @@ const communityPacksMock = [
   },
 ];
 
-type CommunityPacksContextState = {
+type MarketplacePacksContextState = {
   allPacks: Resource<WidgetPack[]>;
   selectedPack: Resource<WidgetPack>;
   previewPack: Accessor<WidgetPack | null>;
@@ -102,19 +102,22 @@ type CommunityPacksContextState = {
   stopPreview: () => void;
 };
 
-const CommunityPacksContext = createContext<CommunityPacksContextState>();
+const MarketplacePacksContext =
+  createContext<MarketplacePacksContextState>();
 
 // TODO: Remove once API calls are implemented.
 function wait(timeout: number) {
   return new Promise(resolve => setTimeout(resolve, timeout));
 }
 
-export function CommunityPacksProvider(props: { children: JSX.Element }) {
+export function MarketplacePacksProvider(props: {
+  children: JSX.Element;
+}) {
   // TODO: Fetch community packs from the backend.
   const [allPacks] = createResource(
     async () => {
       await wait(2000);
-      return communityPacksMock;
+      return marketplacePacksMock;
     },
     { initialValue: [] },
   );
@@ -152,7 +155,7 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
     setPreviewPack(null);
   }
 
-  const store: CommunityPacksContextState = {
+  const store: MarketplacePacksContextState = {
     allPacks,
     selectedPack,
     previewPack,
@@ -163,18 +166,18 @@ export function CommunityPacksProvider(props: { children: JSX.Element }) {
   };
 
   return (
-    <CommunityPacksContext.Provider value={store}>
+    <MarketplacePacksContext.Provider value={store}>
       {props.children}
-    </CommunityPacksContext.Provider>
+    </MarketplacePacksContext.Provider>
   );
 }
 
-export function useCommunityPacks() {
-  const context = useContext(CommunityPacksContext);
+export function useMarketplacePacks() {
+  const context = useContext(MarketplacePacksContext);
 
   if (!context) {
     throw new Error(
-      '`useCommunityPacks` must be used within a `CommunityPacksProvider`.',
+      '`useMarketplacePacks` must be used within a `MarketplacePacksProvider`.',
     );
   }
 

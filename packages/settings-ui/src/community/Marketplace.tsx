@@ -4,14 +4,14 @@ import { IconDownload, IconEye } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { createMemo } from 'solid-js';
 
-import { useCommunityPacks } from '~/common';
+import { useMarketplacePacks } from '~/common';
 
 type FilterQuery = {
   search: string;
 };
 
-export function CommunityPacks() {
-  const communityPacks = useCommunityPacks();
+export function Marketplace() {
+  const communityPacks = useMarketplacePacks();
 
   const filterQueryForm = createForm<FilterQuery>({
     search: '',
@@ -35,7 +35,7 @@ export function CommunityPacks() {
   return (
     <div class="container mx-auto py-6 space-y-6">
       <div class="space-y-1">
-        <h1 class="text-3xl font-bold tracking-tight">Browse Community</h1>
+        <h1 class="text-3xl font-bold tracking-tight">Marketplace</h1>
 
         <p class="text-muted-foreground">
           Discover and install widget packs that other users have created.
@@ -56,7 +56,7 @@ export function CommunityPacks() {
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredPacks().map(pack => (
           <div class="group relative">
-            <A href={`/community/${pack.id}`} class="block">
+            <A href={`/marketplace/packs/${pack.id}`} class="block">
               <div class="overflow-hidden rounded-lg aspect-[3/2] bg-muted">
                 <img
                   src={pack.previewUrls[0] || '/placeholder.svg'}

@@ -1,31 +1,31 @@
 /* @refresh reload */
 import './index.css';
-import { HashRouter, Navigate, Route } from '@solidjs/router';
+import { HashRouter, Route } from '@solidjs/router';
 import { render } from 'solid-js/web';
 
 import {
   AppLayout,
-  CommunityPacksProvider,
+  MarketplacePacksProvider,
   UserPacksProvider,
 } from './common';
-import { CommunityPacks, CommunityPack } from './community';
+import { Marketplace, MarketplacePack } from './community';
 import { WidgetPack, WidgetPacks } from './user-packs';
 
 render(
   () => (
     <UserPacksProvider>
-      <CommunityPacksProvider>
+      <MarketplacePacksProvider>
         <HashRouter root={AppLayout}>
+          <Route path="/" component={WidgetPacks} />
+          <Route path="/packs/:packId" component={WidgetPack} />
+          <Route path="/packs/:packId/:widgetId" component={WidgetPack} />
+          <Route path="/marketplace" component={Marketplace} />
           <Route
-            path="/"
-            component={() => <Navigate href="/user-packs" />}
+            path="/marketplace/packs/:id"
+            component={MarketplacePack}
           />
-          <Route path="/user-packs" component={WidgetPacks} />
-          <Route path="/user-packs/:path" component={WidgetPack} />
-          <Route path="/community" component={CommunityPacks} />
-          <Route path="/community/:id" component={CommunityPack} />
         </HashRouter>
-      </CommunityPacksProvider>
+      </MarketplacePacksProvider>
     </UserPacksProvider>
   ),
   document.getElementById('root')!,

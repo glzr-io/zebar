@@ -74,11 +74,11 @@ export function Sidebar(props: SidebarProps) {
       <SidebarItem
         isCollapsed={isCollapsed()}
         icon={<IconWorldSearch class="size-6" />}
-        tooltip="Browse Community"
+        tooltip="Marketplace"
         variant="ghost"
       >
-        <A href="/community">
-          <div class="truncate">Browse Community</div>
+        <A href="/marketplace">
+          <div class="truncate">Marketplace</div>
         </A>
       </SidebarItem>
 

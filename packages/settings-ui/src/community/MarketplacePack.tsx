@@ -29,11 +29,11 @@ import {
 
 import { createEffect, createSignal, Show } from 'solid-js';
 
-import { useCommunityPacks, WidgetPack } from '~/common';
+import { useMarketplacePacks, WidgetPack } from '~/common';
 
-export function CommunityPack() {
+export function MarketplacePack() {
   const params = useParams();
-  const communityPacks = useCommunityPacks();
+  const communityPacks = useMarketplacePacks();
 
   const [currentImageIndex, setCurrentImageIndex] = createSignal(0);
 
@@ -62,8 +62,8 @@ export function CommunityPack() {
                 <Breadcrumb>
                   <BreadcrumbList>
                     <BreadcrumbItem>
-                      <BreadcrumbLink href="/community">
-                        Browse Community
+                      <BreadcrumbLink href="/marketplace">
+                        Marketplace
                       </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
