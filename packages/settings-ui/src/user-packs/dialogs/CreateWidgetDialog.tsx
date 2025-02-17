@@ -1,62 +1,49 @@
 import {
-  SelectField,
   Button,
-  TextField,
   DialogFooter,
+  DialogHeader,
+  DialogContent,
+  Dialog,
+  DialogTitle,
+  DialogDescription,
 } from '@glzr/components';
-import { createForm, Field } from 'smorf';
+import { createForm } from 'smorf';
 
-import { CreateWidgetForm } from '~/common';
+import { CreateWidgetArgs } from '~/common';
+import { CreateWidgetForm } from '../CreateWidgetForm';
 
 export type CreateWidgetDialogProps = {
-  onSubmit: (widget: CreateWidgetForm) => void;
+  onSubmit: (widget: CreateWidgetArgs) => void;
 };
 
 export function CreateWidgetDialog(props: CreateWidgetDialogProps) {
-  const form = createForm<CreateWidgetForm>({
+  const form = createForm<CreateWidgetArgs>({
     name: '',
     template: 'react-buildless',
   });
 
   return (
-    <div class="grid gap-4 py-4">
-      <div class="grid gap-2">
-        <Field of={form} path="name">
-          {inputProps => (
-            <TextField
-              label="Widget Name"
-              placeholder="My Cool Widget"
-              {...inputProps}
-            />
-          )}
-        </Field>
-      </div>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Add new widget</DialogTitle>
+        <DialogDescription>
+          Create a new widget in this pack.
+        </DialogDescription>
+      </DialogHeader>
 
-      <div class="grid gap-2">
-        <Field of={form} path="template">
-          {inputProps => (
-            <SelectField
-              label="Template"
-              placeholder="Select a template"
-              options={[
-                { label: 'React Buildless', value: 'react-buildless' },
-                { label: 'Solid TypeScript', value: 'solid-ts' },
-              ]}
-              {...inputProps}
-            />
-          )}
-        </Field>
+      <div class="py-4">
+        <CreateWidgetForm form={form} />
       </div>
 
       <DialogFooter>
-        <Button
-          type="submit"
-          onClick={() => props.onSubmit(form.value)}
-          disabled={!form.value.name}
-        >
-          Create Widget
-        </Button>
+        <Dialog.CloseButton>
+          <Button variant="outline">Cancel</Button>
+        </Dialog.CloseButton>
+
+        <Dialog.CloseButton onClick={() => props.onSubmit(form.value)}>
+          <Button disabled={!form.value.name.trim()}>Create widget</Button>
+        </Dialog.CloseButton>
       </DialogFooter>
-    </div>
+    </DialogContent>
   );
 }

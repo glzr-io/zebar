@@ -2,6 +2,8 @@ import {
   Resizable,
   ResizableHandle,
   ResizablePanel,
+  ToastList,
+  ToastRegion,
 } from '@glzr/components';
 import { createSignal, Show, type JSX } from 'solid-js';
 import { RouteSectionProps } from '@solidjs/router';
@@ -38,6 +40,10 @@ export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
           <PreviewBar pack={pack()} onStop={communityPacks.stopPreview} />
         )}
       </Show>
+
+      <ToastRegion>
+        <ToastList />
+      </ToastRegion>
     </>
   );
 }

@@ -1,56 +1,25 @@
 import {
   Button,
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
-  FormDescription,
-  FormField,
-  FormLabel,
-  Badge,
   Card,
   CardContent,
   Table,
-  TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   toaster,
-  AlertDialogClose,
+  TextField,
+  ChipField,
 } from '@glzr/components';
-import { useParams } from '@solidjs/router';
-import {
-  IconPlus,
-  IconTrash,
-  IconCopy,
-  IconUpload,
-  IconX,
-  IconAlertTriangle,
-} from '@tabler/icons-solidjs';
-import { createForm } from 'smorf';
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  For,
-  on,
-  Show,
-} from 'solid-js';
+import { IconPlus, IconCopy } from '@tabler/icons-solidjs';
+import { createForm, Field } from 'smorf';
+import { createSignal } from 'solid-js';
 import * as z from 'zod';
+import { Widget } from 'zebar';
 
-import { WidgetConfigForm } from './WidgetConfigForm';
-import { useUserPacks } from '~/common';
+import { CreateWidgetArgs } from '~/common';
+import { CreateWidgetDialog } from './dialogs/CreateWidgetDialog';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -68,12 +37,8 @@ const formSchema = z.object({
 });
 
 export function WidgetPackPage() {
-  const [widgets, setWidgets] = createSignal<Widget[]>([]);
-  const [newWidgetOpen, setNewWidgetOpen] = createSignal(false);
-  const [deleteWidgetId, setDeleteWidgetId] = createSignal<string | null>(
-    null,
-  );
   const fileInputRef = createSignal<HTMLInputElement | null>(null);
+  const [widgets, setWidgets] = createSignal<Widget[]>([]);
 
   const form = createForm<z.infer<typeof formSchema>>({
     name: '',
@@ -82,30 +47,16 @@ export function WidgetPackPage() {
     previewImages: [],
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    toaster.show({
-      title: 'Widget pack updated',
-      description: 'Your changes have been saved successfully.',
-    });
-  }
-
-  function handleAddWidget(name: string, template: Widget['template']) {
-    const newWidget = {
-      id: Math.random().toString(36).substring(7),
-      name,
-      template,
-    };
-    setWidgets([...widgets, newWidget]);
-    setNewWidgetOpen(false);
+  function handleAddWidget(widget: CreateWidgetArgs) {
+    // setWidgets([...widgets, widget]);
     toaster.show({
       title: 'Widget added',
-      description: `${name} has been added to the widget pack.`,
+      description: `${widget.name} has been added to the widget pack.`,
     });
   }
 
   function handleDeleteWidget(id: string) {
-    setWidgets(widgets.filter(widget => widget.id !== id));
-    setDeleteWidgetId(null);
+    // setWidgets(widgets.filter(widget => widget.id !== id));
     toaster.show({
       title: 'Widget deleted',
       description: 'The widget has been removed from the pack.',
@@ -119,41 +70,22 @@ export function WidgetPackPage() {
     });
   }
 
-  function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
-    const files = event.target.files;
-    if (files) {
-      const newImages = Array.from(files).map(file =>
-        URL.createObjectURL(file),
-      );
-      setPreviewImages([...previewImages, ...newImages]);
-      form.setValue('previewImages', [...previewImages, ...newImages]);
-    }
-  }
+  // function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
+  //   const files = event.target.files;
+  //   if (files) {
+  //     const newImages = Array.from(files).map(file =>
+  //       URL.createObjectURL(file),
+  //     );
+  //     setPreviewImages([...previewImages, ...newImages]);
+  //     form.setValue('previewImages', [...previewImages, ...newImages]);
+  //   }
+  // }
 
-  const removeImage = (index: number) => {
-    const newImages = previewImages.filter((_, i) => i !== index);
-    setPreviewImages(newImages);
-    form.setValue('previewImages', newImages);
-  };
-
-  const addTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      const value = (event.target as HTMLInputElement).value.trim();
-      if (value && !tags.includes(value)) {
-        const newTags = [...tags, value];
-        setTags(newTags);
-        form.setValue('tags', newTags);
-        (event.target as HTMLInputElement).value = '';
-      }
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    const newTags = tags.filter(tag => tag !== tagToRemove);
-    setTags(newTags);
-    form.setValue('tags', newTags);
-  };
+  // const removeImage = (index: number) => {
+  //   const newImages = previewImages.filter((_, i) => i !== index);
+  //   setPreviewImages(newImages);
+  //   form.setValue('previewImages', newImages);
+  // };
 
   return (
     <div class="container mx-auto py-6 max-w-4xl">
@@ -165,83 +97,39 @@ export function WidgetPackPage() {
         </Button>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} class="space-y-8">
+      <form class="space-y-8">
         <Card>
           <CardContent class="pt-6">
             <div class="grid gap-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="My Awesome Widget Pack"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      This will be used as the directory name (as a slug)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+              <Field of={form} path="name">
+                {inputProps => (
+                  <TextField
+                    placeholder="My Awesome Widget Pack"
+                    description="This will be used as the directory name (as a slug)"
+                    {...inputProps()}
+                  />
                 )}
-              />
+              </Field>
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="A collection of beautiful widgets..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <Field of={form} path="description">
+                {inputProps => (
+                  <TextField
+                    placeholder="A collection of beautiful widgets..."
+                    {...inputProps()}
+                  />
                 )}
-              />
+              </Field>
 
-              <FormField
-                control={form.control}
-                name="tags"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Tags</FormLabel>
-                    <FormControl>
-                      <div class="space-y-2">
-                        <Input
-                          placeholder="Press Enter to add tags..."
-                          onKeyDown={addTag}
-                        />
-                        <div class="flex flex-wrap gap-2">
-                          {tags.map(tag => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              class="cursor-pointer"
-                              onClick={() => removeTag(tag)}
-                            >
-                              {tag}
-                              <X class="ml-1 h-3 w-3" />
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Common tags: catpuccin, nord, weather, system-monitor
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+              <Field of={form} path="tags">
+                {inputProps => (
+                  <ChipField
+                    placeholder="Press enter to add tags..."
+                    {...inputProps()}
+                  />
                 )}
-              />
+              </Field>
 
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="previewImages"
                 render={() => (
@@ -295,7 +183,7 @@ export function WidgetPackPage() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
             </div>
           </CardContent>
         </Card>
@@ -304,22 +192,15 @@ export function WidgetPackPage() {
           <CardContent class="pt-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-xl font-semibold">Widgets</h2>
-              <Dialog open={newWidgetOpen} onOpenChange={setNewWidgetOpen}>
-                <DialogTrigger asChild>
-                  <Button>
+
+              <Dialog>
+                <DialogTrigger>
+                  <Button variant="outline">
                     <IconPlus class="mr-2 h-4 w-4" />
                     Add Widget
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Widget</DialogTitle>
-                    <DialogDescription>
-                      Create a new widget in this pack
-                    </DialogDescription>
-                  </DialogHeader>
-                  <NewWidgetForm onSubmit={handleAddWidget} />
-                </DialogContent>
+                <CreateWidgetDialog onSubmit={handleAddWidget} />
               </Dialog>
             </div>
 
@@ -331,9 +212,10 @@ export function WidgetPackPage() {
                   <TableHead class="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {widgets.map(widget => (
-                  <TableRow key={widget.id}>
+
+              {/* <TableBody>
+                {widgets().map(widget => (
+                  <TableRow>
                     <TableCell>{widget.name}</TableCell>
                     <TableCell>{widget.template}</TableCell>
                     <TableCell>
@@ -392,7 +274,8 @@ export function WidgetPackPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {widgets.length === 0 && (
+
+                {widgets().length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={3}
@@ -402,7 +285,7 @@ export function WidgetPackPage() {
                     </TableCell>
                   </TableRow>
                 )}
-              </TableBody>
+              </TableBody> */}
             </Table>
           </CardContent>
         </Card>

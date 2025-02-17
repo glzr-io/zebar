@@ -68,7 +68,7 @@ export type CreateWidgetPackForm = {
   name: string;
 };
 
-export type CreateWidgetForm = {
+export type CreateWidgetArgs = {
   name: string;
   template: 'react-buildless' | 'solid-ts';
 };
@@ -79,7 +79,7 @@ type UserPacksContextState = {
   widgetConfigs: Resource<Record<string, WidgetConfig>>;
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (pack: CreateWidgetPackForm) => Promise<void>;
-  createWidget: (widget: CreateWidgetForm) => Promise<void>;
+  createWidget: (widget: CreateWidgetArgs) => Promise<void>;
   deletePack: (packId: string) => Promise<void>;
   updateWidgetConfig: (
     configPath: string,
@@ -168,7 +168,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     return invoke<void>('create_widget_pack', { pack });
   }
 
-  async function createWidget(widget: CreateWidgetForm) {
+  async function createWidget(widget: CreateWidgetArgs) {
     return invoke<void>('create_widget', { widget });
   }
 
