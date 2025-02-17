@@ -88,7 +88,7 @@ export function WidgetPackPage() {
   // };
 
   return (
-    <div class="container mx-auto py-6 max-w-4xl">
+    <div class="container mx-auto pt-3.5 pb-32">
       <AppBreadcrumbs
         entries={[
           {

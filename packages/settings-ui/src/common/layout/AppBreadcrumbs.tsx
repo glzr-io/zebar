@@ -1,4 +1,5 @@
 import { Breadcrumbs, BreadcrumbsProps } from '@glzr/components';
+import { IconHome } from '@tabler/icons-solidjs';
 import { createMemo } from 'solid-js';
 
 export function AppBreadcrumbs(props: BreadcrumbsProps) {
@@ -6,11 +7,11 @@ export function AppBreadcrumbs(props: BreadcrumbsProps) {
     return [
       {
         href: '/',
-        content: 'Home',
+        content: () => <IconHome class="h-4 w-4 my-0.5" />,
       },
       ...props.entries,
     ];
   });
 
-  return <Breadcrumbs entries={entries()} />;
+  return <Breadcrumbs class="mb-5" entries={entries()} />;
 }

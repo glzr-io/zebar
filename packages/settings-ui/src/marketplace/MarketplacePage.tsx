@@ -33,7 +33,7 @@ export function MarketplacePage() {
   );
 
   return (
-    <div class="container mx-auto py-6 space-y-6">
+    <div class="container mx-auto pt-3.5 pb-32 space-y-6">
       <div class="space-y-3">
         <AppBreadcrumbs
           entries={[{ href: '/marketplace', content: 'Marketplace' }]}

@@ -18,11 +18,11 @@ export function WidgetPacksPage() {
   const userPacks = useUserPacks();
 
   return (
-    <div class="container mx-auto pt-6">
+    <div class="container mx-auto pt-3.5 pb-32">
       <AppBreadcrumbs entries={[]} />
 
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">Widget Packs</h1>
+        <h1 class="text-3xl font-bold">My Widgets</h1>
         <div class="flex gap-2">
           <Dialog>
             <DialogTrigger>

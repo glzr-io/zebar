@@ -42,7 +42,7 @@ export function MarketplacePackPage() {
   }
 
   return (
-    <div class="container mx-auto pt-6 pb-40">
+    <div class="container mx-auto pt-3.5 pb-32">
       <Show when={communityPacks.selectedPack()}>
         {selectedPack => (
           <div class="space-y-8">
