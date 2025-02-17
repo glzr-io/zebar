@@ -8,17 +8,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  toaster,
   TextField,
   ChipField,
+  FileField,
 } from '@glzr/components';
-import { IconPlus, IconCopy } from '@tabler/icons-solidjs';
+import { IconPlus } from '@tabler/icons-solidjs';
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { createForm, Field } from 'smorf';
 import { createSignal } from 'solid-js';
 import * as z from 'zod';
 import { Widget } from 'zebar';
 
-import { AppBreadcrumbs, CreateWidgetArgs } from '~/common';
+import { AppBreadcrumbs, useUserPacks } from '~/common';
 import { CreateWidgetDialog } from './dialogs';
 
 const formSchema = z.object({
@@ -37,6 +38,8 @@ const formSchema = z.object({
 });
 
 export function WidgetPackPage() {
+  const userPacks = useUserPacks();
+
   const fileInputRef = createSignal<HTMLInputElement | null>(null);
   const [widgets, setWidgets] = createSignal<Widget[]>([]);
 
@@ -47,45 +50,22 @@ export function WidgetPackPage() {
     previewImages: [],
   });
 
-  function handleAddWidget(widget: CreateWidgetArgs) {
-    // setWidgets([...widgets, widget]);
-    toaster.show({
-      title: 'Widget added',
-      description: `${widget.name} has been added to the widget pack.`,
-    });
+  function onFileSelect(value: File[]) {
+    console.log('files', value);
+
+    // setSelectedFiles(files);
+
+    // Update form with file paths.
+    const paths = value.map(file => `./resources/${file.name}`);
+    form.setFieldValue('previewImages', paths);
   }
 
-  function handleDeleteWidget(id: string) {
-    // setWidgets(widgets.filter(widget => widget.id !== id));
-    toaster.show({
-      title: 'Widget deleted',
-      description: 'The widget has been removed from the pack.',
-    });
+  function removeImage(index: number) {
+    // setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    // packForm.setFieldValue('previewImages', prev =>
+    //   prev.filter((_, i) => i !== index),
+    // );
   }
-
-  function handleDuplicatePack() {
-    toaster.show({
-      title: 'Widget pack duplicated',
-      description: 'A copy of this widget pack has been created.',
-    });
-  }
-
-  // function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
-  //   const files = event.target.files;
-  //   if (files) {
-  //     const newImages = Array.from(files).map(file =>
-  //       URL.createObjectURL(file),
-  //     );
-  //     setPreviewImages([...previewImages, ...newImages]);
-  //     form.setValue('previewImages', [...previewImages, ...newImages]);
-  //   }
-  // }
-
-  // const removeImage = (index: number) => {
-  //   const newImages = previewImages.filter((_, i) => i !== index);
-  //   setPreviewImages(newImages);
-  //   form.setValue('previewImages', newImages);
-  // };
 
   return (
     <div class="container mx-auto pt-3.5 pb-32">
@@ -100,23 +80,18 @@ export function WidgetPackPage() {
         ]}
       />
 
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">Edit Widget Pack</h1>
-        <Button onClick={handleDuplicatePack}>
-          <IconCopy class="mr-2 h-4 w-4" />
-          Duplicate Pack
-        </Button>
-      </div>
+      <h1 class="text-3xl font-bold">Edit Widget Pack</h1>
 
       <form class="space-y-8">
         <Card>
           <CardContent class="pt-6">
-            <div class="grid gap-6">
+            <div class="grid gap-4">
               <Field of={form} path="name">
                 {inputProps => (
                   <TextField
+                    label="Name"
                     placeholder="My Awesome Widget Pack"
-                    description="This will be used as the directory name (as a slug)"
+                    description="This will be used as the directory name (as a slug)."
                     {...inputProps()}
                   />
                 )}
@@ -125,6 +100,7 @@ export function WidgetPackPage() {
               <Field of={form} path="description">
                 {inputProps => (
                   <TextField
+                    label="Description"
                     placeholder="A collection of beautiful widgets..."
                     {...inputProps()}
                   />
@@ -134,67 +110,37 @@ export function WidgetPackPage() {
               <Field of={form} path="tags">
                 {inputProps => (
                   <ChipField
+                    label="Tags"
                     placeholder="Press enter to add tags..."
                     {...inputProps()}
                   />
                 )}
               </Field>
 
-              {/* <FormField
-                control={form.control}
-                name="previewImages"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Preview Images</FormLabel>
-                    <FormControl>
-                      <div class="space-y-4">
-                        <div class="flex items-center gap-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <Upload class="mr-2 h-4 w-4" />
-                            Upload Images
-                          </Button>
-                          <input
-                            type="file"
-                            ref={fileInputRef}
-                            class="hidden"
-                            multiple
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                          />
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {previewImages.map((image, index) => (
-                            <div
-                              key={index}
-                              class="relative aspect-video group"
-                            >
-                              <img
-                                src={image || '/placeholder.svg'}
-                                alt={`Preview ${index + 1}`}
-                                class="rounded-lg object-cover w-full h-full"
-                              />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => removeImage(index)}
-                              >
-                                <X class="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <Field of={form} path="previewImages">
+                {inputProps => (
+                  <FileField
+                    label="Preview Images"
+                    type="file"
+                    multiple
+                    placeholder="A collection of beautiful widgets..."
+                    onClick={e => {
+                      e.preventDefault();
+
+                      openFileDialog({
+                        multiple: true,
+                        filters: [
+                          {
+                            name: 'Images',
+                            extensions: ['png', 'jpg', 'jpeg'],
+                          },
+                        ],
+                      });
+                    }}
+                    onChange={onFileSelect}
+                  />
                 )}
-              /> */}
+              </Field>
             </div>
           </CardContent>
         </Card>
@@ -211,7 +157,7 @@ export function WidgetPackPage() {
                     Add Widget
                   </Button>
                 </DialogTrigger>
-                <CreateWidgetDialog onSubmit={handleAddWidget} />
+                <CreateWidgetDialog onSubmit={userPacks.createWidget} />
               </Dialog>
             </div>
 

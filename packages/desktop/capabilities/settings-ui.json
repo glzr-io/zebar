@@ -8,6 +8,8 @@
     "core:event:default",
     "core:path:allow-resolve-directory",
     "core:path:default",
-    "core:window:default"
+    "core:window:default",
+    "dialog:default",
+    "dialog:allow-open"
   ]
 }
