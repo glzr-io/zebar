@@ -18,8 +18,8 @@ import { createSignal } from 'solid-js';
 import * as z from 'zod';
 import { Widget } from 'zebar';
 
-import { CreateWidgetArgs } from '~/common';
-import { CreateWidgetDialog } from './dialogs/CreateWidgetDialog';
+import { AppBreadcrumbs, CreateWidgetArgs } from '~/common';
+import { CreateWidgetDialog } from './dialogs';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -89,6 +89,17 @@ export function WidgetPackPage() {
 
   return (
     <div class="container mx-auto py-6 max-w-4xl">
+      <AppBreadcrumbs
+        entries={[
+          {
+            href: 'TODO',
+            content: 'TODO',
+            // href: `/packs/${selectedPack().id}`,
+            // content: selectedPack().name,
+          },
+        ]}
+      />
+
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Edit Widget Pack</h1>
         <Button onClick={handleDuplicatePack}>

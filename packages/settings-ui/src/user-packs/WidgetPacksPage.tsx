@@ -10,15 +10,17 @@ import {
 import { IconBrandGithub, IconFolderPlus } from '@tabler/icons-solidjs';
 import { For } from 'solid-js';
 
-import { useUserPacks } from '~/common';
+import { AppBreadcrumbs, useUserPacks } from '~/common';
 import { WidgetPackCard } from './WidgetPackCard';
-import { CreateWidgetPackDialog } from './dialogs/CreateWidgetPackDialog';
+import { CreateWidgetPackDialog } from './dialogs';
 
 export function WidgetPacksPage() {
   const userPacks = useUserPacks();
 
   return (
-    <div class="container mx-auto p-6">
+    <div class="container mx-auto pt-6">
+      <AppBreadcrumbs entries={[]} />
+
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Widget Packs</h1>
         <div class="flex gap-2">

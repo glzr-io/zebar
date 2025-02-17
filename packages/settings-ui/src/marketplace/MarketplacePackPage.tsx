@@ -1,27 +1,17 @@
 import {
   Badge,
   Button,
-  Separator,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbPage,
   Card,
   CardContent,
 } from '@glzr/components';
-import { A, useParams } from '@solidjs/router';
+import { useParams } from '@solidjs/router';
 import {
   IconDownload,
   IconEye,
-  IconHeart,
-  IconShare2,
-  IconArrowLeft,
   IconChevronLeft,
   IconChevronRight,
   IconBrandGithub,
@@ -29,7 +19,7 @@ import {
 
 import { createEffect, createSignal, Show } from 'solid-js';
 
-import { useMarketplacePacks, WidgetPack } from '~/common';
+import { AppBreadcrumbs, useMarketplacePacks, WidgetPack } from '~/common';
 
 export function MarketplacePackPage() {
   const params = useParams();
@@ -56,26 +46,18 @@ export function MarketplacePackPage() {
       <Show when={communityPacks.selectedPack()}>
         {selectedPack => (
           <div class="space-y-8">
-            {/* Header */}
             <div class="space-y-3">
-              <div class="flex items-center gap-2">
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="/marketplace">
-                        Marketplace
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>
-                        {selectedPack().name}
-                      </BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-              </div>
+              <AppBreadcrumbs
+                entries={[
+                  { href: '/marketplace', content: 'Marketplace' },
+                  {
+                    href: `/marketplace/${selectedPack().id}`,
+                    content: selectedPack().name,
+                  },
+                ]}
+              />
 
+              {/* Header */}
               <div class="flex items-center gap-4">
                 <h1 class="text-3xl font-bold tracking-tight">
                   {selectedPack().name}

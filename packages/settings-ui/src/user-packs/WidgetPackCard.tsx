@@ -21,7 +21,7 @@ import {
 } from '@tabler/icons-solidjs';
 
 import { WidgetPack } from '~/common';
-import { DeleteWidgetPackDialog } from './dialogs/DeleteWidgetPackDialog';
+import { DeleteWidgetPackDialog } from './dialogs';
 
 export interface WidgetPackCardProps {
   pack: WidgetPack;

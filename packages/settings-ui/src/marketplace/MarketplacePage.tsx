@@ -4,7 +4,7 @@ import { IconDownload, IconEye } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { createMemo } from 'solid-js';
 
-import { useMarketplacePacks } from '~/common';
+import { AppBreadcrumbs, useMarketplacePacks } from '~/common';
 
 type FilterQuery = {
   search: string;
@@ -34,7 +34,11 @@ export function MarketplacePage() {
 
   return (
     <div class="container mx-auto py-6 space-y-6">
-      <div class="space-y-1">
+      <div class="space-y-3">
+        <AppBreadcrumbs
+          entries={[{ href: '/marketplace', content: 'Marketplace' }]}
+        />
+
         <h1 class="text-3xl font-bold tracking-tight">Marketplace</h1>
 
         <p class="text-muted-foreground">
