@@ -12,7 +12,8 @@ import {
   ChipField,
   FileField,
 } from '@glzr/components';
-import { IconPlus } from '@tabler/icons-solidjs';
+import { IconPhoto, IconPlus, IconX } from '@tabler/icons-solidjs';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { createForm, Field } from 'smorf';
 import { createSignal } from 'solid-js';
@@ -117,17 +118,15 @@ export function WidgetPackPage() {
                 )}
               </Field>
 
-              <Field of={form} path="previewImages">
-                {inputProps => (
-                  <FileField
-                    label="Preview Images"
-                    type="file"
-                    multiple
-                    placeholder="A collection of beautiful widgets..."
-                    onClick={e => {
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm font-medium">Preview Images</label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async e => {
                       e.preventDefault();
-
-                      openFileDialog({
+                      const selected = await openFileDialog({
                         multiple: true,
                         filters: [
                           {
@@ -136,11 +135,48 @@ export function WidgetPackPage() {
                           },
                         ],
                       });
+                      if (selected) {
+                        form.setFieldValue('previewImages', selected);
+                      }
                     }}
-                    onChange={onFileSelect}
-                  />
-                )}
-              </Field>
+                  >
+                    <IconPlus class="h-4 w-4 mr-2" />
+                    Add Images
+                  </Button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  {form.value.previewImages.length > 0 ? (
+                    form.value.previewImages.map((path, index) => (
+                      <div class="relative group aspect-video">
+                        <img
+                          src={convertFileSrc(path)}
+                          alt={`Preview ${index + 1}`}
+                          class="w-full h-full object-cover rounded-md"
+                        />
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeImage(index)}
+                        >
+                          <IconX class="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <div class="col-span-2 border-2 border-dashed rounded-md p-8 text-center">
+                      <div class="text-muted-foreground">
+                        <IconPhoto class="h-8 w-8 mx-auto mb-2" />
+                        <p>No preview images selected</p>
+                        <p class="text-sm">
+                          Click "Add Images" to select preview images
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
