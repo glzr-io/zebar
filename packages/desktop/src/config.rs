@@ -475,6 +475,33 @@ impl Config {
 
     Ok(())
   }
+
+  /// Deletes a widget from a pack.
+  ///
+  /// Removes an entry from the pack config and deletes the widget's
+  /// sub-directory.
+  pub fn delete_widget(
+    &self,
+    widget_directory: &str,
+    pack_directory: &str,
+  ) -> anyhow::Result<()> {
+    let pack_dir = self.app_settings.config_dir.join(pack_directory);
+    let widget_dir = pack_dir.join(widget_directory);
+
+    fs::remove_dir_all(&widget_dir)?;
+
+    // Remove widget from pack config.
+    let mut pack_config = read_and_parse_json::<PackConfig>(&pack_dir)?;
+    pack_config.widgets.retain(|path| path != &widget_dir);
+
+    // Write the updated pack config to file.
+    fs::write(
+      pack_dir.join("zebar-pack.json"),
+      serde_json::to_string_pretty(&pack_config)? + "\n",
+    )?;
+
+    Ok(())
+  }
 }
 
 /// Helper function for setting a default value for a boolean field.

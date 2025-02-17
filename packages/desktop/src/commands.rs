@@ -88,7 +88,7 @@ pub async fn update_widget_config(
 }
 
 #[tauri::command]
-pub async fn create_widget_pack_config(
+pub async fn create_widget_pack(
   args: CreateWidgetPackArgs,
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<(), String> {
@@ -98,11 +98,22 @@ pub async fn create_widget_pack_config(
 }
 
 #[tauri::command]
-pub async fn create_widget_config(
+pub async fn create_widget(
   args: CreateWidgetArgs,
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<(), String> {
   config.create_widget(args).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_widget(
+  widget_directory: String,
+  pack_directory: String,
+  config: State<'_, Arc<Config>>,
+) -> anyhow::Result<(), String> {
+  config
+    .delete_widget(&widget_directory, &pack_directory)
+    .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
