@@ -9,7 +9,7 @@ import {
   UserPacksProvider,
 } from './common';
 import { MarketplacePage, MarketplacePackPage } from './marketplace';
-import { WidgetPage, WidgetPacksPage } from './user-packs';
+import { WidgetPage, WidgetPacksPage, WidgetPackPage } from './user-packs';
 
 render(
   () => (
@@ -17,7 +17,7 @@ render(
       <MarketplacePacksProvider>
         <HashRouter root={AppLayout}>
           <Route path="/" component={WidgetPacksPage} />
-          <Route path="/packs/:packId" component={WidgetPage} />
+          <Route path="/packs/:packId" component={WidgetPackPage} />
           <Route path="/packs/:packId/:widgetId" component={WidgetPage} />
           <Route path="/marketplace" component={MarketplacePage} />
           <Route

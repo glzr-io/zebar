@@ -68,13 +68,19 @@ export type CreateWidgetPackForm = {
   name: string;
 };
 
+export type CreateWidgetForm = {
+  name: string;
+  template: 'react-buildless' | 'solid-ts';
+};
+
 type UserPacksContextState = {
   communityPacks: Resource<WidgetPack[]>;
   localPacks: Resource<WidgetPack[]>;
   widgetConfigs: Resource<Record<string, WidgetConfig>>;
   widgetStates: Resource<Record<string, Widget>>;
-  createPack: (pack: CreateWidgetPackForm) => void;
-  deletePack: (packId: string) => void;
+  createPack: (pack: CreateWidgetPackForm) => Promise<void>;
+  createWidget: (widget: CreateWidgetForm) => Promise<void>;
+  deletePack: (packId: string) => Promise<void>;
   updateWidgetConfig: (
     configPath: string,
     newConfig: WidgetConfig,
@@ -159,11 +165,15 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   }
 
   async function createPack(pack: CreateWidgetPackForm) {
-    // TODO
+    return invoke<void>('create_widget_pack', { pack });
+  }
+
+  async function createWidget(widget: CreateWidgetForm) {
+    return invoke<void>('create_widget', { widget });
   }
 
   async function deletePack(packId: string) {
-    // TODO
+    return invoke<void>('delete_widget_pack', { packId });
   }
 
   const store: UserPacksContextState = {
@@ -174,6 +184,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     updateWidgetConfig,
     togglePreset,
     createPack,
+    createWidget,
     deletePack,
   };
 
