@@ -16,6 +16,7 @@ import {
   IconChevronRight,
   IconBrandGithub,
 } from '@tabler/icons-solidjs';
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
 
 import { createEffect, createSignal, Show } from 'solid-js';
 
@@ -154,9 +155,11 @@ export function MarketplacePackPage() {
                     <div class="space-y-2 mt-3">
                       <h3 class="font-medium">Repository</h3>
                       <a
-                        href={selectedPack().versions?.[0].repoUrl}
-                        class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-                        target="_blank"
+                        class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+                        onClick={e => {
+                          e.preventDefault();
+                          shellOpen(selectedPack().versions?.[0].repoUrl);
+                        }}
                       >
                         <IconBrandGithub class="h-4 w-4" />
                         {new URL(

@@ -10,6 +10,8 @@
     "core:path:default",
     "core:window:default",
     "dialog:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "shell:default",
+    "shell:allow-open"
   ]
 }

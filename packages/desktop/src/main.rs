@@ -191,6 +191,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
 
   app.manage(ShellState::new(app.handle(), widget_factory.clone()));
   app.handle().plugin(tauri_plugin_dialog::init())?;
+  app.handle().plugin(tauri_plugin_shell::init())?;
 
   // Initialize `ProviderManager` in Tauri state.
   let (manager, emit_rx) = ProviderManager::new(app.handle());
