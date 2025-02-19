@@ -15,31 +15,11 @@ import {
 } from '@glzr/components';
 import { useNavigate, useParams } from '@solidjs/router';
 import { IconPlus, IconTrash } from '@tabler/icons-solidjs';
-import { createForm } from 'smorf';
-import { createEffect, createMemo, Show } from 'solid-js';
-import * as z from 'zod';
+import { createMemo, Show } from 'solid-js';
 
 import { AppBreadcrumbs, useUserPacks } from '~/common';
 import { CreateWidgetDialog, DeleteWidgetDialog } from './dialogs';
 import { WidgetPackForm } from './WidgetPackForm';
-
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
-  description: z.string().min(10, {
-    message: 'Description must be at least 10 characters.',
-  }),
-  tags: z.array(z.string()).min(1, {
-    message: 'At least one tag is required.',
-  }),
-  previewImages: z.array(z.string()).min(1, {
-    message: 'At least one preview image is required.',
-  }),
-  excludeFiles: z.string(),
-});
-
-export type WidgetPackFormData = z.infer<typeof formSchema>;
 
 export function WidgetPackPage() {
   const params = useParams();
@@ -53,26 +33,6 @@ export function WidgetPackPage() {
   const isMarketplacePack = createMemo(
     () => selectedPack()?.type === 'marketplace',
   );
-
-  const form = createForm<WidgetPackFormData>({
-    name: '',
-    description: '',
-    tags: [],
-    previewImages: [],
-    excludeFiles: '',
-  });
-
-  createEffect(() => {
-    if (selectedPack()) {
-      form.setValue({
-        name: selectedPack().name,
-        description: selectedPack().description,
-        tags: selectedPack().tags,
-        previewImages: selectedPack().previewImages,
-        excludeFiles: selectedPack().excludeFiles,
-      });
-    }
-  });
 
   return (
     <div class="container mx-auto pt-3.5 pb-32">
@@ -88,7 +48,16 @@ export function WidgetPackPage() {
 
         <h1 class="text-3xl font-bold mb-4">Widget Pack</h1>
 
-        <WidgetPackForm form={form} disabled={isMarketplacePack()} />
+        <WidgetPackForm
+          pack={selectedPack()}
+          onChange={form =>
+            userPacks.updatePack(selectedPack().id, {
+              ...selectedPack(),
+              ...form,
+            })
+          }
+          disabled={isMarketplacePack()}
+        />
 
         <Card>
           <CardContent class="pt-6">

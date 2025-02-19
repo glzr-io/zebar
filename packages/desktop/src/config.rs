@@ -37,7 +37,7 @@ pub struct WidgetPackConfig {
   pub preview_images: Vec<String>,
 
   /// Files to exclude from the pack during publishing.
-  pub exclude_files: Vec<String>,
+  pub exclude_files: String,
 
   /// Paths to widgets in the pack.
   pub widget_paths: Vec<PathBuf>,
@@ -49,6 +49,7 @@ pub struct WidgetPack {
   pub id: String,
   #[serde(flatten)]
   pub config: WidgetPackConfig,
+  pub directory_path: PathBuf,
   pub widget_configs: Vec<WidgetConfig>,
 }
 
@@ -255,9 +256,8 @@ pub struct CreateWidgetPackArgs {
 #[serde(rename_all = "camelCase")]
 pub struct CreateWidgetArgs {
   pub name: String,
-  pub directory: PathBuf,
-  pub pack_directory: PathBuf,
-  pub frontend: FrontendTemplate,
+  pub pack_name: String,
+  pub template: FrontendTemplate,
 }
 
 #[derive(Debug)]
@@ -486,6 +486,7 @@ impl Config {
 
     let pack = WidgetPack {
       id: format!("local.{}", pack_config.name),
+      directory_path: pack_dir,
       config: pack_config,
       widget_configs,
     };
@@ -502,10 +503,10 @@ impl Config {
     args: CreateWidgetArgs,
   ) -> anyhow::Result<WidgetConfig> {
     let pack_dir = self.app_settings.config_dir.join(&args.name);
-    let widget_dir = pack_dir.join(&args.directory);
+    let widget_dir = pack_dir.join(&args.name);
 
     self.app_settings.init_template(
-      TemplateResource::Widget(args.frontend),
+      TemplateResource::Widget(args.template),
       &widget_dir,
       &HashMap::new(),
     )?;

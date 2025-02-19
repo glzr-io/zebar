@@ -17,6 +17,7 @@ const communityPacksMock = [
     name: 'System Monitor',
     author: 'glzr-io',
     type: 'marketplace' as const,
+    directoryPath: 'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa',
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
@@ -42,6 +43,7 @@ const communityPacksMock = [
     name: 'Weather Pack',
     author: 'glzr-io',
     type: 'marketplace' as const,
+    directoryPath: 'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa',
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
@@ -67,6 +69,7 @@ const localPacksMock = [
     author: 'me',
     type: 'local' as 'local' | 'marketplace',
     description: 'Personal collection of widgets',
+    directoryPath: 'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa',
     version: '0.1.0',
     widgetConfigs: [
       {
@@ -87,19 +90,11 @@ export type WidgetPack = {
   type: 'local' | 'marketplace';
   previewImages: string[];
   excludeFiles: string;
-  versions?: WidgetPackVersion[];
+  directoryPath: string;
   description: string;
   version: string;
   widgetConfigs: WidgetConfig[];
   tags: string[];
-};
-
-export type WidgetPackVersion = {
-  versionNumber: string;
-  releaseNotes: string;
-  commitSha: string;
-  repoUrl: string;
-  publishDate: Date;
 };
 
 export type CreateWidgetPackArgs = {
@@ -114,7 +109,7 @@ export type CreateWidgetPackArgs = {
 export type CreateWidgetArgs = {
   name: string;
   packId: string;
-  template: 'react-buildless' | 'solid-ts';
+  template: 'react_buildless' | 'solid_typescript';
 };
 
 type UserPacksContextState = {
@@ -125,6 +120,7 @@ type UserPacksContextState = {
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (args: CreateWidgetPackArgs) => Promise<WidgetPack>;
   createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfig>;
+  updatePack: (packId: string, pack: WidgetPack) => Promise<WidgetPack>;
   deletePack: (packId: string) => Promise<void>;
   deleteWidget: (widgetName: string) => Promise<void>;
   updateWidgetConfig: (
@@ -242,6 +238,19 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     mutateLocalPacks(packs => packs.filter(pack => pack.id !== packId));
   }
 
+  async function updatePack(packId: string, pack: WidgetPack) {
+    const updatedPack = await invoke<WidgetPack>('update_widget_pack', {
+      packId,
+      pack,
+    });
+
+    mutateLocalPacks(packs =>
+      packs.map(p => (p.id === packId ? updatedPack : p)),
+    );
+
+    return updatedPack;
+  }
+
   async function deleteWidget(widgetName: string) {
     await invoke<void>('delete_widget', { widgetName });
 
@@ -267,6 +276,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     togglePreset,
     createPack,
     createWidget,
+    updatePack,
     deletePack,
     deleteWidget,
   };

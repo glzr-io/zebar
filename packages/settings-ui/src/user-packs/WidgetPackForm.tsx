@@ -6,22 +6,97 @@ import {
   TextAreaField,
   FormField,
 } from '@glzr/components';
-import { Field, FormState } from 'smorf';
+import { createForm, Field } from 'smorf';
+import { createEffect, createResource, on } from 'solid-js';
+import { join, sep } from '@tauri-apps/api/path';
+import * as z from 'zod';
 
-import { ImageSelector } from '~/common';
-import { WidgetPackFormData } from './WidgetPackPage';
+import { ImageSelector, WidgetPack } from '~/common';
+
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: 'Name must be at least 2 characters.',
+  }),
+  description: z.string().min(10, {
+    message: 'Description must be at least 10 characters.',
+  }),
+  tags: z.array(z.string()).min(1, {
+    message: 'At least one tag is required.',
+  }),
+  previewImages: z.array(z.string()).min(1, {
+    message: 'At least one preview image is required.',
+  }),
+  excludeFiles: z.string(),
+});
+
+export type WidgetPackFormData = z.infer<typeof formSchema>;
 
 export interface WidgetPackFormProps {
-  form: FormState<WidgetPackFormData>;
+  pack?: WidgetPack;
+  onChange?: (form: WidgetPackFormData) => void;
   disabled?: boolean;
 }
 
 export function WidgetPackForm(props: WidgetPackFormProps) {
+  const form = createForm<WidgetPackFormData>({
+    name: '',
+    description: '',
+    tags: [],
+    previewImages: [],
+    excludeFiles: '',
+  });
+
+  const [imagePaths] = createResource(
+    () =>
+      [
+        form.getFieldValue('previewImages'),
+        props.pack.directoryPath,
+      ] as const,
+    async ([images, dirPath]) => {
+      return Promise.all(images.map(image => join(dirPath, image)));
+    },
+  );
+
+  createEffect(
+    on(
+      () => props.pack,
+      value => {
+        form.setValue({
+          name: value.name,
+          description: value.description,
+          tags: value.tags,
+          previewImages: value.previewImages,
+          excludeFiles: value.excludeFiles,
+        });
+      },
+    ),
+  );
+
+  createEffect(
+    on(
+      () => form.value,
+      value => {
+        if (form.isDirty()) {
+          props.onChange?.(value);
+        }
+      },
+    ),
+  );
+
+  async function onImageChange(images: string[]) {
+    const pathPrefix = props.pack.directoryPath + sep();
+
+    form.setFieldValue(
+      'previewImages',
+      images.map(image => image.replace(pathPrefix, '')),
+    );
+  }
+
   return (
     <form class="space-y-8 mb-4">
       <Card>
         <CardContent class="pt-6">
-          <Field of={props.form} path="name">
+          <Field of={form} path="name">
             {inputProps => (
               <TextField
                 label="Name"
@@ -33,7 +108,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
             )}
           </Field>
 
-          <Field of={props.form} path="description">
+          <Field of={form} path="description">
             {inputProps => (
               <TextField
                 label="Description"
@@ -44,7 +119,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
             )}
           </Field>
 
-          <Field of={props.form} path="tags">
+          <Field of={form} path="tags">
             {inputProps => (
               <ChipField
                 label="Tags"
@@ -57,15 +132,14 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
 
           <FormField label="Preview images" disabled={props.disabled}>
             <ImageSelector
-              images={props.form.value.previewImages}
-              onChange={images =>
-                props.form.setFieldValue('previewImages', images)
-              }
+              images={imagePaths() ?? []}
+              cwd={props.pack.directoryPath}
+              onChange={onImageChange}
               disabled={props.disabled}
             />
           </FormField>
 
-          <Field of={props.form} path="excludeFiles">
+          <Field of={form} path="excludeFiles">
             {inputProps => (
               <TextAreaField
                 label="Exclude files"

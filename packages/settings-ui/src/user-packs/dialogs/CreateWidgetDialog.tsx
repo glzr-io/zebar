@@ -19,7 +19,8 @@ export type CreateWidgetDialogProps = {
 export function CreateWidgetDialog(props: CreateWidgetDialogProps) {
   const form = createForm<CreateWidgetArgs>({
     name: '',
-    template: 'react-buildless',
+    packId: '',
+    template: 'react_buildless',
   });
 
   return (

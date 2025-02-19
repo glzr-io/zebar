@@ -6,6 +6,7 @@ import { Show } from 'solid-js';
 
 export interface ImageSelectorProps {
   images: string[];
+  cwd?: string;
   onChange?: (images: string[]) => void;
   disabled?: boolean;
 }
@@ -20,6 +21,7 @@ export function ImageSelector(props: ImageSelectorProps) {
           extensions: ['png', 'jpg', 'jpeg'],
         },
       ],
+      ...(props.cwd && { defaultPath: props.cwd }),
     });
 
     if (selectedPaths) {

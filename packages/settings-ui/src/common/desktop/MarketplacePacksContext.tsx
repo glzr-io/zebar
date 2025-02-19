@@ -8,20 +8,37 @@ import {
 } from 'solid-js';
 import { createResource } from 'solid-js';
 
-import { WidgetPack } from './UserPacksContext';
 import { WidgetConfig } from 'zebar';
 
-const marketplacePacksMock = [
+export type MarketplaceWidgetPack = {
+  id: string;
+  name: string;
+  author: string;
+  previewImages: string[];
+  versions: WidgetPackVersion[];
+  description: string;
+  version: string;
+  widgetConfigs: WidgetConfig[];
+  tags: string[];
+};
+
+export type WidgetPackVersion = {
+  versionNumber: string;
+  releaseNotes: string;
+  commitSha: string;
+  repoUrl: string;
+  publishDate: Date;
+};
+
+const marketplacePacksMock: MarketplaceWidgetPack[] = [
   {
     id: 'glzr-io.system-monitor',
     name: 'System Monitor',
     author: 'glzr-io',
-    type: 'marketplace' as const,
     previewImages: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],
-    excludeFiles: '',
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
@@ -67,12 +84,10 @@ const marketplacePacksMock = [
     id: 'glzr-io.weather-widgets',
     name: 'Weather Pack',
     author: 'glzr-io',
-    type: 'marketplace' as const,
     previewImages: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],
-    excludeFiles: '',
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
@@ -113,12 +128,12 @@ const marketplacePacksMock = [
 ];
 
 type MarketplacePacksContextState = {
-  allPacks: Resource<WidgetPack[]>;
-  selectedPack: Resource<WidgetPack>;
-  previewPack: Accessor<WidgetPack | null>;
-  install: (pack: WidgetPack) => void;
+  allPacks: Resource<MarketplaceWidgetPack[]>;
+  selectedPack: Resource<MarketplaceWidgetPack>;
+  previewPack: Accessor<MarketplaceWidgetPack | null>;
+  install: (pack: MarketplaceWidgetPack) => void;
   selectPack: (packId: string) => void;
-  startPreview: (pack: WidgetPack) => void;
+  startPreview: (pack: MarketplaceWidgetPack) => void;
   stopPreview: () => void;
 };
 
@@ -155,19 +170,18 @@ export function MarketplacePacksProvider(props: {
     },
   );
 
-  const [previewPack, setPreviewPack] = createSignal<WidgetPack | null>(
-    null,
-  );
+  const [previewPack, setPreviewPack] =
+    createSignal<MarketplaceWidgetPack | null>(null);
 
   function selectPack(packId: string) {
     setSelectedPackId(packId);
   }
 
-  function install(pack: WidgetPack) {
+  function install(pack: MarketplaceWidgetPack) {
     // TODO
   }
 
-  function startPreview(pack: WidgetPack) {
+  function startPreview(pack: MarketplaceWidgetPack) {
     setPreviewPack(pack);
   }
 
