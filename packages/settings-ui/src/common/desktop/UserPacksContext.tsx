@@ -65,7 +65,7 @@ const localPacksMock = [
     id: 'local.my-custom-widgets',
     name: 'My Custom Widgets',
     author: 'me',
-    type: 'local' as const,
+    type: 'local' as 'local' | 'marketplace',
     description: 'Personal collection of widgets',
     version: '0.1.0',
     widgets: [
@@ -102,12 +102,18 @@ export type WidgetPackVersion = {
   publishDate: Date;
 };
 
-export type CreateWidgetPackForm = {
+export type CreateWidgetPackArgs = {
   name: string;
+  description: string;
+  tags: string[];
+  previewImages: string[];
+  excludeFiles: string;
+  widgets: CreateWidgetArgs[];
 };
 
 export type CreateWidgetArgs = {
   name: string;
+  packId: string;
   template: 'react-buildless' | 'solid-ts';
 };
 
@@ -117,8 +123,8 @@ type UserPacksContextState = {
   allPacks: Accessor<WidgetPack[]>;
   widgetConfigs: Resource<Record<string, WidgetConfig>>;
   widgetStates: Resource<Record<string, Widget>>;
-  createPack: (pack: CreateWidgetPackForm) => Promise<void>;
-  createWidget: (widget: CreateWidgetArgs) => Promise<void>;
+  createPack: (args: CreateWidgetPackArgs) => Promise<WidgetPack>;
+  createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfig>;
   deletePack: (packId: string) => Promise<void>;
   deleteWidget: (widgetName: string) => Promise<void>;
   updateWidgetConfig: (
@@ -135,7 +141,9 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   const [communityPacks] = createResource(async () => communityPacksMock);
 
   // TODO: Fetch local packs from the backend.
-  const [localPacks] = createResource(async () => localPacksMock);
+  const [localPacks, { mutate: mutateLocalPacks }] = createResource(
+    async () => localPacksMock,
+  );
 
   const allPacks = createMemo(() => [
     ...(communityPacks() ?? []),
@@ -209,20 +217,42 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     }
   }
 
-  async function createPack(pack: CreateWidgetPackForm) {
-    return invoke<void>('create_widget_pack', { pack });
+  async function createPack(args: CreateWidgetPackArgs) {
+    const pack = await invoke<WidgetPack>('create_widget_pack', { args });
+    mutateLocalPacks(packs => [...packs, pack]);
+    return pack;
   }
 
-  async function createWidget(widget: CreateWidgetArgs) {
-    return invoke<void>('create_widget', { widget });
+  async function createWidget(args: CreateWidgetArgs) {
+    const widget = await invoke<WidgetConfig>('create_widget', { args });
+
+    mutateLocalPacks(packs =>
+      packs.map(pack => {
+        return pack.id === args.packId
+          ? { ...pack, widgets: [...pack.widgets, widget] }
+          : pack;
+      }),
+    );
+
+    return widget;
   }
 
   async function deletePack(packId: string) {
-    return invoke<void>('delete_widget_pack', { packId });
+    await invoke<void>('delete_widget_pack', { packId });
+    mutateLocalPacks(packs => packs.filter(pack => pack.id !== packId));
   }
 
   async function deleteWidget(widgetName: string) {
-    return invoke<void>('delete_widget', { widgetName });
+    await invoke<void>('delete_widget', { widgetName });
+
+    mutateLocalPacks(packs =>
+      packs.map(pack => {
+        return {
+          ...pack,
+          widgets: pack.widgets.filter(w => w.name !== widgetName),
+        };
+      }),
+    );
   }
 
   const store: UserPacksContextState = {

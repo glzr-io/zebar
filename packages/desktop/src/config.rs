@@ -19,8 +19,25 @@ use crate::{
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PackConfig {
-  pub widgets: Vec<PathBuf>,
+pub struct WidgetPack {
+  /// JSON schema URL to validate the widget pack file.
+  #[serde(rename = "$schema")]
+  schema: Option<String>,
+
+  /// Name of the pack.
+  pub name: String,
+
+  /// Description of the pack.
+  pub description: String,
+
+  /// Tags of the pack.
+  pub tags: Vec<String>,
+
+  /// Preview images of the pack.
+  pub preview_images: Vec<String>,
+
+  /// Paths to widgets in the pack.
+  pub widget_paths: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -215,10 +232,10 @@ impl DockEdge {
 #[serde(rename_all = "camelCase")]
 pub struct CreateWidgetPackArgs {
   pub name: String,
-  pub directory: PathBuf,
   pub description: String,
   pub tags: Vec<String>,
   pub preview_images: Vec<String>,
+  pub exclude_files: String,
   pub widgets: Vec<CreateWidgetArgs>,
 }
 
@@ -420,17 +437,22 @@ impl Config {
     Some((abs_path, config.clone()))
   }
 
+  /// Creates a new widget pack.
   pub fn create_widget_pack(
     &self,
     args: CreateWidgetPackArgs,
-  ) -> anyhow::Result<()> {
-    let pack_dir = self.app_settings.config_dir.join(&args.directory);
+  ) -> anyhow::Result<WidgetPack> {
+    let pack_dir = self.app_settings.config_dir.join(&args.name);
 
     self.app_settings.init_template(
       TemplateResource::Pack,
       &pack_dir,
-      // TODO: Add template variables.
-      &HashMap::new(),
+      &HashMap::from([
+        ("PACK_NAME", args.name),
+        ("PACK_DESCRIPTION", args.description),
+        ("PACK_TAGS", args.tags.join(",")),
+        ("PACK_PREVIEW_IMAGES", args.preview_images.join(",")),
+      ]),
     )?;
 
     for widget in args.widgets {
@@ -443,7 +465,11 @@ impl Config {
       .current_dir(&pack_dir)
       .output();
 
-    Ok(())
+    let pack_config_path = pack_dir.join("zebar-pack.json");
+    let pack_config =
+      read_and_parse_json::<WidgetPack>(&pack_config_path)?;
+
+    Ok(pack_config)
   }
 
   /// Creates a new widget from a template.
@@ -453,7 +479,7 @@ impl Config {
   pub fn create_widget(
     &self,
     args: CreateWidgetArgs,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<WidgetConfig> {
     let pack_dir = self.app_settings.config_dir.join(&args.name);
     let widget_dir = pack_dir.join(&args.directory);
 
@@ -463,17 +489,24 @@ impl Config {
       &HashMap::new(),
     )?;
 
+    let pack_config_path = pack_dir.join("zebar-pack.json");
+    let mut pack_config =
+      read_and_parse_json::<WidgetPack>(&pack_config_path)?;
+
     // Add widget to pack config.
-    let mut pack_config = read_and_parse_json::<PackConfig>(&pack_dir)?;
-    pack_config.widgets.push(widget_dir);
+    pack_config.widget_paths.push(widget_dir.clone());
 
     // Write the updated pack config to file.
     fs::write(
-      pack_dir.join("zebar-pack.json"),
+      pack_config_path,
       serde_json::to_string_pretty(&pack_config)? + "\n",
     )?;
 
-    Ok(())
+    let widget_config_path = widget_dir.join("zebar.json");
+    let widget_config =
+      read_and_parse_json::<WidgetConfig>(&widget_config_path)?;
+
+    Ok(widget_config)
   }
 
   /// Deletes a widget from a pack.
@@ -482,21 +515,24 @@ impl Config {
   /// sub-directory.
   pub fn delete_widget(
     &self,
-    widget_directory: &str,
-    pack_directory: &str,
+    pack_name: &str,
+    widget_name: &str,
   ) -> anyhow::Result<()> {
-    let pack_dir = self.app_settings.config_dir.join(pack_directory);
-    let widget_dir = pack_dir.join(widget_directory);
+    let pack_dir = self.app_settings.config_dir.join(pack_name);
+    let widget_dir = pack_dir.join(widget_name);
 
     fs::remove_dir_all(&widget_dir)?;
 
+    let pack_config_path = pack_dir.join("zebar-pack.json");
+    let mut pack_config =
+      read_and_parse_json::<WidgetPack>(&pack_config_path)?;
+
     // Remove widget from pack config.
-    let mut pack_config = read_and_parse_json::<PackConfig>(&pack_dir)?;
-    pack_config.widgets.retain(|path| path != &widget_dir);
+    pack_config.widget_paths.retain(|path| path != &widget_dir);
 
     // Write the updated pack config to file.
     fs::write(
-      pack_dir.join("zebar-pack.json"),
+      pack_config_path,
       serde_json::to_string_pretty(&pack_config)? + "\n",
     )?;
 

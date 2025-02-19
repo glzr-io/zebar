@@ -10,17 +10,22 @@ import {
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
 
-import { CreateWidgetPackForm } from '~/common';
+import { CreateWidgetPackArgs } from '~/common';
 
 export interface CreateWidgetPackDialogProps {
-  onSubmit: (pack: CreateWidgetPackForm) => void;
+  onSubmit: (args: CreateWidgetPackArgs) => void;
 }
 
 export function CreateWidgetPackDialog(
   props: CreateWidgetPackDialogProps,
 ) {
-  const packForm = createForm<CreateWidgetPackForm>({
+  const packForm = createForm<CreateWidgetPackArgs>({
     name: '',
+    description: '',
+    tags: [],
+    previewImages: [],
+    excludeFiles: '',
+    widgets: [],
   });
 
   return (

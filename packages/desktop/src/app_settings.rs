@@ -337,7 +337,7 @@ impl AppSettings {
     &self,
     template: TemplateResource,
     dest_dir: &Path,
-    context: &HashMap<String, String>,
+    context: &HashMap<&str, String>,
   ) -> anyhow::Result<()> {
     // Determine source template path based on template type.
     let template_path = match template {
