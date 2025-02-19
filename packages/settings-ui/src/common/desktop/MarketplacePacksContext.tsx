@@ -27,15 +27,15 @@ const marketplacePacksMock = [
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
     widgets: [
       {
-        name: 'CPU Usage',
+        name: 'cpu-usage',
         htmlPath: 'cpu-usage.html',
       } as any as WidgetConfig,
       {
-        name: 'Memory Usage',
+        name: 'memory-usage',
         htmlPath: 'memory-usage.html',
       } as any as WidgetConfig,
       {
-        name: 'Disk Space',
+        name: 'disk-space',
         htmlPath: 'disk-space.html',
       } as any as WidgetConfig,
     ],
@@ -78,11 +78,11 @@ const marketplacePacksMock = [
     tags: ['weather', 'forecast', 'current'],
     widgets: [
       {
-        name: 'Current Weather',
+        name: 'current-weather',
         htmlPath: 'current-weather.html',
       } as any as WidgetConfig,
       {
-        name: 'Weekly Forecast',
+        name: 'weekly-forecast',
         htmlPath: 'weekly-forecast.html',
       } as any as WidgetConfig,
     ],

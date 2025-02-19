@@ -4,5 +4,5 @@
   "description": "{{ PACK_DESCRIPTION }}",
   "tags": ["desktop", "widget"],
   "previewImages": ["./resources/preview-image-1.png"],
-  "widgets": []
+  "widgetPaths": []
 }

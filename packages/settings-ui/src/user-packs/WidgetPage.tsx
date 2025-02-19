@@ -23,17 +23,22 @@ import { useUserPacks } from '~/common';
 export function WidgetPage() {
   const params = useParams();
 
-  const { widgetConfigs, widgetStates, updateWidgetConfig, togglePreset } =
+  const { allPacks, widgetStates, updateWidgetConfig, togglePreset } =
     useUserPacks();
 
-  const selectedConfigPath = createMemo(() => atob(params.path));
+  const selectedPack = createMemo(() =>
+    allPacks().find(pack => pack.id === params.packId),
+  );
+
+  const selectedWidgetName = createMemo(() => params.widgetName);
+  const selectedConfig = createMemo(() =>
+    selectedPack()?.widgets.find(
+      widget => widget.name === params.widgetName,
+    ),
+  );
 
   const [selectedPreset, setSelectedPreset] = createSignal<string | null>(
     null,
-  );
-
-  const selectedConfig = createMemo(
-    () => widgetConfigs()[selectedConfigPath()],
   );
 
   const presetNames = createMemo(() =>
@@ -42,7 +47,7 @@ export function WidgetPage() {
 
   // Widget states for the selected config.
   const selectedConfigStates = createMemo(() => {
-    const configPath = selectedConfigPath();
+    const configPath = selectedWidgetName();
     return Object.values(widgetStates()).filter(
       state => state.configPath === configPath,
     );
@@ -60,7 +65,7 @@ export function WidgetPage() {
   // Initialize the selected preset when a config is selected.
   createEffect(
     on(
-      () => selectedConfigPath(),
+      () => selectedWidgetName(),
       () => {
         if (selectedConfig()) {
           setSelectedPreset(selectedConfig().presets[0]?.name ?? null);
@@ -92,18 +97,18 @@ export function WidgetPage() {
           <main class="flex-1 grid grid-rows-[1fr_auto] overflow-hidden">
             <div id="form-container" class="container p-4 overflow-y-auto">
               <h1 class="text-2xl font-bold mb-1">
-                {selectedConfigPath().split(/[/\\]/).at(-1)}
+                {selectedWidgetName()}
               </h1>
 
               <p class="bg-muted text-xs font-mono rounded-sm mb-6 p-1 text-muted-foreground inline-block">
-                {selectedConfigPath()}
+                {selectedWidgetName()}
               </p>
 
               <WidgetConfigForm
                 config={config()}
-                configPath={selectedConfigPath()}
+                configPath={selectedWidgetName()}
                 onChange={config =>
-                  updateWidgetConfig(selectedConfigPath(), config)
+                  updateWidgetConfig(selectedWidgetName(), config)
                 }
               />
             </div>
@@ -120,7 +125,7 @@ export function WidgetPage() {
                   class="rounded-r-none self-end"
                   disabled={presetNames().length === 0}
                   onClick={() =>
-                    togglePreset(selectedConfigPath(), selectedPreset())
+                    togglePreset(selectedWidgetName(), selectedPreset())
                   }
                 >
                   <Show when={selectedPreset()} fallback="No presets">

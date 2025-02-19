@@ -13,7 +13,7 @@ import {
   AlertDialogTrigger,
   AlertDialog,
 } from '@glzr/components';
-import { useParams } from '@solidjs/router';
+import { useNavigate, useParams } from '@solidjs/router';
 import { IconPlus, IconTrash } from '@tabler/icons-solidjs';
 import { createForm } from 'smorf';
 import { createEffect, createMemo, Show } from 'solid-js';
@@ -43,6 +43,7 @@ export type WidgetPackFormData = z.infer<typeof formSchema>;
 
 export function WidgetPackPage() {
   const params = useParams();
+  const navigate = useNavigate();
   const userPacks = useUserPacks();
 
   const selectedPack = createMemo(() =>
@@ -85,7 +86,7 @@ export function WidgetPackPage() {
           ]}
         />
 
-        <h1 class="text-3xl font-bold">Widget Pack</h1>
+        <h1 class="text-3xl font-bold mb-4">Widget Pack</h1>
 
         <WidgetPackForm form={form} disabled={isMarketplacePack()} />
 
@@ -116,7 +117,14 @@ export function WidgetPackPage() {
 
               <TableBody>
                 {selectedPack()?.widgets.map(widget => (
-                  <TableRow>
+                  <TableRow
+                    class="cursor-pointer"
+                    onClick={() =>
+                      navigate(
+                        `/packs/${selectedPack().id}/${widget.name}`,
+                      )
+                    }
+                  >
                     <TableCell>{widget.name}</TableCell>
                     <TableCell>{widget.htmlPath}</TableCell>
                     <TableCell>

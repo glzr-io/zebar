@@ -18,7 +18,10 @@ render(
         <HashRouter root={AppLayout}>
           <Route path="/" component={WidgetPacksPage} />
           <Route path="/packs/:packId" component={WidgetPackPage} />
-          <Route path="/packs/:packId/:widgetId" component={WidgetPage} />
+          <Route
+            path="/packs/:packId/:widgetName"
+            component={WidgetPage}
+          />
           <Route path="/marketplace" component={MarketplacePage} />
           <Route
             path="/marketplace/packs/:id"
