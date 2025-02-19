@@ -11,15 +11,17 @@ import {
   TextField,
   ChipField,
   FormLabel,
+  TextAreaField,
 } from '@glzr/components';
 import { IconPlus } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
-import { createSignal } from 'solid-js';
+import { createEffect, createMemo, createSignal, Show } from 'solid-js';
 import * as z from 'zod';
 import { Widget } from 'zebar';
 
 import { AppBreadcrumbs, useUserPacks, ImageSelector } from '~/common';
 import { CreateWidgetDialog } from './dialogs';
+import { useParams } from '@solidjs/router';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -34,109 +36,135 @@ const formSchema = z.object({
   previewImages: z.array(z.string()).min(1, {
     message: 'At least one preview image is required.',
   }),
+  excludeFiles: z.string(),
 });
 
 export function WidgetPackPage() {
+  const params = useParams();
   const userPacks = useUserPacks();
 
-  const [widgets, setWidgets] = createSignal<Widget[]>([]);
+  const selectedPack = createMemo(() =>
+    userPacks.allPacks().find(pack => pack.id === params.packId),
+  );
 
   const form = createForm<z.infer<typeof formSchema>>({
     name: '',
     description: '',
     tags: [],
     previewImages: [],
+    excludeFiles: '',
+  });
+
+  createEffect(() => {
+    if (selectedPack()) {
+      form.setValue({
+        name: selectedPack().name,
+        description: selectedPack().description,
+        tags: selectedPack().tags,
+        previewImages: selectedPack().previewUrls,
+        excludeFiles: selectedPack().excludeFiles,
+      });
+    }
   });
 
   return (
     <div class="container mx-auto pt-3.5 pb-32">
-      <AppBreadcrumbs
-        entries={[
-          {
-            href: 'TODO',
-            content: 'TODO',
-            // href: `/packs/${selectedPack().id}`,
-            // content: selectedPack().name,
-          },
-        ]}
-      />
+      <Show when={selectedPack()}>
+        <AppBreadcrumbs
+          entries={[
+            {
+              href: `/packs/${selectedPack().id}`,
+              content: selectedPack().id,
+            },
+          ]}
+        />
 
-      <h1 class="text-3xl font-bold">Edit Widget Pack</h1>
+        <h1 class="text-3xl font-bold">Widget Pack</h1>
 
-      <form class="space-y-8">
-        <Card>
-          <CardContent class="pt-6">
-            <div class="grid gap-4">
-              <Field of={form} path="name">
-                {inputProps => (
-                  <TextField
-                    label="Name"
-                    placeholder="My widget pack"
-                    description="This will be used as the directory name (as a slug)."
-                    {...inputProps()}
+        <form class="space-y-8">
+          <Card>
+            <CardContent class="pt-6">
+              <div class="grid gap-4">
+                <Field of={form} path="name">
+                  {inputProps => (
+                    <TextField
+                      label="Name"
+                      placeholder="My widget pack"
+                      description="This will be used as the directory name (as a slug)."
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                <Field of={form} path="description">
+                  {inputProps => (
+                    <TextField
+                      label="Description"
+                      placeholder="A collection of beautiful widgets..."
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                <Field of={form} path="tags">
+                  {inputProps => (
+                    <ChipField
+                      label="Tags"
+                      placeholder="Press enter to add tags..."
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                <div>
+                  <FormLabel>Preview Images</FormLabel>
+                  <ImageSelector
+                    images={form.value.previewImages}
+                    onChange={images =>
+                      form.setFieldValue('previewImages', images)
+                    }
                   />
-                )}
-              </Field>
+                </div>
 
-              <Field of={form} path="description">
-                {inputProps => (
-                  <TextField
-                    label="Description"
-                    placeholder="A collection of beautiful widgets..."
-                    {...inputProps()}
-                  />
-                )}
-              </Field>
-
-              <Field of={form} path="tags">
-                {inputProps => (
-                  <ChipField
-                    label="Tags"
-                    placeholder="Press enter to add tags..."
-                    {...inputProps()}
-                  />
-                )}
-              </Field>
-
-              <div>
-                <FormLabel>Preview Images</FormLabel>
-                <ImageSelector
-                  images={form.value.previewImages}
-                  onChange={images =>
-                    form.setFieldValue('previewImages', images)
-                  }
-                />
+                <Field of={form} path="excludeFiles">
+                  {inputProps => (
+                    <TextAreaField
+                      label="Exclude Files"
+                      description="A list of file patterns to exclude from the pack separated by new lines."
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent class="pt-6">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-xl font-semibold">Widgets</h2>
+          <Card>
+            <CardContent class="pt-6">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Widgets</h2>
 
-              <Dialog>
-                <DialogTrigger>
-                  <Button variant="outline">
-                    <IconPlus class="mr-2 h-4 w-4" />
-                    Add Widget
-                  </Button>
-                </DialogTrigger>
-                <CreateWidgetDialog onSubmit={userPacks.createWidget} />
-              </Dialog>
-            </div>
+                <Dialog>
+                  <DialogTrigger>
+                    <Button variant="outline">
+                      <IconPlus class="mr-2 h-4 w-4" />
+                      Add Widget
+                    </Button>
+                  </DialogTrigger>
+                  <CreateWidgetDialog onSubmit={userPacks.createWidget} />
+                </Dialog>
+              </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Template</TableHead>
-                  <TableHead class="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Template</TableHead>
+                    <TableHead class="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
 
-              {/* <TableBody>
+                {/* <TableBody>
                 {widgets().map(widget => (
                   <TableRow>
                     <TableCell>{widget.name}</TableCell>
@@ -209,10 +237,11 @@ export function WidgetPackPage() {
                   </TableRow>
                 )}
               </TableBody> */}
-            </Table>
-          </CardContent>
-        </Card>
-      </form>
+              </Table>
+            </CardContent>
+          </Card>
+        </form>
+      </Show>
     </div>
   );
 }

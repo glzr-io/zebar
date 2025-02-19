@@ -1,4 +1,11 @@
-import { createContext, type JSX, Resource, useContext } from 'solid-js';
+import {
+  createContext,
+  createMemo,
+  type Accessor,
+  type JSX,
+  Resource,
+  useContext,
+} from 'solid-js';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event } from '@tauri-apps/api/event';
 import { createResource } from 'solid-js';
@@ -6,9 +13,9 @@ import type { Widget, WidgetConfig } from 'zebar';
 
 const communityPacksMock = [
   {
-    id: 'system-monitor',
+    id: 'glzr-io.system-monitor',
     name: 'System Monitor',
-    author: 'Zebar Team',
+    author: 'glzr-io',
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
@@ -17,11 +24,13 @@ const communityPacksMock = [
       { id: 'memory-usage', name: 'Memory Usage' },
       { id: 'disk-space', name: 'Disk Space' },
     ],
+    previewUrls: [],
+    excludeFiles: '',
   },
   {
-    id: 'weather-widgets',
+    id: 'glzr-io.weather-widgets',
     name: 'Weather Pack',
-    author: 'Weather Team',
+    author: 'glzr-io',
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
@@ -29,18 +38,22 @@ const communityPacksMock = [
       { id: 'current-weather', name: 'Current Weather' },
       { id: 'forecast', name: 'Weekly Forecast' },
     ],
+    previewUrls: [],
+    excludeFiles: '',
   },
 ];
 
 const localPacksMock = [
   {
-    id: 'my-custom-widgets',
+    id: 'local.my-custom-widgets',
     name: 'My Custom Widgets',
     author: 'me',
     description: 'Personal collection of widgets',
     version: '0.1.0',
     widgets: [{ id: 'todo-list', name: 'Todo List' }],
     tags: ['todo', 'list', 'custom'],
+    previewUrls: [],
+    excludeFiles: '',
   },
 ];
 
@@ -48,7 +61,8 @@ export type WidgetPack = {
   id: string;
   name: string;
   author: string;
-  previewUrls?: string[];
+  previewUrls: string[];
+  excludeFiles: string;
   versions?: WidgetPackVersion[];
   description: string;
   version: string;
@@ -76,6 +90,7 @@ export type CreateWidgetArgs = {
 type UserPacksContextState = {
   communityPacks: Resource<WidgetPack[]>;
   localPacks: Resource<WidgetPack[]>;
+  allPacks: Accessor<WidgetPack[]>;
   widgetConfigs: Resource<Record<string, WidgetConfig>>;
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (pack: CreateWidgetPackForm) => Promise<void>;
@@ -96,6 +111,11 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
   // TODO: Fetch local packs from the backend.
   const [localPacks] = createResource(async () => localPacksMock);
+
+  const allPacks = createMemo(() => [
+    ...(communityPacks() ?? []),
+    ...(localPacks() ?? []),
+  ]);
 
   const [widgetConfigs, { mutate: mutateWidgetConfigs }] = createResource(
     async () => invoke<Record<string, WidgetConfig>>('widget_configs'),
@@ -179,6 +199,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   const store: UserPacksContextState = {
     communityPacks,
     localPacks,
+    allPacks,
     widgetConfigs,
     widgetStates,
     updateWidgetConfig,

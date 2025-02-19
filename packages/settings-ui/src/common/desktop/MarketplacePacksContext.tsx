@@ -12,13 +12,14 @@ import { WidgetPack } from './UserPacksContext';
 
 const marketplacePacksMock = [
   {
-    id: 'system-monitor',
+    id: 'glzr-io.system-monitor',
     name: 'System Monitor',
-    author: 'Zebar Team',
+    author: 'glzr-io',
     previewUrls: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],
+    excludeFiles: '',
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
@@ -52,13 +53,14 @@ const marketplacePacksMock = [
     ],
   },
   {
-    id: 'weather-widgets',
+    id: 'glzr-io.weather-widgets',
     name: 'Weather Pack',
-    author: 'Weather Team',
+    author: 'glzr-io',
     previewUrls: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],
+    excludeFiles: '',
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
