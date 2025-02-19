@@ -9,6 +9,7 @@ import {
 import { createResource } from 'solid-js';
 
 import { WidgetPack } from './UserPacksContext';
+import { WidgetConfig } from 'zebar';
 
 const marketplacePacksMock = [
   {
@@ -24,9 +25,18 @@ const marketplacePacksMock = [
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
     widgets: [
-      { id: 'cpu-usage', name: 'CPU Usage' },
-      { id: 'memory-usage', name: 'Memory Usage' },
-      { id: 'disk-space', name: 'Disk Space' },
+      {
+        name: 'CPU Usage',
+        htmlPath: 'cpu-usage.html',
+      } as any as WidgetConfig,
+      {
+        name: 'Memory Usage',
+        htmlPath: 'memory-usage.html',
+      } as any as WidgetConfig,
+      {
+        name: 'Disk Space',
+        htmlPath: 'disk-space.html',
+      } as any as WidgetConfig,
     ],
     versions: [
       {
@@ -65,8 +75,14 @@ const marketplacePacksMock = [
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
     widgets: [
-      { id: 'current-weather', name: 'Current Weather' },
-      { id: 'forecast', name: 'Weekly Forecast' },
+      {
+        name: 'Current Weather',
+        htmlPath: 'current-weather.html',
+      } as any as WidgetConfig,
+      {
+        name: 'Weekly Forecast',
+        htmlPath: 'weekly-forecast.html',
+      } as any as WidgetConfig,
     ],
     versions: [
       {

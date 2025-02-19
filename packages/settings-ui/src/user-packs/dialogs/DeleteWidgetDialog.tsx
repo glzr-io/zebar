@@ -7,11 +7,11 @@ import {
   AlertDialogClose,
   AlertDialogAction,
 } from '@glzr/components';
-import { Widget } from 'zebar';
+import { WidgetConfig } from 'zebar';
 
 export interface DeleteWidgetDialogProps {
-  widget: Widget;
-  onDelete: (widgetId: string) => void;
+  widget: WidgetConfig;
+  onDelete: (widgetName: string) => void;
 }
 
 export function DeleteWidgetDialog(props: DeleteWidgetDialogProps) {
@@ -20,14 +20,14 @@ export function DeleteWidgetDialog(props: DeleteWidgetDialogProps) {
       <AlertDialogHeader>
         <AlertDialogTitle>Delete Widget</AlertDialogTitle>
         <AlertDialogDescription>
-          Are you sure you want to delete "{props.widget.configPath}"? This
+          Are you sure you want to delete "{props.widget.name}"? This
           action cannot be undone.
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogClose>Cancel</AlertDialogClose>
         <AlertDialogAction
-          onClick={() => props.onDelete(props.widget.id)}
+          onClick={() => props.onDelete(props.widget.name)}
           class="bg-red-500 hover:bg-red-600"
         >
           Delete

@@ -12,15 +12,22 @@ import {
   ChipField,
   FormLabel,
   TextAreaField,
+  TableBody,
+  TableCell,
+  AlertDialogTrigger,
+  AlertDialog,
 } from '@glzr/components';
-import { IconPlus } from '@tabler/icons-solidjs';
+import { IconPlus, IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
-import { createEffect, createMemo, createSignal, Show } from 'solid-js';
+import { createEffect, createMemo, Show } from 'solid-js';
 import * as z from 'zod';
-import { Widget } from 'zebar';
 
 import { AppBreadcrumbs, useUserPacks, ImageSelector } from '~/common';
-import { CreateWidgetDialog } from './dialogs';
+import {
+  CreateWidgetDialog,
+  DeleteWidgetDialog,
+  DeleteWidgetPackDialog,
+} from './dialogs';
 import { useParams } from '@solidjs/router';
 
 const formSchema = z.object({
@@ -117,7 +124,7 @@ export function WidgetPackPage() {
                 </Field>
 
                 <div>
-                  <FormLabel>Preview Images</FormLabel>
+                  <FormLabel>Preview images</FormLabel>
                   <ImageSelector
                     images={form.value.previewImages}
                     onChange={images =>
@@ -129,7 +136,7 @@ export function WidgetPackPage() {
                 <Field of={form} path="excludeFiles">
                   {inputProps => (
                     <TextAreaField
-                      label="Exclude Files"
+                      label="Exclude files"
                       description="A list of file patterns to exclude from the pack separated by new lines."
                       {...inputProps()}
                     />
@@ -148,7 +155,7 @@ export function WidgetPackPage() {
                   <DialogTrigger>
                     <Button variant="outline">
                       <IconPlus class="mr-2 h-4 w-4" />
-                      Add Widget
+                      Add widget
                     </Button>
                   </DialogTrigger>
                   <CreateWidgetDialog onSubmit={userPacks.createWidget} />
@@ -159,84 +166,47 @@ export function WidgetPackPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Template</TableHead>
+                    <TableHead>HTML Path</TableHead>
                     <TableHead class="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
-                {/* <TableBody>
-                {widgets().map(widget => (
-                  <TableRow>
-                    <TableCell>{widget.name}</TableCell>
-                    <TableCell>{widget.template}</TableCell>
-                    <TableCell>
-                      <AlertDialog
-                        open={deleteWidgetId === widget.id}
-                        onOpenChange={open =>
-                          setDeleteWidgetId(open ? widget.id : null)
-                        }
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          class="text-destructive"
-                          onClick={() => setDeleteWidgetId(widget.id)}
-                        >
-                          <IconTrash class="h-4 w-4" />
-                        </Button>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Delete Widget: {widget.name}
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              <div class="flex flex-col gap-4">
-                                <div class="flex items-center gap-2 text-destructive">
-                                  <IconAlertTriangle class="h-5 w-5" />
-                                  <span>
-                                    This action cannot be undone. The
-                                    following files will be deleted:
-                                  </span>
-                                </div>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                  <li>zebar-widget.json</li>
-                                  <li>
-                                    /
-                                    {widget.name
-                                      .toLowerCase()
-                                      .replace(/\s+/g, '-')}
-                                    /
-                                  </li>
-                                </ul>
-                              </div>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogClose>Cancel</AlertDialogClose>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteWidget(widget.id)}
-                              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                <TableBody>
+                  {selectedPack()?.widgets.map(widget => (
+                    <TableRow>
+                      <TableCell>{widget.name}</TableCell>
+                      <TableCell>{widget.htmlPath}</TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              class="text-red-500 hover:text-red-600"
                             >
-                              Delete Widget
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                              <IconTrash class="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <DeleteWidgetDialog
+                            widget={widget}
+                            onDelete={userPacks.deleteWidget}
+                          />
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
 
-                {widgets().length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      class="text-center text-muted-foreground"
-                    >
-                      No widgets added yet
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody> */}
+                  {selectedPack()?.widgets.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        class="text-center text-muted-foreground"
+                      >
+                        No widgets added yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
               </Table>
             </CardContent>
           </Card>

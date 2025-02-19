@@ -20,9 +20,18 @@ const communityPacksMock = [
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
     widgets: [
-      { id: 'cpu-usage', name: 'CPU Usage' },
-      { id: 'memory-usage', name: 'Memory Usage' },
-      { id: 'disk-space', name: 'Disk Space' },
+      {
+        name: 'CPU Usage',
+        htmlPath: 'cpu-usage.html',
+      } as any as WidgetConfig,
+      {
+        name: 'Memory Usage',
+        htmlPath: 'memory-usage.html',
+      } as any as WidgetConfig,
+      {
+        name: 'Disk Space',
+        htmlPath: 'disk-space.html',
+      } as any as WidgetConfig,
     ],
     previewUrls: [],
     excludeFiles: '',
@@ -35,8 +44,14 @@ const communityPacksMock = [
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
     widgets: [
-      { id: 'current-weather', name: 'Current Weather' },
-      { id: 'forecast', name: 'Weekly Forecast' },
+      {
+        name: 'Current Weather',
+        htmlPath: 'current-weather.html',
+      } as any as WidgetConfig,
+      {
+        name: 'Weekly Forecast',
+        htmlPath: 'weekly-forecast.html',
+      } as any as WidgetConfig,
     ],
     previewUrls: [],
     excludeFiles: '',
@@ -50,7 +65,12 @@ const localPacksMock = [
     author: 'me',
     description: 'Personal collection of widgets',
     version: '0.1.0',
-    widgets: [{ id: 'todo-list', name: 'Todo List' }],
+    widgets: [
+      {
+        name: 'Todo List',
+        htmlPath: 'todo-list.html',
+      } as any as WidgetConfig,
+    ],
     tags: ['todo', 'list', 'custom'],
     previewUrls: [],
     excludeFiles: '',
@@ -66,7 +86,7 @@ export type WidgetPack = {
   versions?: WidgetPackVersion[];
   description: string;
   version: string;
-  widgets: { id: string; name: string }[];
+  widgets: WidgetConfig[];
   tags: string[];
 };
 
@@ -96,6 +116,7 @@ type UserPacksContextState = {
   createPack: (pack: CreateWidgetPackForm) => Promise<void>;
   createWidget: (widget: CreateWidgetArgs) => Promise<void>;
   deletePack: (packId: string) => Promise<void>;
+  deleteWidget: (widgetName: string) => Promise<void>;
   updateWidgetConfig: (
     configPath: string,
     newConfig: WidgetConfig,
@@ -196,6 +217,10 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     return invoke<void>('delete_widget_pack', { packId });
   }
 
+  async function deleteWidget(widgetName: string) {
+    return invoke<void>('delete_widget', { widgetName });
+  }
+
   const store: UserPacksContextState = {
     communityPacks,
     localPacks,
@@ -207,6 +232,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     createPack,
     createWidget,
     deletePack,
+    deleteWidget,
   };
 
   return (
