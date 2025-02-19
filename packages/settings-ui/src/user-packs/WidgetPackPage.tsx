@@ -10,17 +10,15 @@ import {
   TableRow,
   TextField,
   ChipField,
-  FileField,
+  FormLabel,
 } from '@glzr/components';
-import { IconPhoto, IconPlus, IconX } from '@tabler/icons-solidjs';
-import { convertFileSrc } from '@tauri-apps/api/core';
-import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
+import { IconPlus } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { createSignal } from 'solid-js';
 import * as z from 'zod';
 import { Widget } from 'zebar';
 
-import { AppBreadcrumbs, useUserPacks } from '~/common';
+import { AppBreadcrumbs, useUserPacks, ImageSelector } from '~/common';
 import { CreateWidgetDialog } from './dialogs';
 
 const formSchema = z.object({
@@ -41,7 +39,6 @@ const formSchema = z.object({
 export function WidgetPackPage() {
   const userPacks = useUserPacks();
 
-  const fileInputRef = createSignal<HTMLInputElement | null>(null);
   const [widgets, setWidgets] = createSignal<Widget[]>([]);
 
   const form = createForm<z.infer<typeof formSchema>>({
@@ -50,23 +47,6 @@ export function WidgetPackPage() {
     tags: [],
     previewImages: [],
   });
-
-  function onFileSelect(value: File[]) {
-    console.log('files', value);
-
-    // setSelectedFiles(files);
-
-    // Update form with file paths.
-    const paths = value.map(file => `./resources/${file.name}`);
-    form.setFieldValue('previewImages', paths);
-  }
-
-  function removeImage(index: number) {
-    // setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    // packForm.setFieldValue('previewImages', prev =>
-    //   prev.filter((_, i) => i !== index),
-    // );
-  }
 
   return (
     <div class="container mx-auto pt-3.5 pb-32">
@@ -91,7 +71,7 @@ export function WidgetPackPage() {
                 {inputProps => (
                   <TextField
                     label="Name"
-                    placeholder="My Awesome Widget Pack"
+                    placeholder="My widget pack"
                     description="This will be used as the directory name (as a slug)."
                     {...inputProps()}
                   />
@@ -118,64 +98,14 @@ export function WidgetPackPage() {
                 )}
               </Field>
 
-              <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                  <label class="text-sm font-medium">Preview Images</label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async e => {
-                      e.preventDefault();
-                      const selected = await openFileDialog({
-                        multiple: true,
-                        filters: [
-                          {
-                            name: 'Images',
-                            extensions: ['png', 'jpg', 'jpeg'],
-                          },
-                        ],
-                      });
-                      if (selected) {
-                        form.setFieldValue('previewImages', selected);
-                      }
-                    }}
-                  >
-                    <IconPlus class="h-4 w-4 mr-2" />
-                    Add Images
-                  </Button>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  {form.value.previewImages.length > 0 ? (
-                    form.value.previewImages.map((path, index) => (
-                      <div class="relative group aspect-video">
-                        <img
-                          src={convertFileSrc(path)}
-                          alt={`Preview ${index + 1}`}
-                          class="w-full h-full object-cover rounded-md"
-                        />
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeImage(index)}
-                        >
-                          <IconX class="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <div class="col-span-2 border-2 border-dashed rounded-md p-8 text-center">
-                      <div class="text-muted-foreground">
-                        <IconPhoto class="h-8 w-8 mx-auto mb-2" />
-                        <p>No preview images selected</p>
-                        <p class="text-sm">
-                          Click "Add Images" to select preview images
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              <div>
+                <FormLabel>Preview Images</FormLabel>
+                <ImageSelector
+                  images={form.value.previewImages}
+                  onChange={images =>
+                    form.setFieldValue('previewImages', images)
+                  }
+                />
               </div>
             </div>
           </CardContent>
