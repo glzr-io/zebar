@@ -1,5 +1,5 @@
 {
-  "name": "solidjs-ts",
+  "name": "{{ WIDGET_NAME }}",
   "version": "0.0.0",
   "description": "",
   "scripts": {

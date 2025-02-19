@@ -68,6 +68,9 @@ pub struct WidgetConfig {
   #[serde(rename = "$schema")]
   schema: Option<String>,
 
+  /// Name of the widget.
+  pub name: String,
+
   /// Relative path to entry point HTML file.
   pub html_path: PathBuf,
 
@@ -517,7 +520,7 @@ impl Config {
     self.app_settings.init_template(
       TemplateResource::Widget(args.template),
       &widget_dir,
-      &HashMap::new(),
+      &HashMap::from([("WIDGET_NAME", args.name)]),
     )?;
 
     let pack_config_path = pack_dir.join("zebar-pack.json");

@@ -1,3 +1,7 @@
+# {{ WIDGET_NAME }}
+
+Generated via SolidJS TypeScript template.
+
 ## Usage
 
 ```bash

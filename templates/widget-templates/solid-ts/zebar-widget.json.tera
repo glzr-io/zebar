@@ -1,5 +1,6 @@
 {
   "$schema": "https://github.com/glzr-io/zebar/raw/v2.7.0/resources/widget-schema.json",
+  "name": "{{ WIDGET_NAME }}",
   "htmlPath": "./dist/index.html",
   "zOrder": "normal",
   "shownInTaskbar": false,
