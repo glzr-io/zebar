@@ -16,6 +16,7 @@ const marketplacePacksMock = [
     id: 'glzr-io.system-monitor',
     name: 'System Monitor',
     author: 'glzr-io',
+    type: 'marketplace' as const,
     previewUrls: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
@@ -66,6 +67,7 @@ const marketplacePacksMock = [
     id: 'glzr-io.weather-widgets',
     name: 'Weather Pack',
     author: 'glzr-io',
+    type: 'marketplace' as const,
     previewUrls: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',

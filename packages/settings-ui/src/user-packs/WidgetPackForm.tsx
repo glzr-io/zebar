@@ -11,8 +11,9 @@ import { Field, FormState } from 'smorf';
 import { ImageSelector } from '~/common';
 import { WidgetPackFormData } from './WidgetPackPage';
 
-interface WidgetPackFormProps {
+export interface WidgetPackFormProps {
   form: FormState<WidgetPackFormData>;
+  disabled?: boolean;
 }
 
 export function WidgetPackForm(props: WidgetPackFormProps) {
@@ -27,6 +28,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
                   label="Name"
                   placeholder="My widget pack"
                   description="This will be used as the directory name (as a slug)."
+                  disabled={props.disabled}
                   {...inputProps()}
                 />
               )}
@@ -37,6 +39,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
                 <TextField
                   label="Description"
                   placeholder="A collection of beautiful widgets..."
+                  disabled={props.disabled}
                   {...inputProps()}
                 />
               )}
@@ -47,6 +50,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
                 <ChipField
                   label="Tags"
                   placeholder="Press enter to add tags..."
+                  disabled={props.disabled}
                   {...inputProps()}
                 />
               )}
@@ -59,6 +63,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
                 onChange={images =>
                   props.form.setFieldValue('previewImages', images)
                 }
+                disabled={props.disabled}
               />
             </div>
 
@@ -67,6 +72,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
                 <TextAreaField
                   label="Exclude files"
                   description="A list of file patterns to exclude from the pack separated by new lines."
+                  disabled={props.disabled}
                   {...inputProps()}
                 />
               )}

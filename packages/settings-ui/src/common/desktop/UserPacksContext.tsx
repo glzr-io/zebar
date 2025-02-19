@@ -16,6 +16,7 @@ const communityPacksMock = [
     id: 'glzr-io.system-monitor',
     name: 'System Monitor',
     author: 'glzr-io',
+    type: 'marketplace' as const,
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
@@ -40,6 +41,7 @@ const communityPacksMock = [
     id: 'glzr-io.weather-widgets',
     name: 'Weather Pack',
     author: 'glzr-io',
+    type: 'marketplace' as const,
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
@@ -63,6 +65,7 @@ const localPacksMock = [
     id: 'local.my-custom-widgets',
     name: 'My Custom Widgets',
     author: 'me',
+    type: 'local' as const,
     description: 'Personal collection of widgets',
     version: '0.1.0',
     widgets: [
@@ -81,6 +84,7 @@ export type WidgetPack = {
   id: string;
   name: string;
   author: string;
+  type: 'local' | 'marketplace';
   previewUrls: string[];
   excludeFiles: string;
   versions?: WidgetPackVersion[];

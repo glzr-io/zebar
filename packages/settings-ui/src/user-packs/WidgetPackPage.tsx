@@ -49,6 +49,10 @@ export function WidgetPackPage() {
     userPacks.allPacks().find(pack => pack.id === params.packId),
   );
 
+  const isMarketplacePack = createMemo(
+    () => selectedPack()?.type === 'marketplace',
+  );
+
   const form = createForm<WidgetPackFormData>({
     name: '',
     description: '',
@@ -83,7 +87,7 @@ export function WidgetPackPage() {
 
         <h1 class="text-3xl font-bold">Widget Pack</h1>
 
-        <WidgetPackForm form={form} />
+        <WidgetPackForm form={form} disabled={isMarketplacePack()} />
 
         <Card>
           <CardContent class="pt-6">
@@ -92,7 +96,7 @@ export function WidgetPackPage() {
 
               <Dialog>
                 <DialogTrigger>
-                  <Button variant="outline">
+                  <Button variant="outline" disabled={isMarketplacePack()}>
                     <IconPlus class="mr-2 h-4 w-4" />
                     Add widget
                   </Button>
@@ -117,11 +121,12 @@ export function WidgetPackPage() {
                     <TableCell>{widget.htmlPath}</TableCell>
                     <TableCell>
                       <AlertDialog>
-                        <AlertDialogTrigger>
+                        <AlertDialogTrigger disabled={isMarketplacePack()}>
                           <Button
                             variant="outline"
                             size="icon"
                             class="text-red-500 hover:text-red-600"
+                            disabled={isMarketplacePack()}
                           >
                             <IconTrash class="h-4 w-4" />
                           </Button>

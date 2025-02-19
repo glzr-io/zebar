@@ -1,4 +1,4 @@
-import { Button } from '@glzr/components';
+import { Button, cn } from '@glzr/components';
 import { IconPhoto, IconPlus, IconX } from '@tabler/icons-solidjs';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
@@ -6,7 +6,8 @@ import { Show } from 'solid-js';
 
 export interface ImageSelectorProps {
   images: string[];
-  onChange: (images: string[]) => void;
+  onChange?: (images: string[]) => void;
+  disabled?: boolean;
 }
 
 export function ImageSelector(props: ImageSelectorProps) {
@@ -36,11 +37,24 @@ export function ImageSelector(props: ImageSelectorProps) {
       fallback={
         <div class="border-2 border-dashed rounded-md p-8 text-center">
           <div class="text-muted-foreground">
-            <IconPhoto class="h-8 w-8 mx-auto mb-2" />
+            <IconPhoto
+              class="h-8 w-8 mx-auto mb-2 data-[disabled]:opacity-70"
+              data-disabled={props.disabled}
+            />
 
-            <p class="mb-3">No preview images selected</p>
+            <p
+              class="mb-3 data-[disabled]:opacity-70"
+              data-disabled={props.disabled}
+            >
+              No preview images selected
+            </p>
 
-            <Button variant="outline" size="sm" onClick={addImages}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addImages}
+              disabled={props.disabled}
+            >
               <IconPlus class="h-4 w-4 mr-2" />
               Add images
             </Button>
@@ -61,6 +75,7 @@ export function ImageSelector(props: ImageSelectorProps) {
               variant="secondary"
               size="icon"
               class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              disabled={props.disabled}
               onClick={() => removeImage(index)}
             >
               <IconX class="h-3 w-3" />
@@ -73,6 +88,7 @@ export function ImageSelector(props: ImageSelectorProps) {
           size="icon"
           class="h-8 w-8 self-center ml-2"
           onClick={addImages}
+          disabled={props.disabled}
         >
           <IconPlus class="h-4 w-4" />
         </Button>
