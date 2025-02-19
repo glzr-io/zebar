@@ -68,7 +68,7 @@ export function WidgetPackPage() {
         name: selectedPack().name,
         description: selectedPack().description,
         tags: selectedPack().tags,
-        previewImages: selectedPack().previewUrls,
+        previewImages: selectedPack().previewImages,
         excludeFiles: selectedPack().excludeFiles,
       });
     }
@@ -116,7 +116,7 @@ export function WidgetPackPage() {
               </TableHeader>
 
               <TableBody>
-                {selectedPack()?.widgets.map(widget => (
+                {selectedPack()?.widgetConfigs.map(widget => (
                   <TableRow
                     class="cursor-pointer"
                     onClick={() =>
@@ -148,7 +148,7 @@ export function WidgetPackPage() {
                   </TableRow>
                 ))}
 
-                {selectedPack()?.widgets.length === 0 && (
+                {selectedPack()?.widgetConfigs.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={3}

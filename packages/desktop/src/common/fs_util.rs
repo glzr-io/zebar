@@ -44,9 +44,19 @@ pub fn copy_dir_all(
   fs::create_dir_all(dest_dir)?;
 
   visit_deep(src_dir, &|entry| {
-    let dest_path = dest_dir.join(entry.file_name());
+    let Ok(dest_path) = entry
+      .path()
+      .strip_prefix(src_dir)
+      .map(|rel_path| dest_dir.join(rel_path))
+    else {
+      return;
+    };
 
-    if override_existing || !dest_path.exists() {
+    if entry.path().is_dir() {
+      if let Err(err) = fs::create_dir_all(&dest_path) {
+        error!("Failed to create directory: {}", err);
+      }
+    } else if override_existing || !dest_path.exists() {
       if let Err(err) = fs::copy(entry.path(), dest_path) {
         error!("Failed to copy file: {}", err);
       }
@@ -70,10 +80,10 @@ pub fn visit_deep(
       let entry = entry?;
       let path = entry.path();
 
+      callback(&entry);
+
       if path.is_dir() {
         visit_deep(&path, callback)?;
-      } else {
-        callback(&entry);
       }
     }
   }

@@ -32,13 +32,13 @@ export function MarketplacePackPage() {
 
   function nextImage(selectedPack: WidgetPack) {
     setCurrentImageIndex(prev =>
-      prev === selectedPack.previewUrls.length - 1 ? 0 : prev + 1,
+      prev === selectedPack.previewImages.length - 1 ? 0 : prev + 1,
     );
   }
 
   function previousImage(selectedPack: WidgetPack) {
     setCurrentImageIndex(prev =>
-      prev === 0 ? selectedPack.previewUrls.length - 1 : prev - 1,
+      prev === 0 ? selectedPack.previewImages.length - 1 : prev - 1,
     );
   }
 
@@ -93,7 +93,7 @@ export function MarketplacePackPage() {
             <div class="relative aspect-[2/1] w-full overflow-hidden rounded-lg bg-muted">
               <img
                 src={
-                  selectedPack().previewUrls[currentImageIndex()] ||
+                  selectedPack().previewImages[currentImageIndex()] ||
                   '/placeholder.svg'
                 }
                 alt={`${selectedPack().name} preview ${currentImageIndex() + 1}`}
@@ -118,7 +118,7 @@ export function MarketplacePackPage() {
                 </Button>
               </div>
               <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {selectedPack().previewUrls.map((_, index) => (
+                {selectedPack().previewImages.map((_, index) => (
                   <button
                     class={`h-1.5 w-1.5 rounded-full ${index === currentImageIndex() ? 'bg-white' : 'bg-white/50'}`}
                     onClick={() => setCurrentImageIndex(index)}
@@ -209,7 +209,7 @@ export function MarketplacePackPage() {
 
                   <TabsContent value="widgets" class="space-y-6">
                     <div class="grid gap-6 sm:grid-cols-2">
-                      {selectedPack().widgets.map(widget => (
+                      {selectedPack().widgetConfigs.map(widget => (
                         <div class="group relative space-y-3">
                           <div>
                             <h3 class="font-medium">{widget.name}</h3>

@@ -20,7 +20,7 @@ const communityPacksMock = [
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
-    widgets: [
+    widgetConfigs: [
       {
         name: 'cpu-usage',
         htmlPath: 'cpu-usage.html',
@@ -34,7 +34,7 @@ const communityPacksMock = [
         htmlPath: 'disk-space.html',
       } as any as WidgetConfig,
     ],
-    previewUrls: [],
+    previewImages: [],
     excludeFiles: '',
   },
   {
@@ -45,7 +45,7 @@ const communityPacksMock = [
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
-    widgets: [
+    widgetConfigs: [
       {
         name: 'current-weather',
         htmlPath: 'current-weather.html',
@@ -55,7 +55,7 @@ const communityPacksMock = [
         htmlPath: 'weekly-forecast.html',
       } as any as WidgetConfig,
     ],
-    previewUrls: [],
+    previewImages: [],
     excludeFiles: '',
   },
 ];
@@ -68,14 +68,14 @@ const localPacksMock = [
     type: 'local' as 'local' | 'marketplace',
     description: 'Personal collection of widgets',
     version: '0.1.0',
-    widgets: [
+    widgetConfigs: [
       {
         name: 'todo-list',
         htmlPath: 'todo-list.html',
       } as any as WidgetConfig,
     ],
     tags: ['todo', 'list', 'custom'],
-    previewUrls: [],
+    previewImages: [],
     excludeFiles: '',
   },
 ];
@@ -85,12 +85,12 @@ export type WidgetPack = {
   name: string;
   author: string;
   type: 'local' | 'marketplace';
-  previewUrls: string[];
+  previewImages: string[];
   excludeFiles: string;
   versions?: WidgetPackVersion[];
   description: string;
   version: string;
-  widgets: WidgetConfig[];
+  widgetConfigs: WidgetConfig[];
   tags: string[];
 };
 
@@ -229,7 +229,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     mutateLocalPacks(packs =>
       packs.map(pack => {
         return pack.id === args.packId
-          ? { ...pack, widgets: [...pack.widgets, widget] }
+          ? { ...pack, widgetConfigs: [...pack.widgetConfigs, widget] }
           : pack;
       }),
     );
@@ -249,7 +249,9 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
       packs.map(pack => {
         return {
           ...pack,
-          widgets: pack.widgets.filter(w => w.name !== widgetName),
+          widgetConfigs: pack.widgetConfigs.filter(
+            w => w.name !== widgetName,
+          ),
         };
       }),
     );

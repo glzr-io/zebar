@@ -17,7 +17,7 @@ const marketplacePacksMock = [
     name: 'System Monitor',
     author: 'glzr-io',
     type: 'marketplace' as const,
-    previewUrls: [
+    previewImages: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],
@@ -25,7 +25,7 @@ const marketplacePacksMock = [
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
-    widgets: [
+    widgetConfigs: [
       {
         name: 'cpu-usage',
         htmlPath: 'cpu-usage.html',
@@ -68,7 +68,7 @@ const marketplacePacksMock = [
     name: 'Weather Pack',
     author: 'glzr-io',
     type: 'marketplace' as const,
-    previewUrls: [
+    previewImages: [
       'https://placehold.co/200x200',
       'https://placehold.co/200x200',
     ],
@@ -76,7 +76,7 @@ const marketplacePacksMock = [
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
-    widgets: [
+    widgetConfigs: [
       {
         name: 'current-weather',
         htmlPath: 'current-weather.html',

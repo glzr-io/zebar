@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WidgetPack {
+pub struct WidgetPackConfig {
   /// JSON schema URL to validate the widget pack file.
   #[serde(rename = "$schema")]
   schema: Option<String>,
@@ -36,8 +36,20 @@ pub struct WidgetPack {
   /// Preview images of the pack.
   pub preview_images: Vec<String>,
 
+  /// Files to exclude from the pack during publishing.
+  pub exclude_files: Vec<String>,
+
   /// Paths to widgets in the pack.
   pub widget_paths: Vec<PathBuf>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetPack {
+  pub id: String,
+  #[serde(flatten)]
+  pub config: WidgetPackConfig,
+  pub widget_configs: Vec<WidgetConfig>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -455,8 +467,11 @@ impl Config {
       ]),
     )?;
 
+    let mut widget_configs = Vec::new();
+
     for widget in args.widgets {
-      self.create_widget(widget)?;
+      let widget_config = self.create_widget(widget)?;
+      widget_configs.push(widget_config);
     }
 
     // Initialize git repository. Ignore errors.
@@ -467,9 +482,15 @@ impl Config {
 
     let pack_config_path = pack_dir.join("zebar-pack.json");
     let pack_config =
-      read_and_parse_json::<WidgetPack>(&pack_config_path)?;
+      read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
 
-    Ok(pack_config)
+    let pack = WidgetPack {
+      id: format!("local.{}", pack_config.name),
+      config: pack_config,
+      widget_configs,
+    };
+
+    Ok(pack)
   }
 
   /// Creates a new widget from a template.
@@ -491,7 +512,7 @@ impl Config {
 
     let pack_config_path = pack_dir.join("zebar-pack.json");
     let mut pack_config =
-      read_and_parse_json::<WidgetPack>(&pack_config_path)?;
+      read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
 
     // Add widget to pack config.
     pack_config.widget_paths.push(widget_dir.clone());
@@ -525,7 +546,7 @@ impl Config {
 
     let pack_config_path = pack_dir.join("zebar-pack.json");
     let mut pack_config =
-      read_and_parse_json::<WidgetPack>(&pack_config_path)?;
+      read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
 
     // Remove widget from pack config.
     pack_config.widget_paths.retain(|path| path != &widget_dir);

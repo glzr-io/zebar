@@ -32,7 +32,7 @@ export function WidgetPage() {
 
   const selectedWidgetName = createMemo(() => params.widgetName);
   const selectedConfig = createMemo(() =>
-    selectedPack()?.widgets.find(
+    selectedPack()?.widgetConfigs.find(
       widget => widget.name === params.widgetName,
     ),
   );

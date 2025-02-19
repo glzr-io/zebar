@@ -63,7 +63,7 @@ export function MarketplacePage() {
             <A href={`/marketplace/packs/${pack.id}`} class="block">
               <div class="overflow-hidden rounded-lg aspect-[3/2] bg-muted">
                 <img
-                  src={pack.previewUrls[0] || '/placeholder.svg'}
+                  src={pack.previewImages[0] || '/placeholder.svg'}
                   alt={`Preview of ${pack.name}`}
                   width={600}
                   height={400}

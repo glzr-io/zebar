@@ -100,7 +100,7 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
           </div>
           <div class="text-sm">
             <p>
-              <strong>Widgets:</strong> {props.pack.widgets.length}
+              <strong>Widgets:</strong> {props.pack.widgetConfigs.length}
             </p>
           </div>
         </CardContent>
