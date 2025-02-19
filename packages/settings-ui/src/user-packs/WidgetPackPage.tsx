@@ -71,7 +71,10 @@ export function WidgetPackPage() {
                     Add widget
                   </Button>
                 </DialogTrigger>
-                <CreateWidgetDialog onSubmit={userPacks.createWidget} />
+                <CreateWidgetDialog
+                  packName={selectedPack().name}
+                  onSubmit={userPacks.createWidget}
+                />
               </Dialog>
             </div>
 

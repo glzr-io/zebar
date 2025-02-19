@@ -7,21 +7,21 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@glzr/components';
-import { createForm } from 'smorf';
+import { FormState } from 'smorf';
+import { createSignal } from 'solid-js';
 
 import { CreateWidgetArgs } from '~/common';
 import { CreateWidgetForm } from '../CreateWidgetForm';
 
 export type CreateWidgetDialogProps = {
+  packName: string;
   onSubmit: (widget: CreateWidgetArgs) => void;
 };
 
 export function CreateWidgetDialog(props: CreateWidgetDialogProps) {
-  const form = createForm<CreateWidgetArgs>({
-    name: '',
-    packId: '',
-    template: 'react_buildless',
-  });
+  const [form, setForm] = createSignal<FormState<CreateWidgetArgs> | null>(
+    null,
+  );
 
   return (
     <DialogContent>
@@ -33,7 +33,7 @@ export function CreateWidgetDialog(props: CreateWidgetDialogProps) {
       </DialogHeader>
 
       <div class="py-4">
-        <CreateWidgetForm form={form} />
+        <CreateWidgetForm onChange={setForm} />
       </div>
 
       <DialogFooter>
@@ -41,8 +41,14 @@ export function CreateWidgetDialog(props: CreateWidgetDialogProps) {
           <Button variant="outline">Cancel</Button>
         </Dialog.CloseButton>
 
-        <Dialog.CloseButton onClick={() => props.onSubmit(form.value)}>
-          <Button disabled={!form.value.name.trim()}>Create widget</Button>
+        <Dialog.CloseButton
+          onClick={() =>
+            props.onSubmit({ ...form()?.value, packName: props.packName })
+          }
+        >
+          <Button disabled={!form()?.value.name.trim()}>
+            Create widget
+          </Button>
         </Dialog.CloseButton>
       </DialogFooter>
     </DialogContent>

@@ -108,7 +108,7 @@ export type CreateWidgetPackArgs = {
 
 export type CreateWidgetArgs = {
   name: string;
-  packId: string;
+  packName: string;
   template: 'react_buildless' | 'solid_typescript';
 };
 
@@ -224,12 +224,13 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
     mutateLocalPacks(packs =>
       packs.map(pack => {
-        return pack.id === args.packId
+        return pack.name === args.packName && pack.type === 'local'
           ? { ...pack, widgetConfigs: [...pack.widgetConfigs, widget] }
           : pack;
       }),
     );
 
+    console.log(widget, localPacks());
     return widget;
   }
 

@@ -47,10 +47,18 @@ pub struct WidgetPackConfig {
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPack {
   pub id: String,
+  pub r#type: WidgetPackType,
   #[serde(flatten)]
   pub config: WidgetPackConfig,
   pub directory_path: PathBuf,
   pub widget_configs: Vec<WidgetConfig>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WidgetPackType {
+  Local,
+  Marketplace,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -486,6 +494,7 @@ impl Config {
 
     let pack = WidgetPack {
       id: format!("local.{}", pack_config.name),
+      r#type: WidgetPackType::Local,
       directory_path: pack_dir,
       config: pack_config,
       widget_configs,
@@ -502,7 +511,7 @@ impl Config {
     &self,
     args: CreateWidgetArgs,
   ) -> anyhow::Result<WidgetConfig> {
-    let pack_dir = self.app_settings.config_dir.join(&args.name);
+    let pack_dir = self.app_settings.config_dir.join(&args.pack_name);
     let widget_dir = pack_dir.join(&args.name);
 
     self.app_settings.init_template(
@@ -524,7 +533,7 @@ impl Config {
       serde_json::to_string_pretty(&pack_config)? + "\n",
     )?;
 
-    let widget_config_path = widget_dir.join("zebar.json");
+    let widget_config_path = widget_dir.join("zebar-widget.json");
     let widget_config =
       read_and_parse_json::<WidgetConfig>(&widget_config_path)?;
 

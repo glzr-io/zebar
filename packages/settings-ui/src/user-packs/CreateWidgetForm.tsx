@@ -1,17 +1,31 @@
 import { SelectField, TextField } from '@glzr/components';
-import { Field, FormState } from 'smorf';
+import { createForm, Field, FormState } from 'smorf';
+import { createEffect, on } from 'solid-js';
 
 import { CreateWidgetArgs } from '~/common';
 
 export type CreateWidgetFormProps = {
-  form: FormState<CreateWidgetArgs>;
+  onChange: (form: FormState<CreateWidgetArgs>) => void;
 };
 
 export function CreateWidgetForm(props: CreateWidgetFormProps) {
+  const form = createForm<CreateWidgetArgs>({
+    name: '',
+    packName: '',
+    template: 'react_buildless',
+  });
+
+  createEffect(
+    on(
+      () => form.value,
+      () => props.onChange(form),
+    ),
+  );
+
   return (
     <div class="grid gap-4 py-4">
       <div class="grid gap-2">
-        <Field of={props.form} path="name">
+        <Field of={form} path="name">
           {inputProps => (
             <TextField
               label="Widget Name"
@@ -23,14 +37,14 @@ export function CreateWidgetForm(props: CreateWidgetFormProps) {
       </div>
 
       <div class="grid gap-2">
-        <Field of={props.form} path="template">
+        <Field of={form} path="template">
           {inputProps => (
             <SelectField
               label="Template"
               placeholder="Select a template"
               options={[
-                { label: 'React Buildless', value: 'react-buildless' },
-                { label: 'Solid TypeScript', value: 'solid-ts' },
+                { label: 'React Buildless', value: 'react_buildless' },
+                { label: 'Solid TypeScript', value: 'solid_typescript' },
               ]}
               {...inputProps}
             />
