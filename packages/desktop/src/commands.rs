@@ -23,7 +23,7 @@ use crate::{
 pub async fn widget_configs(
   config: State<'_, Arc<Config>>,
 ) -> Result<HashMap<PathBuf, WidgetConfig>, String> {
-  Ok(config.widget_configs().await)
+  Ok(config.widget_packs().await)
 }
 
 #[tauri::command]

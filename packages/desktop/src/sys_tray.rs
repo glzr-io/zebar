@@ -226,7 +226,7 @@ impl SysTray {
 
   /// Creates and returns the main system tray menu.
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
-    let widget_configs = self.config.widget_configs().await;
+    let widget_configs = self.config.widget_packs().await;
     let widget_states = self.widget_factory.states_by_path().await;
     let startup_configs =
       self.app_settings.startup_configs_by_path().await?;

@@ -242,7 +242,7 @@ fn listen_events(
   let mut settings_change_rx = app_settings.settings_change_tx.subscribe();
   let mut monitors_change_rx = monitor_state.change_tx.subscribe();
   let mut widget_configs_change_rx =
-    config.widget_configs_change_tx.subscribe();
+    config.widget_packs_change_tx.subscribe();
 
   task::spawn(async move {
     loop {

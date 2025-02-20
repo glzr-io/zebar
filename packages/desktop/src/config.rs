@@ -14,7 +14,7 @@ use tracing::{error, info};
 
 use crate::{
   app_settings::{AppSettings, FrontendTemplate, TemplateResource},
-  common::{has_extension, read_and_parse_json, LengthValue, PathExt},
+  common::{read_and_parse_json, LengthValue, PathExt},
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -50,8 +50,9 @@ pub struct WidgetPack {
   pub r#type: WidgetPackType,
   #[serde(flatten)]
   pub config: WidgetPackConfig,
+  pub config_path: PathBuf,
   pub directory_path: PathBuf,
-  pub widget_configs: Vec<WidgetConfig>,
+  pub widget_configs: HashMap<PathBuf, WidgetConfig>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -278,14 +279,14 @@ pub struct Config {
   /// Reference to `AppSettings`.
   app_settings: Arc<AppSettings>,
 
-  /// List of widget configs.
-  pub widget_configs: Arc<Mutex<HashMap<PathBuf, WidgetConfig>>>,
+  /// List of widget packs.
+  pub widget_packs: Arc<Mutex<HashMap<PathBuf, WidgetPack>>>,
 
-  _widget_configs_change_rx:
-    broadcast::Receiver<HashMap<PathBuf, WidgetConfig>>,
+  _widget_packs_change_rx:
+    broadcast::Receiver<HashMap<PathBuf, WidgetPack>>,
 
-  pub widget_configs_change_tx:
-    broadcast::Sender<HashMap<PathBuf, WidgetConfig>>,
+  pub widget_packs_change_tx:
+    broadcast::Sender<HashMap<PathBuf, WidgetPack>>,
 }
 
 impl Config {
@@ -296,43 +297,42 @@ impl Config {
     app_handle: &AppHandle,
     app_settings: Arc<AppSettings>,
   ) -> anyhow::Result<Self> {
-    let widget_configs =
-      Self::read_widget_configs(&app_settings.config_dir)?;
+    let widget_packs = Self::read_widget_packs(&app_settings.config_dir)?;
 
-    let (widget_configs_change_tx, _widget_configs_change_rx) =
+    let (widget_packs_change_tx, _widget_packs_change_rx) =
       broadcast::channel(16);
 
     Ok(Self {
       app_handle: app_handle.clone(),
       app_settings,
-      widget_configs: Arc::new(Mutex::new(widget_configs)),
-      _widget_configs_change_rx,
-      widget_configs_change_tx,
+      widget_packs: Arc::new(Mutex::new(widget_packs)),
+      _widget_packs_change_rx,
+      widget_packs_change_tx,
     })
   }
 
   /// Re-evaluates config files within the config directory.
   pub async fn reload(&self) -> anyhow::Result<()> {
-    let new_widget_configs =
-      Self::read_widget_configs(&self.app_settings.config_dir)?;
+    let new_widget_packs =
+      Self::read_widget_packs(&self.app_settings.config_dir)?;
 
     {
-      let mut widget_configs = self.widget_configs.lock().await;
-      *widget_configs = new_widget_configs.clone();
+      let mut widget_packs = self.widget_packs.lock().await;
+      *widget_packs = new_widget_packs.clone();
     }
 
-    self.widget_configs_change_tx.send(new_widget_configs)?;
+    self.widget_packs_change_tx.send(new_widget_packs)?;
 
     Ok(())
   }
 
-  /// Aggregates all valid widget configs at the 2nd-level of the given
-  /// directory (i.e. `<CONFIG_DIR>/*/*.zebar.json`).
+  /// Aggregates all valid widget packs at the 2nd-level of the given
+  /// directory (i.e. `<CONFIG_DIR>/*/zebar-pack.json`).
   ///
-  /// Returns a hashmap of config paths to their `WidgetConfig` instances.
-  fn read_widget_configs(
+  /// Returns a hashmap of config paths to their `WidgetPack` instances.
+  fn read_widget_packs(
     dir: &PathBuf,
-  ) -> anyhow::Result<HashMap<PathBuf, WidgetConfig>> {
+  ) -> anyhow::Result<HashMap<PathBuf, WidgetPack>> {
     let dir_paths = fs::read_dir(dir)
       .with_context(|| {
         format!("Failed to read directory: {}", dir.display())
@@ -348,17 +348,24 @@ impl Config {
 
     // Collect the found config files.
     let config_paths = subdir_paths
-      .filter(|path| path.is_file() && has_extension(&path, ".zebar.json"))
+      .filter(|path| {
+        path.is_file()
+          && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| name == "zebar-pack.json")
+            .unwrap_or(false)
+      })
       .collect::<Vec<PathBuf>>();
 
-    let mut configs = HashMap::new();
+    let mut packs = HashMap::new();
 
     // Parse the found config files.
     for path in config_paths {
-      match Self::parse_widget_config(&path) {
-        Ok((config_path, config)) => {
-          info!("Found valid widget config at: {}", config_path.display());
-          configs.insert(config_path, config);
+      match Self::parse_widget_pack(&path) {
+        Ok((config_path, pack)) => {
+          info!("Found valid widget pack at: {}", config_path.display());
+          packs.insert(config_path, pack);
         }
         Err(err) => {
           error!("{:?}", err);
@@ -366,7 +373,56 @@ impl Config {
       }
     }
 
-    Ok(configs)
+    Ok(packs)
+  }
+
+  fn parse_widget_pack(
+    config_path: &PathBuf,
+  ) -> anyhow::Result<(PathBuf, WidgetPack)> {
+    let abs_path = config_path.to_absolute().with_context(|| {
+      format!("Invalid widget pack path '{}'.", config_path.display())
+    })?;
+
+    let pack_config = read_and_parse_json::<WidgetPackConfig>(&abs_path)
+      .map_err(|err| {
+      anyhow::anyhow!(
+        "Failed to parse widget pack at '{}': {:?}",
+        abs_path.display(),
+        err
+      )
+    })?;
+
+    let mut widget_configs = HashMap::new();
+
+    // Parse the found widget config files.
+    for path in &pack_config.widget_paths {
+      match Self::parse_widget_config(&path) {
+        Ok((config_path, widget_config)) => {
+          info!("Found valid widget config at: {}", config_path.display());
+          widget_configs.insert(config_path, widget_config);
+        }
+        Err(err) => {
+          error!("{:?}", err);
+        }
+      }
+    }
+
+    let pack = WidgetPack {
+      id: format!("local.{}", pack_config.name),
+      r#type: WidgetPackType::Local,
+      config_path: config_path.to_path_buf(),
+      directory_path: config_path
+        .parent()
+        .context(format!(
+          "Failed to get parent directory of '{}'.",
+          config_path.display()
+        ))?
+        .to_path_buf(),
+      config: pack_config,
+      widget_configs,
+    };
+
+    Ok((abs_path, pack))
   }
 
   fn parse_widget_config(
@@ -388,8 +444,8 @@ impl Config {
     Ok((abs_path, config))
   }
 
-  pub async fn widget_configs(&self) -> HashMap<PathBuf, WidgetConfig> {
-    self.widget_configs.lock().await.clone()
+  pub async fn widget_packs(&self) -> HashMap<PathBuf, WidgetPack> {
+    self.widget_packs.lock().await.clone()
   }
 
   /// Updates the widget config at the given path.
@@ -403,7 +459,7 @@ impl Config {
     info!("Updating widget config at {}.", config_path.display());
 
     {
-      let mut widget_configs = self.widget_configs.lock().await;
+      let mut widget_configs = self.widget_packs.lock().await;
 
       let config_entry = widget_configs.get_mut(config_path).context(
         format!("Widget config not found at {}.", config_path.display()),
@@ -415,7 +471,7 @@ impl Config {
 
     // Emit the changed config.
     self
-      .widget_configs_change_tx
+      .widget_packs_change_tx
       .send(HashMap::from([(config_path.clone(), new_config.clone())]))?;
 
     // Write the updated config to file.
@@ -453,7 +509,7 @@ impl Config {
   ) -> Option<(PathBuf, WidgetConfig)> {
     let abs_path = self.app_settings.to_absolute_path(config_path).ok()?;
 
-    let widget_configs = self.widget_configs.lock().await;
+    let widget_configs = self.widget_packs.lock().await;
     let config = widget_configs.get(&abs_path)?;
 
     Some((abs_path, config.clone()))
