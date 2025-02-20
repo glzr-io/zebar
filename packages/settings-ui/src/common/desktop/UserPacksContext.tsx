@@ -103,7 +103,6 @@ export type CreateWidgetPackArgs = {
   tags: string[];
   previewImages: string[];
   excludeFiles: string;
-  widgets: CreateWidgetArgs[];
 };
 
 export type CreateWidgetArgs = {

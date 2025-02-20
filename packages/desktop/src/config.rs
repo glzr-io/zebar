@@ -260,7 +260,6 @@ pub struct CreateWidgetPackArgs {
   pub tags: Vec<String>,
   pub preview_images: Vec<String>,
   pub exclude_files: String,
-  pub widgets: Vec<CreateWidgetArgs>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -478,13 +477,6 @@ impl Config {
       ]),
     )?;
 
-    let mut widget_configs = Vec::new();
-
-    for widget in args.widgets {
-      let widget_config = self.create_widget(widget)?;
-      widget_configs.push(widget_config);
-    }
-
     // Initialize git repository. Ignore errors.
     let _ = std::process::Command::new("git")
       .arg("init")
@@ -500,7 +492,7 @@ impl Config {
       r#type: WidgetPackType::Local,
       directory_path: pack_dir,
       config: pack_config,
-      widget_configs,
+      widget_configs: vec![],
     };
 
     Ok(pack)

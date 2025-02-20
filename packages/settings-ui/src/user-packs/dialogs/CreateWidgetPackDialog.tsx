@@ -25,7 +25,6 @@ export function CreateWidgetPackDialog(
     tags: [],
     previewImages: [],
     excludeFiles: '',
-    widgets: [],
   });
 
   return (
