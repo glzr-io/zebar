@@ -76,18 +76,6 @@ pub async fn stop_preset(
 }
 
 #[tauri::command]
-pub async fn update_widget_config(
-  config_path: String,
-  new_config: WidgetConfig,
-  config: State<'_, Arc<Config>>,
-) -> Result<(), String> {
-  config
-    .update_widget_config(&PathBuf::from(config_path), new_config)
-    .await
-    .map_err(|err| err.to_string())
-}
-
-#[tauri::command]
 pub async fn create_widget_pack(
   args: CreateWidgetPackArgs,
   config: State<'_, Arc<Config>>,
@@ -98,11 +86,34 @@ pub async fn create_widget_pack(
 }
 
 #[tauri::command]
+pub async fn update_widget_pack(
+  pack_id: String,
+  args: CreateWidgetPackArgs,
+  config: State<'_, Arc<Config>>,
+) -> anyhow::Result<WidgetPack, String> {
+  config
+    .update_widget_pack(pack_id, args)
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 pub async fn create_widget(
   args: CreateWidgetArgs,
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<WidgetConfig, String> {
   config.create_widget(args).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn update_widget_config(
+  config_path: String,
+  new_config: WidgetConfig,
+  config: State<'_, Arc<Config>>,
+) -> Result<(), String> {
+  config
+    .update_widget_config(&PathBuf::from(config_path), new_config)
+    .await
+    .map_err(|err| err.to_string())
 }
 
 #[tauri::command]

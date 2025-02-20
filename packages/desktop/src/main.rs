@@ -92,6 +92,7 @@ async fn main() -> anyhow::Result<()> {
       commands::stop_preset,
       commands::update_widget_config,
       commands::create_widget_pack,
+      commands::update_widget_pack,
       commands::create_widget,
       commands::delete_widget,
       commands::listen_provider,

@@ -506,6 +506,16 @@ impl Config {
     Ok(pack)
   }
 
+  /// Updates a widget pack.
+  pub fn update_widget_pack(
+    &self,
+    pack_id: String,
+    args: CreateWidgetPackArgs,
+  ) -> anyhow::Result<WidgetPack> {
+    // TODO: Implement.
+    anyhow::bail!("Not implemented")
+  }
+
   /// Creates a new widget from a template.
   ///
   /// Adds a new entry to the pack config and copies the appropriate
