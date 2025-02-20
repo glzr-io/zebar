@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/glzr-io/zebar/raw/v2.8.0/resources/pack-schema.json",
+  "$schema": "https://github.com/glzr-io/zebar/raw/v{{ ZEBAR_VERSION }}/resources/pack-schema.json",
   "name": "{{ PACK_NAME }}",
   "description": "{{ PACK_DESCRIPTION }}",
   "tags": ["desktop", "widget"],

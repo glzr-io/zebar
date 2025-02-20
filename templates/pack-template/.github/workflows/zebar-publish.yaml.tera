@@ -16,22 +16,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      {% if inputs.build_command %}
+      {% if INSTALL_COMMAND %}
+      - name: Install dependencies
+        run: {{ INSTALL_COMMAND }}
+      {% endif %}
+      {% if BUILD_COMMAND %}
       - name: Build
-        run: {{ inputs.build_command }}
-
+        run: {{ BUILD_COMMAND }}
       {% endif %}
       - name: Publish
         uses: glzr-io/zebar-publish@main
-        with:
-      {% raw %}
-          # This is a secret that must be added in the repository settings.
-          # To get a new API key, go to https://glzr.io/my-api-key
-          zebar-api-key: ${{ secrets.ZEBAR_API_KEY }}
+        {% raw %}with:
+          # ZEBAR_TOKEN is a secret that must be added in the repository settings.
+          # To get a new token, go to https://glzr.io/my-api-token
+          token: ${{ secrets.ZEBAR_TOKEN }}
           version: ${{ github.event.release.tag_name || inputs.version-number }}
           commit-sha: ${{ github.event.release.commit.sha }}
           release-notes: ${{ github.event.release.body }}
           release-url: ${{ github.event.release.url }}
-          github-token: ${{ github.token }}
-      {% endraw %}
