@@ -25,7 +25,10 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
   const navigate = useNavigate();
 
   return (
-    <Card class="mb-4" onClick={() => navigate(`/packs/${props.pack.id}`)}>
+    <Card
+      class="mb-4 cursor-pointer"
+      onClick={() => navigate(`/packs/${props.pack.id}`)}
+    >
       <CardHeader>
         <div class="flex justify-between items-start">
           <div>

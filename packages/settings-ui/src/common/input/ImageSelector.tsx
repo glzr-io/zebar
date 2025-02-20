@@ -41,12 +41,12 @@ export function ImageSelector(props: ImageSelectorProps) {
           <div class="text-muted-foreground">
             <IconPhoto
               class="h-8 w-8 mx-auto mb-2 data-[disabled]:opacity-70"
-              data-disabled={props.disabled}
+              data-disabled={props.disabled || null}
             />
 
             <p
               class="mb-3 data-[disabled]:opacity-70"
-              data-disabled={props.disabled}
+              data-disabled={props.disabled || null}
             >
               No preview images selected
             </p>
