@@ -1,6 +1,6 @@
 use std::{
   fs::{self, DirEntry},
-  path::{Path, PathBuf},
+  path::Path,
 };
 
 use anyhow::Context;
@@ -10,7 +10,7 @@ use serde::de::DeserializeOwned;
 ///
 /// Returns the parsed type `T` if successful.
 pub fn read_and_parse_json<T: DeserializeOwned>(
-  path: &PathBuf,
+  path: &Path,
 ) -> anyhow::Result<T> {
   let content = fs::read_to_string(path)
     .with_context(|| format!("Failed to read file: {}", path.display()))?;

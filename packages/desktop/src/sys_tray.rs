@@ -25,12 +25,12 @@ enum MenuEvent {
   ReloadConfigs,
   OpenSettings,
   Exit,
+  EditWidgetPack {
+    pack_id: String,
+  },
   EditWidget {
     pack_id: String,
     widget_name: String,
-  },
-  EditWidgetPack {
-    pack_id: String,
   },
   ToggleWidgetPreset {
     enable: bool,
@@ -53,14 +53,14 @@ impl ToString for MenuEvent {
       MenuEvent::ReloadConfigs => "reload_configs".to_string(),
       MenuEvent::OpenSettings => "open_settings".to_string(),
       MenuEvent::Exit => "exit".to_string(),
+      MenuEvent::EditWidgetPack { pack_id } => {
+        format!("edit_widget_pack_{}", pack_id)
+      }
       MenuEvent::EditWidget {
         pack_id,
         widget_name,
       } => {
         format!("edit_widget_{}_{}", pack_id, widget_name)
-      }
-      MenuEvent::EditWidgetPack { pack_id } => {
-        format!("edit_widget_pack_{}", pack_id)
       }
       MenuEvent::ToggleWidgetPreset {
         enable,
@@ -99,12 +99,12 @@ impl FromStr for MenuEvent {
       ["reload", "configs"] => Ok(Self::ReloadConfigs),
       ["open", "settings"] => Ok(Self::OpenSettings),
       ["exit"] => Ok(Self::Exit),
+      ["edit", "widget", "pack", pack_id] => Ok(Self::EditWidgetPack {
+        pack_id: pack_id.to_string(),
+      }),
       ["edit", "widget", pack_id, widget_name] => Ok(Self::EditWidget {
         pack_id: pack_id.to_string(),
         widget_name: widget_name.to_string(),
-      }),
-      ["edit", "widget", pack_id] => Ok(Self::EditWidgetPack {
-        pack_id: pack_id.to_string(),
       }),
       ["toggle", "widget", "config", enable @ ("true" | "false"), preset, pack_id, widget_name] => {
         Ok(Self::ToggleWidgetPreset {

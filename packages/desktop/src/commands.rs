@@ -22,8 +22,8 @@ use crate::{
 #[tauri::command]
 pub async fn widget_packs(
   config: State<'_, Arc<Config>>,
-) -> Result<HashMap<String, WidgetPack>, String> {
-  Ok(config.widget_packs().await)
+) -> Result<Vec<WidgetPack>, String> {
+  Ok(config.widget_packs().await.values().cloned().collect())
 }
 
 #[tauri::command]

@@ -75,10 +75,11 @@ impl<'de> Deserialize<'de> for StartupConfig {
 
       // TODO: Transform pack ID if necessary. It might include special
       // symbols or spaces.
-      path.split_once(|c| c == '/' || c == '\\').map_or(
+      path.split_once(['/', '\\']).map_or(
         (path.to_string(), String::new()),
-        |(pack_id, widget_name)| {
-          (pack_id.to_string(), widget_name.to_string())
+        |(pack_dir, widget_name)| {
+          let pack_id = format!("local.{}", pack_dir);
+          (pack_id, widget_name.to_string())
         },
       )
     }
