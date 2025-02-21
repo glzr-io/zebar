@@ -9,7 +9,7 @@ use crate::common::macos::WindowExtMacOs;
 use crate::common::windows::WindowExtWindows;
 use crate::{
   config::{
-    Config, CreateWidgetArgs, CreateWidgetPackArgs, WidgetConfig,
+    Config, CreateWidgetConfigArgs, CreateWidgetPackArgs, WidgetConfig,
     WidgetPack, WidgetPlacement,
   },
   providers::{
@@ -120,11 +120,13 @@ pub async fn update_widget_pack(
 }
 
 #[tauri::command]
-pub async fn create_widget(
-  args: CreateWidgetArgs,
+pub async fn create_widget_config(
+  args: CreateWidgetConfigArgs,
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<WidgetConfig, String> {
-  config.create_widget(args).map_err(|err| err.to_string())
+  config
+    .create_widget_config(args)
+    .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
@@ -141,13 +143,13 @@ pub async fn update_widget_config(
 }
 
 #[tauri::command]
-pub async fn delete_widget(
+pub async fn delete_widget_config(
   pack_name: String,
   widget_name: String,
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<(), String> {
   config
-    .delete_widget(&pack_name, &widget_name)
+    .delete_widget_config(&pack_name, &widget_name)
     .map_err(|err| err.to_string())
 }
 

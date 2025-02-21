@@ -219,7 +219,9 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   }
 
   async function createWidget(args: CreateWidgetArgs) {
-    const widget = await invoke<WidgetConfig>('create_widget', { args });
+    const widget = await invoke<WidgetConfig>('create_widget_config', {
+      args,
+    });
 
     mutateLocalPacks(packs =>
       packs.map(pack => {
@@ -252,7 +254,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   }
 
   async function deleteWidget(widgetName: string) {
-    await invoke<void>('delete_widget', { widgetName });
+    await invoke<void>('delete_widget_config', { widgetName });
 
     mutateLocalPacks(packs =>
       packs.map(pack => {

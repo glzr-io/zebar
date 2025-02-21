@@ -44,6 +44,9 @@ pub struct WidgetPack {
   pub widget_configs: HashMap<String, (PathBuf, WidgetConfig)>,
 }
 
+/// Deserialized widget pack.
+///
+/// This is the type of the `zebar-pack.json` file.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPackConfig {
@@ -77,6 +80,9 @@ pub enum WidgetPackType {
   Marketplace,
 }
 
+/// Deserialized widget config.
+///
+/// This is the type of the `zebar-widget.json` file.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetConfig {
@@ -279,7 +285,7 @@ pub struct CreateWidgetPackArgs {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateWidgetArgs {
+pub struct CreateWidgetConfigArgs {
   pub name: String,
   pub pack_name: String,
   pub template: FrontendTemplate,
@@ -336,7 +342,7 @@ impl Config {
     })
   }
 
-  /// Re-evaluates config files within the config directory.
+  /// Re-evaluates widget packs within the config directory.
   pub async fn reload(&self) -> anyhow::Result<()> {
     let new_widget_packs =
       Self::read_widget_packs(&self.app_settings.config_dir)?;
@@ -569,7 +575,8 @@ impl Config {
       ]),
     )?;
 
-    // Initialize git repository. Ignore errors.
+    // Initialize git repository. Ignore errors (in case Git is not
+    // installed).
     let _ = std::process::Command::new("git")
       .arg("init")
       .current_dir(&pack_dir)
@@ -605,9 +612,9 @@ impl Config {
   ///
   /// Adds a new entry to the pack config and copies the appropriate
   /// frontend template (e.g. React, Solid) to the widget's sub-directory.
-  pub fn create_widget(
+  pub fn create_widget_config(
     &self,
-    args: CreateWidgetArgs,
+    args: CreateWidgetConfigArgs,
   ) -> anyhow::Result<WidgetConfig> {
     let pack_dir = self.app_settings.config_dir.join(&args.pack_name);
     let widget_dir = pack_dir.join(&args.name);
@@ -645,7 +652,7 @@ impl Config {
   ///
   /// Removes an entry from the pack config and deletes the widget's
   /// sub-directory.
-  pub fn delete_widget(
+  pub fn delete_widget_config(
     &self,
     pack_name: &str,
     widget_name: &str,
