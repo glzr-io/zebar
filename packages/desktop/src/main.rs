@@ -242,7 +242,7 @@ fn listen_events(
   let mut settings_change_rx = app_settings.settings_change_tx.subscribe();
   let mut monitors_change_rx = monitor_state.change_tx.subscribe();
   let mut widget_configs_change_rx =
-    config.widget_packs_change_tx.subscribe();
+    config.widget_configs_change_tx.subscribe();
 
   task::spawn(async move {
     loop {
@@ -267,9 +267,11 @@ fn listen_events(
           info!("Monitors changed.");
           widget_factory.relaunch_all().await
         },
-        Ok(changed_configs) = widget_configs_change_rx.recv() => {
-          info!("Widget configs changed.");
-          widget_factory.relaunch_by_paths(&changed_configs.keys().cloned().collect()).await
+        Ok((pack_id, changed_config)) = widget_configs_change_rx.recv() => {
+          info!("Widget config changed.");
+          widget_factory
+            .relaunch_by_name(&pack_id, &changed_config.name)
+            .await
         },
         Some(provider_emission) = emit_rx.recv() => {
           info!("Provider emission: {:?}", provider_emission);

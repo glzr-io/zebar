@@ -15,7 +15,6 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
-base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 crossbeam = "0.8"
 netdev = "0.33.0"

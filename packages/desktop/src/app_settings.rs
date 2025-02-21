@@ -282,22 +282,6 @@ impl AppSettings {
     self.value.lock().await.startup_configs.clone()
   }
 
-  /// Returns the widget configs to open on startup.
-  pub async fn startup_configs_by_path(
-    &self,
-  ) -> anyhow::Result<HashMap<PathBuf, StartupConfig>> {
-    self
-      .startup_configs()
-      .await
-      .into_iter()
-      .map(|config| {
-        self
-          .to_absolute_path(&config.pack_id)
-          .map(|abs_path| (abs_path, config))
-      })
-      .collect()
-  }
-
   /// Adds the given config to be launched on startup.
   pub async fn add_startup_config(
     &self,

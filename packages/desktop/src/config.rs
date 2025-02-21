@@ -319,11 +319,9 @@ pub struct Config {
   pub widget_packs_change_tx:
     broadcast::Sender<HashMap<String, WidgetPack>>,
 
-  _widget_configs_change_rx:
-    broadcast::Receiver<HashMap<(String, String), WidgetConfig>>,
+  _widget_configs_change_rx: broadcast::Receiver<(String, WidgetConfig)>,
 
-  pub widget_configs_change_tx:
-    broadcast::Sender<HashMap<(String, String), WidgetConfig>>,
+  pub widget_configs_change_tx: broadcast::Sender<(String, WidgetConfig)>,
 }
 
 impl Config {
@@ -549,10 +547,9 @@ impl Config {
     };
 
     // Emit the changed config.
-    self.widget_configs_change_tx.send(HashMap::from([(
-      (pack_id.to_string(), widget_name.to_string()),
-      new_config.clone(),
-    )]))?;
+    self
+      .widget_configs_change_tx
+      .send((pack_id.to_string(), new_config.clone()))?;
 
     // Write the updated config to file.
     fs::write(

@@ -8,7 +8,6 @@ use std::{
 };
 
 use anyhow::{bail, Context};
-use base64::prelude::*;
 use serde::Serialize;
 use tauri::{
   self, path::BaseDirectory, AppHandle, Manager, PhysicalPosition,
@@ -27,7 +26,6 @@ use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
   app_settings::AppSettings,
   asset_server::create_init_url,
-  common::PathExt,
   config::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
     WidgetPlacement,
@@ -290,11 +288,6 @@ impl WidgetFactory {
         open_options: open_options.clone(),
       };
 
-      // Widgets from the same top-level directory share their browser
-      // cache (i.e. `localStorage`, `sessionStorage`, SW cache, etc.).
-      let cache_id =
-        BASE64_STANDARD.encode(parent_dir.to_unicode_string());
-
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
@@ -315,10 +308,12 @@ impl WidgetFactory {
           .app_handle
           .path()
           .resolve(
-            format!(".glzr/zebar/tmp-{}", cache_id),
-            BaseDirectory::Home,
+            // Widgets from the same pack share their browser cache (i.e.
+            // `localStorage`, `sessionStorage`, SW cache, etc.).
+            format!("zebar/webview-cache/{}", pack_id),
+            BaseDirectory::Data,
           )
-          .context("Unable to get home directory.")
+          .context("Unable to get data directory.")
           .unwrap(),
       )
       .build()?;
@@ -677,24 +672,6 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Closes all widgets with the given config path.
-  pub async fn _stop_by_path(
-    &self,
-    config_path: &PathBuf,
-  ) -> anyhow::Result<()> {
-    let widget_states = self.states_by_path().await;
-
-    let found_widget_states = widget_states
-      .get(config_path)
-      .context("No widgets found with the given config path.")?;
-
-    for widget_state in found_widget_states {
-      self.stop_by_id(&widget_state.id)?;
-    }
-
-    Ok(())
-  }
-
   /// Closes all widgets of the given preset name.
   pub async fn stop_by_preset(
     &self,
@@ -702,18 +679,16 @@ impl WidgetFactory {
     widget_name: &str,
     preset_name: &str,
   ) -> anyhow::Result<()> {
-    let widget_states = self.states_by_path().await;
+    let widget_states = self.states().await;
 
-    let found_widget_states = widget_states
-      .get(config_path)
-      .context("No widgets found with the given config path.")?
-      .iter()
-      .filter(|state| {
-        matches!(
+    let found_widget_states = widget_states.values().filter(|state| {
+      state.pack_id == *pack_id
+        && state.name == *widget_name
+        && matches!(
           &state.open_options,
           WidgetOpenOptions::Preset(name) if name == preset_name
         )
-      });
+    });
 
     for widget_state in found_widget_states {
       self.stop_by_id(&widget_state.id)?;
@@ -776,9 +751,10 @@ impl WidgetFactory {
   }
 
   /// Relaunches widgets with the given config paths.
-  pub async fn relaunch_by_paths(
+  pub async fn relaunch_by_name(
     &self,
-    config_paths: &Vec<PathBuf>,
+    pack_id: &str,
+    widget_name: &str,
   ) -> anyhow::Result<()> {
     let widget_ids = {
       self
@@ -786,7 +762,9 @@ impl WidgetFactory {
         .lock()
         .await
         .iter()
-        .filter(|(_, state)| config_paths.contains(&state.config_path))
+        .filter(|(_, state)| {
+          state.pack_id == *pack_id && state.name == *widget_name
+        })
         .map(|(id, _)| id.clone())
         .collect::<Vec<_>>()
     };
@@ -817,22 +795,5 @@ impl WidgetFactory {
   /// Returns a widget state by its widget ID.
   pub async fn state_by_id(&self, widget_id: &str) -> Option<WidgetState> {
     self.widget_states.lock().await.get(widget_id).cloned()
-  }
-
-  /// Returns widget states grouped by their config paths.
-  pub async fn states_by_path(
-    &self,
-  ) -> HashMap<PathBuf, Vec<WidgetState>> {
-    self.widget_states.lock().await.values().fold(
-      HashMap::new(),
-      |mut acc, state| {
-        acc
-          .entry(state.config_path.clone())
-          .or_insert_with(Vec::new)
-          .push(state.clone());
-
-        acc
-      },
-    )
   }
 }
