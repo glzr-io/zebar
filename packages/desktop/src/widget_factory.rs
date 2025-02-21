@@ -701,7 +701,8 @@ impl WidgetFactory {
   /// Closes all widgets of the given preset name.
   pub async fn stop_by_preset(
     &self,
-    config_path: &PathBuf,
+    pack_id: &str,
+    widget_name: &str,
     preset_name: &str,
   ) -> anyhow::Result<()> {
     let widget_states = self.states_by_path().await;

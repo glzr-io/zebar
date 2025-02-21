@@ -73,9 +73,11 @@ export async function startWidget(
   placement: WidgetPlacement,
   args: StartWidgetArgs,
 ) {
-  return desktopCommands.startWidget(widgetName, placement, {
-    packId: args.packId ?? currentWidget().packId,
-  });
+  return desktopCommands.startWidget(
+    args.packId ?? currentWidget().packId,
+    widgetName,
+    placement,
+  );
 }
 
 export interface StartWidgetPresetArgs {
@@ -90,7 +92,9 @@ export async function startWidgetPreset(
   presetName: string,
   args?: StartWidgetPresetArgs,
 ) {
-  return desktopCommands.startWidgetPreset(widgetName, presetName, {
-    packId: args?.packId ?? currentWidget().packId,
-  });
+  return desktopCommands.startWidgetPreset(
+    args?.packId ?? currentWidget().packId,
+    widgetName,
+    presetName,
+  );
 }

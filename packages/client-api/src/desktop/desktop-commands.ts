@@ -67,30 +67,26 @@ export interface SystrayFunction {
 }
 
 function startWidget(
+  packId: string,
   widgetName: string,
   placement: WidgetPlacement,
-  args: {
-    packId: string;
-  },
 ): Promise<void> {
   return invoke<void>('start_widget', {
+    packId,
     widgetName,
     placement,
-    args,
   });
 }
 
 function startWidgetPreset(
+  packId: string,
   widgetName: string,
   presetName: string,
-  args: {
-    packId: string;
-  },
 ): Promise<void> {
   return invoke<void>('start_widget_preset', {
+    packId,
     widgetName,
     presetName,
-    args,
   });
 }
 

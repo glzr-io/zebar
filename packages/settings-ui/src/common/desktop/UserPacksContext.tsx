@@ -200,7 +200,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     );
 
     if (presetStates.length > 0) {
-      await invoke<void>('stop_preset', {
+      await invoke<void>('stop_widget_preset', {
         configPath,
         presetName,
       });

@@ -73,7 +73,7 @@ pub struct WidgetPackConfig {
   pub widget_paths: Vec<PathBuf>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WidgetPackType {
   Local,
@@ -285,9 +285,20 @@ pub struct CreateWidgetPackArgs {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct UpdateWidgetPackArgs {
+  pub name: String,
+  pub description: String,
+  pub tags: Vec<String>,
+  pub preview_images: Vec<String>,
+  pub exclude_files: String,
+  pub widget_paths: Vec<PathBuf>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateWidgetConfigArgs {
   pub name: String,
-  pub pack_name: String,
+  pub pack_id: String,
   pub template: FrontendTemplate,
 }
 
@@ -309,10 +320,10 @@ pub struct Config {
     broadcast::Sender<HashMap<String, WidgetPack>>,
 
   _widget_configs_change_rx:
-    broadcast::Receiver<HashMap<String, WidgetConfig>>,
+    broadcast::Receiver<HashMap<(String, String), WidgetConfig>>,
 
   pub widget_configs_change_tx:
-    broadcast::Sender<HashMap<String, WidgetConfig>>,
+    broadcast::Sender<HashMap<(String, String), WidgetConfig>>,
 }
 
 impl Config {
@@ -510,16 +521,13 @@ impl Config {
         .get_mut(pack_id)
         .context(format!("Widget pack not found for {}.", pack_id))?;
 
-      let widget_configs = &mut pack_entry.widget_configs;
-
-      let config_entry = widget_configs.get_mut(widget_name).context(
-        format!("Widget config not found for {}.", widget_name),
-      )?;
-
-      // Store the config path before updating the entry.
-      let config_path = config_entry.0.clone();
+      let config_entry =
+        pack_entry.widget_configs.get_mut(widget_name).context(
+          format!("Widget config not found for {}.", widget_name),
+        )?;
 
       // Update the config in state.
+      let config_path = config_entry.0.clone();
       *config_entry = (config_path.clone(), new_config.clone());
 
       config_path
@@ -527,7 +535,7 @@ impl Config {
 
     // Emit the changed config.
     self.widget_configs_change_tx.send(HashMap::from([(
-      widget_name.to_string(),
+      (pack_id.to_string(), widget_name.to_string()),
       new_config.clone(),
     )]))?;
 
@@ -540,25 +548,8 @@ impl Config {
     Ok(())
   }
 
-  /// Formats a widget's config path for display.
-  ///
-  /// Returns relative path without the `.zebar.json` suffix (e.g.
-  /// `starter/vanilla`).
-  pub fn formatted_widget_path(&self, config_path: &PathBuf) -> String {
-    let path = self
-      .app_settings
-      .to_relative_path(config_path)
-      .to_unicode_string();
-
-    // Ensure path delimiters are forward slashes on Windows.
-    #[cfg(windows)]
-    let path = path.replace('\\', "/");
-
-    path.strip_suffix(".zebar.json").unwrap_or(&path).into()
-  }
-
   /// Creates a new widget pack.
-  pub fn create_widget_pack(
+  pub async fn create_widget_pack(
     &self,
     args: CreateWidgetPackArgs,
   ) -> anyhow::Result<WidgetPack> {
@@ -582,42 +573,73 @@ impl Config {
       .current_dir(&pack_dir)
       .output();
 
-    let pack_config_path = pack_dir.join("zebar-pack.json");
-    let pack_config =
-      read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
+    let pack = Self::parse_widget_pack(&pack_dir.join("zebar-pack.json"))?;
 
-    let pack = WidgetPack {
-      id: format!("local.{}", pack_config.name),
-      r#type: WidgetPackType::Local,
-      config_path: pack_config_path,
-      directory_path: pack_dir,
-      config: pack_config,
-      widget_configs: HashMap::new(),
-    };
+    // Add the new widget pack to state.
+    let mut widget_packs = self.widget_packs.lock().await;
+    widget_packs.insert(pack.id.clone(), pack.clone());
+
+    self
+      .widget_packs_change_tx
+      .send(HashMap::from([(pack.id.clone(), pack.clone())]))?;
 
     Ok(pack)
   }
 
   /// Updates a widget pack.
-  pub fn update_widget_pack(
+  pub async fn update_widget_pack(
     &self,
     pack_id: String,
-    args: CreateWidgetPackArgs,
+    args: UpdateWidgetPackArgs,
   ) -> anyhow::Result<WidgetPack> {
-    // TODO: Implement.
-    anyhow::bail!("Not implemented")
+    let mut pack = self
+      .widget_pack_by_id(&pack_id)
+      .await
+      .filter(|pack| pack.r#type == WidgetPackType::Local)
+      .context(format!("Widget pack not found for {}.", pack_id))?;
+
+    // Update pack config fields.
+    pack.config.name = args.name;
+    pack.config.description = args.description;
+    pack.config.tags = args.tags;
+    pack.config.preview_images = args.preview_images;
+    pack.config.exclude_files = args.exclude_files;
+    pack.config.widget_paths = args.widget_paths;
+
+    // Write the updated pack config to file.
+    fs::write(
+      &pack.config_path,
+      serde_json::to_string_pretty(&pack.config)? + "\n",
+    )?;
+
+    // Update state and notify listeners.
+    {
+      let mut widget_packs = self.widget_packs.lock().await;
+      widget_packs.insert(pack.id.clone(), pack.clone());
+    }
+
+    self
+      .widget_packs_change_tx
+      .send(HashMap::from([(pack.id.clone(), pack.clone())]))?;
+
+    Ok(pack)
   }
 
   /// Creates a new widget from a template.
   ///
   /// Adds a new entry to the pack config and copies the appropriate
   /// frontend template (e.g. React, Solid) to the widget's sub-directory.
-  pub fn create_widget_config(
+  pub async fn create_widget_config(
     &self,
     args: CreateWidgetConfigArgs,
   ) -> anyhow::Result<WidgetConfig> {
-    let pack_dir = self.app_settings.config_dir.join(&args.pack_name);
-    let widget_dir = pack_dir.join(&args.name);
+    let mut pack = self
+      .widget_pack_by_id(&args.pack_id)
+      .await
+      .filter(|pack| pack.r#type == WidgetPackType::Local)
+      .context(format!("Widget pack not found for {}.", args.pack_id))?;
+
+    let widget_dir = pack.directory_path.join(&args.name);
 
     self.app_settings.init_template(
       TemplateResource::Widget(args.template),
@@ -628,17 +650,13 @@ impl Config {
       ]),
     )?;
 
-    let pack_config_path = pack_dir.join("zebar-pack.json");
-    let mut pack_config =
-      read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
-
     // Add widget to pack config.
-    pack_config.widget_paths.push(widget_dir.clone());
+    pack.config.widget_paths.push(widget_dir.clone());
 
     // Write the updated pack config to file.
     fs::write(
-      pack_config_path,
-      serde_json::to_string_pretty(&pack_config)? + "\n",
+      pack.config_path,
+      serde_json::to_string_pretty(&pack.config)? + "\n",
     )?;
 
     let widget_config_path = widget_dir.join("zebar-widget.json");
@@ -652,27 +670,27 @@ impl Config {
   ///
   /// Removes an entry from the pack config and deletes the widget's
   /// sub-directory.
-  pub fn delete_widget_config(
+  pub async fn delete_widget_config(
     &self,
-    pack_name: &str,
+    pack_id: &str,
     widget_name: &str,
   ) -> anyhow::Result<()> {
-    let pack_dir = self.app_settings.config_dir.join(pack_name);
-    let widget_dir = pack_dir.join(widget_name);
+    let mut pack = self
+      .widget_pack_by_id(&pack_id)
+      .await
+      .filter(|pack| pack.r#type == WidgetPackType::Local)
+      .context(format!("Widget pack not found for {}.", pack_id))?;
 
+    let widget_dir = pack.directory_path.join(widget_name);
     fs::remove_dir_all(&widget_dir)?;
 
-    let pack_config_path = pack_dir.join("zebar-pack.json");
-    let mut pack_config =
-      read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
-
     // Remove widget from pack config.
-    pack_config.widget_paths.retain(|path| path != &widget_dir);
+    pack.config.widget_paths.retain(|path| path != &widget_dir);
 
     // Write the updated pack config to file.
     fs::write(
-      pack_config_path,
-      serde_json::to_string_pretty(&pack_config)? + "\n",
+      pack.config_path,
+      serde_json::to_string_pretty(&pack.config)? + "\n",
     )?;
 
     Ok(())

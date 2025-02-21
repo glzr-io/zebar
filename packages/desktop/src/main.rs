@@ -89,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
       commands::widget_states,
       commands::start_widget,
       commands::start_widget_preset,
-      commands::stop_preset,
+      commands::stop_widget_preset,
       commands::update_widget_config,
       commands::create_widget_pack,
       commands::update_widget_pack,
