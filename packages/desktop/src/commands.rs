@@ -1,6 +1,5 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use serde::{Deserialize, Serialize};
 use tauri::{State, Window};
 
 #[cfg(target_os = "macos")]
@@ -9,8 +8,8 @@ use crate::common::macos::WindowExtMacOs;
 use crate::common::windows::WindowExtWindows;
 use crate::{
   config::{
-    Config, CreateWidgetConfigArgs, CreateWidgetPackArgs, WidgetConfig,
-    WidgetPack, WidgetPlacement,
+    Config, CreateWidgetConfigArgs, CreateWidgetPackArgs,
+    UpdateWidgetPackArgs, WidgetConfig, WidgetPack, WidgetPlacement,
   },
   providers::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
@@ -103,11 +102,11 @@ pub async fn create_widget_pack(
 #[tauri::command]
 pub async fn update_widget_pack(
   pack_id: String,
-  args: CreateWidgetPackArgs,
+  args: UpdateWidgetPackArgs,
   config: State<'_, Arc<Config>>,
 ) -> anyhow::Result<WidgetPack, String> {
   config
-    .update_widget_pack(pack_id, args)
+    .update_widget_pack(&pack_id, args)
     .await
     .map_err(|err| err.to_string())
 }

@@ -247,8 +247,8 @@ impl AppSettings {
 
   /// Initializes app settings to the given path.
   ///
-  /// `settings.json` is initialized with either `starter/vanilla` or
-  /// `starter/with-glazewm` as startup config.
+  /// `settings.json` is initialized with either `glzr-io/starter`'s
+  /// `vanilla` or `with-glazewm` widget as startup config.
   fn create_default(config_dir: &Path) -> anyhow::Result<()> {
     tracing::info!("Initializing app settings from default.",);
 

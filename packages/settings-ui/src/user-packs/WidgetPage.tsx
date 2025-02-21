@@ -30,7 +30,6 @@ export function WidgetPage() {
     allPacks().find(pack => pack.id === params.packId),
   );
 
-  const selectedWidgetName = createMemo(() => params.widgetName);
   const selectedConfig = createMemo(() =>
     selectedPack()?.widgetConfigs.find(
       widget => widget.name === params.widgetName,
@@ -47,9 +46,11 @@ export function WidgetPage() {
 
   // Widget states for the selected config.
   const selectedConfigStates = createMemo(() => {
-    const configPath = selectedWidgetName();
+    const packId = selectedPack()?.id;
+    const widgetName = selectedConfig()?.name;
+
     return Object.values(widgetStates()).filter(
-      state => state.configPath === configPath,
+      state => state.name === widgetName && state.packId === packId,
     );
   });
 
@@ -65,10 +66,10 @@ export function WidgetPage() {
   // Initialize the selected preset when a config is selected.
   createEffect(
     on(
-      () => selectedWidgetName(),
-      () => {
-        if (selectedConfig()) {
-          setSelectedPreset(selectedConfig().presets[0]?.name ?? null);
+      () => selectedConfig(),
+      config => {
+        if (config) {
+          setSelectedPreset(config.presets[0]?.name ?? null);
           document.querySelector('#form-container').scrollTo(0, 0);
         }
       },
@@ -79,12 +80,9 @@ export function WidgetPage() {
   createEffect(
     on(
       () => presetNames(),
-      () => {
-        if (
-          !selectedPreset() ||
-          !presetNames().includes(selectedPreset())
-        ) {
-          setSelectedPreset(presetNames()[0] ?? null);
+      presetNames => {
+        if (!selectedPreset() || !presetNames.includes(selectedPreset())) {
+          setSelectedPreset(presetNames[0] ?? null);
         }
       },
     ),
@@ -96,19 +94,21 @@ export function WidgetPage() {
         {config => (
           <main class="flex-1 grid grid-rows-[1fr_auto] overflow-hidden">
             <div id="form-container" class="container p-4 overflow-y-auto">
-              <h1 class="text-2xl font-bold mb-1">
-                {selectedWidgetName()}
-              </h1>
+              <h1 class="text-2xl font-bold mb-1">{config().name}</h1>
 
               <p class="bg-muted text-xs font-mono rounded-sm mb-6 p-1 text-muted-foreground inline-block">
-                {selectedWidgetName()}
+                {config().name}
               </p>
 
               <WidgetConfigForm
                 config={config()}
-                configPath={selectedWidgetName()}
+                configPath={config().name}
                 onChange={config =>
-                  updateWidgetConfig(selectedWidgetName(), config)
+                  updateWidgetConfig(
+                    selectedPack().id,
+                    config.name,
+                    config,
+                  )
                 }
               />
             </div>
@@ -125,7 +125,7 @@ export function WidgetPage() {
                   class="rounded-r-none self-end"
                   disabled={presetNames().length === 0}
                   onClick={() =>
-                    togglePreset(selectedWidgetName(), selectedPreset())
+                    togglePreset(config().name, selectedPreset())
                   }
                 >
                   <Show when={selectedPreset()} fallback="No presets">

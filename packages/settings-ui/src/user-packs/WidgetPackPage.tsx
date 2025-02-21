@@ -113,7 +113,12 @@ export function WidgetPackPage() {
                         </AlertDialogTrigger>
                         <DeleteWidgetDialog
                           widget={widget}
-                          onDelete={userPacks.deleteWidget}
+                          onDelete={() =>
+                            userPacks.deleteWidget(
+                              selectedPack().id,
+                              widget.name,
+                            )
+                          }
                         />
                       </AlertDialog>
                     </TableCell>

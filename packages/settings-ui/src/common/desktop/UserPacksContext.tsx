@@ -101,13 +101,21 @@ export type CreateWidgetPackArgs = {
   name: string;
   description: string;
   tags: string[];
-  previewImages: string[];
   excludeFiles: string;
+};
+
+export type UpdateWidgetPackArgs = {
+  name?: string;
+  description?: string;
+  tags?: string[];
+  previewImages?: string[];
+  excludeFiles?: string;
+  widgetPaths?: string[];
 };
 
 export type CreateWidgetArgs = {
   name: string;
-  packName: string;
+  packId: string;
   template: 'react_buildless' | 'solid_typescript';
 };
 
@@ -115,15 +123,18 @@ type UserPacksContextState = {
   communityPacks: Resource<WidgetPack[]>;
   localPacks: Resource<WidgetPack[]>;
   allPacks: Accessor<WidgetPack[]>;
-  widgetConfigs: Resource<Record<string, WidgetConfig>>;
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (args: CreateWidgetPackArgs) => Promise<WidgetPack>;
   createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfig>;
-  updatePack: (packId: string, pack: WidgetPack) => Promise<WidgetPack>;
+  updatePack: (
+    packId: string,
+    args: UpdateWidgetPackArgs,
+  ) => Promise<WidgetPack>;
   deletePack: (packId: string) => Promise<void>;
-  deleteWidget: (widgetName: string) => Promise<void>;
+  deleteWidget: (packId: string, widgetName: string) => Promise<void>;
   updateWidgetConfig: (
-    configPath: string,
+    packId: string,
+    widgetName: string,
     newConfig: WidgetConfig,
   ) => Promise<void>;
   togglePreset: (configPath: string, presetName: string) => Promise<void>;
@@ -135,20 +146,14 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   // TODO: Fetch installed community packs from the backend.
   const [communityPacks] = createResource(async () => communityPacksMock);
 
-  // TODO: Fetch local packs from the backend.
   const [localPacks, { mutate: mutateLocalPacks }] = createResource(
-    async () => localPacksMock,
+    async () => invoke<WidgetPack[]>('widget_packs'),
   );
 
   const allPacks = createMemo(() => [
     ...(communityPacks() ?? []),
     ...(localPacks() ?? []),
   ]);
-
-  const [widgetConfigs, { mutate: mutateWidgetConfigs }] = createResource(
-    async () => invoke<Record<string, WidgetConfig>>('widget_configs'),
-    { initialValue: {} },
-  );
 
   const [widgetStates, { mutate: mutateWidgetStates }] = createResource(
     async () => invoke<Record<string, Widget>>('widget_states'),
@@ -173,18 +178,30 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   });
 
   async function updateWidgetConfig(
-    configPath: string,
+    packId: string,
+    widgetName: string,
     newConfig: WidgetConfig,
   ) {
-    mutateWidgetConfigs(configs => ({
-      ...configs,
-      [configPath]: newConfig,
-    }));
-
     await invoke<void>('update_widget_config', {
-      configPath,
+      packId,
+      widgetName,
       newConfig,
     });
+
+    mutateLocalPacks(packs =>
+      packs.map(pack =>
+        pack.id === packId && pack.type === 'local'
+          ? {
+              ...pack,
+              widgetConfigs: pack.widgetConfigs.map(widgetConfig =>
+                widgetConfig.name === widgetName
+                  ? newConfig
+                  : widgetConfig,
+              ),
+            }
+          : pack,
+      ),
+    );
   }
 
   async function togglePreset(configPath: string, presetName: string) {
@@ -225,13 +242,12 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
     mutateLocalPacks(packs =>
       packs.map(pack => {
-        return pack.name === args.packName && pack.type === 'local'
+        return pack.id === args.packId && pack.type === 'local'
           ? { ...pack, widgetConfigs: [...pack.widgetConfigs, widget] }
           : pack;
       }),
     );
 
-    console.log(widget, localPacks());
     return widget;
   }
 
@@ -240,10 +256,10 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     mutateLocalPacks(packs => packs.filter(pack => pack.id !== packId));
   }
 
-  async function updatePack(packId: string, pack: WidgetPack) {
+  async function updatePack(packId: string, args: UpdateWidgetPackArgs) {
     const updatedPack = await invoke<WidgetPack>('update_widget_pack', {
       packId,
-      pack,
+      args,
     });
 
     mutateLocalPacks(packs =>
@@ -253,8 +269,8 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     return updatedPack;
   }
 
-  async function deleteWidget(widgetName: string) {
-    await invoke<void>('delete_widget_config', { widgetName });
+  async function deleteWidget(packId: string, widgetName: string) {
+    await invoke<void>('delete_widget_config', { packId, widgetName });
 
     mutateLocalPacks(packs =>
       packs.map(pack => {
@@ -272,7 +288,6 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     communityPacks,
     localPacks,
     allPacks,
-    widgetConfigs,
     widgetStates,
     updateWidgetConfig,
     togglePreset,

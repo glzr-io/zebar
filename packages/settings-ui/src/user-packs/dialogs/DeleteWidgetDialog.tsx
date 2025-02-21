@@ -11,7 +11,7 @@ import { WidgetConfig } from 'zebar';
 
 export interface DeleteWidgetDialogProps {
   widget: WidgetConfig;
-  onDelete: (widgetName: string) => void;
+  onDelete: () => void;
 }
 
 export function DeleteWidgetDialog(props: DeleteWidgetDialogProps) {
@@ -27,7 +27,7 @@ export function DeleteWidgetDialog(props: DeleteWidgetDialogProps) {
       <AlertDialogFooter>
         <AlertDialogClose>Cancel</AlertDialogClose>
         <AlertDialogAction
-          onClick={() => props.onDelete(props.widget.name)}
+          onClick={() => props.onDelete()}
           class="bg-red-500 hover:bg-red-600"
         >
           Delete

@@ -283,15 +283,15 @@ pub struct CreateWidgetPackArgs {
   pub exclude_files: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWidgetPackArgs {
-  pub name: String,
-  pub description: String,
-  pub tags: Vec<String>,
-  pub preview_images: Vec<String>,
-  pub exclude_files: String,
-  pub widget_paths: Vec<PathBuf>,
+  pub name: Option<String>,
+  pub description: Option<String>,
+  pub tags: Option<Vec<String>>,
+  pub preview_images: Option<Vec<String>>,
+  pub exclude_files: Option<String>,
+  pub widget_paths: Option<Vec<PathBuf>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -505,6 +505,21 @@ impl Config {
     widget_packs.get(pack_id).cloned()
   }
 
+  /// Finds a local widget pack by ID.
+  ///
+  /// Returns an error if the widget pack is not found or is not a
+  /// local pack.
+  async fn find_local_widget_pack(
+    &self,
+    pack_id: &str,
+  ) -> anyhow::Result<WidgetPack> {
+    self
+      .widget_pack_by_id(pack_id)
+      .await
+      .filter(|pack| pack.r#type == WidgetPackType::Local)
+      .context(format!("Local widget pack not found: {}", pack_id))
+  }
+
   /// Updates the widget config for the given pack and widget name.
   pub async fn update_widget_config(
     &self,
@@ -589,22 +604,22 @@ impl Config {
   /// Updates a widget pack.
   pub async fn update_widget_pack(
     &self,
-    pack_id: String,
+    pack_id: &str,
     args: UpdateWidgetPackArgs,
   ) -> anyhow::Result<WidgetPack> {
-    let mut pack = self
-      .widget_pack_by_id(&pack_id)
-      .await
-      .filter(|pack| pack.r#type == WidgetPackType::Local)
-      .context(format!("Widget pack not found for {}.", pack_id))?;
+    let mut pack = self.find_local_widget_pack(pack_id).await?;
 
     // Update pack config fields.
-    pack.config.name = args.name;
-    pack.config.description = args.description;
-    pack.config.tags = args.tags;
-    pack.config.preview_images = args.preview_images;
-    pack.config.exclude_files = args.exclude_files;
-    pack.config.widget_paths = args.widget_paths;
+    pack.config.name = args.name.unwrap_or(pack.config.name);
+    pack.config.description =
+      args.description.unwrap_or(pack.config.description);
+    pack.config.tags = args.tags.unwrap_or(pack.config.tags);
+    pack.config.preview_images =
+      args.preview_images.unwrap_or(pack.config.preview_images);
+    pack.config.exclude_files =
+      args.exclude_files.unwrap_or(pack.config.exclude_files);
+    pack.config.widget_paths =
+      args.widget_paths.unwrap_or(pack.config.widget_paths);
 
     // Write the updated pack config to file.
     fs::write(
@@ -613,10 +628,11 @@ impl Config {
     )?;
 
     // Update state and notify listeners.
-    {
-      let mut widget_packs = self.widget_packs.lock().await;
-      widget_packs.insert(pack.id.clone(), pack.clone());
-    }
+    self
+      .widget_packs
+      .lock()
+      .await
+      .insert(pack.id.clone(), pack.clone());
 
     self
       .widget_packs_change_tx
@@ -633,65 +649,64 @@ impl Config {
     &self,
     args: CreateWidgetConfigArgs,
   ) -> anyhow::Result<WidgetConfig> {
-    let mut pack = self
-      .widget_pack_by_id(&args.pack_id)
-      .await
-      .filter(|pack| pack.r#type == WidgetPackType::Local)
-      .context(format!("Widget pack not found for {}.", args.pack_id))?;
-
+    let pack = self.find_local_widget_pack(&args.pack_id).await?;
     let widget_dir = pack.directory_path.join(&args.name);
 
     self.app_settings.init_template(
       TemplateResource::Widget(args.template),
       &widget_dir,
       &HashMap::from([
-        ("WIDGET_NAME", args.name),
+        ("WIDGET_NAME", args.name.clone()),
         ("ZEBAR_VERSION", VERSION_NUMBER.to_string()),
       ]),
     )?;
 
     // Add widget to pack config.
-    pack.config.widget_paths.push(widget_dir.clone());
+    let mut widget_paths = pack.config.widget_paths.clone();
+    widget_paths.push(format!("{}/zebar-widget.json", args.name).into());
 
-    // Write the updated pack config to file.
-    fs::write(
-      pack.config_path,
-      serde_json::to_string_pretty(&pack.config)? + "\n",
-    )?;
+    self
+      .update_widget_pack(
+        &args.pack_id,
+        UpdateWidgetPackArgs {
+          widget_paths: Some(widget_paths),
+          ..Default::default()
+        },
+      )
+      .await?;
 
     let widget_config_path = widget_dir.join("zebar-widget.json");
-    let widget_config =
-      read_and_parse_json::<WidgetConfig>(&widget_config_path)?;
-
-    Ok(widget_config)
+    read_and_parse_json::<WidgetConfig>(&widget_config_path)
   }
 
   /// Deletes a widget from a pack.
   ///
-  /// Removes an entry from the pack config and deletes the widget's
+  /// Removes the entry from the pack config and deletes the widget's
   /// sub-directory.
   pub async fn delete_widget_config(
     &self,
     pack_id: &str,
     widget_name: &str,
   ) -> anyhow::Result<()> {
-    let mut pack = self
-      .widget_pack_by_id(&pack_id)
-      .await
-      .filter(|pack| pack.r#type == WidgetPackType::Local)
-      .context(format!("Widget pack not found for {}.", pack_id))?;
+    let pack = self.find_local_widget_pack(pack_id).await?;
 
+    // Remove directory with the same name as the widget.
     let widget_dir = pack.directory_path.join(widget_name);
-    fs::remove_dir_all(&widget_dir)?;
+    let _ = fs::remove_dir_all(&widget_dir);
 
     // Remove widget from pack config.
-    pack.config.widget_paths.retain(|path| path != &widget_dir);
+    let mut widget_paths = pack.config.widget_paths.clone();
+    widget_paths.retain(|path| path != &widget_dir);
 
-    // Write the updated pack config to file.
-    fs::write(
-      pack.config_path,
-      serde_json::to_string_pretty(&pack.config)? + "\n",
-    )?;
+    self
+      .update_widget_pack(
+        pack_id,
+        UpdateWidgetPackArgs {
+          widget_paths: Some(widget_paths),
+          ..Default::default()
+        },
+      )
+      .await?;
 
     Ok(())
   }
