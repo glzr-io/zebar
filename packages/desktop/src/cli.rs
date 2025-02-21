@@ -2,12 +2,12 @@ use std::{path::PathBuf, process};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use crate::{common::LengthValue, config::AnchorPoint};
-
-const VERSION: &'static str = env!("VERSION_NUMBER");
+use crate::{
+  app_settings::VERSION_NUMBER, common::LengthValue, config::AnchorPoint,
+};
 
 #[derive(Clone, Debug, Parser)]
-#[clap(author, version = VERSION, about, long_about = None)]
+#[clap(author, version = VERSION_NUMBER, about, long_about = None)]
 pub struct Cli {
   #[command(subcommand)]
   command: Option<CliCommand>,
@@ -21,18 +21,12 @@ impl Cli {
 
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum CliCommand {
-  /// Opens a widget by its config path and chosen placement.
-  ///
-  /// Config path is relative within the Zebar config directory, e.g.
-  /// `zebar start-widget --path starter/vanilla`.
+  /// Opens a widget by its name and chosen placement.
   ///
   /// Starts Zebar if it is not already running.
   StartWidget(StartWidgetArgs),
 
-  /// Opens a widget by its config path and a preset name.
-  ///
-  /// Config path is relative within the Zebar config directory, e.g.
-  /// `zebar start-widget-preset --path starter/vanilla --preset default`.
+  /// Opens a widget by its name and a preset name.
   ///
   /// Starts Zebar if it is not already running.
   StartWidgetPreset(StartWidgetPresetArgs),
@@ -58,10 +52,13 @@ pub enum CliCommand {
 
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct StartWidgetArgs {
-  /// Relative file path to widget config within the Zebar config
-  /// directory.
-  #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
-  pub config_path: PathBuf,
+  /// Widget pack ID.
+  #[clap(long)]
+  pub pack_id: String,
+
+  /// Widget name.
+  #[clap(long)]
+  pub widget_name: String,
 
   /// Anchor-point of the widget.
   #[clap(long)]
@@ -99,10 +96,13 @@ pub enum MonitorType {
 
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct StartWidgetPresetArgs {
-  /// Relative file path to widget config within the Zebar config
-  /// directory.
-  #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
-  pub config_path: PathBuf,
+  /// Widget pack ID.
+  #[clap(long)]
+  pub pack_id: String,
+
+  /// Widget name.
+  #[clap(long)]
+  pub widget_name: String,
 
   /// Name of the preset within the target widget config.
   #[clap(long = "preset")]

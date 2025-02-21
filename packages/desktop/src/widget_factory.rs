@@ -76,6 +76,12 @@ pub struct WidgetState {
   /// Used as the Tauri window label.
   pub id: String,
 
+  /// Name of the widget.
+  pub name: String,
+
+  /// Unique identifier for the widget pack.
+  pub pack_id: String,
+
   /// Handle to the underlying Tauri window.
   ///
   /// This is only available on Windows.
@@ -182,15 +188,26 @@ impl WidgetFactory {
   /// Config path must be absolute.
   pub async fn start_widget(
     &self,
-    config_path: &PathBuf,
+    pack_id: &str,
+    widget_name: &str,
     open_options: &WidgetOpenOptions,
   ) -> anyhow::Result<()> {
-    let (config_path, widget_config) = self
+    let widget_pack = self
       .config
-      .widget_config_by_path(config_path)
+      .widget_pack_by_id(pack_id)
       .await
       .with_context(|| {
-        format!("No config found at path '{}'.", config_path.display())
+        format!("No widget pack found for '{}'.", pack_id)
+      })?;
+
+    let (config_path, widget_config) = widget_pack
+      .widget_configs
+      .get(widget_name)
+      .with_context(|| {
+        format!(
+          "No widget named '{}' found in widget pack '{}'.",
+          widget_name, pack_id
+        )
       })?;
 
     // No-op if preset is already open.
@@ -202,7 +219,7 @@ impl WidgetFactory {
           .await
           .values()
           .find(|state| {
-            state.config_path == config_path
+            state.config_path == *config_path
               && state.open_options == *open_options
           })
           .is_some()
@@ -264,6 +281,8 @@ impl WidgetFactory {
 
       let mut state = WidgetState {
         id: widget_id.clone(),
+        name: widget_name.to_string(),
+        pack_id: pack_id.to_string(),
         window_handle: None,
         config: widget_config.clone(),
         config_path: config_path.clone(),
@@ -499,7 +518,8 @@ impl WidgetFactory {
     for startup_config in startup_configs {
       self
         .start_widget(
-          &startup_config.path,
+          &startup_config.pack_id,
+          &startup_config.widget_name,
           &WidgetOpenOptions::Preset(startup_config.preset),
         )
         .await?;
@@ -747,7 +767,8 @@ impl WidgetFactory {
 
       self
         .start_widget(
-          &widget_state.config_path,
+          &widget_state.pack_id,
+          &widget_state.name,
           &widget_state.open_options,
         )
         .await?;

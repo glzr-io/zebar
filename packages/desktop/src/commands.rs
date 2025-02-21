@@ -1,5 +1,6 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
+use serde::{Deserialize, Serialize};
 use tauri::{State, Window};
 
 #[cfg(target_os = "macos")]
@@ -19,11 +20,29 @@ use crate::{
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct StartWidgetArgs {
+  pack_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct StartWidgetPresetArgs {
+  pack_id: String,
+}
+
 #[tauri::command]
-pub async fn widget_configs(
+pub async fn widget_packs(
   config: State<'_, Arc<Config>>,
-) -> Result<HashMap<PathBuf, WidgetConfig>, String> {
+) -> Result<HashMap<String, WidgetPack>, String> {
   Ok(config.widget_packs().await)
+}
+
+#[tauri::command]
+pub async fn widget_pack_by_id(
+  pack_id: String,
+  config: State<'_, Arc<Config>>,
+) -> Result<Option<WidgetPack>, String> {
+  Ok(config.widget_pack_by_id(&pack_id).await)
 }
 
 #[tauri::command]
@@ -35,13 +54,15 @@ pub async fn widget_states(
 
 #[tauri::command]
 pub async fn start_widget(
-  config_path: String,
+  widget_name: String,
   placement: WidgetPlacement,
+  args: StartWidgetArgs,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
     .start_widget(
-      &PathBuf::from(config_path),
+      &args.pack_id,
+      &widget_name,
       &WidgetOpenOptions::Standalone(placement),
     )
     .await
@@ -49,14 +70,16 @@ pub async fn start_widget(
 }
 
 #[tauri::command]
-pub async fn start_preset(
-  config_path: String,
+pub async fn start_widget_preset(
+  widget_name: String,
   preset_name: String,
+  args: StartWidgetPresetArgs,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
     .start_widget(
-      &PathBuf::from(config_path),
+      &args.pack_id,
+      &widget_name,
       &WidgetOpenOptions::Preset(preset_name),
     )
     .await
@@ -106,12 +129,13 @@ pub async fn create_widget(
 
 #[tauri::command]
 pub async fn update_widget_config(
-  config_path: String,
+  pack_id: String,
+  widget_name: String,
   new_config: WidgetConfig,
   config: State<'_, Arc<Config>>,
 ) -> Result<(), String> {
   config
-    .update_widget_config(&PathBuf::from(config_path), new_config)
+    .update_widget_config(&pack_id, &widget_name, new_config)
     .await
     .map_err(|err| err.to_string())
 }

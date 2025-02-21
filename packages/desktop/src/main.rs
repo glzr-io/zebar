@@ -85,10 +85,10 @@ async fn main() -> anyhow::Result<()> {
       })
     })
     .invoke_handler(tauri::generate_handler![
-      commands::widget_configs,
+      commands::widget_packs,
       commands::widget_states,
       commands::start_widget,
-      commands::start_preset,
+      commands::start_widget_preset,
       commands::stop_preset,
       commands::update_widget_config,
       commands::create_widget_pack,
@@ -327,7 +327,8 @@ async fn open_widgets_by_cli_command(
     CliCommand::StartWidget(args) => {
       widget_factory
         .start_widget(
-          &args.config_path,
+          &args.pack_id,
+          &args.widget_name,
           &WidgetOpenOptions::Standalone(WidgetPlacement {
             anchor: args.anchor,
             offset_x: args.offset_x,
@@ -347,7 +348,8 @@ async fn open_widgets_by_cli_command(
     CliCommand::StartWidgetPreset(args) => {
       widget_factory
         .start_widget(
-          &args.config_path,
+          &args.pack_id,
+          &args.widget_name,
           &WidgetOpenOptions::Preset(args.preset_name),
         )
         .await

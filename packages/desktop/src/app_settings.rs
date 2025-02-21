@@ -14,6 +14,8 @@ use crate::common::{
   copy_dir_all, read_and_parse_json, visit_deep, PathExt,
 };
 
+pub const VERSION_NUMBER: &str = env!("VERSION_NUMBER");
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettingsValue {
@@ -28,15 +30,18 @@ pub struct AppSettingsValue {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StartupConfig {
-  /// Relative path to widget configs to launch on startup.
-  pub path: PathBuf,
+  /// ID of the widget pack to launch on startup.
+  pub pack_id: String,
+
+  /// Name of the widget within the widget pack to launch on startup.
+  pub widget_name: String,
 
   /// Preset name within the widget config.
   pub preset: String,
 }
 
-// Deserializer that handles `StartupConfig` objects and string format from
-// v2.3.0 and earlier.
+// Deserializer for `StartupConfig` that handles the different formats
+// from v2.3.0 to v3.0.0.
 impl<'de> Deserialize<'de> for StartupConfig {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
   where
@@ -45,20 +50,69 @@ impl<'de> Deserialize<'de> for StartupConfig {
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum StringOrObject {
+      // String format from v2.3.0 and earlier.
       String(String),
-      Object { path: PathBuf, preset: String },
+      // Object format from v2.7.0 and earlier.
+      V2Object {
+        path: PathBuf,
+        preset: String,
+      },
+      // Object format from v3.0.0 onwards.
+      V3Object {
+        pack_id: String,
+        widget_name: String,
+        preset: String,
+      },
+    }
+
+    fn parse_path(path: &Path) -> (String, String) {
+      let path = path.to_string_lossy();
+      let path = path
+        .trim_start_matches('.')
+        .trim_start_matches('/')
+        .trim_start_matches('\\')
+        .trim_end_matches(".zebar.json");
+
+      // TODO: Transform pack ID if necessary. It might include special
+      // symbols or spaces.
+      path.split_once(|c| c == '/' || c == '\\').map_or(
+        (path.to_string(), String::new()),
+        |(pack_id, widget_name)| {
+          (pack_id.to_string(), widget_name.to_string())
+        },
+      )
     }
 
     let value = StringOrObject::deserialize(deserializer)?;
 
     Ok(match value {
-      StringOrObject::String(s) => StartupConfig {
-        path: PathBuf::from(s),
-        preset: "default".to_string(),
-      },
-      StringOrObject::Object { path, preset } => {
-        StartupConfig { path, preset }
+      StringOrObject::String(s) => {
+        let (pack_id, widget_name) = parse_path(&PathBuf::from(s));
+
+        StartupConfig {
+          pack_id,
+          widget_name,
+          preset: "default".to_string(),
+        }
       }
+      StringOrObject::V2Object { path, preset } => {
+        let (pack_id, widget_name) = parse_path(&path);
+
+        StartupConfig {
+          pack_id,
+          widget_name,
+          preset,
+        }
+      }
+      StringOrObject::V3Object {
+        pack_id,
+        widget_name,
+        preset,
+      } => StartupConfig {
+        pack_id,
+        widget_name,
+        preset,
+      },
     })
   }
 }
@@ -199,11 +253,15 @@ impl AppSettings {
     tracing::info!("Initializing app settings from default.",);
 
     let default_settings = AppSettingsValue {
-      schema: Some("https://github.com/glzr-io/zebar/raw/v2.4.0/resources/settings-schema.json".into()),
+      schema: Some(format!(
+        "https://github.com/glzr-io/zebar/raw/v{}/resources/settings-schema.json",
+        VERSION_NUMBER
+      )),
       startup_configs: vec![StartupConfig {
-        path: match is_app_installed("glazewm") {
-          true => "starter/with-glazewm.zebar.json".into(),
-          false => "starter/vanilla.zebar.json".into(),
+        pack_id: "glzr-io/starter".into(),
+        widget_name: match is_app_installed("glazewm") {
+          true => "with-glazewm".into(),
+          false => "vanilla".into(),
         },
         preset: "default".into(),
       }],
@@ -234,24 +292,24 @@ impl AppSettings {
       .into_iter()
       .map(|config| {
         self
-          .to_absolute_path(&config.path)
+          .to_absolute_path(&config.pack_id)
           .map(|abs_path| (abs_path, config))
       })
       .collect()
   }
 
   /// Adds the given config to be launched on startup.
-  ///
-  /// Config path can be either absolute or relative.
   pub async fn add_startup_config(
     &self,
-    config_path: &Path,
+    pack_id: &str,
+    widget_name: &str,
     preset_name: &str,
   ) -> anyhow::Result<()> {
     let mut new_settings = { self.value.lock().await.clone() };
 
     let startup_config = StartupConfig {
-      path: self.to_relative_path(config_path),
+      pack_id: pack_id.to_string(),
+      widget_name: widget_name.to_string(),
       preset: preset_name.to_string(),
     };
 
@@ -264,18 +322,18 @@ impl AppSettings {
   }
 
   /// Removes the given config from being launched on startup.
-  ///
-  /// Config path can be either absolute or relative.
   pub async fn remove_startup_config(
     &self,
-    config_path: &Path,
+    pack_id: &str,
+    widget_name: &str,
     preset_name: &str,
   ) -> anyhow::Result<()> {
     let mut new_settings = { self.value.lock().await.clone() };
-    let rel_path = self.to_relative_path(config_path);
 
     new_settings.startup_configs.retain(|config| {
-      config.path != rel_path || config.preset != preset_name
+      config.pack_id != pack_id
+        && config.widget_name != widget_name
+        && config.preset != preset_name
     });
 
     self.write_settings(new_settings).await
