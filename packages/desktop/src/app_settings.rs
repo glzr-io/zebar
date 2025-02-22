@@ -172,7 +172,7 @@ impl AppSettings {
 
     Ok(Self {
       app_handle: app_handle.clone(),
-      config_dir: config_dir.to_absolute()?,
+      config_dir: config_dir.canonicalize_pretty()?,
       value: Arc::new(Mutex::new(settings)),
       _settings_change_rx,
       settings_change_tx,
@@ -248,8 +248,9 @@ impl AppSettings {
 
   /// Initializes app settings to the given path.
   ///
-  /// `settings.json` is initialized with either `glzr-io/starter`'s
-  /// `vanilla` or `with-glazewm` widget as startup config.
+  /// `settings.json` is initialized with either `vanilla` or
+  /// `with-glazewm` from the `glzr-io/starter` widget pack as
+  /// startup config.
   fn create_default(config_dir: &Path) -> anyhow::Result<()> {
     tracing::info!("Initializing app settings from default.",);
 
@@ -322,30 +323,6 @@ impl AppSettings {
     });
 
     self.write_settings(new_settings).await
-  }
-
-  /// Joins the given path with the config directory path.
-  ///
-  /// Returns an absolute path.
-  pub fn to_absolute_path(
-    &self,
-    config_path: &PathBuf,
-  ) -> anyhow::Result<PathBuf> {
-    match config_path.is_absolute() {
-      false => self.config_dir.join(config_path).to_absolute(),
-      // Ensure path is canonicalized even if already absolute.
-      true => config_path.to_absolute(),
-    }
-  }
-
-  /// Strips the config directory path from the given path.
-  ///
-  /// Returns a relative path.
-  pub fn to_relative_path(&self, config_path: &Path) -> PathBuf {
-    config_path
-      .strip_prefix(&self.config_dir)
-      .unwrap_or(config_path)
-      .into()
   }
 
   /// Opens the config directory in the OS-dependent file explorer.

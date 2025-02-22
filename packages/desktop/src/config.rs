@@ -10,7 +10,6 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tokio::sync::{broadcast, Mutex};
-use tracing::{error, info};
 
 use crate::{
   app_settings::{
@@ -344,7 +343,7 @@ impl Config {
     app_handle: &AppHandle,
     app_settings: Arc<AppSettings>,
   ) -> anyhow::Result<Self> {
-    let widget_packs = Self::read_widget_packs(&app_settings.config_dir)?;
+    let widget_packs = Self::read_widget_packs(&app_settings)?;
 
     let (widget_packs_change_tx, _widget_packs_change_rx) =
       broadcast::channel(16);
@@ -365,8 +364,7 @@ impl Config {
 
   /// Re-evaluates widget packs within the config directory.
   pub async fn reload(&self) -> anyhow::Result<()> {
-    let new_widget_packs =
-      Self::read_widget_packs(&self.app_settings.config_dir)?;
+    let new_widget_packs = Self::read_widget_packs(&self.app_settings)?;
 
     {
       let mut widget_packs = self.widget_packs.lock().await;
@@ -380,39 +378,38 @@ impl Config {
 
   /// Finds all valid widget packs within the given directory.
   ///
-  /// Widget packs are at the 2nd-level of the given directory
+  /// Widget packs are at the 2nd-level of the config directory
   /// (i.e. `<CONFIG_DIR>/*/zebar-pack.json`).
   ///
   /// Returns a hashmap of widget pack ID's to their `WidgetPack`
   /// instances.
   fn read_widget_packs(
-    dir: &PathBuf,
+    app_settings: &AppSettings,
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
     // Scan the 2nd-level of the config directory.
-    let pack_dirs = fs::read_dir(dir)
+    let pack_dirs = fs::read_dir(&app_settings.config_dir)
       .with_context(|| {
-        format!("Failed to read directory: {}", dir.display())
+        format!(
+          "Failed to read config directory: {}",
+          app_settings.config_dir.display()
+        )
       })?
       .filter_map(|entry| Some(entry.ok()?.path()))
-      .filter(|path| path.is_dir());
+      .filter(|path| {
+        path.is_dir() && path.join("zebar-pack.json").exists()
+      });
 
     let mut packs = HashMap::new();
 
     // Parse the found config files.
     for pack_dir in pack_dirs {
-      let pack_config_path = pack_dir.join("zebar-pack.json");
-
-      // Skip if the pack config file does not exist.
-      if !pack_config_path.exists() {
-        continue;
-      }
-
-      match Self::parse_widget_pack(&pack_dir) {
+      match Self::read_widget_pack(&pack_dir) {
         Ok(pack) => {
           tracing::info!(
             "Found valid widget pack at: {}",
             pack_dir.display()
           );
+
           packs.insert(pack.id.clone(), pack);
         }
         Err(err) => {
@@ -424,65 +421,32 @@ impl Config {
     Ok(packs)
   }
 
-  fn parse_widget_pack(pack_dir: &Path) -> anyhow::Result<WidgetPack> {
-    let pack_config_path = pack_dir.join("zebar-pack.json");
-    let abs_path = pack_config_path.to_absolute().with_context(|| {
-      format!("Invalid widget pack path '{}'.", pack_config_path.display())
-    })?;
+  /// Reads a widget pack from a directory. Expects the pack config
+  /// file (`zebar-pack.json`) to be present.
+  ///
+  /// Returns a `WidgetPack` instance.
+  fn read_widget_pack(pack_dir: &Path) -> anyhow::Result<WidgetPack> {
+    let config_path =
+      pack_dir.join("zebar-pack.json").to_absolute(pack_dir)?;
 
-    let pack_config = read_and_parse_json::<WidgetPackConfig>(&abs_path)
-      .map_err(|err| {
+    let pack_config = read_and_parse_json::<WidgetPackConfig>(
+      &config_path,
+    )
+    .map_err(|err| {
       anyhow::anyhow!(
         "Failed to parse widget pack at '{}': {:?}",
-        abs_path.display(),
+        config_path.display(),
         err
       )
     })?;
 
-    let mut widget_configs = vec![];
-
-    // Parse the found widget config files.
-    for widget_path in &pack_config.widget_paths {
-      let absolute_path = if widget_path.is_absolute() {
-        widget_path.clone()
-      } else {
-        pack_dir.join(widget_path)
-      }
-      .to_absolute()
-      .with_context(|| {
-        format!("Invalid widget path '{}'.", widget_path.display())
-      })?;
-
-      match Self::parse_widget_config(&absolute_path) {
-        Ok(widget_config) => {
-          info!(
-            "Found valid widget config at: {}",
-            absolute_path.display()
-          );
-
-          let relative_path = absolute_path
-            .strip_prefix(pack_dir)
-            .map(|path| path.to_path_buf())
-            .with_context(|| {
-              format!("Invalid widget path '{}'.", absolute_path.display())
-            })?;
-
-          widget_configs.push(WidgetConfigEntry {
-            absolute_path,
-            relative_path,
-            value: widget_config,
-          });
-        }
-        Err(err) => {
-          error!("{:?}", err);
-        }
-      }
-    }
+    let widget_configs =
+      Self::read_widget_configs(&pack_config, pack_dir)?;
 
     let pack = WidgetPack {
       id: format!("local.{}", pack_config.name),
       r#type: WidgetPackType::Local,
-      config_path: abs_path,
+      config_path,
       directory_path: pack_dir.to_path_buf(),
       config: pack_config,
       widget_configs,
@@ -491,19 +455,48 @@ impl Config {
     Ok(pack)
   }
 
-  fn parse_widget_config(
-    config_path: &Path,
-  ) -> anyhow::Result<WidgetConfig> {
-    let config = read_and_parse_json::<WidgetConfig>(config_path)
-      .map_err(|err| {
-        anyhow::anyhow!(
-          "Failed to parse widget config at '{}': {:?}",
-          config_path.display(),
-          err
-        )
-      })?;
+  /// Reads widget configs for a widget pack.
+  ///
+  /// Returns a vector of `WidgetConfigEntry` instances.
+  fn read_widget_configs(
+    pack_config: &WidgetPackConfig,
+    pack_dir: &Path,
+  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
+    let mut widget_configs = vec![];
 
-    Ok(config)
+    for widget_path in &pack_config.widget_paths {
+      let absolute_path = widget_path.to_absolute(pack_dir)?;
+      let relative_path = widget_path.to_relative(pack_dir)?;
+
+      let config = read_and_parse_json::<WidgetConfig>(&absolute_path)
+        .map_err(|err| {
+          anyhow::anyhow!(
+            "Failed to parse widget config at '{}': {:?}",
+            absolute_path.display(),
+            err
+          )
+        });
+
+      match config {
+        Ok(widget_config) => {
+          tracing::info!(
+            "Found valid widget config at: {}",
+            absolute_path.display()
+          );
+
+          widget_configs.push(WidgetConfigEntry {
+            absolute_path,
+            relative_path,
+            value: widget_config,
+          });
+        }
+        Err(err) => {
+          tracing::error!("{:?}", err);
+        }
+      }
+    }
+
+    Ok(widget_configs)
   }
 
   /// Returns all widget packs as a hashmap.
@@ -541,17 +534,17 @@ impl Config {
     pack_id: &str,
     widget_name: &str,
     new_config: WidgetConfig,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<WidgetConfigEntry> {
     tracing::info!("Updating widget config for {}.", widget_name);
 
-    let config_path = {
+    let config_entry = {
       let mut widget_packs = self.widget_packs.lock().await;
 
-      let pack_entry = widget_packs
+      let pack = widget_packs
         .get_mut(pack_id)
         .context(format!("Widget pack not found for {}.", pack_id))?;
 
-      let config_entry = pack_entry
+      let config_entry = pack
         .widget_configs
         .iter_mut()
         .find(|entry| entry.value.name == widget_name)
@@ -562,8 +555,7 @@ impl Config {
 
       // Update the config in state.
       config_entry.value = new_config.clone();
-
-      config_entry.absolute_path.clone()
+      config_entry.clone()
     };
 
     // Emit the changed config.
@@ -573,11 +565,11 @@ impl Config {
 
     // Write the updated config to file.
     fs::write(
-      &config_path,
+      &config_entry.absolute_path,
       serde_json::to_string_pretty(&new_config)? + "\n",
     )?;
 
-    Ok(())
+    Ok(config_entry)
   }
 
   /// Creates a new widget pack.
@@ -605,7 +597,7 @@ impl Config {
       .current_dir(&pack_dir)
       .output();
 
-    let pack = Self::parse_widget_pack(&pack_dir.join("zebar-pack.json"))?;
+    let pack = Self::read_widget_pack(&pack_dir)?;
 
     // Add the new widget pack to state.
     let mut widget_packs = self.widget_packs.lock().await;

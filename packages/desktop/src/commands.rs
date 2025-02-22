@@ -9,7 +9,8 @@ use crate::common::windows::WindowExtWindows;
 use crate::{
   config::{
     Config, CreateWidgetConfigArgs, CreateWidgetPackArgs,
-    UpdateWidgetPackArgs, WidgetConfig, WidgetPack, WidgetPlacement,
+    UpdateWidgetPackArgs, WidgetConfig, WidgetConfigEntry, WidgetPack,
+    WidgetPlacement,
   },
   providers::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
@@ -128,7 +129,7 @@ pub async fn update_widget_config(
   widget_name: String,
   new_config: WidgetConfig,
   config: State<'_, Arc<Config>>,
-) -> Result<(), String> {
+) -> Result<WidgetConfigEntry, String> {
   config
     .update_widget_config(&pack_id, &widget_name, new_config)
     .await

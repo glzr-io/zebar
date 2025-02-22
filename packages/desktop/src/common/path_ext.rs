@@ -3,6 +3,8 @@ use std::{
   path::{Component, Path, PathBuf, Prefix},
 };
 
+use anyhow::Context;
+
 pub trait PathExt
 where
   Self: AsRef<Path>,
@@ -15,7 +17,17 @@ where
   /// let path = PathBuf::from("\\?\C:\\Users\\John\\Desktop\\test");
   /// path.canonicalize_pretty().unwrap(); // "C:\\Users\\John\\Desktop\\test"
   /// ```
-  fn to_absolute(&self) -> anyhow::Result<PathBuf>;
+  fn canonicalize_pretty(&self) -> anyhow::Result<PathBuf>;
+
+  /// Strips the given base path.
+  ///
+  /// Returns a relative path (e.g. 'subdir/file.json').
+  fn to_relative(&self, base_path: &Path) -> anyhow::Result<PathBuf>;
+
+  /// Joins the given base path.
+  ///
+  /// Returns an absolute path (e.g. 'C:\\Users\\John\\Desktop\\test').
+  fn to_absolute(&self, base_path: &Path) -> anyhow::Result<PathBuf>;
 
   /// Converts the path to a unicode string.
   ///
@@ -24,7 +36,7 @@ where
 }
 
 impl PathExt for PathBuf {
-  fn to_absolute(&self) -> anyhow::Result<PathBuf> {
+  fn canonicalize_pretty(&self) -> anyhow::Result<PathBuf> {
     let canonicalized = fs::canonicalize(self)?;
 
     #[cfg(not(windows))]
@@ -53,14 +65,51 @@ impl PathExt for PathBuf {
     }
   }
 
+  fn to_relative(&self, base_path: &Path) -> anyhow::Result<PathBuf> {
+    if !self.is_absolute() {
+      Ok(self.to_path_buf())
+    } else {
+      let relative_path =
+        self.strip_prefix(base_path).with_context(|| {
+          format!("Unable to convert path to relative: {}", self.display())
+        })?;
+
+      Ok(relative_path.to_path_buf())
+    }
+  }
+
+  fn to_absolute(&self, base_path: &Path) -> anyhow::Result<PathBuf> {
+    let absolute_path = if self.is_absolute() {
+      self
+    } else {
+      &base_path.join(self)
+    };
+
+    // Ensure path is canonicalized even if already absolute.
+    absolute_path.canonicalize_pretty().with_context(|| {
+      format!(
+        "Unable to convert path to absolute: {}",
+        absolute_path.display()
+      )
+    })
+  }
+
   fn to_unicode_string(&self) -> String {
     self.to_string_lossy().to_string()
   }
 }
 
 impl PathExt for Path {
-  fn to_absolute(&self) -> anyhow::Result<PathBuf> {
-    self.to_path_buf().to_absolute()
+  fn canonicalize_pretty(&self) -> anyhow::Result<PathBuf> {
+    self.to_path_buf().canonicalize_pretty()
+  }
+
+  fn to_relative(&self, base_path: &Path) -> anyhow::Result<PathBuf> {
+    self.to_path_buf().to_relative(base_path)
+  }
+
+  fn to_absolute(&self, base_path: &Path) -> anyhow::Result<PathBuf> {
+    self.to_path_buf().to_absolute(base_path)
   }
 
   fn to_unicode_string(&self) -> String {

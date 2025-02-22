@@ -133,7 +133,7 @@ pub async fn serve(
 
   let asset_path = base_url
     .join(path.unwrap_or("index.html".into()))
-    .to_absolute()
+    .canonicalize_pretty()
     .ok()?;
 
   // Prevent directory traversal outside of the base URL.
