@@ -40,8 +40,20 @@ pub struct WidgetPack {
   /// This is the parent directory of `config_path`.
   pub directory_path: PathBuf,
 
-  /// Widget configs and their absolute paths by widget name.
-  pub widget_configs: HashMap<String, (PathBuf, WidgetConfig)>,
+  /// List of widget configs.
+  pub widget_configs: Vec<WidgetConfigEntry>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WidgetConfigEntry {
+  /// Absolute path to the widget config file.
+  pub absolute_path: PathBuf,
+
+  /// Relative path to the widget config file.
+  pub relative_path: PathBuf,
+
+  /// Deserialized widget config.
+  pub value: WidgetConfig,
 }
 
 /// Deserialized widget pack.
@@ -427,11 +439,11 @@ impl Config {
       )
     })?;
 
-    let mut widget_configs = HashMap::new();
+    let mut widget_configs = vec![];
 
     // Parse the found widget config files.
     for widget_path in &pack_config.widget_paths {
-      let widget_path = if widget_path.is_absolute() {
+      let absolute_path = if widget_path.is_absolute() {
         widget_path.clone()
       } else {
         pack_dir.join(widget_path)
@@ -441,14 +453,25 @@ impl Config {
         format!("Invalid widget path '{}'.", widget_path.display())
       })?;
 
-      match Self::parse_widget_config(&widget_path) {
+      match Self::parse_widget_config(&absolute_path) {
         Ok(widget_config) => {
-          info!("Found valid widget config at: {}", widget_path.display());
-
-          widget_configs.insert(
-            widget_config.name.clone(),
-            (widget_path, widget_config),
+          info!(
+            "Found valid widget config at: {}",
+            absolute_path.display()
           );
+
+          let relative_path = absolute_path
+            .strip_prefix(pack_dir)
+            .map(|path| path.to_path_buf())
+            .with_context(|| {
+              format!("Invalid widget path '{}'.", absolute_path.display())
+            })?;
+
+          widget_configs.push(WidgetConfigEntry {
+            absolute_path,
+            relative_path,
+            value: widget_config,
+          });
         }
         Err(err) => {
           error!("{:?}", err);
@@ -528,16 +551,19 @@ impl Config {
         .get_mut(pack_id)
         .context(format!("Widget pack not found for {}.", pack_id))?;
 
-      let config_entry =
-        pack_entry.widget_configs.get_mut(widget_name).context(
-          format!("Widget config not found for {}.", widget_name),
-        )?;
+      let config_entry = pack_entry
+        .widget_configs
+        .iter_mut()
+        .find(|entry| entry.value.name == widget_name)
+        .context(format!(
+          "Widget config not found for {}.",
+          widget_name
+        ))?;
 
       // Update the config in state.
-      let config_path = config_entry.0.clone();
-      *config_entry = (config_path.clone(), new_config.clone());
+      config_entry.value = new_config.clone();
 
-      config_path
+      config_entry.absolute_path.clone()
     };
 
     // Emit the changed config.

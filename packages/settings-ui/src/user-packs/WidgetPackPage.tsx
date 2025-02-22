@@ -88,17 +88,17 @@ export function WidgetPackPage() {
               </TableHeader>
 
               <TableBody>
-                {selectedPack()?.widgetConfigs.map(widget => (
+                {selectedPack()?.widgetConfigs.map(config => (
                   <TableRow
                     class="cursor-pointer"
                     onClick={() =>
                       navigate(
-                        `/packs/${selectedPack().id}/${widget.name}`,
+                        `/packs/${selectedPack().id}/${config.value.name}`,
                       )
                     }
                   >
-                    <TableCell>{widget.name}</TableCell>
-                    <TableCell>{widget.htmlPath}</TableCell>
+                    <TableCell>{config.value.name}</TableCell>
+                    <TableCell>{config.value.htmlPath}</TableCell>
                     <TableCell>
                       <AlertDialog>
                         <AlertDialogTrigger disabled={isMarketplacePack()}>
@@ -112,11 +112,11 @@ export function WidgetPackPage() {
                           </Button>
                         </AlertDialogTrigger>
                         <DeleteWidgetDialog
-                          widget={widget}
+                          widget={config.value}
                           onDelete={() =>
                             userPacks.deleteWidget(
                               selectedPack().id,
-                              widget.name,
+                              config.value.name,
                             )
                           }
                         />

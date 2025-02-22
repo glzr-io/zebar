@@ -28,7 +28,7 @@ use crate::{
   asset_server::create_init_url,
   config::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
-    WidgetPlacement,
+    WidgetConfigEntry, WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
 };
@@ -198,9 +198,14 @@ impl WidgetFactory {
         format!("No widget pack found for '{}'.", pack_id)
       })?;
 
-    let (config_path, widget_config) = widget_pack
+    let WidgetConfigEntry {
+      value: widget_config,
+      absolute_path: config_path,
+      ..
+    } = widget_pack
       .widget_configs
-      .get(widget_name)
+      .iter()
+      .find(|entry| entry.value.name == widget_name)
       .with_context(|| {
         format!(
           "No widget named '{}' found in widget pack '{}'.",

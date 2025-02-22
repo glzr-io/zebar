@@ -49,35 +49,24 @@ const communityPacksMock = [
     tags: ['weather', 'forecast', 'current'],
     widgetConfigs: [
       {
-        name: 'current-weather',
-        htmlPath: 'current-weather.html',
-      } as any as WidgetConfig,
+        absolutePath:
+          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\current-weather\\zebar-widget.json',
+        relativePath: 'current-weather\\zebar-widget.json',
+        value: {
+          name: 'current-weather',
+          htmlPath: 'current-weather.html',
+        } as any as WidgetConfig,
+      },
       {
-        name: 'weekly-forecast',
-        htmlPath: 'weekly-forecast.html',
-      } as any as WidgetConfig,
+        absolutePath:
+          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\weekly-forecast\\zebar-widget.json',
+        relativePath: 'weekly-forecast\\zebar-widget.json',
+        value: {
+          name: 'weekly-forecast',
+          htmlPath: 'weekly-forecast.html',
+        } as any as WidgetConfig,
+      },
     ],
-    previewImages: [],
-    excludeFiles: '',
-  },
-];
-
-const localPacksMock = [
-  {
-    id: 'local.my-custom-widgets',
-    name: 'My Custom Widgets',
-    author: 'me',
-    type: 'local' as 'local' | 'marketplace',
-    description: 'Personal collection of widgets',
-    directoryPath: 'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa',
-    version: '0.1.0',
-    widgetConfigs: [
-      {
-        name: 'todo-list',
-        htmlPath: 'todo-list.html',
-      } as any as WidgetConfig,
-    ],
-    tags: ['todo', 'list', 'custom'],
     previewImages: [],
     excludeFiles: '',
   },
@@ -93,8 +82,14 @@ export type WidgetPack = {
   directoryPath: string;
   description: string;
   version: string;
-  widgetConfigs: WidgetConfig[];
+  widgetConfigs: WidgetConfigEntry[];
   tags: string[];
+};
+
+export type WidgetConfigEntry = {
+  absolutePath: string;
+  relativePath: string;
+  value: WidgetConfig;
 };
 
 export type CreateWidgetPackArgs = {
@@ -194,8 +189,11 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
           ? {
               ...pack,
               widgetConfigs: pack.widgetConfigs.map(widgetConfig =>
-                widgetConfig.name === widgetName
-                  ? newConfig
+                widgetConfig.value.name === widgetName
+                  ? {
+                      ...widgetConfig,
+                      value: newConfig,
+                    }
                   : widgetConfig,
               ),
             }
@@ -277,7 +275,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
         return {
           ...pack,
           widgetConfigs: pack.widgetConfigs.filter(
-            w => w.name !== widgetName,
+            w => w.value.name !== widgetName,
           ),
         };
       }),
