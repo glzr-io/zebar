@@ -99,7 +99,7 @@ export function WidgetPage() {
               </h1>
 
               <p class="bg-muted text-xs font-mono rounded-sm mb-6 p-1 text-muted-foreground inline-block">
-                {config().value.name}
+                {config().absolutePath}
               </p>
 
               <WidgetConfigForm
@@ -127,7 +127,11 @@ export function WidgetPage() {
                   class="rounded-r-none self-end"
                   disabled={presetNames().length === 0}
                   onClick={() =>
-                    togglePreset(config().value.name, selectedPreset())
+                    togglePreset(
+                      selectedPack().id,
+                      config().value.name,
+                      selectedPreset(),
+                    )
                   }
                 >
                   <Show when={selectedPreset()} fallback="No presets">

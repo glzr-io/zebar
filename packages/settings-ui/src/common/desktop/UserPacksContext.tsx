@@ -147,7 +147,11 @@ type UserPacksContextState = {
     widgetName: string,
     newConfig: WidgetConfig,
   ) => Promise<WidgetConfigEntry>;
-  togglePreset: (configPath: string, presetName: string) => Promise<void>;
+  togglePreset: (
+    packId: string,
+    widgetName: string,
+    presetName: string,
+  ) => Promise<void>;
 };
 
 const UserPacksContext = createContext<UserPacksContextState>();
@@ -219,11 +223,15 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     return updatedEntry;
   }
 
-  async function togglePreset(configPath: string, presetName: string) {
+  async function togglePreset(
+    packId: string,
+    widgetName: string,
+    presetName: string,
+  ) {
     const states = widgetStates();
 
     const configStates = Object.values(states).filter(
-      state => state.configPath === configPath,
+      state => state.packId === packId && state.name === widgetName,
     );
 
     const presetStates = configStates.filter(
@@ -233,12 +241,14 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
     if (presetStates.length > 0) {
       await invoke<void>('stop_widget_preset', {
-        configPath,
+        packId,
+        widgetName,
         presetName,
       });
     } else {
       await invoke<void>('start_widget_preset', {
-        configPath,
+        packId,
+        widgetName,
         presetName,
       });
     }

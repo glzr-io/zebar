@@ -44,6 +44,7 @@ pub struct WidgetPack {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WidgetConfigEntry {
   /// Absolute path to the widget config file.
   pub absolute_path: PathBuf,
