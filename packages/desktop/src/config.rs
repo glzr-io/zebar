@@ -376,13 +376,12 @@ impl Config {
     Ok(())
   }
 
-  /// Finds all valid widget packs within the given directory.
+  /// Finds all valid widget packs within the user's config directory.
   ///
   /// Widget packs are at the 2nd-level of the config directory
   /// (i.e. `<CONFIG_DIR>/*/zebar-pack.json`).
   ///
-  /// Returns a hashmap of widget pack ID's to their `WidgetPack`
-  /// instances.
+  /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
   fn read_widget_packs(
     app_settings: &AppSettings,
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
@@ -600,8 +599,10 @@ impl Config {
     let pack = Self::read_widget_pack(&pack_dir)?;
 
     // Add the new widget pack to state.
-    let mut widget_packs = self.widget_packs.lock().await;
-    widget_packs.insert(pack.id.clone(), pack.clone());
+    {
+      let mut widget_packs = self.widget_packs.lock().await;
+      widget_packs.insert(pack.id.clone(), pack.clone());
+    }
 
     self
       .widget_packs_change_tx
@@ -627,8 +628,13 @@ impl Config {
       args.preview_images.unwrap_or(pack.config.preview_images);
     pack.config.exclude_files =
       args.exclude_files.unwrap_or(pack.config.exclude_files);
-    pack.config.widget_paths =
-      args.widget_paths.unwrap_or(pack.config.widget_paths);
+
+    // Only re-parse widget configs if widget paths changed.
+    if let Some(new_widget_paths) = args.widget_paths {
+      pack.config.widget_paths = new_widget_paths;
+      pack.widget_configs =
+        Self::read_widget_configs(&pack.config, &pack.directory_path)?;
+    }
 
     // Write the updated pack config to file.
     fs::write(
@@ -636,13 +642,12 @@ impl Config {
       serde_json::to_string_pretty(&pack.config)? + "\n",
     )?;
 
-    // Update state and notify listeners.
-    self
-      .widget_packs
-      .lock()
-      .await
-      .insert(pack.id.clone(), pack.clone());
+    {
+      let mut widget_packs = self.widget_packs.lock().await;
+      widget_packs.insert(pack.id.clone(), pack.clone());
+    }
 
+    // Broadcast the change.
     self
       .widget_packs_change_tx
       .send(HashMap::from([(pack.id.clone(), pack.clone())]))?;
@@ -657,7 +662,7 @@ impl Config {
   pub async fn create_widget_config(
     &self,
     args: CreateWidgetConfigArgs,
-  ) -> anyhow::Result<WidgetConfig> {
+  ) -> anyhow::Result<WidgetConfigEntry> {
     let pack = self.find_local_widget_pack(&args.pack_id).await?;
     let widget_dir = pack.directory_path.join(&args.name);
 
@@ -685,7 +690,15 @@ impl Config {
       .await?;
 
     let widget_config_path = widget_dir.join("zebar-widget.json");
-    read_and_parse_json::<WidgetConfig>(&widget_config_path)
+    let widget_config =
+      read_and_parse_json::<WidgetConfig>(&widget_config_path)?;
+
+    Ok(WidgetConfigEntry {
+      absolute_path: widget_config_path.clone(),
+      relative_path: widget_config_path
+        .to_relative(&pack.directory_path)?,
+      value: widget_config,
+    })
   }
 
   /// Deletes a widget from a pack.

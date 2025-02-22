@@ -11,7 +11,7 @@ import { listen, type Event } from '@tauri-apps/api/event';
 import { createResource } from 'solid-js';
 import type { Widget, WidgetConfig } from 'zebar';
 
-const communityPacksMock = [
+const communityPacksMock: WidgetPack[] = [
   {
     id: 'glzr-io.system-monitor',
     name: 'System Monitor',
@@ -23,17 +23,32 @@ const communityPacksMock = [
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
     widgetConfigs: [
       {
-        name: 'cpu-usage',
-        htmlPath: 'cpu-usage.html',
-      } as any as WidgetConfig,
+        absolutePath:
+          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\cpu-usage\\zebar-widget.json',
+        relativePath: 'cpu-usage\\zebar-widget.json',
+        value: {
+          name: 'cpu-usage',
+          htmlPath: 'cpu-usage.html',
+        } as any as WidgetConfig,
+      },
       {
-        name: 'memory-usage',
-        htmlPath: 'memory-usage.html',
-      } as any as WidgetConfig,
+        absolutePath:
+          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\memory-usage\\zebar-widget.json',
+        relativePath: 'memory-usage\\zebar-widget.json',
+        value: {
+          name: 'memory-usage',
+          htmlPath: 'memory-usage.html',
+        } as any as WidgetConfig,
+      },
       {
-        name: 'disk-space',
-        htmlPath: 'disk-space.html',
-      } as any as WidgetConfig,
+        absolutePath:
+          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\disk-space\\zebar-widget.json',
+        relativePath: 'disk-space\\zebar-widget.json',
+        value: {
+          name: 'disk-space',
+          htmlPath: 'disk-space.html',
+        } as any as WidgetConfig,
+      },
     ],
     previewImages: [],
     excludeFiles: '',
@@ -120,7 +135,7 @@ type UserPacksContextState = {
   allPacks: Accessor<WidgetPack[]>;
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (args: CreateWidgetPackArgs) => Promise<WidgetPack>;
-  createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfig>;
+  createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfigEntry>;
   updatePack: (
     packId: string,
     args: UpdateWidgetPackArgs,
@@ -131,7 +146,7 @@ type UserPacksContextState = {
     packId: string,
     widgetName: string,
     newConfig: WidgetConfig,
-  ) => Promise<void>;
+  ) => Promise<WidgetConfigEntry>;
   togglePreset: (configPath: string, presetName: string) => Promise<void>;
 };
 
@@ -177,29 +192,31 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     widgetName: string,
     newConfig: WidgetConfig,
   ) {
-    await invoke<void>('update_widget_config', {
-      packId,
-      widgetName,
-      newConfig,
-    });
+    const updatedEntry = await invoke<WidgetConfigEntry>(
+      'update_widget_config',
+      {
+        packId,
+        widgetName,
+        newConfig,
+      },
+    );
 
     mutateLocalPacks(packs =>
       packs.map(pack =>
         pack.id === packId && pack.type === 'local'
           ? {
               ...pack,
-              widgetConfigs: pack.widgetConfigs.map(widgetConfig =>
-                widgetConfig.value.name === widgetName
-                  ? {
-                      ...widgetConfig,
-                      value: newConfig,
-                    }
-                  : widgetConfig,
+              widgetConfigs: pack.widgetConfigs.map(configEntry =>
+                configEntry.value.name === widgetName
+                  ? updatedEntry
+                  : configEntry,
               ),
             }
           : pack,
       ),
     );
+
+    return updatedEntry;
   }
 
   async function togglePreset(configPath: string, presetName: string) {
@@ -220,7 +237,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
         presetName,
       });
     } else {
-      await invoke<void>('start_preset', {
+      await invoke<void>('start_widget_preset', {
         configPath,
         presetName,
       });
@@ -234,19 +251,25 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   }
 
   async function createWidget(args: CreateWidgetArgs) {
-    const widget = await invoke<WidgetConfig>('create_widget_config', {
-      args,
-    });
+    const configEntry = await invoke<WidgetConfigEntry>(
+      'create_widget_config',
+      {
+        args,
+      },
+    );
 
     mutateLocalPacks(packs =>
       packs.map(pack => {
         return pack.id === args.packId && pack.type === 'local'
-          ? { ...pack, widgetConfigs: [...pack.widgetConfigs, widget] }
+          ? {
+              ...pack,
+              widgetConfigs: [...pack.widgetConfigs, configEntry],
+            }
           : pack;
       }),
     );
 
-    return widget;
+    return configEntry;
   }
 
   async function deletePack(packId: string) {

@@ -26,6 +26,7 @@ use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
   app_settings::AppSettings,
   asset_server::create_init_url,
+  common::PathExt,
   config::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
     WidgetConfigEntry, WidgetPlacement,
@@ -289,7 +290,7 @@ impl WidgetFactory {
         window_handle: None,
         config: widget_config.clone(),
         config_path: config_path.clone(),
-        html_path: html_path.clone(),
+        html_path: html_path.canonicalize_pretty()?,
         open_options: open_options.clone(),
       };
 

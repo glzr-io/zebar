@@ -116,7 +116,7 @@ pub async fn update_widget_pack(
 pub async fn create_widget_config(
   args: CreateWidgetConfigArgs,
   config: State<'_, Arc<Config>>,
-) -> anyhow::Result<WidgetConfig, String> {
+) -> anyhow::Result<WidgetConfigEntry, String> {
   config
     .create_widget_config(args)
     .await
