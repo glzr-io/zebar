@@ -18,7 +18,7 @@ import {
 } from 'solid-js';
 
 import { WidgetConfigForm } from './WidgetConfigForm';
-import { useUserPacks } from '~/common';
+import { AppBreadcrumbs, useUserPacks } from '~/common';
 
 export function WidgetPage() {
   const params = useParams();
@@ -94,7 +94,20 @@ export function WidgetPage() {
         {config => (
           <main class="flex-1 grid grid-rows-[1fr_auto] overflow-hidden">
             <div id="form-container" class="container p-4 overflow-y-auto">
-              <h1 class="text-2xl font-bold mb-1">
+              <AppBreadcrumbs
+                entries={[
+                  {
+                    href: `/packs/${selectedPack().id}`,
+                    content: selectedPack().id,
+                  },
+                  {
+                    href: `/packs/${selectedPack().id}/widgets/${config().value.name}`,
+                    content: config().value.name,
+                  },
+                ]}
+              />
+
+              <h1 class="text-3xl font-bold mb-4">
                 {config().value.name}
               </h1>
 
