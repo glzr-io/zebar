@@ -14,8 +14,8 @@ use tokio::task;
 use tracing::{error, info};
 
 use crate::{
-  app_settings::{AppSettings, StartupConfig},
-  config::{Config, WidgetPack, WidgetPreset},
+  app_settings::{AppSettings, StartupConfig, VERSION_NUMBER},
+  config::{Config, WidgetConfigEntry, WidgetPack, WidgetPreset},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -24,6 +24,7 @@ enum MenuEvent {
   ShowConfigFolder,
   ReloadConfigs,
   OpenSettings,
+  BrowseWidgets,
   Exit,
   EditWidgetPack {
     pack_id: String,
@@ -52,6 +53,7 @@ impl ToString for MenuEvent {
       MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
       MenuEvent::ReloadConfigs => "reload_configs".to_string(),
       MenuEvent::OpenSettings => "open_settings".to_string(),
+      MenuEvent::BrowseWidgets => "browse_widgets".to_string(),
       MenuEvent::Exit => "exit".to_string(),
       MenuEvent::EditWidgetPack { pack_id } => {
         format!("edit_widget_pack_{}", pack_id)
@@ -98,6 +100,7 @@ impl FromStr for MenuEvent {
       ["show", "config", "folder"] => Ok(Self::ShowConfigFolder),
       ["reload", "configs"] => Ok(Self::ReloadConfigs),
       ["open", "settings"] => Ok(Self::OpenSettings),
+      ["browse", "widgets"] => Ok(Self::BrowseWidgets),
       ["exit"] => Ok(Self::Exit),
       ["edit", "widget", "pack", pack_id] => Ok(Self::EditWidgetPack {
         pack_id: pack_id.to_string(),
@@ -136,6 +139,7 @@ enum SettingsRoute {
     pack_id: String,
     widget_name: String,
   },
+  Marketplace,
 }
 
 /// System tray icon for Zebar.
@@ -169,7 +173,7 @@ impl SysTray {
   }
 
   async fn create_tray_icon(&self) -> anyhow::Result<TrayIcon> {
-    let tooltip = format!("Zebar v{}", env!("VERSION_NUMBER"));
+    let tooltip = format!("Zebar v{}", VERSION_NUMBER);
 
     // Linting: `mut` needed for Windows where `tray_icon` is modified with
     // additional click handler.
@@ -263,6 +267,7 @@ impl SysTray {
 
     let mut tray_menu = MenuBuilder::new(&self.app_handle)
       .text(MenuEvent::OpenSettings, "Open settings")
+      .text(MenuEvent::BrowseWidgets, "Browse widgets...")
       .item(&configs_menu)
       .text(MenuEvent::ReloadConfigs, {
         #[cfg(windows)]
@@ -277,6 +282,7 @@ impl SysTray {
       })
       .separator();
 
+    // *********
     // Add submenus for currently active widget.
     // if !widget_states.is_empty() {
     //   for (config_path, config) in &widget_configs {
@@ -342,6 +348,10 @@ impl SysTray {
         MenuEvent::OpenSettings => {
           Self::open_settings_window(&app_handle, SettingsRoute::Index)
         }
+        MenuEvent::BrowseWidgets => Self::open_settings_window(
+          &app_handle,
+          SettingsRoute::Marketplace,
+        ),
         MenuEvent::Exit => {
           app_handle.exit(0);
           Ok(())
@@ -426,11 +436,12 @@ impl SysTray {
       } => {
         format!("/index.html#/packs/{}/{}", pack_id, widget_name)
       }
+      SettingsRoute::Marketplace => "/index.html#/marketplace".to_string(),
     };
 
     match &settings_window {
       None => {
-        WebviewWindowBuilder::new(
+        let window = WebviewWindowBuilder::new(
           app_handle,
           "settings",
           WebviewUrl::App(route.into()),
@@ -439,9 +450,12 @@ impl SysTray {
         .focused(true)
         .visible(true)
         .inner_size(900., 600.)
-        .visible(true)
         .build()
         .context("Failed to build the settings window.")?;
+
+        // Ensure window is shown and activated.
+        window.show()?;
+        window.set_focus()?;
 
         Ok(())
       }
@@ -502,83 +516,115 @@ impl SysTray {
       _ => format!("({}) {}", active_count, pack.id),
     };
 
-    let mut presets_menu = SubmenuBuilder::new(&self.app_handle, label)
-      .text(
-        MenuEvent::EditWidgetPack {
-          pack_id: pack.id.clone(),
-        },
-        "Edit",
-      );
+    let mut pack_menu = SubmenuBuilder::new(&self.app_handle, label).text(
+      MenuEvent::EditWidgetPack {
+        pack_id: pack.id.clone(),
+      },
+      "Settings",
+    );
 
-    // Add each widget config to the menu.
-    // for preset in &widget_config.presets {
-    //   let preset_menu = self.create_preset_menu(
-    //     &pack.id,
-    //     &preset,
-    //     widget_states
-    //       .get(config_path)
-    //       .map(|states| {
-    //         states
-    //           .iter()
-    //           .filter(|state| {
-    //             state.open_options
-    //               == WidgetOpenOptions::Preset(preset.name.clone())
-    //           })
-    //           .count()
-    //       })
-    //       .unwrap_or(0),
-    //     startup_configs.contains_key(config_path),
-    //   )?;
+    // Add each widget config within the pack as a submenu.
+    for config_entry in &pack.widget_configs {
+      let widget_menu = self.create_widget_menu(
+        &pack.id,
+        &config_entry,
+        widget_states,
+        startup_configs,
+      )?;
 
-    //   presets_menu = presets_menu.item(&preset_menu);
-    // }
+      pack_menu = pack_menu.item(&widget_menu);
+    }
 
-    Ok(presets_menu.build()?)
+    Ok(pack_menu.build()?)
   }
 
-  // /// Creates and returns a submenu for the given widget config.
-  // fn create_preset_menu(
-  //   &self,
-  //   config_path: &PathBuf,
-  //   preset: &WidgetPreset,
-  //   preset_count: usize,
-  //   is_launched_on_startup: bool,
-  // ) -> anyhow::Result<Submenu<Wry>> {
-  //   let enabled_item = CheckMenuItem::with_id(
-  //     &self.app_handle,
-  //     MenuEvent::ToggleWidgetPreset {
-  //       enable: preset_count == 0,
-  //       preset: preset.name.clone(),
-  //       path: config_path.clone(),
-  //     },
-  //     "Enabled",
-  //     true,
-  //     preset_count > 0,
-  //     None::<&str>,
-  //   )?;
+  /// Creates and returns a submenu for the given widget config.
+  fn create_widget_menu(
+    &self,
+    pack_id: &String,
+    config_entry: &WidgetConfigEntry,
+    widget_states: &HashMap<String, WidgetState>,
+    startup_configs: &Vec<StartupConfig>,
+  ) -> anyhow::Result<Submenu<Wry>> {
+    let active_count = widget_states
+      .values()
+      .filter(|state| {
+        state.pack_id == *pack_id && state.name == config_entry.value.name
+      })
+      .count();
 
-  //   let startup_item = CheckMenuItem::with_id(
-  //     &self.app_handle,
-  //     MenuEvent::ToggleStartupWidgetConfig {
-  //       enable: !is_launched_on_startup,
-  //       preset: preset.name.clone(),
-  //       path: config_path.clone(),
-  //     },
-  //     "Launch on startup",
-  //     true,
-  //     is_launched_on_startup,
-  //     None::<&str>,
-  //   )?;
+    let label = match active_count {
+      0 => config_entry.value.name.clone(),
+      _ => format!("({}) {}", active_count, config_entry.value.name),
+    };
 
-  //   let label = match preset_count {
-  //     0 => &preset.name,
-  //     _ => &format!("({}) {}", preset_count, preset.name),
-  //   };
+    let mut widget_menu = SubmenuBuilder::new(&self.app_handle, label)
+      .text(
+        MenuEvent::EditWidget {
+          pack_id: pack_id.clone(),
+          widget_name: config_entry.value.name.clone(),
+        },
+        "Settings",
+      );
 
-  //   let config_menu = SubmenuBuilder::new(&self.app_handle, label)
-  //     .item(&enabled_item)
-  //     .item(&startup_item);
+    for preset in &config_entry.value.presets {
+      // TODO: Remove repetition.
+      let preset_count = widget_states
+        .values()
+        .filter(|state| {
+          state.pack_id == *pack_id
+            && state.name == config_entry.value.name
+            && state.open_options
+              == WidgetOpenOptions::Preset(preset.name.clone())
+        })
+        .count();
 
-  //   Ok(config_menu.build()?)
-  // }
+      let enabled_item = CheckMenuItem::with_id(
+        &self.app_handle,
+        MenuEvent::ToggleWidgetPreset {
+          enable: preset_count == 0,
+          preset: preset.name.clone(),
+          pack_id: pack_id.clone(),
+          widget_name: config_entry.value.name.clone(),
+        },
+        "Enabled",
+        true,
+        preset_count > 0,
+        None::<&str>,
+      )?;
+
+      widget_menu = widget_menu.item(&enabled_item);
+    }
+
+    let mut widget_startup_menu =
+      SubmenuBuilder::new(&self.app_handle, "Run on startup");
+
+    for preset in &config_entry.value.presets {
+      let is_launched_on_startup = startup_configs.iter().any(|config| {
+        config.pack_id == *pack_id
+          && config.widget_name == config_entry.value.name
+          && config.preset == preset.name
+      });
+
+      let startup_item = CheckMenuItem::with_id(
+        &self.app_handle,
+        MenuEvent::ToggleStartupWidgetConfig {
+          enable: !is_launched_on_startup,
+          pack_id: pack_id.clone(),
+          widget_name: config_entry.value.name.clone(),
+          preset: preset.name.clone(),
+        },
+        "Launch on startup",
+        true,
+        is_launched_on_startup,
+        None::<&str>,
+      )?;
+
+      widget_startup_menu = widget_startup_menu.item(&startup_item);
+    }
+
+    widget_menu = widget_menu.item(&widget_startup_menu.build()?);
+
+    Ok(widget_menu.build()?)
+  }
 }
