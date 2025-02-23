@@ -1,4 +1,9 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{
+  collections::HashMap,
+  fmt::{self, Display},
+  str::FromStr,
+  sync::Arc,
+};
 
 use anyhow::{bail, Context};
 use tauri::{
@@ -47,22 +52,22 @@ enum MenuEvent {
   },
 }
 
-impl ToString for MenuEvent {
-  fn to_string(&self) -> String {
+impl Display for MenuEvent {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      MenuEvent::ShowConfigFolder => "show_config_folder".to_string(),
-      MenuEvent::ReloadConfigs => "reload_configs".to_string(),
-      MenuEvent::OpenSettings => "open_settings".to_string(),
-      MenuEvent::BrowseWidgets => "browse_widgets".to_string(),
-      MenuEvent::Exit => "exit".to_string(),
+      MenuEvent::ShowConfigFolder => write!(f, "show_config_folder"),
+      MenuEvent::ReloadConfigs => write!(f, "reload_configs"),
+      MenuEvent::OpenSettings => write!(f, "open_settings"),
+      MenuEvent::BrowseWidgets => write!(f, "browse_widgets"),
+      MenuEvent::Exit => write!(f, "exit"),
       MenuEvent::EditWidgetPack { pack_id } => {
-        format!("edit_widget_pack_{}", pack_id)
+        write!(f, "edit_widget_pack_{}", pack_id)
       }
       MenuEvent::EditWidget {
         pack_id,
         widget_name,
       } => {
-        format!("edit_widget_{}_{}", pack_id, widget_name)
+        write!(f, "edit_widget_{}_{}", pack_id, widget_name)
       }
       MenuEvent::ToggleWidgetPreset {
         enable,
@@ -70,9 +75,10 @@ impl ToString for MenuEvent {
         pack_id,
         widget_name,
       } => {
-        format!(
+        write!(
+          f,
           "toggle_widget_config_{}_{}_{}_{}",
-          enable, preset, pack_id, widget_name,
+          enable, preset, pack_id, widget_name
         )
       }
       MenuEvent::ToggleStartupWidgetConfig {
@@ -81,9 +87,10 @@ impl ToString for MenuEvent {
         pack_id,
         widget_name,
       } => {
-        format!(
+        write!(
+          f,
           "toggle_startup_widget_config_{}_{}_{}_{}",
-          enable, preset, pack_id, widget_name,
+          enable, preset, pack_id, widget_name
         )
       }
     }
@@ -255,12 +262,12 @@ impl SysTray {
 
   /// Creates and returns the main system tray menu.
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
-    let widget_configs = self.config.widget_packs().await;
+    let widget_packs = self.config.widget_packs().await;
     let widget_states = self.widget_factory.states().await;
     let startup_configs = self.app_settings.startup_configs().await;
 
     let configs_menu = self.create_packs_menu(
-      &widget_configs,
+      &widget_packs,
       &widget_states,
       &startup_configs,
     )?;
@@ -282,24 +289,25 @@ impl SysTray {
       })
       .separator();
 
-    // *********
-    // Add submenus for currently active widget.
-    // if !widget_states.is_empty() {
-    //   for (config_path, config) in &widget_configs {
-    //     if let Some(_) = widget_states.get(config_path) {
-    //       let config_menu = self.create_config_menu(
-    //         &config_path,
-    //         config,
-    //         &widget_states,
-    //         &startup_configs,
-    //       )?;
+    // Add submenus for currently active widget packs.
+    if !widget_states.is_empty() {
+      for (pack_id, pack) in &widget_packs {
+        if widget_states
+          .values()
+          .any(|state| state.pack_id == *pack_id)
+        {
+          let pack_menu = self.create_pack_menu(
+            pack,
+            &widget_states,
+            &startup_configs,
+          )?;
 
-    //       tray_menu = tray_menu.item(&config_menu);
-    //     }
-    //   }
+          tray_menu = tray_menu.item(&pack_menu);
+        }
+      }
 
-    //   tray_menu = tray_menu.separator();
-    // }
+      tray_menu = tray_menu.separator();
+    }
 
     let tray_menu = tray_menu.text(MenuEvent::Exit, "Exit").build()?;
 
