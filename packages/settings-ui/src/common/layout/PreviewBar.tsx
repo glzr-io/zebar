@@ -1,10 +1,10 @@
 import { Button } from '@glzr/components';
 import { IconPlayerPause } from '@tabler/icons-solidjs';
 
-import { WidgetPack } from '~/common';
+import { MarketplaceWidgetPack } from '~/common';
 
 export type PreviewBarProps = {
-  pack: WidgetPack;
+  pack: MarketplaceWidgetPack;
   onStop: () => void;
 };
 

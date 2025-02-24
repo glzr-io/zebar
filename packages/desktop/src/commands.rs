@@ -28,14 +28,6 @@ pub async fn widget_packs(
 }
 
 #[tauri::command]
-pub async fn widget_pack_by_id(
-  pack_id: String,
-  config: State<'_, Arc<Config>>,
-) -> Result<Option<WidgetPack>, String> {
-  Ok(config.widget_pack_by_id(&pack_id).await)
-}
-
-#[tauri::command]
 pub async fn widget_states(
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> Result<HashMap<String, WidgetState>, String> {

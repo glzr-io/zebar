@@ -33,13 +33,13 @@ export function WidgetPacksPage() {
       <AppBreadcrumbs entries={[]} />
 
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">My Widgets</h1>
+        <h1 class="text-3xl font-bold">My widgets</h1>
         <div class="flex gap-2">
           <Dialog>
             <DialogTrigger>
               <Button variant="outline">
                 <IconFolderPlus class="mr-2 h-4 w-4" />
-                Create New Pack
+                Create new pack
               </Button>
             </DialogTrigger>
             <CreateWidgetPackDialog onSubmit={onCreatePack} />
@@ -47,7 +47,7 @@ export function WidgetPacksPage() {
 
           <Button variant="outline">
             <IconBrandGithub class="mr-2 h-4 w-4" />
-            Submit to Community
+            Submit to marketplace
           </Button>
         </div>
       </div>
@@ -55,7 +55,7 @@ export function WidgetPacksPage() {
       <Tabs defaultValue="installed" class="w-full">
         <TabsList>
           <TabsTrigger value="installed">
-            Installed ({userPacks.communityPacks()?.length})
+            Installed ({userPacks.downloadedPacks()?.length})
           </TabsTrigger>
           <TabsTrigger value="local">
             Local ({userPacks.localPacks()?.length})
@@ -63,7 +63,7 @@ export function WidgetPacksPage() {
         </TabsList>
 
         <TabsContent value="installed" class="mt-6">
-          <For each={userPacks.communityPacks()}>
+          <For each={userPacks.downloadedPacks()}>
             {pack => (
               <WidgetPackCard
                 pack={pack}

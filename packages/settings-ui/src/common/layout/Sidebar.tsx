@@ -20,7 +20,7 @@ export interface SidebarProps {
 export function Sidebar(props: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = createSignal(false);
 
-  const { communityPacks: installedPacks, localPacks } = useUserPacks();
+  const { downloadedPacks, localPacks } = useUserPacks();
 
   return (
     <ResizablePanel
@@ -67,7 +67,7 @@ export function Sidebar(props: SidebarProps) {
         variant="ghost"
       >
         <A href="/">
-          <div class="truncate">Home</div>
+          <div class="truncate">My widgets</div>
         </A>
       </SidebarItem>
 
@@ -84,11 +84,11 @@ export function Sidebar(props: SidebarProps) {
 
       {!isCollapsed() && (
         <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
-          Community Packs
+          Downloads
         </h3>
       )}
 
-      <For each={installedPacks()}>
+      <For each={downloadedPacks()}>
         {pack => (
           <SidebarItem
             isCollapsed={isCollapsed()}
@@ -111,7 +111,7 @@ export function Sidebar(props: SidebarProps) {
 
       {!isCollapsed() && (
         <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
-          Local Packs
+          Personal
         </h3>
       )}
 

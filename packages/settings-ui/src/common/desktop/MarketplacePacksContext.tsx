@@ -148,7 +148,7 @@ function wait(timeout: number) {
 export function MarketplacePacksProvider(props: {
   children: JSX.Element;
 }) {
-  // TODO: Fetch community packs from the backend.
+  // TODO: Fetch marketplace packs from the backend.
   const [allPacks] = createResource(
     async () => {
       await wait(2000);
@@ -161,7 +161,7 @@ export function MarketplacePacksProvider(props: {
     null,
   );
 
-  // TODO: Fetch community pack from the backend.
+  // TODO: Fetch marketplace pack from the backend.
   const [selectedPack] = createResource(
     () => selectedPackId() && allPacks(),
     async () => {

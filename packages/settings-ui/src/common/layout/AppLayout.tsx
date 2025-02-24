@@ -17,7 +17,7 @@ export interface AppLayoutProps {
 }
 
 export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
-  const communityPacks = useMarketplacePacks();
+  const marketplacePacks = useMarketplacePacks();
   const [sizes, setSizes] = createSignal<number[]>([0.2, 0.8]);
 
   return (
@@ -35,9 +35,12 @@ export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
         </ResizablePanel>
       </Resizable>
 
-      <Show when={communityPacks.previewPack()}>
+      <Show when={marketplacePacks.previewPack()}>
         {pack => (
-          <PreviewBar pack={pack()} onStop={communityPacks.stopPreview} />
+          <PreviewBar
+            pack={pack()}
+            onStop={marketplacePacks.stopPreview}
+          />
         )}
       </Show>
 

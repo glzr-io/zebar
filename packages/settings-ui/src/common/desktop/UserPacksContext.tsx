@@ -11,7 +11,7 @@ import { listen, type Event } from '@tauri-apps/api/event';
 import { createResource } from 'solid-js';
 import type { Widget, WidgetConfig } from 'zebar';
 
-const communityPacksMock: WidgetPack[] = [
+const downloadedPacksMock: WidgetPack[] = [
   {
     id: 'glzr-io.system-monitor',
     name: 'System Monitor',
@@ -130,7 +130,7 @@ export type CreateWidgetArgs = {
 };
 
 type UserPacksContextState = {
-  communityPacks: Resource<WidgetPack[]>;
+  downloadedPacks: Resource<WidgetPack[]>;
   localPacks: Resource<WidgetPack[]>;
   allPacks: Accessor<WidgetPack[]>;
   widgetStates: Resource<Record<string, Widget>>;
@@ -157,15 +157,17 @@ type UserPacksContextState = {
 const UserPacksContext = createContext<UserPacksContextState>();
 
 export function UserPacksProvider(props: { children: JSX.Element }) {
-  // TODO: Fetch installed community packs from the backend.
-  const [communityPacks] = createResource(async () => communityPacksMock);
+  // TODO: Fetch installed marketplace packs from the backend.
+  const [downloadedPacks] = createResource(
+    async () => downloadedPacksMock,
+  );
 
   const [localPacks, { mutate: mutateLocalPacks }] = createResource(
     async () => invoke<WidgetPack[]>('widget_packs'),
   );
 
   const allPacks = createMemo(() => [
-    ...(communityPacks() ?? []),
+    ...(downloadedPacks() ?? []),
     ...(localPacks() ?? []),
   ]);
 
@@ -229,6 +231,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     presetName: string,
   ) {
     const states = widgetStates();
+    console.log(states);
 
     const configStates = Object.values(states).filter(
       state => state.packId === packId && state.name === widgetName,
@@ -316,7 +319,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   }
 
   const store: UserPacksContextState = {
-    communityPacks,
+    downloadedPacks,
     localPacks,
     allPacks,
     widgetStates,

@@ -11,14 +11,14 @@ type FilterQuery = {
 };
 
 export function MarketplacePage() {
-  const communityPacks = useMarketplacePacks();
+  const marketplacePacks = useMarketplacePacks();
 
   const filterQueryForm = createForm<FilterQuery>({
     search: '',
   });
 
   const filteredPacks = createMemo(() =>
-    communityPacks.allPacks().filter(pack => {
+    marketplacePacks.allPacks().filter(pack => {
       const searchQuery = filterQueryForm.value.search;
 
       const matchesSearch =
@@ -84,7 +84,7 @@ export function MarketplacePage() {
                     class="h-8 w-8"
                     onClick={e => {
                       e.preventDefault();
-                      communityPacks.startPreview(pack);
+                      marketplacePacks.startPreview(pack);
                     }}
                   >
                     <IconEye class="h-4 w-4" />
@@ -96,7 +96,7 @@ export function MarketplacePage() {
                     class="h-8 w-8"
                     onClick={e => {
                       e.preventDefault();
-                      communityPacks.install(pack);
+                      marketplacePacks.install(pack);
                     }}
                   >
                     <IconDownload class="h-4 w-4" />

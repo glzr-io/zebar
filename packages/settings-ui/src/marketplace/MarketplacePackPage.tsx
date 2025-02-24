@@ -17,26 +17,29 @@ import {
   IconBrandGithub,
 } from '@tabler/icons-solidjs';
 import { open as shellOpen } from '@tauri-apps/plugin-shell';
-
 import { createEffect, createSignal, Show } from 'solid-js';
 
-import { AppBreadcrumbs, useMarketplacePacks, WidgetPack } from '~/common';
+import {
+  AppBreadcrumbs,
+  MarketplaceWidgetPack,
+  useMarketplacePacks,
+} from '~/common';
 
 export function MarketplacePackPage() {
   const params = useParams();
-  const communityPacks = useMarketplacePacks();
+  const marketplacePacks = useMarketplacePacks();
 
   const [currentImageIndex, setCurrentImageIndex] = createSignal(0);
 
-  createEffect(() => communityPacks.selectPack(params.id));
+  createEffect(() => marketplacePacks.selectPack(params.id));
 
-  function nextImage(selectedPack: WidgetPack) {
+  function nextImage(selectedPack: MarketplaceWidgetPack) {
     setCurrentImageIndex(prev =>
       prev === selectedPack.previewImages.length - 1 ? 0 : prev + 1,
     );
   }
 
-  function previousImage(selectedPack: WidgetPack) {
+  function previousImage(selectedPack: MarketplaceWidgetPack) {
     setCurrentImageIndex(prev =>
       prev === 0 ? selectedPack.previewImages.length - 1 : prev - 1,
     );
@@ -44,7 +47,7 @@ export function MarketplacePackPage() {
 
   return (
     <div class="container mx-auto pt-3.5 pb-32">
-      <Show when={communityPacks.selectedPack()}>
+      <Show when={marketplacePacks.selectedPack()}>
         {selectedPack => (
           <div class="space-y-8">
             <div class="space-y-3">
@@ -133,7 +136,9 @@ export function MarketplacePackPage() {
                 <div class="flex flex-col gap-2">
                   <Button
                     class="w-full"
-                    onClick={() => communityPacks.install(selectedPack())}
+                    onClick={() =>
+                      marketplacePacks.install(selectedPack())
+                    }
                   >
                     <IconDownload class="mr-2 h-4 w-4" />
                     Install
@@ -142,7 +147,7 @@ export function MarketplacePackPage() {
                     variant="outline"
                     class="w-full"
                     onClick={() =>
-                      communityPacks.startPreview(selectedPack())
+                      marketplacePacks.startPreview(selectedPack())
                     }
                   >
                     <IconEye class="mr-2 h-4 w-4" />
