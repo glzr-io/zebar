@@ -1,19 +1,31 @@
 import { SelectField, TextField } from '@glzr/components';
 import { createForm, Field, FormState } from 'smorf';
 import { createEffect, on } from 'solid-js';
+import { z } from 'zod';
 
-import { CreateWidgetArgs } from '~/common';
+const formSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Name is required.')
+    .regex(
+      /^[a-z][a-z0-9-_]*$/,
+      'Only lowercase letters, numbers, dashes and underscores are allowed.',
+    ),
+  template: z.enum(['react_buildless', 'solid_typescript']),
+});
 
 export type CreateWidgetFormProps = {
-  onChange: (form: FormState<CreateWidgetArgs>) => void;
+  onChange: (form: FormState<z.infer<typeof formSchema>>) => void;
 };
 
 export function CreateWidgetForm(props: CreateWidgetFormProps) {
-  const form = createForm<CreateWidgetArgs>({
-    name: '',
-    packName: '',
-    template: 'react_buildless',
-  });
+  const form = createForm<z.infer<typeof formSchema>>(
+    {
+      name: '',
+      template: 'react_buildless',
+    },
+    { schema: formSchema },
+  );
 
   createEffect(
     on(
@@ -26,10 +38,11 @@ export function CreateWidgetForm(props: CreateWidgetFormProps) {
     <div class="grid gap-4 py-4">
       <div class="grid gap-2">
         <Field of={form} path="name">
-          {inputProps => (
+          {(inputProps, field) => (
             <TextField
               label="Widget Name"
-              placeholder="My Cool Widget"
+              placeholder="my-cool-widget"
+              error={field.error()}
               {...inputProps}
             />
           )}

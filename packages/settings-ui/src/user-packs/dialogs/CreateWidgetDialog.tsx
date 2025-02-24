@@ -14,7 +14,7 @@ import { CreateWidgetArgs } from '~/common';
 import { CreateWidgetForm } from '../CreateWidgetForm';
 
 export type CreateWidgetDialogProps = {
-  packName: string;
+  packId: string;
   onSubmit: (widget: CreateWidgetArgs) => void;
 };
 
@@ -43,7 +43,7 @@ export function CreateWidgetDialog(props: CreateWidgetDialogProps) {
 
         <Dialog.CloseButton
           onClick={() =>
-            props.onSubmit({ ...form()?.value, packName: props.packName })
+            props.onSubmit({ ...form()?.value, packId: props.packId })
           }
         >
           <Button disabled={!form()?.value.name.trim()}>

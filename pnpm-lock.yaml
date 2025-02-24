@@ -125,8 +125,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       smorf:
-        specifier: 1.2.1
-        version: 1.2.1(solid-js@1.9.3)
+        specifier: 1.3.1
+        version: 1.3.1(solid-js@1.9.3)
       solid-js:
         specifier: 1.9.3
         version: 1.9.3
@@ -1135,6 +1135,11 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
+  '@solid-primitives/map@0.6.0':
+    resolution: {integrity: sha512-h8uCJNxUTvzNK/aTW9vJCd/PQeBkUL8i7AyLPvTFqMgcMnJ1I5GzAi5JODzxpxQwffxoqJyQtOE1vBqFzDv0Vw==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
   '@solid-primitives/media@2.2.9':
     resolution: {integrity: sha512-QUmU62D4/d9YWx/4Dvr/UZasIkIpqNXz7wosA5GLmesRW9XlPa3G5M6uOmTw73SByHNTCw0D6x8bSdtvvLgzvQ==}
     peerDependencies:
@@ -1170,8 +1175,8 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
-  '@solid-primitives/set@0.5.0':
-    resolution: {integrity: sha512-ccMQ89GtBrCZpGk4GKnWe+WurYe+UlK4yyiPxb0KetHqsBRLYcOkYHSDMmERNw3rwn8Cb/aVprKH0khoJqZe8g==}
+  '@solid-primitives/set@0.6.0':
+    resolution: {integrity: sha512-P1Tp001m8ib5XCi/LEJHh2QsoS2uPO86HewtbrSxr2axt5te9EGc0UOwNKTPxNvNSLNHteUw5IrzDsEklW4m3g==}
     peerDependencies:
       solid-js: ^1.6.12
 
@@ -1185,8 +1190,18 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
+  '@solid-primitives/trigger@1.2.0':
+    resolution: {integrity: sha512-sW4/3cDXSjYQampn8CIFZ11BlxgNf2li8r2fXnb3b3YWE6RdZZCl8PhvpPF38Gzl0CnryrbTPJWM7OIkseCDgQ==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
   '@solid-primitives/utils@6.2.3':
     resolution: {integrity: sha512-CqAwKb2T5Vi72+rhebSsqNZ9o67buYRdEJrIFzRXz3U59QqezuuxPsyzTSVCacwS5Pf109VRsgCJQoxKRoECZQ==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
+  '@solid-primitives/utils@6.3.0':
+    resolution: {integrity: sha512-e7hTlJ1Ywh2+g/Qug+n4L1mpfxsikoIS4/sHE2EK9WatQt8UJqop/vE6bsLnXlU1xuhb/jo94Ah5Y27rd4wP7A==}
     peerDependencies:
       solid-js: ^1.6.12
 
@@ -2163,8 +2178,8 @@ packages:
     resolution: {integrity: sha512-3dOsAHXXUkQTpOYcoAxLIorMTp4gIQr5IW3iVb7A7lFIp0VHhnynm9izx6TssdrIcVIESAlVjtnO2K8bg+Coew==}
     engines: {node: '>=12'}
 
-  smorf@1.2.1:
-    resolution: {integrity: sha512-Vec1HgBE3/4YYtrN+q8kAL/I3Ew+SitEMqX8H4v2SxibVElVSJXtiSskW0wSlcOIXApEXGkBqH+FJTlFIdjQpA==}
+  smorf@1.3.1:
+    resolution: {integrity: sha512-6Frsi51ntVRW1EMtVZ9pxDl2rTwD+mVG66Sq0bG96SlAJMPUub5qKHK6ixJHTJX37SdU14w0kF2V6qtd7rFVeQ==}
     peerDependencies:
       solid-js: '>=1.7.0'
 
@@ -3236,6 +3251,11 @@ snapshots:
       '@solid-primitives/trigger': 1.1.0(solid-js@1.9.3)
       solid-js: 1.9.3
 
+  '@solid-primitives/map@0.6.0(solid-js@1.9.3)':
+    dependencies:
+      '@solid-primitives/trigger': 1.2.0(solid-js@1.9.3)
+      solid-js: 1.9.3
+
   '@solid-primitives/media@2.2.9(solid-js@1.9.3)':
     dependencies:
       '@solid-primitives/event-listener': 2.3.3(solid-js@1.9.3)
@@ -3277,9 +3297,9 @@ snapshots:
     dependencies:
       solid-js: 1.9.3
 
-  '@solid-primitives/set@0.5.0(solid-js@1.9.3)':
+  '@solid-primitives/set@0.6.0(solid-js@1.9.3)':
     dependencies:
-      '@solid-primitives/trigger': 1.1.0(solid-js@1.9.3)
+      '@solid-primitives/trigger': 1.2.0(solid-js@1.9.3)
       solid-js: 1.9.3
 
   '@solid-primitives/static-store@0.0.8(solid-js@1.9.3)':
@@ -3292,7 +3312,16 @@ snapshots:
       '@solid-primitives/utils': 6.2.3(solid-js@1.9.3)
       solid-js: 1.9.3
 
+  '@solid-primitives/trigger@1.2.0(solid-js@1.9.3)':
+    dependencies:
+      '@solid-primitives/utils': 6.3.0(solid-js@1.9.3)
+      solid-js: 1.9.3
+
   '@solid-primitives/utils@6.2.3(solid-js@1.9.3)':
+    dependencies:
+      solid-js: 1.9.3
+
+  '@solid-primitives/utils@6.3.0(solid-js@1.9.3)':
     dependencies:
       solid-js: 1.9.3
 
@@ -4368,11 +4397,13 @@ snapshots:
 
   slash@4.0.0: {}
 
-  smorf@1.2.1(solid-js@1.9.3):
+  smorf@1.3.1(solid-js@1.9.3):
     dependencies:
-      '@solid-primitives/set': 0.5.0(solid-js@1.9.3)
+      '@solid-primitives/map': 0.6.0(solid-js@1.9.3)
+      '@solid-primitives/set': 0.6.0(solid-js@1.9.3)
       solid-js: 1.9.3
       type-fest: 4.26.1
+      zod: 3.24.2
 
   solid-dismissible@0.1.1(solid-js@1.9.3):
     dependencies:

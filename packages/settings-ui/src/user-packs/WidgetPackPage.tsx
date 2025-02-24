@@ -72,7 +72,7 @@ export function WidgetPackPage() {
                   </Button>
                 </DialogTrigger>
                 <CreateWidgetDialog
-                  packName={selectedPack().name}
+                  packId={selectedPack().id}
                   onSubmit={userPacks.createWidget}
                 />
               </Dialog>
