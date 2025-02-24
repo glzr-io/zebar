@@ -6,10 +6,11 @@ import { z } from 'zod';
 const formSchema = z.object({
   name: z
     .string()
-    .min(1, 'Name is required.')
+    .min(2, 'Name must be at least 2 characters.')
+    .max(24, 'Name cannot exceed 24 characters.')
     .regex(
-      /^[a-z][a-z0-9-_]*$/,
-      'Only lowercase letters, numbers, dashes and underscores are allowed.',
+      /^[a-z0-9][a-z0-9-_]*$/,
+      'Only lowercase letters, numbers, and the characters - and _ are allowed.',
     ),
   template: z.enum(['react_buildless', 'solid_typescript']),
 });

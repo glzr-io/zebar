@@ -50,12 +50,14 @@ export function WidgetPackPage() {
 
         <WidgetPackForm
           pack={selectedPack()}
-          onChange={form =>
-            userPacks.updatePack(selectedPack().id, {
-              ...selectedPack(),
-              ...form,
-            })
-          }
+          onChange={form => {
+            if (form.isDirty() && !form.hasError()) {
+              userPacks.updatePack(selectedPack().id, {
+                ...selectedPack(),
+                ...form.value,
+              });
+            }
+          }}
           disabled={isMarketplacePack()}
         />
 
