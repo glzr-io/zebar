@@ -5,7 +5,7 @@ import {
   ToastList,
   ToastRegion,
 } from '@glzr/components';
-import { createSignal, Show, type JSX } from 'solid-js';
+import { createSignal, onMount, Show, type JSX } from 'solid-js';
 import { RouteSectionProps } from '@solidjs/router';
 
 import { Sidebar } from './Sidebar';
@@ -19,6 +19,13 @@ export interface AppLayoutProps {
 export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
   const marketplacePacks = useMarketplacePacks();
   const [sizes, setSizes] = createSignal<number[]>([0.2, 0.8]);
+
+  // Disable the right-click context menu.
+  onMount(() => {
+    document.addEventListener('contextmenu', (e: MouseEvent) => {
+      e.preventDefault();
+    });
+  });
 
   return (
     <>
