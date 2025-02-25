@@ -5,6 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@glzr/components';
+import { A } from '@solidjs/router';
 import { type JSX, Show } from 'solid-js';
 
 export interface SidebarItemProps {
@@ -12,8 +13,8 @@ export interface SidebarItemProps {
   icon: JSX.Element;
   tooltip: string;
   children: JSX.Element;
-  variant: 'default' | 'ghost';
-  isActive?: boolean;
+  href: string;
+  onClick?: (e: MouseEvent) => void;
 }
 
 /**
@@ -23,28 +24,35 @@ export interface SidebarItemProps {
  */
 export function SidebarItem(props: SidebarItemProps) {
   const ExpandedButton = () => (
-    <div
+    <A
+      href={props.href}
+      onClick={props.onClick}
+      activeClass="bg-accent text-accent-foreground"
+      end={true}
       class={cn(
-        buttonVariants({ variant: props.variant }),
+        buttonVariants({ variant: 'ghost' }),
         'flex justify-start min-w-0 m-2 pl-2',
-        props.isActive && 'bg-accent text-accent-foreground',
       )}
     >
       <div class="mr-2">{props.icon}</div>
       <div class="flex-1 min-w-0">{props.children}</div>
-    </div>
+    </A>
   );
 
   const CollapsedButton = () => (
     <Tooltip openDelay={0} closeDelay={0} placement="right">
       <TooltipTrigger
+        as={A}
+        href={props.href}
+        onClick={props.onClick}
+        activeClass="bg-accent text-accent-foreground"
+        end={true}
         class={cn(
           buttonVariants({
-            variant: props.variant,
+            variant: 'ghost',
             size: 'icon',
           }),
           'm-2',
-          props.isActive && 'bg-accent text-accent-foreground',
         )}
       >
         {props.icon}
@@ -56,10 +64,7 @@ export function SidebarItem(props: SidebarItemProps) {
   );
 
   return (
-    <Show
-      when={props.isCollapsed && props.tooltip}
-      fallback={<ExpandedButton />}
-    >
+    <Show when={props.isCollapsed} fallback={<ExpandedButton />}>
       <CollapsedButton />
     </Show>
   );

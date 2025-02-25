@@ -81,29 +81,23 @@ export function Sidebar(props: SidebarProps) {
 
       <Separator />
 
-      <A href="/" class="block">
-        <SidebarItem
-          isCollapsed={isCollapsed()}
-          icon={<IconHome class="size-6" />}
-          tooltip="Home"
-          variant="ghost"
-          isActive={isCurrentRoute('/')}
-        >
-          <div class="truncate">My widgets</div>
-        </SidebarItem>
-      </A>
+      <SidebarItem
+        isCollapsed={isCollapsed()}
+        icon={<IconHome class="size-6" />}
+        tooltip="Home"
+        href="/"
+      >
+        <div class="truncate">My widgets</div>
+      </SidebarItem>
 
-      <A href="/marketplace" class="block">
-        <SidebarItem
-          isCollapsed={isCollapsed()}
-          icon={<IconWorldSearch class="size-6" />}
-          tooltip="Marketplace"
-          variant="ghost"
-          isActive={isCurrentRoute('/marketplace')}
-        >
-          <div class="truncate">Browse Community</div>
-        </SidebarItem>
-      </A>
+      <SidebarItem
+        isCollapsed={isCollapsed()}
+        icon={<IconWorldSearch class="size-6" />}
+        tooltip="Marketplace"
+        href="/marketplace"
+      >
+        <div class="truncate">Browse Community</div>
+      </SidebarItem>
 
       {!isCollapsed() && (
         <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
@@ -114,41 +108,34 @@ export function Sidebar(props: SidebarProps) {
       <For each={downloadedPacks()}>
         {pack => (
           <>
-            <A href={`/packs/${pack.id}`} class="block">
-              <SidebarItem
-                isCollapsed={isCollapsed()}
-                tooltip={pack.name}
-                icon={
-                  <div class="group-hover:hidden">
-                    <IconPackage class="size-6" />
-                  </div>
-                }
-                variant="ghost"
-                isActive={isCurrentRoute(`/packs/${pack.id}`)}
-              >
-                <div class="flex items-center gap-2 w-full overflow-hidden">
-                  <div class="truncate flex-1">
-                    <span class="truncate block">{pack.name}</span>
-                    <span class="truncate block text-xs text-muted-foreground font-normal">
-                      {pack.author} • v{pack.version}
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="size-6 p-0 ml-auto flex-none"
-                    onClick={e => togglePackExpanded(pack.id, e)}
-                  >
-                    <Show
-                      when={expandedPacks()[pack.id]}
-                      fallback={<IconChevronRight class="size-4" />}
-                    >
-                      <IconChevronDown class="size-4" />
-                    </Show>
-                  </Button>
+            <SidebarItem
+              isCollapsed={isCollapsed()}
+              tooltip={pack.name}
+              icon={<IconPackage class="size-6" />}
+              href={`/packs/${pack.id}`}
+            >
+              <div class="flex items-center gap-2 w-full overflow-hidden">
+                <div class="truncate flex-1">
+                  <span class="truncate block">{pack.name}</span>
+                  <span class="truncate block text-xs text-muted-foreground font-normal">
+                    {pack.author} • v{pack.version}
+                  </span>
                 </div>
-              </SidebarItem>
-            </A>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="size-6 p-0 ml-auto flex-none"
+                  onClick={e => togglePackExpanded(pack.id, e)}
+                >
+                  <Show
+                    when={expandedPacks()[pack.id]}
+                    fallback={<IconChevronRight class="size-4" />}
+                  >
+                    <IconChevronDown class="size-4" />
+                  </Show>
+                </Button>
+              </div>
+            </SidebarItem>
 
             <Show when={!isCollapsed() && expandedPacks()[pack.id]}>
               <div class="ml-6 mr-2">
@@ -188,36 +175,29 @@ export function Sidebar(props: SidebarProps) {
       <For each={localPacks()}>
         {pack => (
           <>
-            <A href={`/packs/${pack.id}`} class="block">
-              <SidebarItem
-                isCollapsed={isCollapsed()}
-                icon={
-                  <div class="group-hover:hidden">
-                    <IconPackage class="size-6" />
-                  </div>
-                }
-                tooltip={pack.name}
-                variant="ghost"
-                isActive={isCurrentRoute(`/packs/${pack.id}`)}
-              >
-                <div class="flex items-center gap-2 w-full overflow-hidden">
-                  <div class="truncate flex-1">{pack.name}</div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="size-6 p-0 ml-auto flex-none"
-                    onClick={e => togglePackExpanded(pack.id, e)}
+            <SidebarItem
+              isCollapsed={isCollapsed()}
+              icon={<IconPackage class="size-6" />}
+              tooltip={pack.name}
+              href={`/packs/${pack.id}`}
+            >
+              <div class="flex items-center gap-2 w-full overflow-hidden">
+                <div class="truncate flex-1">{pack.name}</div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="size-6 p-0 ml-auto flex-none"
+                  onClick={e => togglePackExpanded(pack.id, e)}
+                >
+                  <Show
+                    when={expandedPacks()[pack.id]}
+                    fallback={<IconChevronRight class="size-4" />}
                   >
-                    <Show
-                      when={expandedPacks()[pack.id]}
-                      fallback={<IconChevronRight class="size-4" />}
-                    >
-                      <IconChevronDown class="size-4" />
-                    </Show>
-                  </Button>
-                </div>
-              </SidebarItem>
-            </A>
+                    <IconChevronDown class="size-4" />
+                  </Show>
+                </Button>
+              </div>
+            </SidebarItem>
 
             <Show when={!isCollapsed() && expandedPacks()[pack.id]}>
               <div class="ml-6 mr-2">
