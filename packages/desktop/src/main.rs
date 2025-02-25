@@ -93,6 +93,7 @@ async fn main() -> anyhow::Result<()> {
       commands::update_widget_config,
       commands::create_widget_pack,
       commands::update_widget_pack,
+      commands::delete_widget_pack,
       commands::create_widget_config,
       commands::delete_widget_config,
       commands::listen_provider,

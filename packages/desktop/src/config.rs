@@ -656,6 +656,30 @@ impl Config {
     Ok(pack)
   }
 
+  /// Deletes a widget pack.
+  ///
+  /// Removes the pack directory and all its contents.
+  pub async fn delete_widget_pack(
+    &self,
+    pack_id: &str,
+  ) -> anyhow::Result<()> {
+    let pack = self.find_local_widget_pack(pack_id).await?;
+
+    // Remove the directory with all widget files.
+    fs::remove_dir_all(&pack.directory_path)?;
+
+    // Remove the pack from state.
+    {
+      let mut widget_packs = self.widget_packs.lock().await;
+      widget_packs.remove(pack_id);
+    }
+
+    // TODO: Broadcast the change.
+    // TODO: Kill active widget instances from the removed pack.
+
+    Ok(())
+  }
+
   /// Creates a new widget from a template.
   ///
   /// Adds a new entry to the pack config and copies the appropriate

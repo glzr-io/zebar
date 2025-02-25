@@ -105,6 +105,17 @@ pub async fn update_widget_pack(
 }
 
 #[tauri::command]
+pub async fn delete_widget_pack(
+  pack_id: String,
+  config: State<'_, Arc<Config>>,
+) -> anyhow::Result<(), String> {
+  config
+    .delete_widget_pack(&pack_id)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 pub async fn create_widget_config(
   args: CreateWidgetConfigArgs,
   config: State<'_, Arc<Config>>,
