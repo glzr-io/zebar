@@ -10,6 +10,7 @@
     "types": ["vite/client"],
     "noEmit": true,
     "isolatedModules": true,
+    "strictNullChecks": true,
     "paths": {
       "~/*": ["./src/*"]
     }

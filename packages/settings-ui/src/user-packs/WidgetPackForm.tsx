@@ -39,7 +39,7 @@ const formSchema = z.object({
 export type WidgetPackFormData = z.infer<typeof formSchema>;
 
 export interface WidgetPackFormProps {
-  pack?: WidgetPack;
+  pack: WidgetPack;
   disabled?: boolean;
   onChange?: (form: FormState<WidgetPackFormData>) => void;
 }
@@ -57,13 +57,11 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
   );
 
   const [imagePaths] = createResource(
-    () =>
-      [
-        form.getFieldValue('previewImages'),
-        props.pack.directoryPath,
-      ] as const,
-    async ([images, dirPath]) => {
-      return Promise.all(images.map(image => join(dirPath, image)));
+    () => form.getFieldValue('previewImages'),
+    async images => {
+      return Promise.all(
+        images.map(image => join(props.pack.directoryPath, image)),
+      );
     },
   );
 
