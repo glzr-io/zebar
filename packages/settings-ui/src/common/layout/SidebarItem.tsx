@@ -13,6 +13,7 @@ export interface SidebarItemProps {
   tooltip: string;
   children: JSX.Element;
   variant: 'default' | 'ghost';
+  isActive?: boolean;
 }
 
 /**
@@ -22,29 +23,28 @@ export interface SidebarItemProps {
  */
 export function SidebarItem(props: SidebarItemProps) {
   const ExpandedButton = () => (
-    <a
-      href="#"
+    <div
       class={cn(
         buttonVariants({ variant: props.variant }),
         'flex justify-start min-w-0 m-2 pl-2',
+        props.isActive && 'bg-accent text-accent-foreground',
       )}
     >
       <div class="mr-2">{props.icon}</div>
-      {props.children}
-    </a>
+      <div class="flex-1 min-w-0">{props.children}</div>
+    </div>
   );
 
   const CollapsedButton = () => (
     <Tooltip openDelay={0} closeDelay={0} placement="right">
       <TooltipTrigger
-        as="a"
-        href="#"
         class={cn(
           buttonVariants({
             variant: props.variant,
             size: 'icon',
           }),
-          'flex m-2',
+          'm-2',
+          props.isActive && 'bg-accent text-accent-foreground',
         )}
       >
         {props.icon}

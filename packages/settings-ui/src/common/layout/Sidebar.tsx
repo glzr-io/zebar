@@ -5,9 +5,10 @@ import {
   IconHome,
   IconPackage,
   IconWorldSearch,
+  IconChevronRight,
 } from '@tabler/icons-solidjs';
-import { A } from '@solidjs/router';
-import { createSignal, For } from 'solid-js';
+import { A, useLocation } from '@solidjs/router';
+import { createSignal, For, Show } from 'solid-js';
 
 import { SidebarItem } from './SidebarItem';
 import { useUserPacks } from '~/common';
@@ -18,9 +19,29 @@ export interface SidebarProps {
 }
 
 export function Sidebar(props: SidebarProps) {
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = createSignal(false);
+  const [expandedPacks, setExpandedPacks] = createSignal<
+    Record<string, boolean>
+  >({});
 
   const { downloadedPacks, localPacks } = useUserPacks();
+
+  function togglePackExpanded(packId: string, e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedPacks(prev => ({
+      ...prev,
+      [packId]: !prev[packId],
+    }));
+  }
+
+  function isCurrentRoute(path: string) {
+    return (
+      location.pathname === path ||
+      location.pathname.startsWith(path + '/')
+    );
+  }
 
   return (
     <ResizablePanel
@@ -60,27 +81,29 @@ export function Sidebar(props: SidebarProps) {
 
       <Separator />
 
-      <SidebarItem
-        isCollapsed={isCollapsed()}
-        icon={<IconHome class="size-6" />}
-        tooltip="Home"
-        variant="ghost"
-      >
-        <A href="/">
+      <A href="/" class="block">
+        <SidebarItem
+          isCollapsed={isCollapsed()}
+          icon={<IconHome class="size-6" />}
+          tooltip="Home"
+          variant="ghost"
+          isActive={isCurrentRoute('/')}
+        >
           <div class="truncate">My widgets</div>
-        </A>
-      </SidebarItem>
+        </SidebarItem>
+      </A>
 
-      <SidebarItem
-        isCollapsed={isCollapsed()}
-        icon={<IconWorldSearch class="size-6" />}
-        tooltip="Marketplace"
-        variant="ghost"
-      >
-        <A href="/marketplace">
-          <div class="truncate">Marketplace</div>
-        </A>
-      </SidebarItem>
+      <A href="/marketplace" class="block">
+        <SidebarItem
+          isCollapsed={isCollapsed()}
+          icon={<IconWorldSearch class="size-6" />}
+          tooltip="Marketplace"
+          variant="ghost"
+          isActive={isCurrentRoute('/marketplace')}
+        >
+          <div class="truncate">Browse Community</div>
+        </SidebarItem>
+      </A>
 
       {!isCollapsed() && (
         <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
@@ -90,22 +113,69 @@ export function Sidebar(props: SidebarProps) {
 
       <For each={downloadedPacks()}>
         {pack => (
-          <SidebarItem
-            isCollapsed={isCollapsed()}
-            tooltip={pack.name}
-            icon={<IconPackage class="size-6" />}
-            variant="ghost"
-          >
-            <div class="flex items-center gap-2 w-full overflow-hidden">
-              <div class="truncate">
-                <span class="truncate block">{pack.name}</span>
-                <span class="truncate block text-xs text-muted-foreground font-normal">
-                  {pack.author} • v{pack.version}
-                </span>
+          <>
+            <A href={`/packs/${pack.id}`} class="block">
+              <SidebarItem
+                isCollapsed={isCollapsed()}
+                tooltip={pack.name}
+                icon={
+                  <div class="group-hover:hidden">
+                    <IconPackage class="size-6" />
+                  </div>
+                }
+                variant="ghost"
+                isActive={isCurrentRoute(`/packs/${pack.id}`)}
+              >
+                <div class="flex items-center gap-2 w-full overflow-hidden">
+                  <div class="truncate flex-1">
+                    <span class="truncate block">{pack.name}</span>
+                    <span class="truncate block text-xs text-muted-foreground font-normal">
+                      {pack.author} • v{pack.version}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="size-6 p-0 ml-auto flex-none"
+                    onClick={e => togglePackExpanded(pack.id, e)}
+                  >
+                    <Show
+                      when={expandedPacks()[pack.id]}
+                      fallback={<IconChevronRight class="size-4" />}
+                    >
+                      <IconChevronDown class="size-4" />
+                    </Show>
+                  </Button>
+                </div>
+              </SidebarItem>
+            </A>
+
+            <Show when={!isCollapsed() && expandedPacks()[pack.id]}>
+              <div class="ml-6 mr-2">
+                <For each={pack.widgetConfigs}>
+                  {config => (
+                    <A
+                      href={`/packs/${pack.id}/${config.value.name}`}
+                      class="block"
+                    >
+                      <div
+                        class={cn(
+                          'text-sm py-1.5 px-2 rounded-md truncate',
+                          isCurrentRoute(
+                            `/packs/${pack.id}/${config.value.name}`,
+                          )
+                            ? 'bg-accent text-accent-foreground'
+                            : 'hover:bg-accent/50',
+                        )}
+                      >
+                        {config.value.name}
+                      </div>
+                    </A>
+                  )}
+                </For>
               </div>
-              <IconChevronDown class="size-4 flex-none ml-auto" />
-            </div>
-          </SidebarItem>
+            </Show>
+          </>
         )}
       </For>
 
@@ -117,17 +187,64 @@ export function Sidebar(props: SidebarProps) {
 
       <For each={localPacks()}>
         {pack => (
-          <SidebarItem
-            isCollapsed={isCollapsed()}
-            icon={<IconPackage class="size-6" />}
-            tooltip={pack.name}
-            variant="ghost"
-          >
-            <div class="flex items-center gap-2 w-full overflow-hidden">
-              <div class="truncate">{pack.name}</div>
-              <IconChevronDown class="size-4 flex-none ml-auto" />
-            </div>
-          </SidebarItem>
+          <>
+            <A href={`/packs/${pack.id}`} class="block">
+              <SidebarItem
+                isCollapsed={isCollapsed()}
+                icon={
+                  <div class="group-hover:hidden">
+                    <IconPackage class="size-6" />
+                  </div>
+                }
+                tooltip={pack.name}
+                variant="ghost"
+                isActive={isCurrentRoute(`/packs/${pack.id}`)}
+              >
+                <div class="flex items-center gap-2 w-full overflow-hidden">
+                  <div class="truncate flex-1">{pack.name}</div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="size-6 p-0 ml-auto flex-none"
+                    onClick={e => togglePackExpanded(pack.id, e)}
+                  >
+                    <Show
+                      when={expandedPacks()[pack.id]}
+                      fallback={<IconChevronRight class="size-4" />}
+                    >
+                      <IconChevronDown class="size-4" />
+                    </Show>
+                  </Button>
+                </div>
+              </SidebarItem>
+            </A>
+
+            <Show when={!isCollapsed() && expandedPacks()[pack.id]}>
+              <div class="ml-6 mr-2">
+                <For each={pack.widgetConfigs}>
+                  {config => (
+                    <A
+                      href={`/packs/${pack.id}/${config.value.name}`}
+                      class="block"
+                    >
+                      <div
+                        class={cn(
+                          'text-sm py-1.5 px-2 rounded-md truncate',
+                          isCurrentRoute(
+                            `/packs/${pack.id}/${config.value.name}`,
+                          )
+                            ? 'bg-accent text-accent-foreground'
+                            : 'hover:bg-accent/50',
+                        )}
+                      >
+                        {config.value.name}
+                      </div>
+                    </A>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </>
         )}
       </For>
     </ResizablePanel>
