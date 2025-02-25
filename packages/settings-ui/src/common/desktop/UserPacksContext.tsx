@@ -87,19 +87,31 @@ const downloadedPacksMock: WidgetPack[] = [
   },
 ];
 
-export type WidgetPack = {
-  id: string;
-  name: string;
-  author: string;
-  type: 'local' | 'marketplace';
-  previewImages: string[];
-  excludeFiles: string;
-  directoryPath: string;
-  description: string;
-  version: string;
-  widgetConfigs: WidgetConfigEntry[];
-  tags: string[];
-};
+export type WidgetPack =
+  | {
+      type: 'marketplace';
+      id: string;
+      name: string;
+      author: string;
+      previewImages: string[];
+      excludeFiles: string;
+      directoryPath: string;
+      description: string;
+      version: string;
+      widgetConfigs: WidgetConfigEntry[];
+      tags: string[];
+    }
+  | {
+      type: 'local';
+      id: string;
+      name: string;
+      previewImages: string[];
+      excludeFiles: string;
+      directoryPath: string;
+      description: string;
+      widgetConfigs: WidgetConfigEntry[];
+      tags: string[];
+    };
 
 export type WidgetConfigEntry = {
   absolutePath: string;

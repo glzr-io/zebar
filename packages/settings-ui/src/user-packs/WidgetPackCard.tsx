@@ -11,13 +11,13 @@ import {
 } from '@glzr/components';
 import { useNavigate } from '@solidjs/router';
 import { IconPackage, IconTrash } from '@tabler/icons-solidjs';
+import { Show } from 'solid-js';
 
 import { WidgetPack } from '~/common';
 import { DeleteWidgetPackDialog } from './dialogs';
 
 export interface WidgetPackCardProps {
   pack: WidgetPack;
-  isLocal: boolean;
   onDelete: (packId: string) => void;
 }
 
@@ -35,14 +35,19 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
             <CardTitle class="flex items-center gap-2">
               <IconPackage class="h-5 w-5" />
               {props.pack.name}
-              <Badge variant="outline" class="ml-2">
-                {props.pack.version}
-              </Badge>
+
+              {props.pack.type === 'marketplace' && (
+                <Badge variant="outline" class="ml-2">
+                  {props.pack.version}
+                </Badge>
+              )}
             </CardTitle>
 
-            <CardDescription class="mt-1">
-              by {props.pack.author}
-            </CardDescription>
+            {props.pack.type === 'marketplace' && (
+              <CardDescription class="mt-1">
+                by {props.pack.author}
+              </CardDescription>
+            )}
           </div>
 
           <div class="flex gap-2" onClick={e => e.stopPropagation()}>
@@ -66,9 +71,12 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
       </CardHeader>
 
       <CardContent>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          {props.pack.description}
-        </p>
+        <Show when={props.pack.description !== ''}>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {props.pack.description}
+          </p>
+        </Show>
+
         <div class="flex flex-wrap gap-2 mb-4">
           {props.pack.tags.map(tag => (
             <Badge key={tag} variant="secondary">
@@ -76,6 +84,7 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
             </Badge>
           ))}
         </div>
+
         <div class="text-sm">
           <p>
             <strong>Widgets:</strong> {props.pack.widgetConfigs.length}

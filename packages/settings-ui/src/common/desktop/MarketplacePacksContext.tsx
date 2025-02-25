@@ -129,7 +129,7 @@ const marketplacePacksMock: MarketplaceWidgetPack[] = [
 
 type MarketplacePacksContextState = {
   allPacks: Resource<MarketplaceWidgetPack[]>;
-  selectedPack: Resource<MarketplaceWidgetPack>;
+  selectedPack: Resource<MarketplaceWidgetPack | null>;
   previewPack: Accessor<MarketplaceWidgetPack | null>;
   install: (pack: MarketplaceWidgetPack) => void;
   selectPack: (packId: string) => void;

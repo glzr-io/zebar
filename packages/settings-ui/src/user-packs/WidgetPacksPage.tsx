@@ -67,7 +67,6 @@ export function WidgetPacksPage() {
             {pack => (
               <WidgetPackCard
                 pack={pack}
-                isLocal={false}
                 onDelete={userPacks.deletePack}
               />
             )}
@@ -79,7 +78,6 @@ export function WidgetPacksPage() {
             {pack => (
               <WidgetPackCard
                 pack={pack}
-                isLocal={true}
                 onDelete={userPacks.deletePack}
               />
             )}
