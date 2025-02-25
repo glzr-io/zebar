@@ -1,17 +1,14 @@
 import { Button, cn, ResizablePanel, Separator } from '@glzr/components';
 import {
-  IconChevronDown,
   IconChevronsLeft,
   IconHome,
-  IconPackage,
   IconWorldSearch,
-  IconChevronRight,
 } from '@tabler/icons-solidjs';
-import { A, useLocation } from '@solidjs/router';
-import { createSignal, For, Show } from 'solid-js';
+import { createSignal, For } from 'solid-js';
 
-import { SidebarItem } from './SidebarItem';
 import { useUserPacks } from '~/common';
+import { SidebarItem } from './SidebarItem';
+import { WidgetPackSidebarItem } from './WidgetPackSidebarItem';
 
 export interface SidebarProps {
   initialSize: number;
@@ -19,29 +16,8 @@ export interface SidebarProps {
 }
 
 export function Sidebar(props: SidebarProps) {
-  const location = useLocation();
+  const userPacks = useUserPacks();
   const [isCollapsed, setIsCollapsed] = createSignal(false);
-  const [expandedPacks, setExpandedPacks] = createSignal<
-    Record<string, boolean>
-  >({});
-
-  const { downloadedPacks, localPacks } = useUserPacks();
-
-  function togglePackExpanded(packId: string, e: MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setExpandedPacks(prev => ({
-      ...prev,
-      [packId]: !prev[packId],
-    }));
-  }
-
-  function isCurrentRoute(path: string) {
-    return (
-      location.pathname === path ||
-      location.pathname.startsWith(path + '/')
-    );
-  }
 
   return (
     <ResizablePanel
@@ -105,64 +81,9 @@ export function Sidebar(props: SidebarProps) {
         </h3>
       )}
 
-      <For each={downloadedPacks()}>
+      <For each={userPacks.downloadedPacks()}>
         {pack => (
-          <>
-            <SidebarItem
-              isCollapsed={isCollapsed()}
-              tooltip={pack.name}
-              icon={<IconPackage class="size-6" />}
-              href={`/packs/${pack.id}`}
-            >
-              <div class="flex items-center gap-2 w-full overflow-hidden">
-                <div class="truncate flex-1">
-                  <span class="truncate block">{pack.name}</span>
-                  <span class="truncate block text-xs text-muted-foreground font-normal">
-                    {pack.author} • v{pack.version}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="size-6 p-0 ml-auto flex-none"
-                  onClick={e => togglePackExpanded(pack.id, e)}
-                >
-                  <Show
-                    when={expandedPacks()[pack.id]}
-                    fallback={<IconChevronRight class="size-4" />}
-                  >
-                    <IconChevronDown class="size-4" />
-                  </Show>
-                </Button>
-              </div>
-            </SidebarItem>
-
-            <Show when={!isCollapsed() && expandedPacks()[pack.id]}>
-              <div class="ml-6 mr-2">
-                <For each={pack.widgetConfigs}>
-                  {config => (
-                    <A
-                      href={`/packs/${pack.id}/${config.value.name}`}
-                      class="block"
-                    >
-                      <div
-                        class={cn(
-                          'text-sm py-1.5 px-2 rounded-md truncate',
-                          isCurrentRoute(
-                            `/packs/${pack.id}/${config.value.name}`,
-                          )
-                            ? 'bg-accent text-accent-foreground'
-                            : 'hover:bg-accent/50',
-                        )}
-                      >
-                        {config.value.name}
-                      </div>
-                    </A>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </>
+          <WidgetPackSidebarItem pack={pack} isCollapsed={isCollapsed()} />
         )}
       </For>
 
@@ -172,59 +93,9 @@ export function Sidebar(props: SidebarProps) {
         </h3>
       )}
 
-      <For each={localPacks()}>
+      <For each={userPacks.localPacks()}>
         {pack => (
-          <>
-            <SidebarItem
-              isCollapsed={isCollapsed()}
-              icon={<IconPackage class="size-6" />}
-              tooltip={pack.name}
-              href={`/packs/${pack.id}`}
-            >
-              <div class="flex items-center gap-2 w-full overflow-hidden">
-                <div class="truncate flex-1">{pack.name}</div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="size-6 p-0 ml-auto flex-none"
-                  onClick={e => togglePackExpanded(pack.id, e)}
-                >
-                  <Show
-                    when={expandedPacks()[pack.id]}
-                    fallback={<IconChevronRight class="size-4" />}
-                  >
-                    <IconChevronDown class="size-4" />
-                  </Show>
-                </Button>
-              </div>
-            </SidebarItem>
-
-            <Show when={!isCollapsed() && expandedPacks()[pack.id]}>
-              <div class="ml-6 mr-2">
-                <For each={pack.widgetConfigs}>
-                  {config => (
-                    <A
-                      href={`/packs/${pack.id}/${config.value.name}`}
-                      class="block"
-                    >
-                      <div
-                        class={cn(
-                          'text-sm py-1.5 px-2 rounded-md truncate',
-                          isCurrentRoute(
-                            `/packs/${pack.id}/${config.value.name}`,
-                          )
-                            ? 'bg-accent text-accent-foreground'
-                            : 'hover:bg-accent/50',
-                        )}
-                      >
-                        {config.value.name}
-                      </div>
-                    </A>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </>
+          <WidgetPackSidebarItem pack={pack} isCollapsed={isCollapsed()} />
         )}
       </For>
     </ResizablePanel>
