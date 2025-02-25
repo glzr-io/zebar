@@ -14,7 +14,7 @@
     "@tauri-apps/api": "2.0.2",
     "@tauri-apps/plugin-dialog": "2.0.0",
     "@tauri-apps/plugin-shell": "2.0.0",
-    "smorf": "1.3.1",
+    "smorf": "1.5.0",
     "solid-js": "1.9.3",
     "solid-markdown": "2.0.14",
     "zebar": "^2.0.0",

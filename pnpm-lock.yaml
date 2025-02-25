@@ -125,8 +125,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       smorf:
-        specifier: 1.3.1
-        version: 1.3.1(solid-js@1.9.3)
+        specifier: 1.5.0
+        version: 1.5.0(solid-js@1.9.3)
       solid-js:
         specifier: 1.9.3
         version: 1.9.3
@@ -2178,8 +2178,8 @@ packages:
     resolution: {integrity: sha512-3dOsAHXXUkQTpOYcoAxLIorMTp4gIQr5IW3iVb7A7lFIp0VHhnynm9izx6TssdrIcVIESAlVjtnO2K8bg+Coew==}
     engines: {node: '>=12'}
 
-  smorf@1.3.1:
-    resolution: {integrity: sha512-6Frsi51ntVRW1EMtVZ9pxDl2rTwD+mVG66Sq0bG96SlAJMPUub5qKHK6ixJHTJX37SdU14w0kF2V6qtd7rFVeQ==}
+  smorf@1.5.0:
+    resolution: {integrity: sha512-uAG9ILHNCe98lWOllDOTbDEl1xZ4AtPhYekHDiFIh+89ekTeS+ko9EqCOt+NpTlxnKFrbqX8vz0aHMruxg5JCQ==}
     peerDependencies:
       solid-js: '>=1.7.0'
 
@@ -4397,7 +4397,7 @@ snapshots:
 
   slash@4.0.0: {}
 
-  smorf@1.3.1(solid-js@1.9.3):
+  smorf@1.5.0(solid-js@1.9.3):
     dependencies:
       '@solid-primitives/map': 0.6.0(solid-js@1.9.3)
       '@solid-primitives/set': 0.6.0(solid-js@1.9.3)
