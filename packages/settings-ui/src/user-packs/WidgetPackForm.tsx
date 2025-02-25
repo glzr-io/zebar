@@ -5,6 +5,7 @@ import {
   ChipField,
   TextAreaField,
   FormField,
+  toaster,
 } from '@glzr/components';
 import { join, sep } from '@tauri-apps/api/path';
 import { createForm, Field, FormState } from 'smorf';
@@ -97,10 +98,22 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
   async function onImageChange(images: string[]) {
     const pathPrefix = props.pack.directoryPath + sep();
 
-    form.setFieldValue(
-      'previewImages',
-      images.map(image => image.replace(pathPrefix, '')),
-    );
+    // Filter out images that are not within the pack directory.
+    const validImages = images
+      .filter(image => image.startsWith(pathPrefix))
+      .map(image => image.replace(pathPrefix, ''));
+
+    // Check if any images were outside the pack directory.
+    if (validImages.length !== images.length) {
+      toaster.show({
+        title:
+          'Some images were outside the pack directory and were ignored.',
+        description: `${images.length - validImages.length} image(s) were ignored.`,
+        variant: 'destructive',
+      });
+    }
+
+    form.setFieldValue('previewImages', validImages);
   }
 
   return (
