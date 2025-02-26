@@ -1,16 +1,15 @@
 use std::{
   fs::{self, File},
-  io::{self, Read, Write},
+  io::Read,
   path::{Path, PathBuf},
 };
 
 use anyhow::{bail, Context};
 use flate2::{write::GzEncoder, Compression};
-use ignore::{DirEntry, WalkBuilder};
+use ignore::WalkBuilder;
 use reqwest::{multipart::Form, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tar::Builder;
-use tracing::{info, warn};
 
 use crate::{
   cli::PublishArgs, common::read_and_parse_json, config::WidgetPackConfig,
@@ -26,39 +25,37 @@ struct UploadResponse {
 pub async fn publish_widget_pack(
   args: &PublishArgs,
 ) -> anyhow::Result<String> {
-  // Read and parse the widget pack config.
-  let pack_config_path = &args.pack_config;
+  let pack_config_path = if args.pack_config.is_dir() {
+    args.pack_config.join("zebar-pack.json")
+  } else {
+    args.pack_config.to_path_buf()
+  };
+
   if !pack_config_path.exists() {
-    bail!(
+    anyhow::bail!(
       "Widget pack config not found at '{}'.",
       pack_config_path.display()
     );
   }
 
+  // Parse the widget pack config.
   let pack_config: WidgetPackConfig =
-    read_and_parse_json(pack_config_path)?;
+    read_and_parse_json(&pack_config_path)?;
+
   let pack_dir = pack_config_path
     .parent()
     .context("Failed to get parent directory of pack config")?;
 
-  // Create tarball
+  // Create tarball.
   let tarball_path = create_tarball(pack_dir, &pack_config.exclude_files)?;
 
-  // Upload to marketplace
-  let response = upload_to_marketplace(
-    &args.token,
-    &args.version,
-    args.commit_sha.as_deref(),
-    args.release_notes.as_deref(),
-    args.release_url.as_deref(),
-    pack_config_path,
-    &tarball_path,
-  )
-  .await?;
+  // Upload to marketplace.
+  let response =
+    upload_to_marketplace(args, &pack_config_path, &tarball_path).await?;
 
-  // Clean up temporary tarball
-  if let Err(e) = fs::remove_file(&tarball_path) {
-    warn!("Failed to remove temporary tarball: {}", e);
+  // Clean up temporary tarball.
+  if let Err(err) = fs::remove_file(&tarball_path) {
+    eprintln!("Failed to remove temporary tarball: {}", err);
   }
 
   Ok(response.message)
@@ -150,42 +147,41 @@ fn create_tarball(
 
 /// Uploads the widget pack to the Zebar marketplace.
 async fn upload_to_marketplace(
-  token: &str,
-  version: &str,
-  commit_sha: Option<&str>,
-  release_notes: Option<&str>,
-  release_url: Option<&str>,
+  args: &PublishArgs,
   pack_config_path: &Path,
   tarball_path: &Path,
 ) -> anyhow::Result<UploadResponse> {
-  // Read the pack config file
-  let config_content = fs::read_to_string(pack_config_path)?;
-
-  // Create multipart form
+  // Create multipart form.
   let mut form = Form::new()
-    .text("version", version.to_string())
-    .text("config", config_content)
+    .text("version", args.version.to_string())
+    .file("packConfig", pack_config_path)
+    .await?
     .file("tarball", tarball_path)
     .await?;
 
-  // Add optional fields
-  if let Some(commit_sha) = commit_sha {
+  if let Some(commit_sha) = &args.commit_sha {
     form = form.text("commitSha", commit_sha.to_string());
   }
 
-  if let Some(release_notes) = release_notes {
+  if let Some(release_notes) = &args.release_notes {
     form = form.text("releaseNotes", release_notes.to_string());
   }
 
-  if let Some(release_url) = release_url {
+  if let Some(release_url) = &args.release_url {
     form = form.text("releaseUrl", release_url.to_string());
   }
+
+  // Construct the full API endpoint URL.
+  let upload_url = format!(
+    "{}/marketplace/widget-packs",
+    args.api_url.trim_end_matches('/')
+  );
 
   // Send the request.
   let client = reqwest::Client::new();
   let response = client
-    .post("https://api.glzr.io/marketplace/widget-packs")
-    .header("Authorization", format!("Bearer {}", token))
+    .post(upload_url)
+    .header("X-API-TOKEN", args.token.clone())
     .multipart(form)
     .send()
     .await?;
@@ -197,7 +193,11 @@ async fn upload_to_marketplace(
     }
     status => {
       let error_text = response.text().await?;
-      bail!("Failed to upload widget pack: {} - {}", status, error_text)
+      anyhow::bail!(
+        "Failed to upload widget pack: {} - {}",
+        status,
+        error_text
+      )
     }
   }
 }

@@ -129,6 +129,12 @@ pub enum QueryArgs {
 
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct PublishArgs {
+  /// Path to the pack config file.
+  ///
+  /// The default path is `./zebar-pack.json`.
+  #[clap(long, value_hint = clap::ValueHint::FilePath, default_value = "./zebar-pack.json")]
+  pub pack_config: PathBuf,
+
   /// API token for authentication.
   ///
   /// The widget pack gets published under the account that this token
@@ -160,11 +166,16 @@ pub struct PublishArgs {
   #[clap(long)]
   pub release_url: Option<String>,
 
-  /// Path to the pack config file.
+  /// API URL to send requests to.
   ///
-  /// The default path is `./zebar-pack.json`.
-  #[clap(long, value_hint = clap::ValueHint::FilePath, default_value = "./zebar-pack.json")]
-  pub pack_config: PathBuf,
+  /// This is internally used for development and testing.
+  #[clap(
+    long,
+    env = "GLZR_API_URL",
+    default_value = "https://api.glzr.io",
+    hide = true
+  )]
+  pub api_url: String,
 }
 
 /// Prints to stdout/stderror and exits the process.
