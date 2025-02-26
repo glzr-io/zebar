@@ -34,6 +34,7 @@ mod common;
 mod config;
 mod monitor_state;
 mod providers;
+mod publish;
 mod shell_state;
 mod sys_tray;
 mod widget_factory;
@@ -66,6 +67,11 @@ async fn main() -> anyhow::Result<()> {
 
           match cli.command() {
             CliCommand::Query(args) => output_query(app, args),
+            CliCommand::Publish(args) => {
+              let result = publish::publish_widget_pack(&args).await?;
+              cli::print_and_exit(Ok(result));
+              Ok(())
+            }
             _ => {
               let start_res = start_app(app, cli).await;
 
