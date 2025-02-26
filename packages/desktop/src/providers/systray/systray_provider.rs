@@ -117,6 +117,7 @@ impl Provider for SystrayProvider {
             icons: systray
               .icons()
               .into_iter()
+              .filter(|icon| icon.is_visible)
               .filter_map(|icon| SystrayOutputIcon::try_from(icon).ok())
               .collect(),
           }));
