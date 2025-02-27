@@ -112,6 +112,11 @@ pub struct SystrayIcon {
 
   /// Version of the icon.
   pub version: Option<u32>,
+
+  /// Whether the icon is visible in the system tray.
+  ///
+  /// This is determined by the `NIS_HIDDEN` flag in the icon's state.
+  pub is_visible: bool,
 }
 
 // Debug implementation for `SystrayIcon`. Icon image is a large
@@ -128,6 +133,7 @@ impl std::fmt::Debug for SystrayIcon {
       .field("icon_image", &self.icon_image.as_ref().map(|_| "..."))
       .field("callback_message", &self.callback_message)
       .field("version", &self.version)
+      .field("is_visible", &self.is_visible)
       .finish()
   }
 }
@@ -292,6 +298,8 @@ impl Systray {
             found_icon.version = Some(version);
           }
 
+          found_icon.is_visible = icon_data.is_visible;
+
           Some(SystrayEvent::IconUpdate(found_icon.clone()))
         } else {
           // Icon doesn't exist yet, so add new icon. Skip icons that
@@ -322,6 +330,7 @@ impl Systray {
             icon_image,
             callback_message: icon_data.callback_message,
             version: icon_data.version,
+            is_visible: icon_data.is_visible,
           };
 
           self.icons.insert(icon.stable_id.clone(), icon.clone());

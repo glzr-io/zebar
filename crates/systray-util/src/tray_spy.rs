@@ -15,10 +15,10 @@ use windows::{
       Threading::{OpenProcess, PROCESS_ALL_ACCESS},
     },
     UI::{
-      Controls::TBBUTTON,
+      Controls::{TBBUTTON, TBSTATE_HIDDEN},
       Shell::{
         NIF_GUID, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE,
-        NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW_0,
+        NIM_MODIFY, NIM_SETVERSION, NIS_HIDDEN, NOTIFYICONDATAW_0,
         NOTIFY_ICON_DATA_FLAGS, NOTIFY_ICON_INFOTIP_FLAGS,
         NOTIFY_ICON_MESSAGE, NOTIFY_ICON_STATE,
       },
@@ -131,6 +131,7 @@ pub(crate) struct IconEventData {
   pub icon_handle: Option<isize>,
   pub callback_message: Option<u32>,
   pub version: Option<u32>,
+  pub is_visible: bool,
 }
 
 impl From<NotifyIconData> for IconEventData {
@@ -185,6 +186,8 @@ impl From<NotifyIconData> for IconEventData {
       None
     };
 
+    let is_visible = icon_data.state.0 & NIS_HIDDEN.0 == 0;
+
     IconEventData {
       uid,
       window_handle,
@@ -193,6 +196,7 @@ impl From<NotifyIconData> for IconEventData {
       icon_handle,
       callback_message,
       version,
+      is_visible,
     }
   }
 }
@@ -227,6 +231,9 @@ impl From<TbButtonItem> for IconEventData {
       icon_handle,
       callback_message: Some(tb_item.callback_message),
       version: Some(tb_item.version),
+      // Determined by the parent `TBBUTTON` struct. This value is set
+      // after initialization.
+      is_visible: true,
     }
   }
 }
@@ -541,7 +548,12 @@ impl TraySpy {
       )
     }?;
 
-    Ok(tray_item.into())
+    let mut icon_event: IconEventData = tray_item.into();
+
+    // Hidden state is determined by the toolbar button state.
+    icon_event.is_visible = button.fsState & TBSTATE_HIDDEN as u8 == 0;
+
+    Ok(icon_event)
   }
 
   /// Whether a message should be forwarded to the real tray window.
