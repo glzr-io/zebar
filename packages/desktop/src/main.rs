@@ -252,7 +252,7 @@ fn listen_events(
         },
         Some(provider_emission) = emit_rx.recv() => {
           info!("Provider emission: {:?}", provider_emission);
-          app_handle.emit("provider-emit", provider_emission.clone());
+          let _ = app_handle.emit("provider-emit", provider_emission.clone());
           manager.update_cache(provider_emission).await;
           Ok(())
         },
