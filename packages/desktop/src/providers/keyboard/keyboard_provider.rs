@@ -1,11 +1,14 @@
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use windows::Win32::{
+  Foundation::HWND,
   Globalization::{LCIDToLocaleName, LOCALE_ALLOW_NEUTRAL_NAMES},
   System::SystemServices::LOCALE_NAME_MAX_LENGTH,
   UI::{
     Input::KeyboardAndMouse::GetKeyboardLayout,
-    WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId},
+    WindowsAndMessaging::{
+      GetGUIThreadInfo, GetWindowThreadProcessId, GUITHREADINFO,
+    },
   },
 };
 
@@ -41,12 +44,21 @@ impl KeyboardProvider {
     KeyboardProvider { config, common }
   }
 
+  unsafe fn get_focused_hwnd() -> anyhow::Result<HWND> {
+    // see: https://stackoverflow.com/questions/51945835/how-to-obtain-keyboard-layout-for-microsoft-edge-and-other-windows-hosted-in-app
+    let mut gui_thread_info = GUITHREADINFO {
+      cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
+      ..Default::default()
+    };
+
+    GetGUIThreadInfo(0, &mut gui_thread_info)?;
+    return Ok(gui_thread_info.hwndFocus);
+  }
+
   fn run_interval(&mut self) -> anyhow::Result<KeyboardOutput> {
     let keyboard_layout = unsafe {
-      GetKeyboardLayout(GetWindowThreadProcessId(
-        GetForegroundWindow(),
-        None,
-      ))
+      let hwnd = KeyboardProvider::get_focused_hwnd()?;
+      GetKeyboardLayout(GetWindowThreadProcessId(hwnd, None))
     };
 
     let lang_id = (keyboard_layout.0 as u32) & 0xffff;

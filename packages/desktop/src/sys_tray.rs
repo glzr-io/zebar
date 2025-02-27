@@ -168,8 +168,9 @@ impl SysTray {
     // Show the settings window on left click (Windows-only).
     #[cfg(windows)]
     {
-      tray_icon =
-        tray_icon.menu_on_left_click(false).on_tray_icon_event({
+      tray_icon = tray_icon
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event({
           let app_handle = self.app_handle.clone();
           let config = self.config.clone();
           let widget_factory = self.widget_factory.clone();
