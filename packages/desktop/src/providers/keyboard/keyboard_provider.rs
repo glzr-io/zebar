@@ -1,7 +1,7 @@
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use windows::Win32::{
-  Foundation::{GetLastError, BOOL, HWND},
+  Foundation::HWND,
   Globalization::{LCIDToLocaleName, LOCALE_ALLOW_NEUTRAL_NAMES},
   System::SystemServices::LOCALE_NAME_MAX_LENGTH,
   UI::{
