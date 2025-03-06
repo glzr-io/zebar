@@ -4,7 +4,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use flate2::{write::GzEncoder, Compression};
 use ignore::WalkBuilder;
 use reqwest::{multipart::Form, StatusCode};
@@ -17,8 +17,7 @@ use crate::{
 
 #[derive(Debug, Deserialize)]
 struct UploadResponse {
-  widget_pack_id: String,
-  message: String,
+  created_id: String,
 }
 
 /// Publishes a widget pack to the Zebar marketplace.
@@ -39,26 +38,29 @@ pub async fn publish_widget_pack(
   }
 
   // Parse the widget pack config.
-  let pack_config: WidgetPackConfig =
-    read_and_parse_json(&pack_config_path)?;
+  let (pack_config, pack_config_str) =
+    read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
 
   let pack_dir = pack_config_path
     .parent()
-    .context("Failed to get parent directory of pack config")?;
+    .context("Failed to get parent directory of pack config.")?;
 
   // Create tarball.
   let tarball_path = create_tarball(pack_dir, &pack_config.exclude_files)?;
 
   // Upload to marketplace.
   let response =
-    upload_to_marketplace(args, &pack_config_path, &tarball_path).await?;
+    upload_to_marketplace(args, pack_config_str, &tarball_path).await?;
 
   // Clean up temporary tarball.
   if let Err(err) = fs::remove_file(&tarball_path) {
-    eprintln!("Failed to remove temporary tarball: {}", err);
+    eprintln!("Failed to clean up temporary tarball file: {}", err);
   }
 
-  Ok(response.message)
+  Ok(format!(
+    "Widget pack '{}' with version {} successfully published!",
+    response.created_id, args.version
+  ))
 }
 
 /// Creates a tarball of the widget pack, excluding files based on the
@@ -148,14 +150,13 @@ fn create_tarball(
 /// Uploads the widget pack to the Zebar marketplace.
 async fn upload_to_marketplace(
   args: &PublishArgs,
-  pack_config_path: &Path,
+  pack_config_str: String,
   tarball_path: &Path,
 ) -> anyhow::Result<UploadResponse> {
   // Create multipart form.
   let mut form = Form::new()
     .text("version", args.version.to_string())
-    .file("packConfig", pack_config_path)
-    .await?
+    .text("packJson", pack_config_str)
     .file("tarball", tarball_path)
     .await?;
 

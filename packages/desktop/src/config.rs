@@ -429,7 +429,7 @@ impl Config {
     let config_path =
       pack_dir.join("zebar-pack.json").to_absolute(pack_dir)?;
 
-    let pack_config = read_and_parse_json::<WidgetPackConfig>(
+    let (pack_config, _) = read_and_parse_json::<WidgetPackConfig>(
       &config_path,
     )
     .map_err(|err| {
@@ -469,6 +469,7 @@ impl Config {
       let relative_path = widget_path.to_relative(pack_dir)?;
 
       let config = read_and_parse_json::<WidgetConfig>(&absolute_path)
+        .map(|(config, _)| config)
         .map_err(|err| {
           anyhow::anyhow!(
             "Failed to parse widget config at '{}': {:?}",
@@ -715,7 +716,7 @@ impl Config {
       .await?;
 
     let widget_config_path = widget_dir.join("zebar-widget.json");
-    let widget_config =
+    let (widget_config, _) =
       read_and_parse_json::<WidgetConfig>(&widget_config_path)?;
 
     Ok(WidgetConfigEntry {
