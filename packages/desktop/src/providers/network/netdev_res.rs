@@ -59,6 +59,7 @@ pub enum InterfaceType {
   Slip,
   Atm,
   GenericModem,
+  ProprietaryVirtual,
   Isdn,
   Wifi,
   Dsl,
@@ -66,6 +67,7 @@ pub enum InterfaceType {
   HighPerformanceSerialBus,
   MobileBroadband,
   Bridge,
+  Can,
 }
 
 impl From<NdInterfaceType> for InterfaceType {
@@ -86,6 +88,7 @@ impl From<NdInterfaceType> for InterfaceType {
         InterfaceType::Atm
       }
       NdInterfaceType::GenericModem => InterfaceType::GenericModem,
+      NdInterfaceType::ProprietaryVirtual => InterfaceType::ProprietaryVirtual,
       NdInterfaceType::Isdn
       | NdInterfaceType::BasicIsdn
       | NdInterfaceType::PrimaryIsdn => InterfaceType::Isdn,
@@ -103,6 +106,8 @@ impl From<NdInterfaceType> for InterfaceType {
       | NdInterfaceType::Wwanpp
       | NdInterfaceType::Wwanpp2 => InterfaceType::MobileBroadband,
       NdInterfaceType::Bridge => InterfaceType::Bridge,
+      NdInterfaceType::Can => InterfaceType::Can,
+      NdInterfaceType::UnknownWithValue(_u32) => InterfaceType::Unknown,
     }
   }
 }

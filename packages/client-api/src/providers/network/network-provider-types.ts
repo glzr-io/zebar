@@ -54,13 +54,15 @@ export type InterfaceType =
   | 'slip'
   | 'atm'
   | 'generic_modem'
+  | 'proprietary_virtual'
   | 'isdn'
   | 'wifi'
   | 'dsl'
   | 'tunnel'
   | 'high_performance_serial_bus'
   | 'mobile_broadband'
-  | 'bridge';
+  | 'bridge'
+  | 'can';
 
 export interface NetworkTraffic {
   received: DataSizeMeasure;
