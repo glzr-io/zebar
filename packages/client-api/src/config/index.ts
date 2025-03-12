@@ -1,5 +1,6 @@
-export * from './monitor-selection';
+export * from './config-schemas';
 export * from './dock-config';
+export * from './monitor-selection';
 export * from './widget-caching';
 export * from './widget-config';
 export * from './widget-placement';
