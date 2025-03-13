@@ -410,7 +410,13 @@ impl AppSettings {
 
             // Remove `.tera` extension from processed files.
             let file_name = file_name.replace(".tera", "");
-            let _ = fs::rename(&path, path.with_file_name(file_name));
+
+            // Replace variables in the file name (e.g. `{{WIDGET_NAME}}`).
+            if let Ok(file_name) =
+              tera::Tera::one_off(&file_name, &context, true)
+            {
+              let _ = fs::rename(&path, path.with_file_name(file_name));
+            }
           }
         }
       }

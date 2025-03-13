@@ -12,7 +12,9 @@ use serde::Deserialize;
 use tar::Builder;
 
 use crate::{
-  cli::PublishArgs, common::read_and_parse_json, config::WidgetPackConfig,
+  cli::PublishArgs,
+  common::read_and_parse_json,
+  config::{Config, WidgetPackConfig},
 };
 
 #[derive(Debug, Deserialize)]
@@ -24,33 +26,28 @@ struct UploadResponse {
 pub async fn publish_widget_pack(
   args: &PublishArgs,
 ) -> anyhow::Result<String> {
-  let pack_config_path = if args.pack_config.is_dir() {
-    args.pack_config.join("zebar-pack.json")
-  } else {
-    args.pack_config.to_path_buf()
-  };
-
-  if !pack_config_path.exists() {
+  if !args.pack_config.exists() {
     anyhow::bail!(
       "Widget pack config not found at '{}'.",
-      pack_config_path.display()
+      args.pack_config.display()
     );
   }
 
   // Parse the widget pack config.
-  let (pack_config, pack_config_str) =
-    read_and_parse_json::<WidgetPackConfig>(&pack_config_path)?;
+  let pack_config = Config::read_widget_pack(&args.pack_config)?;
 
-  let pack_dir = pack_config_path
+  let pack_dir = args
+    .pack_config
     .parent()
     .context("Failed to get parent directory of pack config.")?;
 
   // Create tarball.
-  let tarball_path = create_tarball(pack_dir, &pack_config.exclude_files)?;
+  let tarball_path =
+    create_tarball(pack_dir, &pack_config.config.exclude_files)?;
 
   // Upload to marketplace.
   let response =
-    upload_to_marketplace(args, pack_config_str, &tarball_path).await?;
+    upload_to_marketplace(&pack_config.name, args, &tarball_path).await?;
 
   // Clean up temporary tarball.
   if let Err(err) = fs::remove_file(&tarball_path) {
@@ -149,14 +146,14 @@ fn create_tarball(
 
 /// Uploads the widget pack to the Zebar marketplace.
 async fn upload_to_marketplace(
+  name: &str,
   args: &PublishArgs,
-  pack_config_str: String,
   tarball_path: &Path,
 ) -> anyhow::Result<UploadResponse> {
   // Create multipart form.
   let mut form = Form::new()
+    .text("name", name.to_string())
     .text("version", args.version.to_string())
-    .text("packJson", pack_config_str)
     .file("tarball", tarball_path)
     .await?;
 
@@ -174,7 +171,7 @@ async fn upload_to_marketplace(
 
   // Construct the full API endpoint URL.
   let upload_url = format!(
-    "{}/marketplace/widget-packs",
+    "{}/api/trpc/widgetPack.publishVersion",
     args.api_url.trim_end_matches('/')
   );
 
