@@ -131,8 +131,8 @@ pub enum QueryArgs {
 pub struct PublishArgs {
   /// Path to the pack config file.
   ///
-  /// The default path is `./zebar-pack.json`.
-  #[clap(long, value_hint = clap::ValueHint::FilePath, default_value = "./zebar-pack.json")]
+  /// The default path is `./zpack.json`.
+  #[clap(long, value_hint = clap::ValueHint::FilePath, default_value = "./zpack.json")]
   pub pack_config: PathBuf,
 
   /// API token for authentication.

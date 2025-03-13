@@ -27,7 +27,7 @@ pub async fn publish_widget_pack(
   args: &PublishArgs,
 ) -> anyhow::Result<String> {
   let pack_config_path = if args.pack_config.is_dir() {
-    args.pack_config.join("zebar-pack.json")
+    args.pack_config.join("zpack.json")
   } else {
     args.pack_config.to_path_buf()
   };

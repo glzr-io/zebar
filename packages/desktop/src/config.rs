@@ -58,7 +58,7 @@ pub struct WidgetConfigEntry {
 
 /// Deserialized widget pack.
 ///
-/// This is the type of the `zebar-pack.json` file.
+/// This is the type of the `zpack.json` file.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPackConfig {
@@ -380,7 +380,7 @@ impl Config {
   /// Finds all valid widget packs within the user's config directory.
   ///
   /// Widget packs are at the 2nd-level of the config directory
-  /// (i.e. `<CONFIG_DIR>/*/zebar-pack.json`).
+  /// (i.e. `<CONFIG_DIR>/*/zpack.json`).
   ///
   /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
   fn read_widget_packs(
@@ -401,11 +401,11 @@ impl Config {
 
     // Parse the found config files.
     for pack_dir in pack_dirs {
-      let pack_config_path = pack_dir.join("zebar-pack.json");
+      let pack_config_path = pack_dir.join("zpack.json");
 
       if !pack_config_path.exists() {
         warn!(
-          "Skipping subdirectory at '{}' because it has no `zebar-pack.json` file.",
+          "Skipping subdirectory at '{}' because it has no `zpack.json` file.",
           pack_dir.display()
         );
 
@@ -431,7 +431,7 @@ impl Config {
   }
 
   /// Reads a widget pack from a directory. Expects the pack config
-  /// file (`zebar-pack.json`) to be present.
+  /// file (`zpack.json`) to be present.
   ///
   /// Returns a `WidgetPack` instance.
   pub fn read_widget_pack(
