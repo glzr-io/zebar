@@ -26,28 +26,31 @@ struct UploadResponse {
 pub async fn publish_widget_pack(
   args: &PublishArgs,
 ) -> anyhow::Result<String> {
-  if !args.pack_config.exists() {
+  let pack_config_path = if args.pack_config.is_dir() {
+    args.pack_config.join("zebar-pack.json")
+  } else {
+    args.pack_config.to_path_buf()
+  };
+
+  if !pack_config_path.exists() {
     anyhow::bail!(
       "Widget pack config not found at '{}'.",
-      args.pack_config.display()
+      pack_config_path.display()
     );
   }
 
-  // Parse the widget pack config.
-  let pack_config = Config::read_widget_pack(&args.pack_config)?;
+  let pack_config = Config::read_widget_pack(&pack_config_path)?;
 
-  let pack_dir = args
-    .pack_config
-    .parent()
-    .context("Failed to get parent directory of pack config.")?;
-
-  // Create tarball.
-  let tarball_path =
-    create_tarball(pack_dir, &pack_config.config.exclude_files)?;
+  // Create the tarball of the widget pack.
+  let tarball_path = create_tarball(
+    &pack_config.directory_path,
+    &pack_config.config.exclude_files,
+  )?;
 
   // Upload to marketplace.
   let response =
-    upload_to_marketplace(&pack_config.name, args, &tarball_path).await?;
+    upload_to_marketplace(&pack_config.config.name, args, &tarball_path)
+      .await?;
 
   // Clean up temporary tarball.
   if let Err(err) = fs::remove_file(&tarball_path) {

@@ -15,7 +15,7 @@ use crate::{
   app_settings::{
     AppSettings, FrontendTemplate, TemplateResource, VERSION_NUMBER,
   },
-  common::{has_extension, read_and_parse_json, LengthValue, PathExt},
+  common::{read_and_parse_json, LengthValue, PathExt},
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -23,9 +23,6 @@ use crate::{
 pub struct WidgetPack {
   /// Unique identifier for the pack.
   pub id: String,
-
-  /// Name of the pack.
-  pub name: String,
 
   /// Whether the pack is a local or marketplace pack.
   pub r#type: WidgetPackType,
@@ -68,6 +65,9 @@ pub struct WidgetPackConfig {
   /// JSON schema URL to validate the widget pack file.
   #[serde(rename = "$schema")]
   schema: Option<String>,
+
+  /// Name of the pack.
+  pub name: String,
 
   /// Description of the pack.
   pub description: String,
@@ -380,14 +380,14 @@ impl Config {
   /// Finds all valid widget packs within the user's config directory.
   ///
   /// Widget packs are at the 2nd-level of the config directory
-  /// (i.e. `<CONFIG_DIR>/*/*.zpack.json`).
+  /// (i.e. `<CONFIG_DIR>/*/zebar-pack.json`).
   ///
   /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
   fn read_widget_packs(
     app_settings: &AppSettings,
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
     // Get paths to the subdirectories within the config directory.
-    let dir_paths = fs::read_dir(&app_settings.config_dir)
+    let pack_dirs = fs::read_dir(&app_settings.config_dir)
       .with_context(|| {
         format!(
           "Failed to read config directory: {}",
@@ -397,23 +397,26 @@ impl Config {
       .filter_map(|entry| Some(entry.ok()?.path()))
       .filter(|path| path.is_dir());
 
-    // Get paths to the pack configs within the subdirectories.
-    let config_paths = dir_paths
-      .filter_map(|dir| fs::read_dir(dir).ok())
-      .flatten()
-      .filter_map(|entry| Some(entry.ok()?.path()))
-      .filter(|path| path.is_file() && has_extension(path, ".zpack.json"))
-      .collect::<Vec<PathBuf>>();
-
     let mut packs = HashMap::new();
 
     // Parse the found config files.
-    for config_path in config_paths {
-      match Self::read_widget_pack(&config_path) {
+    for pack_dir in pack_dirs {
+      let pack_config_path = pack_dir.join("zebar-pack.json");
+
+      if !pack_config_path.exists() {
+        warn!(
+          "Skipping subdirectory at '{}' because it has no `zebar-pack.json` file.",
+          pack_dir.display()
+        );
+
+        continue;
+      }
+
+      match Self::read_widget_pack(&pack_config_path) {
         Ok(pack) => {
           tracing::info!(
             "Found valid widget pack at: {}",
-            config_path.display()
+            pack_dir.display()
           );
 
           packs.insert(pack.id.clone(), pack);
@@ -428,7 +431,7 @@ impl Config {
   }
 
   /// Reads a widget pack from a directory. Expects the pack config
-  /// file (`*.zpack.json`) to be present.
+  /// file (`zebar-pack.json`) to be present.
   ///
   /// Returns a `WidgetPack` instance.
   pub fn read_widget_pack(
@@ -455,12 +458,8 @@ impl Config {
     let widget_configs =
       Self::read_widget_configs(&pack_config, pack_dir)?;
 
-    let pack_name =
-      config_path.to_unicode_string().replace(".zpack.json", "");
-
     let pack = WidgetPack {
-      id: format!("local.{}", pack_name),
-      name: pack_name,
+      id: format!("local.{}", pack_config.name),
       r#type: WidgetPackType::Local,
       config_path: config_path.to_path_buf(),
       directory_path: pack_dir.to_path_buf(),
@@ -654,18 +653,6 @@ impl Config {
         Self::read_widget_configs(&pack.config, &pack.directory_path)?;
     }
 
-    // Update the pack ID if a new name is provided.
-    if let Some(new_name) = args.name {
-      pack.id = format!("local.{}", new_name);
-
-      let new_config_path =
-        pack.directory_path.join(format!("{}.zpack.json", new_name));
-
-      fs::rename(&pack.config_path, &new_config_path)?;
-      pack.config_path = new_config_path;
-      pack.name = new_name;
-    }
-
     // Write the updated pack config to file.
     fs::write(
       &pack.config_path,
@@ -675,8 +662,10 @@ impl Config {
     {
       let mut widget_packs = self.widget_packs.lock().await;
 
-      // Remove the old entry if the ID has changed.
-      if pack_id != pack.id {
+      // Update the pack ID and remove the old entry if a new name is
+      // provided.
+      if let Some(new_name) = args.name {
+        pack.id = format!("local.{}", new_name);
         widget_packs.remove(&pack_id);
       }
 
