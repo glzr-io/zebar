@@ -12,6 +12,19 @@ const systrayProviderConfigSchema = z.object({
   type: z.literal('systray'),
 });
 
+const iconCache = new Map<string, { iconUrl: string, iconBlob: Blob }>();
+
+function hashIconBytes(bytes: number[]): string {
+  const length = bytes.length;
+  const sample = [
+    ...bytes.slice(0, 8),
+    length,
+    ...bytes.slice(length - 8, length)
+  ];
+
+  return sample.join(',');
+}
+
 export function createSystrayProvider(
   config: SystrayProviderConfig,
 ): SystrayProvider {
@@ -27,14 +40,21 @@ export function createSystrayProvider(
           queue.output({
             ...result.output,
             icons: result.output.icons.map(icon => {
-              const iconBlob = new Blob([new Uint8Array(icon.iconBytes)], {
-                type: 'image/png',
-              });
+              const iconHash = hashIconBytes(icon.iconBytes);
+              let cached = iconCache.get(iconHash);
+              if (!cached) {
+                const iconBlob = new Blob([new Uint8Array(icon.iconBytes)], {
+                  type: 'image/png',
+                });
+                const iconUrl = URL.createObjectURL(iconBlob);
+                cached = { iconUrl, iconBlob };
+                iconCache.set(iconHash, cached);
+              }
 
               return {
                 ...icon,
-                iconBlob,
-                iconUrl: URL.createObjectURL(iconBlob),
+                iconBlob: cached.iconBlob,
+                iconUrl: cached.iconUrl,
               };
             }),
             onHoverEnter: (iconId: string) => {
