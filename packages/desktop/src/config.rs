@@ -613,7 +613,7 @@ impl Config {
       .current_dir(&pack_dir)
       .output();
 
-    let pack = Self::read_widget_pack(&pack_dir)?;
+    let pack = Self::read_widget_pack(&pack_dir.join("zpack.json"))?;
 
     // Add the new widget pack to state.
     {
