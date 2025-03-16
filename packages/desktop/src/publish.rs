@@ -4,18 +4,13 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use anyhow::Context;
 use flate2::{write::GzEncoder, Compression};
 use ignore::WalkBuilder;
 use reqwest::{multipart::Form, StatusCode};
 use serde::Deserialize;
 use tar::Builder;
 
-use crate::{
-  cli::PublishArgs,
-  common::read_and_parse_json,
-  config::{Config, WidgetPackConfig},
-};
+use crate::{cli::PublishArgs, config::Config};
 
 #[derive(Debug, Deserialize)]
 struct UploadResponse {

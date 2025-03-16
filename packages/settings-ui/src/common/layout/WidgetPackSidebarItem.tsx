@@ -64,15 +64,15 @@ export function WidgetPackSidebarItem(props: WidgetPackSidebarItemProps) {
 
       <Show when={!props.isCollapsed && isExpanded()}>
         <div class="ml-6 mr-2">
-          <For each={props.pack.widgetConfigs}>
+          <For each={props.pack.widgets}>
             {config => (
               <A
-                href={`/packs/${props.pack.id}/${config.value.name}`}
+                href={`/packs/${props.pack.id}/${config.name}`}
                 class="block text-sm py-1.5 px-2 rounded-md truncate"
                 activeClass="bg-accent text-accent-foreground"
                 inactiveClass="hover:bg-accent/50"
               >
-                {config.value.name}
+                {config.name}
               </A>
             )}
           </For>

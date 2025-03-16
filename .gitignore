@@ -15,6 +15,7 @@ build
 dist
 target
 gen
+!templates/**/dist
 
 # Misc
 .DS_Store

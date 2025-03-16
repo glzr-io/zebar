@@ -31,8 +31,8 @@ export function WidgetPage() {
   );
 
   const selectedConfig = createMemo(() =>
-    selectedPack()?.widgetConfigs.find(
-      widget => widget.value.name === params.widgetName,
+    selectedPack()?.widgets.find(
+      widget => widget.name === params.widgetName,
     ),
   );
 
@@ -41,13 +41,13 @@ export function WidgetPage() {
   );
 
   const presetNames = createMemo(() =>
-    (selectedConfig()?.value.presets ?? []).map(preset => preset.name),
+    (selectedConfig()?.presets ?? []).map(preset => preset.name),
   );
 
   // Widget states for the selected config.
   const selectedConfigStates = createMemo(() => {
     const packId = selectedPack()?.id;
-    const widgetName = selectedConfig()?.value.name;
+    const widgetName = selectedConfig()?.name;
 
     return Object.values(widgetStates()).filter(
       state => state.name === widgetName && state.packId === packId,
@@ -69,8 +69,8 @@ export function WidgetPage() {
       () => selectedConfig(),
       config => {
         if (config) {
-          setSelectedPreset(config.value.presets[0]?.name ?? null);
-          document.querySelector('#form-container').scrollTo(0, 0);
+          setSelectedPreset(config.presets[0]?.name ?? null);
+          document.querySelector('#form-container')?.scrollTo(0, 0);
         }
       },
     ),
@@ -101,23 +101,17 @@ export function WidgetPage() {
                     content: selectedPack().id,
                   },
                   {
-                    href: `/packs/${selectedPack().id}/widgets/${config().value.name}`,
-                    content: config().value.name,
+                    href: `/packs/${selectedPack().id}/widgets/${config().name}`,
+                    content: config().name,
                   },
                 ]}
               />
 
-              <h1 class="text-3xl font-bold mb-4">
-                {config().value.name}
-              </h1>
-
-              <p class="bg-muted text-xs font-mono rounded-sm mb-6 p-1 text-muted-foreground inline-block">
-                {config().absolutePath}
-              </p>
+              <h1 class="text-3xl font-bold mb-4">{config().name}</h1>
 
               <WidgetConfigForm
-                config={config().value}
-                configPath={config().absolutePath}
+                config={config()}
+                packId={selectedPack().id}
                 onChange={config =>
                   updateWidgetConfig(
                     selectedPack().id,
@@ -142,7 +136,7 @@ export function WidgetPage() {
                   onClick={() =>
                     togglePreset(
                       selectedPack().id,
-                      config().value.name,
+                      config().name,
                       selectedPreset(),
                     )
                   }

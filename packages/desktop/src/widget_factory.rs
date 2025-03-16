@@ -29,7 +29,7 @@ use crate::{
   common::PathExt,
   config::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
-    WidgetConfigEntry, WidgetPlacement,
+    WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
 };
@@ -88,9 +88,6 @@ pub struct WidgetState {
 
   /// User-defined config for the widget.
   pub config: WidgetConfig,
-
-  /// Absolute path to the widget's config file.
-  pub config_path: PathBuf,
 
   /// Absolute path to the widget's HTML file.
   pub html_path: PathBuf,
@@ -199,14 +196,11 @@ impl WidgetFactory {
         format!("No widget pack found for '{}'.", pack_id)
       })?;
 
-    let WidgetConfigEntry {
-      value: widget_config,
-      absolute_path: config_path,
-      ..
-    } = widget_pack
-      .widget_configs
+    let widget_config = widget_pack
+      .config
+      .widgets
       .iter()
-      .find(|entry| entry.value.name == widget_name)
+      .find(|entry| entry.name == widget_name)
       .with_context(|| {
         format!(
           "No widget named '{}' found in widget pack '{}'.",
@@ -223,7 +217,8 @@ impl WidgetFactory {
           .await
           .values()
           .find(|state| {
-            state.config_path == *config_path
+            state.pack_id == *pack_id
+              && state.name == *widget_config.name
               && state.open_options == *open_options
           })
           .is_some()
@@ -246,7 +241,7 @@ impl WidgetFactory {
             format!(
               "No preset with name '{}' at config '{}'.",
               name,
-              config_path.display()
+              widget_pack.config_path.display()
             )
           })?
           .placement
@@ -261,26 +256,23 @@ impl WidgetFactory {
       let widget_id = format!("widget-{}", new_count);
 
       info!(
-        "Creating window for {} from {}",
-        widget_id,
-        config_path.display()
+        "Creating window {} for {} from {}",
+        widget_id, widget_name, widget_pack.id
       );
 
-      let parent_dir =
-        config_path.parent().context("No parent directory.")?;
-
-      let html_path = parent_dir.join(&widget_config.html_path);
+      let html_path =
+        widget_pack.directory_path.join(&widget_config.html_path);
 
       if !html_path.exists() {
         bail!(
           "HTML file not found at '{}' for config '{}'.",
           widget_config.html_path.display(),
-          config_path.display()
+          widget_pack.config_path.display()
         )
       }
 
       let webview_url = WebviewUrl::External(
-        create_init_url(&parent_dir, &html_path).await?,
+        create_init_url(&widget_pack.directory_path, &html_path).await?,
       );
 
       let mut state = WidgetState {
@@ -289,7 +281,6 @@ impl WidgetFactory {
         pack_id: pack_id.to_string(),
         window_handle: None,
         config: widget_config.clone(),
-        config_path: config_path.clone(),
         html_path: html_path.canonicalize_pretty()?,
         open_options: open_options.clone(),
       };
@@ -737,9 +728,8 @@ impl WidgetFactory {
 
     for widget_state in &changed_states {
       info!(
-        "Relaunching widget #{} from {}",
-        widget_state.id,
-        widget_state.config_path.display()
+        "Relaunching widget {} from {} (#{}).",
+        widget_state.name, widget_state.pack_id, widget_state.id
       );
 
       let _ = self.stop_by_id(&widget_state.id);

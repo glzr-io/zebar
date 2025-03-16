@@ -21,34 +21,19 @@ const downloadedPacksMock: WidgetPack[] = [
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
-    widgetConfigs: [
+    widgets: [
       {
-        absolutePath:
-          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\cpu-usage\\zebar-widget.json',
-        relativePath: 'cpu-usage\\zebar-widget.json',
-        value: {
-          name: 'cpu-usage',
-          htmlPath: 'cpu-usage.html',
-        } as any as WidgetConfig,
-      },
+        name: 'cpu-usage',
+        htmlPath: 'cpu-usage.html',
+      } as any as WidgetConfig,
       {
-        absolutePath:
-          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\memory-usage\\zebar-widget.json',
-        relativePath: 'memory-usage\\zebar-widget.json',
-        value: {
-          name: 'memory-usage',
-          htmlPath: 'memory-usage.html',
-        } as any as WidgetConfig,
-      },
+        name: 'memory-usage',
+        htmlPath: 'memory-usage.html',
+      } as any as WidgetConfig,
       {
-        absolutePath:
-          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\disk-space\\zebar-widget.json',
-        relativePath: 'disk-space\\zebar-widget.json',
-        value: {
-          name: 'disk-space',
-          htmlPath: 'disk-space.html',
-        } as any as WidgetConfig,
-      },
+        name: 'disk-space',
+        htmlPath: 'disk-space.html',
+      } as any as WidgetConfig,
     ],
     previewImages: [],
     excludeFiles: '',
@@ -62,25 +47,15 @@ const downloadedPacksMock: WidgetPack[] = [
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
-    widgetConfigs: [
+    widgets: [
       {
-        absolutePath:
-          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\current-weather\\zebar-widget.json',
-        relativePath: 'current-weather\\zebar-widget.json',
-        value: {
-          name: 'current-weather',
-          htmlPath: 'current-weather.html',
-        } as any as WidgetConfig,
-      },
+        name: 'current-weather',
+        htmlPath: 'current-weather.html',
+      } as any as WidgetConfig,
       {
-        absolutePath:
-          'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa\\weekly-forecast\\zebar-widget.json',
-        relativePath: 'weekly-forecast\\zebar-widget.json',
-        value: {
-          name: 'weekly-forecast',
-          htmlPath: 'weekly-forecast.html',
-        } as any as WidgetConfig,
-      },
+        name: 'weekly-forecast',
+        htmlPath: 'weekly-forecast.html',
+      } as any as WidgetConfig,
     ],
     previewImages: [],
     excludeFiles: '',
@@ -98,7 +73,7 @@ export type WidgetPack =
       directoryPath: string;
       description: string;
       version: string;
-      widgetConfigs: WidgetConfigEntry[];
+      widgets: WidgetConfig[];
       tags: string[];
     }
   | {
@@ -109,15 +84,9 @@ export type WidgetPack =
       excludeFiles: string;
       directoryPath: string;
       description: string;
-      widgetConfigs: WidgetConfigEntry[];
+      widgets: WidgetConfig[];
       tags: string[];
     };
-
-export type WidgetConfigEntry = {
-  absolutePath: string;
-  relativePath: string;
-  value: WidgetConfig;
-};
 
 export type CreateWidgetPackArgs = {
   name: string;
@@ -147,7 +116,7 @@ type UserPacksContextState = {
   allPacks: Accessor<WidgetPack[]>;
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (args: CreateWidgetPackArgs) => Promise<WidgetPack>;
-  createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfigEntry>;
+  createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfig>;
   updatePack: (
     packId: string,
     args: UpdateWidgetPackArgs,
@@ -158,7 +127,7 @@ type UserPacksContextState = {
     packId: string,
     widgetName: string,
     newConfig: WidgetConfig,
-  ) => Promise<WidgetConfigEntry>;
+  ) => Promise<WidgetConfig>;
   togglePreset: (
     packId: string,
     widgetName: string,
@@ -210,7 +179,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     widgetName: string,
     newConfig: WidgetConfig,
   ) {
-    const updatedEntry = await invoke<WidgetConfigEntry>(
+    const updatedEntry = await invoke<WidgetConfig>(
       'update_widget_config',
       {
         packId,
@@ -220,12 +189,12 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     );
 
     mutateLocalPacks(packs =>
-      packs.map(pack =>
+      packs?.map(pack =>
         pack.id === packId && pack.type === 'local'
           ? {
               ...pack,
-              widgetConfigs: pack.widgetConfigs.map(configEntry =>
-                configEntry.value.name === widgetName
+              widgets: pack.widgets.map(configEntry =>
+                configEntry.name === widgetName
                   ? updatedEntry
                   : configEntry,
               ),
@@ -271,12 +240,12 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
   async function createPack(args: CreateWidgetPackArgs) {
     const pack = await invoke<WidgetPack>('create_widget_pack', { args });
-    mutateLocalPacks(packs => [...packs, pack]);
+    mutateLocalPacks(packs => [...(packs ?? []), pack]);
     return pack;
   }
 
   async function createWidget(args: CreateWidgetArgs) {
-    const configEntry = await invoke<WidgetConfigEntry>(
+    const configEntry = await invoke<WidgetConfig>(
       'create_widget_config',
       {
         args,
@@ -284,11 +253,11 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     );
 
     mutateLocalPacks(packs =>
-      packs.map(pack => {
+      packs?.map(pack => {
         return pack.id === args.packId && pack.type === 'local'
           ? {
               ...pack,
-              widgetConfigs: [...pack.widgetConfigs, configEntry],
+              widgets: [...pack.widgets, configEntry],
             }
           : pack;
       }),
@@ -299,7 +268,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
   async function deletePack(packId: string) {
     await invoke<void>('delete_widget_pack', { packId });
-    mutateLocalPacks(packs => packs.filter(pack => pack.id !== packId));
+    mutateLocalPacks(packs => packs?.filter(pack => pack.id !== packId));
   }
 
   async function updatePack(packId: string, args: UpdateWidgetPackArgs) {
@@ -309,7 +278,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     });
 
     mutateLocalPacks(packs =>
-      packs.map(p => (p.id === packId ? updatedPack : p)),
+      packs?.map(p => (p.id === packId ? updatedPack : p)),
     );
 
     return updatedPack;
@@ -319,11 +288,11 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     await invoke<void>('delete_widget_config', { packId, widgetName });
 
     mutateLocalPacks(packs =>
-      packs.map(pack => {
+      packs?.map(pack => {
         return {
           ...pack,
-          widgetConfigs: pack.widgetConfigs.filter(
-            w => w.value.name !== widgetName,
+          widgets: pack.widgets.filter(
+            widgetConfig => widgetConfig.name !== widgetName,
           ),
         };
       }),

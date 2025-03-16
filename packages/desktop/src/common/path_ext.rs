@@ -19,7 +19,8 @@ where
   /// ```
   fn canonicalize_pretty(&self) -> anyhow::Result<PathBuf>;
 
-  /// Strips the given base path.
+  /// Strips the given base path. Path delimiters get normalized to forward
+  /// slashes.
   ///
   /// Returns a relative path (e.g. 'subdir/file.json').
   fn to_relative(&self, base_path: &Path) -> anyhow::Result<PathBuf>;
@@ -66,16 +67,21 @@ impl PathExt for PathBuf {
   }
 
   fn to_relative(&self, base_path: &Path) -> anyhow::Result<PathBuf> {
-    if !self.is_absolute() {
-      Ok(self.to_path_buf())
+    let path_to_normalize = if !self.is_absolute() {
+      self.to_path_buf()
     } else {
-      let relative_path =
-        self.strip_prefix(base_path).with_context(|| {
+      self
+        .strip_prefix(base_path)
+        .with_context(|| {
           format!("Unable to convert path to relative: {}", self.display())
-        })?;
+        })?
+        .to_path_buf()
+    };
 
-      Ok(relative_path.to_path_buf())
-    }
+    // Convert to string and normalize delimiters to forward slashes.
+    let path_str = path_to_normalize.to_string_lossy().replace('\\', "/");
+
+    Ok(PathBuf::from(path_str))
   }
 
   fn to_absolute(&self, base_path: &Path) -> anyhow::Result<PathBuf> {

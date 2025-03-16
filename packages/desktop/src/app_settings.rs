@@ -78,8 +78,7 @@ impl<'de> Deserialize<'de> for StartupConfig {
       path.split_once(['/', '\\']).map_or(
         (path.to_string(), String::new()),
         |(pack_dir, widget_name)| {
-          let pack_id = format!("local.{}", pack_dir);
-          (pack_id, widget_name.to_string())
+          (pack_dir.to_string(), widget_name.to_string())
         },
       )
     }

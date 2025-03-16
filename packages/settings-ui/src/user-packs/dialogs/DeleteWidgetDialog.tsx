@@ -19,9 +19,12 @@ export function DeleteWidgetDialog(props: DeleteWidgetDialogProps) {
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>Delete Widget</AlertDialogTitle>
-        <AlertDialogDescription>
-          Are you sure you want to delete "{props.widget.name}"? This
-          action cannot be undone.
+        <AlertDialogDescription class="space-y-2">
+          <p>Are you sure you want to delete "{props.widget.name}"?</p>
+          <p>
+            This will remove the widget from the <code>zpack.json</code>{' '}
+            file. Other files will not be affected.
+          </p>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

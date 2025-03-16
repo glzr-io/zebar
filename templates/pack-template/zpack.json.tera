@@ -5,5 +5,5 @@
   "tags": ["desktop", "widget"],
   "previewImages": ["./resources/preview-image-1.png"],
   "excludeFiles": "src\ntest",
-  "widgetPaths": []
+  "widgets": []
 }

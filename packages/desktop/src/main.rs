@@ -165,7 +165,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.manage(app_settings.clone());
 
   // Initialize `Config` in Tauri state.
-  let config = Arc::new(Config::new(app.handle(), app_settings.clone())?);
+  let config = Arc::new(Config::new(app_settings.clone())?);
   app.manage(config.clone());
 
   // Initialize `MonitorState` in Tauri state.

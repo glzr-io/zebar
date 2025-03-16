@@ -18,7 +18,7 @@ export type MarketplaceWidgetPack = {
   versions: WidgetPackVersion[];
   description: string;
   version: string;
-  widgetConfigs: WidgetConfig[];
+  widgets: WidgetConfig[];
   tags: string[];
 };
 
@@ -42,7 +42,7 @@ const marketplacePacksMock: MarketplaceWidgetPack[] = [
     description: 'CPU, memory, and disk usage widgets',
     version: '1.0.0',
     tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
-    widgetConfigs: [
+    widgets: [
       {
         name: 'cpu-usage',
         htmlPath: 'cpu-usage.html',
@@ -91,7 +91,7 @@ const marketplacePacksMock: MarketplaceWidgetPack[] = [
     description: 'Current weather and forecast widgets',
     version: '2.1.0',
     tags: ['weather', 'forecast', 'current'],
-    widgetConfigs: [
+    widgets: [
       {
         name: 'current-weather',
         htmlPath: 'current-weather.html',

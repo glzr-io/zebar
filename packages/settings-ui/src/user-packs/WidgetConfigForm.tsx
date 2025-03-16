@@ -20,7 +20,7 @@ import { WidgetCachingSubform } from './WidgetCachingSubform';
 
 export interface WidgetConfigFormProps {
   config: WidgetConfig;
-  configPath: string;
+  packId: string;
   onChange: (config: WidgetConfig) => void;
 }
 
@@ -30,7 +30,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
   // Update the form when the config is different.
   createEffect(
     on(
-      () => props.configPath,
+      () => props.packId,
       () => {
         configForm.unsetDirty();
         configForm.unsetTouched();
@@ -119,6 +119,8 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
         return ['bottom'];
       case 'bottom_right':
         return ['bottom', 'right'];
+      default:
+        throw new Error(`Invalid anchor: ${anchor}`);
     }
   }
 
@@ -137,7 +139,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <TextField
                 id="html-path"
                 label="HTML path"
-                placeholder="/path/to/widget.html"
+                placeholder="path/to/widget.html"
                 {...inputProps()}
               />
             )}

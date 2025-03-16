@@ -8,7 +8,6 @@ use std::{
 use anyhow::Context;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
 use tokio::sync::{broadcast, Mutex};
 
 use crate::{
@@ -38,22 +37,6 @@ pub struct WidgetPack {
   ///
   /// This is the parent directory of `config_path`.
   pub directory_path: PathBuf,
-
-  /// List of widget configs.
-  pub widget_configs: Vec<WidgetConfigEntry>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WidgetConfigEntry {
-  /// Absolute path to the widget config file.
-  pub absolute_path: PathBuf,
-
-  /// Relative path to the widget config file.
-  pub relative_path: PathBuf,
-
-  /// Deserialized widget config.
-  pub value: WidgetConfig,
 }
 
 /// Deserialized widget pack.
@@ -81,8 +64,8 @@ pub struct WidgetPackConfig {
   /// Files to exclude from the pack during publishing.
   pub exclude_files: String,
 
-  /// Paths to widgets in the pack.
-  pub widget_paths: Vec<PathBuf>,
+  /// Widgets in the pack.
+  pub widgets: Vec<WidgetConfig>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -93,9 +76,7 @@ pub enum WidgetPackType {
 }
 
 /// Deserialized widget config.
-///
-/// This is the type of the `zebar-widget.json` file.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetConfig {
   /// JSON schema URL to validate the widget config file.
@@ -137,7 +118,7 @@ pub struct WidgetConfig {
   pub presets: Vec<WidgetPreset>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ZOrder {
   BottomMost,
@@ -145,7 +126,7 @@ pub enum ZOrder {
   TopMost,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct WidgetCaching {
   /// Default duration to cache network resources for (in seconds).
@@ -164,7 +145,7 @@ impl Default for WidgetCaching {
   }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetCachingRule {
   /// URL regex pattern to match.
@@ -174,7 +155,7 @@ pub struct WidgetCachingRule {
   pub duration: u32,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPreset {
   #[serde(default = "default_preset_name")]
@@ -211,7 +192,7 @@ pub struct WidgetPlacement {
 }
 
 #[derive(
-  Clone, Copy, Debug, Deserialize, PartialEq, Serialize, ValueEnum,
+  Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, ValueEnum,
 )]
 #[clap(rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
@@ -227,7 +208,7 @@ pub enum AnchorPoint {
   BottomRight,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", content = "match", rename_all = "snake_case")]
 pub enum MonitorSelection {
   All,
@@ -237,14 +218,14 @@ pub enum MonitorSelection {
   Name(String),
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPrivileges {
   /// Shell commands that the widget is allowed to run.
   pub shell_commands: Vec<ShellPrivilege>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShellPrivilege {
   /// Program name (if in PATH) or full path to the program.
@@ -254,7 +235,7 @@ pub struct ShellPrivilege {
   pub args_regex: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DockConfig {
   /// Whether to dock the widget to the monitor edge and reserve screen
@@ -271,7 +252,7 @@ pub struct DockConfig {
   pub window_margin: LengthValue,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DockEdge {
   Top,
@@ -295,7 +276,7 @@ pub struct CreateWidgetPackArgs {
   pub exclude_files: String,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWidgetPackArgs {
   pub name: Option<String>,
@@ -303,7 +284,7 @@ pub struct UpdateWidgetPackArgs {
   pub tags: Option<Vec<String>>,
   pub preview_images: Option<Vec<String>>,
   pub exclude_files: Option<String>,
-  pub widget_paths: Option<Vec<PathBuf>>,
+  pub widgets: Option<Vec<WidgetConfig>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -316,9 +297,6 @@ pub struct CreateWidgetConfigArgs {
 
 #[derive(Debug)]
 pub struct Config {
-  /// Handle to the Tauri application.
-  app_handle: AppHandle,
-
   /// Reference to `AppSettings`.
   app_settings: Arc<AppSettings>,
 
@@ -340,10 +318,7 @@ impl Config {
   /// Reads the config files within the config directory.
   ///
   /// Returns a new `Config` instance.
-  pub fn new(
-    app_handle: &AppHandle,
-    app_settings: Arc<AppSettings>,
-  ) -> anyhow::Result<Self> {
+  pub fn new(app_settings: Arc<AppSettings>) -> anyhow::Result<Self> {
     let widget_packs = Self::read_widget_packs(&app_settings)?;
 
     let (widget_packs_change_tx, _widget_packs_change_rx) =
@@ -353,7 +328,6 @@ impl Config {
       broadcast::channel(16);
 
     Ok(Self {
-      app_handle: app_handle.clone(),
       app_settings,
       widget_packs: Arc::new(Mutex::new(widget_packs)),
       _widget_packs_change_rx,
@@ -455,64 +429,15 @@ impl Config {
       )
     })?;
 
-    let widget_configs =
-      Self::read_widget_configs(&pack_config, pack_dir)?;
-
     let pack = WidgetPack {
-      id: format!("local.{}", pack_config.name),
+      id: pack_config.name.to_string(),
       r#type: WidgetPackType::Local,
       config_path: config_path.to_path_buf(),
       directory_path: pack_dir.to_path_buf(),
       config: pack_config,
-      widget_configs,
     };
 
     Ok(pack)
-  }
-
-  /// Reads widget configs for a widget pack.
-  ///
-  /// Returns a vector of `WidgetConfigEntry` instances.
-  fn read_widget_configs(
-    pack_config: &WidgetPackConfig,
-    pack_dir: &Path,
-  ) -> anyhow::Result<Vec<WidgetConfigEntry>> {
-    let mut widget_configs = vec![];
-
-    for widget_path in &pack_config.widget_paths {
-      let absolute_path = widget_path.to_absolute(pack_dir)?;
-      let relative_path = widget_path.to_relative(pack_dir)?;
-
-      let config = read_and_parse_json::<WidgetConfig>(&absolute_path)
-        .map(|(config, _)| config)
-        .map_err(|err| {
-          anyhow::anyhow!(
-            "Failed to parse widget config at '{}': {:?}",
-            absolute_path.display(),
-            err
-          )
-        });
-
-      match config {
-        Ok(widget_config) => {
-          tracing::info!(
-            "Found valid widget config at: {}",
-            absolute_path.display()
-          );
-
-          widget_configs.push(WidgetConfigEntry {
-            absolute_path,
-            relative_path,
-            value: widget_config,
-          });
-        }
-        Err(err) => {
-          tracing::error!("{:?}", err);
-        }
-      }
-    }
-
-    Ok(widget_configs)
   }
 
   /// Returns all widget packs as a hashmap.
@@ -550,42 +475,36 @@ impl Config {
     pack_id: &str,
     widget_name: &str,
     new_config: WidgetConfig,
-  ) -> anyhow::Result<WidgetConfigEntry> {
+  ) -> anyhow::Result<WidgetConfig> {
     tracing::info!("Updating widget config for {}.", widget_name);
 
-    let config_entry = {
-      let mut widget_packs = self.widget_packs.lock().await;
+    let pack = self.find_local_widget_pack(pack_id).await?;
 
-      let pack = widget_packs
-        .get_mut(pack_id)
-        .context(format!("Widget pack not found for {}.", pack_id))?;
+    let mut widgets = pack.config.widgets.clone();
+    let widget_index = widgets
+      .iter()
+      .position(|w| w.name == widget_name)
+      .context(format!("Widget config not found for {}.", widget_name))?;
 
-      let config_entry = pack
-        .widget_configs
-        .iter_mut()
-        .find(|entry| entry.value.name == widget_name)
-        .context(format!(
-          "Widget config not found for {}.",
-          widget_name
-        ))?;
+    widgets[widget_index] = new_config.clone();
 
-      // Update the config in state.
-      config_entry.value = new_config.clone();
-      config_entry.clone()
-    };
+    // Update the pack config to persist changes to disk.
+    self
+      .update_widget_pack(
+        pack_id,
+        UpdateWidgetPackArgs {
+          widgets: Some(widgets),
+          ..Default::default()
+        },
+      )
+      .await?;
 
     // Emit the changed config.
     self
       .widget_configs_change_tx
       .send((pack_id.to_string(), new_config.clone()))?;
 
-    // Write the updated config to file.
-    fs::write(
-      &config_entry.absolute_path,
-      serde_json::to_string_pretty(&new_config)? + "\n",
-    )?;
-
-    Ok(config_entry)
+    Ok(new_config)
   }
 
   /// Creates a new widget pack.
@@ -645,13 +564,7 @@ impl Config {
       args.preview_images.unwrap_or(pack.config.preview_images);
     pack.config.exclude_files =
       args.exclude_files.unwrap_or(pack.config.exclude_files);
-
-    // Only re-parse widget configs if widget paths have changed.
-    if let Some(new_widget_paths) = args.widget_paths {
-      pack.config.widget_paths = new_widget_paths;
-      pack.widget_configs =
-        Self::read_widget_configs(&pack.config, &pack.directory_path)?;
-    }
+    pack.config.widgets = args.widgets.unwrap_or(pack.config.widgets);
 
     // Write the updated pack config to file.
     fs::write(
@@ -665,7 +578,7 @@ impl Config {
       // Update the pack ID and remove the old entry if a new name is
       // provided.
       if let Some(new_name) = args.name {
-        pack.id = format!("local.{}", new_name);
+        pack.id = new_name;
         widget_packs.remove(&pack_id);
       }
 
@@ -711,12 +624,12 @@ impl Config {
   pub async fn create_widget_config(
     &self,
     args: CreateWidgetConfigArgs,
-  ) -> anyhow::Result<WidgetConfigEntry> {
+  ) -> anyhow::Result<WidgetConfig> {
     let pack = self.find_local_widget_pack(&args.pack_id).await?;
     let widget_dir = pack.directory_path.join(&args.name);
 
     self.app_settings.init_template(
-      TemplateResource::Widget(args.template),
+      TemplateResource::Widget(args.template.clone()),
       &widget_dir,
       &HashMap::from([
         ("WIDGET_NAME", args.name.clone()),
@@ -724,30 +637,56 @@ impl Config {
       ]),
     )?;
 
+    let widget_config = WidgetConfig {
+      name: args.name.clone(),
+      html_path: match args.template {
+        FrontendTemplate::ReactBuildless => {
+          widget_dir.join("index.html").to_relative(&pack.directory_path)?
+        }
+        FrontendTemplate::SolidTypescript => {
+          widget_dir.join("dist/index.html").to_relative(&pack.directory_path)?
+        }
+      },
+      schema: Some(format!(
+        "https://github.com/glzr-io/zebar/raw/v{}/resources/widget-schema.json",
+        VERSION_NUMBER
+      )),
+      z_order: ZOrder::Normal,
+      shown_in_taskbar: false,
+      focused: false,
+      resizable: false,
+      transparent: false,
+      caching: WidgetCaching::default(),
+      privileges: WidgetPrivileges::default(),
+      presets: vec![WidgetPreset {
+        name: "default".to_string(),
+        placement: WidgetPlacement {
+          anchor: AnchorPoint::TopLeft,
+          offset_x: "0px".parse()?,
+          offset_y: "0px".parse()?,
+          width: "100%".parse()?,
+          height: "40px".parse()?,
+          monitor_selection: MonitorSelection::All,
+          dock_to_edge: DockConfig::default(),
+        },
+      }],
+    };
+
     // Add widget to pack config.
-    let mut widget_paths = pack.config.widget_paths.clone();
-    widget_paths.push(format!("{}/zebar-widget.json", args.name).into());
+    let mut widgets = pack.config.widgets.clone();
+    widgets.push(widget_config.clone());
 
     self
       .update_widget_pack(
         &args.pack_id,
         UpdateWidgetPackArgs {
-          widget_paths: Some(widget_paths),
+          widgets: Some(widgets),
           ..Default::default()
         },
       )
       .await?;
 
-    let widget_config_path = widget_dir.join("zebar-widget.json");
-    let (widget_config, _) =
-      read_and_parse_json::<WidgetConfig>(&widget_config_path)?;
-
-    Ok(WidgetConfigEntry {
-      absolute_path: widget_config_path.clone(),
-      relative_path: widget_config_path
-        .to_relative(&pack.directory_path)?,
-      value: widget_config,
-    })
+    Ok(widget_config)
   }
 
   /// Deletes a widget from a pack.
@@ -761,19 +700,15 @@ impl Config {
   ) -> anyhow::Result<()> {
     let pack = self.find_local_widget_pack(pack_id).await?;
 
-    // Remove directory with the same name as the widget.
-    let widget_dir = pack.directory_path.join(widget_name);
-    let _ = fs::remove_dir_all(&widget_dir);
-
     // Remove widget from pack config.
-    let mut widget_paths = pack.config.widget_paths.clone();
-    widget_paths.retain(|path| path != &widget_dir);
+    let mut widgets = pack.config.widgets.clone();
+    widgets.retain(|widget| widget.name != widget_name);
 
     self
       .update_widget_pack(
         pack_id,
         UpdateWidgetPackArgs {
-          widget_paths: Some(widget_paths),
+          widgets: Some(widgets),
           ..Default::default()
         },
       )

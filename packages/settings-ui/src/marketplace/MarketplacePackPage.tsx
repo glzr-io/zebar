@@ -214,7 +214,7 @@ export function MarketplacePackPage() {
 
                   <TabsContent value="widgets" class="space-y-6">
                     <div class="grid gap-6 sm:grid-cols-2">
-                      {selectedPack().widgetConfigs.map(widget => (
+                      {selectedPack().widgets.map(widget => (
                         <div class="group relative space-y-3">
                           <div>
                             <h3 class="font-medium">{widget.name}</h3>

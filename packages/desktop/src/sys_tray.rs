@@ -20,7 +20,7 @@ use tracing::{error, info};
 
 use crate::{
   app_settings::{AppSettings, StartupConfig, VERSION_NUMBER},
-  config::{Config, WidgetConfigEntry, WidgetPack},
+  config::{Config, WidgetConfig, WidgetPack},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
@@ -522,11 +522,11 @@ impl SysTray {
     let mut pack_menu = SubmenuBuilder::new(&self.app_handle, label);
 
     // Add each widget config within the pack as a submenu.
-    if !pack.widget_configs.is_empty() {
-      for config_entry in &pack.widget_configs {
+    if !pack.config.widgets.is_empty() {
+      for widget_config in &pack.config.widgets {
         let widget_menu = self.create_widget_menu(
           &pack.id,
-          config_entry,
+          widget_config,
           &pack_states,
           startup_configs,
         )?;
@@ -551,27 +551,27 @@ impl SysTray {
   fn create_widget_menu(
     &self,
     pack_id: &String,
-    config_entry: &WidgetConfigEntry,
+    widget_config: &WidgetConfig,
     pack_states: &[&WidgetState],
     startup_configs: &[StartupConfig],
   ) -> anyhow::Result<Submenu<Wry>> {
     let widget_states = pack_states
       .iter()
-      .filter(|state| state.name == config_entry.value.name)
+      .filter(|state| state.name == widget_config.name)
       .collect::<Vec<_>>();
 
     let label = match widget_states.len() {
-      0 => config_entry.value.name.clone(),
+      0 => widget_config.name.clone(),
       _ => {
-        format!("({}) {}", widget_states.len(), config_entry.value.name)
+        format!("({}) {}", widget_states.len(), widget_config.name)
       }
     };
 
     let mut widget_menu = SubmenuBuilder::new(&self.app_handle, label);
 
     // Add a toggle for starting/stopping each preset of the widget.
-    if !config_entry.value.presets.is_empty() {
-      for preset in &config_entry.value.presets {
+    if !widget_config.presets.is_empty() {
+      for preset in &widget_config.presets {
         let preset_states = widget_states
           .iter()
           .filter(|state| {
@@ -591,7 +591,7 @@ impl SysTray {
             enable: preset_states.is_empty(),
             preset: preset.name.clone(),
             pack_id: pack_id.clone(),
-            widget_name: config_entry.value.name.clone(),
+            widget_name: widget_config.name.clone(),
           },
           label,
           true,
@@ -608,21 +608,21 @@ impl SysTray {
     widget_menu = widget_menu.text(
       MenuEvent::EditWidget {
         pack_id: pack_id.clone(),
-        widget_name: config_entry.value.name.clone(),
+        widget_name: widget_config.name.clone(),
       },
       "Settings",
     );
 
     // Add a submenu for toggling the widget's presets on startup.
-    if !config_entry.value.presets.is_empty() {
+    if !widget_config.presets.is_empty() {
       let mut widget_startup_menu =
         SubmenuBuilder::new(&self.app_handle, "Run on start-up");
 
-      for preset in &config_entry.value.presets {
+      for preset in &widget_config.presets {
         let is_launched_on_startup =
           startup_configs.iter().any(|config| {
             config.pack_id == *pack_id
-              && config.widget_name == config_entry.value.name
+              && config.widget_name == widget_config.name
               && config.preset == preset.name
           });
 
@@ -631,7 +631,7 @@ impl SysTray {
           MenuEvent::ToggleStartupWidgetConfig {
             enable: !is_launched_on_startup,
             pack_id: pack_id.clone(),
-            widget_name: config_entry.value.name.clone(),
+            widget_name: widget_config.name.clone(),
             preset: preset.name.clone(),
           },
           preset.name.clone(),
