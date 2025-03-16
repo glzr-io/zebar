@@ -17,7 +17,7 @@ import { ImageSelector, WidgetPack } from '~/common';
 
 export type WidgetPackFormData = Omit<
   z.infer<typeof configSchemas.widgetPack>,
-  'widgetPaths'
+  'widgets'
 >;
 
 export interface WidgetPackFormProps {

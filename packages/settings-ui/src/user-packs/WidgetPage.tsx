@@ -66,10 +66,10 @@ export function WidgetPage() {
   // Initialize the selected preset when a config is selected.
   createEffect(
     on(
-      () => selectedConfig(),
-      config => {
-        if (config) {
-          setSelectedPreset(config.presets[0]?.name ?? null);
+      () => selectedPack()?.id,
+      (id, prevId) => {
+        if (id !== prevId && selectedConfig()) {
+          setSelectedPreset(selectedConfig().presets[0]?.name ?? null);
           document.querySelector('#form-container')?.scrollTo(0, 0);
         }
       },
@@ -112,13 +112,15 @@ export function WidgetPage() {
               <WidgetConfigForm
                 config={config()}
                 packId={selectedPack().id}
-                onChange={config =>
-                  updateWidgetConfig(
-                    selectedPack().id,
-                    config.name,
-                    config,
-                  )
-                }
+                onChange={form => {
+                  if (form.isDirty() && !form.hasError()) {
+                    updateWidgetConfig(
+                      selectedPack().id,
+                      form.value.name,
+                      form.value,
+                    );
+                  }
+                }}
               />
             </div>
 

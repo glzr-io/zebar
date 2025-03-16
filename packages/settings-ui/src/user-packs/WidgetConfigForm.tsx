@@ -12,20 +12,22 @@ import {
   TooltipTrigger,
 } from '@glzr/components';
 import { IconAlertTriangle, IconTrash } from '@tabler/icons-solidjs';
-import { createForm, Field } from 'smorf';
+import { createForm, Field, FormState } from 'smorf';
 import { batch, createEffect, on, Show } from 'solid-js';
-import { WidgetConfig } from 'zebar';
+import { configSchemas, WidgetConfig } from 'zebar';
 
 import { WidgetCachingSubform } from './WidgetCachingSubform';
 
 export interface WidgetConfigFormProps {
   config: WidgetConfig;
   packId: string;
-  onChange: (config: WidgetConfig) => void;
+  onChange: (form: FormState<WidgetConfig>) => void;
 }
 
 export function WidgetConfigForm(props: WidgetConfigFormProps) {
-  const configForm = createForm<WidgetConfig>(props.config);
+  const configForm = createForm<WidgetConfig>(props.config, {
+    schema: configSchemas.widget,
+  });
 
   // Update the form when the config is different.
   createEffect(
@@ -40,15 +42,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
     ),
   );
 
-  // Emit changes to the form value.
+  // Broadcast the form changes to the parent.
   createEffect(
     on(
       () => configForm.value,
-      formValue => {
-        if (configForm.isDirty()) {
-          props.onChange(formValue);
-        }
-      },
+      () => props.onChange(configForm),
     ),
   );
 
@@ -111,8 +109,12 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
         return ['top'];
       case 'top_right':
         return ['top', 'right'];
+      case 'center_left':
+        return ['left'];
       case 'center':
         return [];
+      case 'center_right':
+        return ['right'];
       case 'bottom_left':
         return ['bottom', 'left'];
       case 'bottom_center':
@@ -135,22 +137,24 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
 
         <CardContent class="space-y-4">
           <Field of={configForm} path="htmlPath">
-            {inputProps => (
+            {(inputProps, field) => (
               <TextField
                 id="html-path"
                 label="HTML path"
                 placeholder="path/to/widget.html"
+                error={field.error()}
                 {...inputProps()}
               />
             )}
           </Field>
 
           <Field of={configForm} path="zOrder">
-            {inputProps => (
+            {(inputProps, field) => (
               <SelectField
                 id="z-order"
                 label="Z-order"
                 placeholder="Select z-order"
+                error={field.error()}
                 options={[
                   {
                     value: 'normal',
@@ -171,40 +175,44 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
           </Field>
 
           <Field of={configForm} path="shownInTaskbar">
-            {inputProps => (
+            {(inputProps, field) => (
               <SwitchField
                 id="shown-in-taskbar"
                 label="Shown in taskbar"
+                error={field.error()}
                 {...inputProps()}
               />
             )}
           </Field>
 
           <Field of={configForm} path="focused">
-            {inputProps => (
+            {(inputProps, field) => (
               <SwitchField
                 id="focused"
                 label="Focused on launch"
+                error={field.error()}
                 {...inputProps()}
               />
             )}
           </Field>
 
           <Field of={configForm} path="resizable">
-            {inputProps => (
+            {(inputProps, field) => (
               <SwitchField
                 id="resizable"
                 label="Resizable"
+                error={field.error()}
                 {...inputProps()}
               />
             )}
           </Field>
 
           <Field of={configForm} path="transparent">
-            {inputProps => (
+            {(inputProps, field) => (
               <SwitchField
                 id="transparent"
                 label="Transparent"
+                error={field.error()}
                 {...inputProps()}
               />
             )}
@@ -228,11 +236,12 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                   of={configForm}
                   path={`privileges.shellCommands.${index}.program`}
                 >
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <TextField
                       id={`privilege-program-${index}`}
                       label="Program"
                       placeholder="Program name or full path"
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -242,11 +251,12 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                   of={configForm}
                   path={`privileges.shellCommands.${index}.argsRegex`}
                 >
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <TextField
                       id={`privilege-args-${index}`}
                       label="Arguments regex (use .* to allow all)"
                       placeholder="Regular expression for allowed arguments"
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -291,10 +301,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
             <div class="border p-4 rounded-md space-y-2">
               <div class="flex justify-between">
                 <Field of={configForm} path={`presets.${index}.name`}>
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <TextField
                       id={`name-${index}`}
                       label="Preset name"
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -319,16 +330,19 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Field of={configForm} path={`presets.${index}.anchor`}>
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <SelectField
                       id={`anchor-${index}`}
                       label="Anchor"
+                      error={field.error()}
                       options={
                         [
                           { value: 'top_left', label: 'Top left' },
                           { value: 'top_center', label: 'Top center' },
                           { value: 'top_right', label: 'Top right' },
+                          { value: 'center_left', label: 'Center left' },
                           { value: 'center', label: 'Center' },
+                          { value: 'center_right', label: 'Center right' },
                           { value: 'bottom_left', label: 'Bottom left' },
                           {
                             value: 'bottom_center',
@@ -363,10 +377,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                   of={configForm}
                   path={`presets.${index}.monitorSelection.type`}
                 >
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <SelectField
                       id={`monitor-${index}`}
                       label="Target monitor(s)"
+                      error={field.error()}
                       options={
                         [
                           { value: 'primary', label: 'Primary' },
@@ -383,10 +398,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {/* TODO: Change to px/percent input. */}
                 <Field of={configForm} path={`presets.${index}.offsetX`}>
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <TextField
                       id={`offset-x-${index}`}
                       label="Offset X"
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -394,10 +410,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
 
                 {/* TODO: Change to px/percent input. */}
                 <Field of={configForm} path={`presets.${index}.offsetY`}>
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <TextField
                       id={`offset-y-${index}`}
                       label="Offset Y"
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -407,10 +424,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {/* TODO: Change to px/percent input. */}
                 <Field of={configForm} path={`presets.${index}.width`}>
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <TextField
                       id={`width-${index}`}
                       label="Width"
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -418,10 +436,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
 
                 {/* TODO: Change to px/percent input. */}
                 <Field of={configForm} path={`presets.${index}.height`}>
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <TextField
                       id={`height-${index}`}
                       label="Height"
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -433,12 +452,13 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                   of={configForm}
                   path={`presets.${index}.dockToEdge.enabled`}
                 >
-                  {inputProps => (
+                  {(inputProps, field) => (
                     <SwitchField
                       id={`dock-enabled-${index}`}
                       class="flex flex-wrap items-center gap-x-4 [&>:last-child]:w-full"
                       label="Dock to edge (Windows-only)"
                       description="Whether to dock the widget to the monitor edge and reserve screen space for it."
+                      error={field.error()}
                       {...inputProps()}
                     />
                   )}
@@ -474,12 +494,13 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       of={configForm}
                       path={`presets.${index}.dockToEdge.edge`}
                     >
-                      {inputProps => (
+                      {(inputProps, field) => (
                         <>
                           <SwitchField
                             id={`dock-edge-switch-${index}`}
                             label="Dock to nearest detected edge"
                             class="flex items-center gap-x-4"
+                            error={field.error()}
                             onBlur={() => inputProps().onBlur()}
                             onChange={enabled =>
                               inputProps().onChange(
@@ -522,11 +543,12 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       of={configForm}
                       path={`presets.${index}.dockToEdge.windowMargin`}
                     >
-                      {inputProps => (
+                      {(inputProps, field) => (
                         <TextField
                           id={`dock-margin-${index}`}
                           label="Margin after window"
                           description="Margin to reserve after the widget window. Can be positive or negative."
+                          error={field.error()}
                           {...inputProps()}
                         />
                       )}

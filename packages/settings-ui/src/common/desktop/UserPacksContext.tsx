@@ -101,7 +101,7 @@ export type UpdateWidgetPackArgs = {
   tags?: string[];
   previewImages?: string[];
   excludeFiles?: string;
-  widgetPaths?: string[];
+  widgets?: string[];
 };
 
 export type CreateWidgetArgs = {
