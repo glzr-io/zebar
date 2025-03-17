@@ -76,6 +76,11 @@ export interface GlazeWmOutput {
   bindingModes: BindingModeConfig[];
 
   /**
+   * Whether GlazeWM is paused or not
+   */
+  isPaused: boolean
+
+  /**
    * Invokes a WM command (e.g. `"focus --workspace 1"`).
    *
    * @param command WM command to run (e.g. `"focus --workspace 1"`).
