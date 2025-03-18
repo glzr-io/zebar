@@ -21,9 +21,9 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
-    "dev": "npm run build -- --watch src",
-    "dev:local": "npm run build -- --watch src",
-    "prepublishOnly": "npm run build"
+    "dev": "pnpm build -- --watch src",
+    "dev:local": "pnpm dev",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@tauri-apps/api": "2.0.2",

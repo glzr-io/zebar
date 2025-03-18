@@ -17,7 +17,7 @@ const name = z
   );
 
 const widget = z.object({
-  name: name,
+  name,
   htmlPath: z.string().refine(path => path.endsWith('.html'), {
     message:
       'Must be a valid HTML file path (e.g. "path/to/widget.html").',
@@ -97,7 +97,17 @@ const widgetPack = z.object({
     .max(1000, 'Description cannot exceed 1000 characters.'),
   tags: z.array(z.string()).max(10, 'At most 10 tags are allowed.'),
   previewImages: z
-    .array(z.string())
+    .array(
+      z
+        .string()
+        .refine(url => !url.startsWith('http'), {
+          message: 'Preview image must be a file within the widget pack.',
+        })
+        .refine(url => url.includes(':\\') || url.startsWith('/'), {
+          message:
+            'Preview image must be a relative file path (e.g. "resources/preview.png")',
+        }),
+    )
     .min(1, 'At least one preview image is required.')
     .max(6, 'At most 6 preview images are allowed.'),
   excludeFiles: z

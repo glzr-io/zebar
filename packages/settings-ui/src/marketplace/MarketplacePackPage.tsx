@@ -17,21 +17,25 @@ import {
   IconBrandGithub,
 } from '@tabler/icons-solidjs';
 import { open as shellOpen } from '@tauri-apps/plugin-shell';
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createResource, createSignal, Show } from 'solid-js';
 
 import {
   AppBreadcrumbs,
   MarketplaceWidgetPack,
+  useApiClient,
   useMarketplacePacks,
 } from '~/common';
 
 export function MarketplacePackPage() {
   const params = useParams();
+  const apiClient = useApiClient();
   const marketplacePacks = useMarketplacePacks();
 
   const [currentImageIndex, setCurrentImageIndex] = createSignal(0);
 
-  createEffect(() => marketplacePacks.selectPack(params.id));
+  const [pack] = createResource(() =>
+    apiClient.widgetPack.getById.query({ id: params.id }),
+  );
 
   function nextImage(selectedPack: MarketplaceWidgetPack) {
     setCurrentImageIndex(prev =>
@@ -47,7 +51,7 @@ export function MarketplacePackPage() {
 
   return (
     <div class="container mx-auto pt-3.5 pb-32">
-      <Show when={marketplacePacks.selectedPack()}>
+      <Show when={pack()}>
         {selectedPack => (
           <div class="space-y-8">
             <div class="space-y-3">
@@ -68,25 +72,18 @@ export function MarketplacePackPage() {
                 </h1>
 
                 <Badge variant="secondary" class="h-6">
-                  v{selectedPack().version}
+                  v{selectedPack().latestVersion}
                 </Badge>
               </div>
 
               <div class="flex items-center gap-4 text-sm text-muted-foreground">
                 <div class="flex items-center gap-2">
-                  <img
-                    src="https://placehold.co/200x200"
-                    alt={selectedPack().author}
-                    width={24}
-                    height={24}
-                    class="rounded-full"
-                  />
-                  <span>by {selectedPack().author}</span>
+                  <span>by {selectedPack().id.split('.')[1]}</span>
                 </div>
                 <span>
                   Published{' '}
                   {new Date(
-                    selectedPack().versions?.[0].publishDate,
+                    selectedPack().versions?.[0].createdAt,
                   ).toLocaleDateString()}
                 </span>
               </div>
@@ -157,29 +154,29 @@ export function MarketplacePackPage() {
 
                 <Card>
                   <CardContent>
-                    <div class="space-y-2 mt-3">
-                      <h3 class="font-medium">Repository</h3>
-                      <a
-                        class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground cursor-pointer"
-                        onClick={e => {
-                          e.preventDefault();
-                          shellOpen(selectedPack().versions?.[0].repoUrl);
-                        }}
-                      >
-                        <IconBrandGithub class="h-4 w-4" />
-                        {new URL(
-                          selectedPack().versions?.[0].repoUrl,
-                        ).pathname.slice(1)}
-                      </a>
-                    </div>
+                    <Show when={selectedPack().repositoryUrl}>
+                      {repositoryUrl => (
+                        <div class="space-y-2 mt-3">
+                          <h3 class="font-medium">Repository</h3>
+                          <a
+                            class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+                            onClick={e => {
+                              e.preventDefault();
+                              shellOpen(repositoryUrl());
+                            }}
+                          >
+                            <IconBrandGithub class="h-4 w-4" />
+                            {new URL(repositoryUrl()).pathname.slice(1)}
+                          </a>
+                        </div>
+                      )}
+                    </Show>
 
                     <div class="space-y-2 mt-1">
                       <h3 class="font-medium">Tags</h3>
                       <div class="flex flex-wrap gap-2">
                         {selectedPack().tags.map(tag => (
-                          <Badge key={tag} variant="secondary">
-                            {tag}
-                          </Badge>
+                          <Badge variant="secondary">{tag}</Badge>
                         ))}
                       </div>
                     </div>
@@ -214,10 +211,10 @@ export function MarketplacePackPage() {
 
                   <TabsContent value="widgets" class="space-y-6">
                     <div class="grid gap-6 sm:grid-cols-2">
-                      {selectedPack().widgets.map(widget => (
+                      {selectedPack().widgetNames.map(widgetName => (
                         <div class="group relative space-y-3">
                           <div>
-                            <h3 class="font-medium">{widget.name}</h3>
+                            <h3 class="font-medium">{widgetName}</h3>
                           </div>
                         </div>
                       ))}
@@ -231,12 +228,12 @@ export function MarketplacePackPage() {
                           <div class="space-y-1">
                             <div class="flex items-center gap-2">
                               <h3 class="font-medium">
-                                v{version.versionNumber}
+                                v{version.version}
                               </h3>
                               <span class="text-sm text-muted-foreground">
                                 •{' '}
                                 {new Date(
-                                  version.publishDate,
+                                  version.createdAt,
                                 ).toLocaleDateString()}
                               </span>
                             </div>

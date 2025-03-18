@@ -2,8 +2,9 @@
   "name": "@zebar/desktop",
   "version": "0.0.0",
   "scripts": {
-    "build": "npm run tauri build -- --verbose",
-    "dev": "npm run tauri dev",
+    "build": "pnpm tauri build -- --verbose",
+    "dev": "pnpm tauri dev",
+    "dev:local": "pnpm dev",
     "format": "cargo fmt",
     "lint": "cargo fmt --check",
     "tauri": "tauri"

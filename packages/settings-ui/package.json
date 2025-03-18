@@ -3,12 +3,13 @@
   "version": "0.0.0",
   "description": "",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite",
-    "dev:local": "vite"
+    "build": "cross-env VITE_API_URL=https://api.glzr.io vite build",
+    "dev": "cross-env VITE_API_URL=https://api.glzr.io vite",
+    "dev:local": "cross-env VITE_API_URL=http://localhost:3000 vite"
   },
   "dependencies": {
     "@glzr/components": "1.2.0",
+    "@glzr/data-access": "0.0.5",
     "@solidjs/router": "0.14.8",
     "@tabler/icons-solidjs": "3.19.0",
     "@tauri-apps/api": "2.0.2",
@@ -21,6 +22,7 @@
     "zod": "3.24.2"
   },
   "devDependencies": {
+    "cross-env": "7.0.3",
     "postcss": "8.4.47",
     "tailwindcss": "3.4.13 ",
     "tailwindcss-animate": "1.0.7",
