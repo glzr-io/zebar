@@ -15,9 +15,12 @@ import { useApiClient } from '../api-client';
 type MarketplacePacksContextState = {
   allPacks: Resource<MarketplaceWidgetPack[]>;
   previewPack: Accessor<MarketplaceWidgetPack | null>;
-  install: (pack: MarketplaceWidgetPack) => void;
-  startPreview: (pack: MarketplaceWidgetPack) => void;
-  stopPreview: () => void;
+  install: (pack: MarketplaceWidgetPack) => Promise<void>;
+  startPreview: (
+    pack: MarketplaceWidgetPack,
+    widgetName: string,
+  ) => Promise<void>;
+  stopPreview: () => Promise<void>;
 };
 
 export type MarketplaceWidgetPack =
@@ -42,29 +45,37 @@ export function MarketplacePacksProvider(props: {
   const [previewPack, setPreviewPack] =
     createSignal<MarketplaceWidgetPack | null>(null);
 
-  function install(pack: MarketplaceWidgetPack) {
-    invoke<void>('install_widget_pack', {
+  async function install(pack: MarketplaceWidgetPack) {
+    await invoke<void>('install_widget_pack', {
       packId: pack.id,
       version: pack.latestVersion,
       tarballUrl: pack.tarballUrl,
+      isPreview: false,
     });
   }
 
-  function startPreview(pack: MarketplaceWidgetPack) {
-    invoke<void>('preview_widget_pack', {
+  async function startPreview(
+    pack: MarketplaceWidgetPack,
+    widgetName: string,
+  ) {
+    await invoke<void>('install_widget_pack', {
       packId: pack.id,
       version: pack.latestVersion,
       tarballUrl: pack.tarballUrl,
+      isPreview: true,
+    });
+
+    await invoke<void>('start_widget_preview', {
+      packId: pack.id,
+      version: pack.latestVersion,
+      widgetName,
     });
 
     setPreviewPack(pack);
   }
 
-  function stopPreview() {
-    invoke<void>('stop_preview_widget_pack', {
-      packId: previewPack()?.id,
-    });
-
+  async function stopPreview() {
+    await invoke<void>('stop_widget_preview');
     setPreviewPack(null);
   }
 

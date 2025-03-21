@@ -11,6 +11,7 @@ use crate::{
     Config, CreateWidgetConfigArgs, CreateWidgetPackArgs,
     UpdateWidgetPackArgs, WidgetConfig, WidgetPack, WidgetPlacement,
   },
+  marketplace_installer::MarketplaceInstaller,
   providers::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
     ProviderManager,
@@ -181,6 +182,42 @@ pub async fn call_provider_function(
 ) -> anyhow::Result<ProviderFunctionResponse, String> {
   provider_manager
     .call_function(config_hash, function)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn install_widget_pack(
+  pack_id: String,
+  version: String,
+  tarball_url: String,
+  is_preview: bool,
+  marketplace_manager: State<'_, Arc<MarketplaceInstaller>>,
+) -> anyhow::Result<(), String> {
+  marketplace_manager
+    .install_widget_pack(&pack_id, &version, &tarball_url, is_preview)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn start_widget_preview(
+  pack_id: String,
+  widget_name: String,
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  widget_factory
+    .start_preview(&pack_id, &widget_name)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn stop_widget_preview(
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  widget_factory
+    .stop_preview()
     .await
     .map_err(|err| err.to_string())
 }

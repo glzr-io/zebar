@@ -716,6 +716,12 @@ impl Config {
 
     Ok(())
   }
+
+  /// Registers a widget pack from the marketplace.
+  pub fn register_widget_pack(&self, metadata: MarketplacePackMetadata) {
+    let mut widget_packs = self.widget_packs.lock().await;
+    widget_packs.insert(metadata.pack_id, metadata);
+  }
 }
 
 /// Helper function for setting a default value for a boolean field.

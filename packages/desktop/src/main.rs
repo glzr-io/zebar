@@ -6,6 +6,7 @@ use std::{env, sync::Arc};
 
 use app_settings::AppSettings;
 use clap::Parser;
+use marketplace_installer::MarketplaceInstaller;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
@@ -32,7 +33,7 @@ mod cli;
 mod commands;
 mod common;
 mod config;
-mod marketplace;
+mod marketplace_installer;
 mod monitor_state;
 mod providers;
 mod publish;
@@ -106,6 +107,9 @@ async fn main() -> anyhow::Result<()> {
       commands::listen_provider,
       commands::unlisten_provider,
       commands::call_provider_function,
+      commands::install_widget_pack,
+      commands::start_widget_preview,
+      commands::stop_widget_preview,
       commands::set_always_on_top,
       commands::set_skip_taskbar,
       commands::shell_exec,
@@ -164,6 +168,11 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   let app_settings =
     Arc::new(AppSettings::new(app.handle(), config_dir_override)?);
   app.manage(app_settings.clone());
+
+  // Initialize `MarketplaceInstaller` in Tauri state.
+  let (marketplace_installer, install_rx) =
+    MarketplaceInstaller::new(app.handle(), app_settings.clone());
+  app.manage(marketplace_installer.clone());
 
   // Initialize `Config` in Tauri state.
   let config = Arc::new(Config::new(app_settings.clone())?);
@@ -226,6 +235,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     widget_factory,
     tray,
     manager,
+    install_rx,
     emit_rx,
   );
 
@@ -243,6 +253,7 @@ fn listen_events(
   tray: SysTray,
   manager: Arc<ProviderManager>,
   mut emit_rx: mpsc::UnboundedReceiver<ProviderEmission>,
+  mut install_rx: mpsc::UnboundedReceiver<MarketplacePackMetadata>,
 ) {
   let app_handle = app_handle.clone();
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
@@ -285,6 +296,11 @@ fn listen_events(
           info!("Provider emission: {:?}", provider_emission);
           let _ = app_handle.emit("provider-emit", provider_emission.clone());
           manager.update_cache(provider_emission).await;
+          Ok(())
+        },
+        Some(metadata) = install_rx.recv() => {
+          info!("Widget pack installed: {:?}", metadata);
+          config.register_widget_pack(metadata);
           Ok(())
         },
       };

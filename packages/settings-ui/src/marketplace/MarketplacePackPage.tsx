@@ -144,7 +144,10 @@ export function MarketplacePackPage() {
                     variant="outline"
                     class="w-full"
                     onClick={() =>
-                      marketplacePacks.startPreview(selectedPack())
+                      marketplacePacks.startPreview(
+                        selectedPack(),
+                        selectedPack().widgetNames[0],
+                      )
                     }
                   >
                     <IconEye class="mr-2 h-4 w-4" />
