@@ -1,4 +1,5 @@
 import type { RouterOutputs } from '@glzr/data-access';
+import { invoke } from '@tauri-apps/api/core';
 import {
   Accessor,
   createContext,
@@ -42,14 +43,28 @@ export function MarketplacePacksProvider(props: {
     createSignal<MarketplaceWidgetPack | null>(null);
 
   function install(pack: MarketplaceWidgetPack) {
-    // TODO
+    invoke<void>('install_widget_pack', {
+      packId: pack.id,
+      version: pack.latestVersion,
+      tarballUrl: pack.tarballUrl,
+    });
   }
 
   function startPreview(pack: MarketplaceWidgetPack) {
+    invoke<void>('preview_widget_pack', {
+      packId: pack.id,
+      version: pack.latestVersion,
+      tarballUrl: pack.tarballUrl,
+    });
+
     setPreviewPack(pack);
   }
 
   function stopPreview() {
+    invoke<void>('stop_preview_widget_pack', {
+      packId: previewPack()?.id,
+    });
+
     setPreviewPack(null);
   }
 

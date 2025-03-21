@@ -39,13 +39,13 @@ export function MarketplacePackPage() {
 
   function nextImage(selectedPack: MarketplaceWidgetPack) {
     setCurrentImageIndex(prev =>
-      prev === selectedPack.previewImages.length - 1 ? 0 : prev + 1,
+      prev === selectedPack.previewImageUrls.length - 1 ? 0 : prev + 1,
     );
   }
 
   function previousImage(selectedPack: MarketplaceWidgetPack) {
     setCurrentImageIndex(prev =>
-      prev === 0 ? selectedPack.previewImages.length - 1 : prev - 1,
+      prev === 0 ? selectedPack.previewImageUrls.length - 1 : prev - 1,
     );
   }
 
@@ -78,7 +78,7 @@ export function MarketplacePackPage() {
 
               <div class="flex items-center gap-4 text-sm text-muted-foreground">
                 <div class="flex items-center gap-2">
-                  <span>by {selectedPack().id.split('.')[1]}</span>
+                  <span>by {selectedPack().id.split('.')[0]}</span>
                 </div>
                 <span>
                   Published{' '}
@@ -93,7 +93,7 @@ export function MarketplacePackPage() {
             <div class="relative aspect-[2/1] w-full overflow-hidden rounded-lg bg-muted">
               <img
                 src={
-                  selectedPack().previewImages[currentImageIndex()] ||
+                  selectedPack().previewImageUrls[currentImageIndex()] ||
                   '/placeholder.svg'
                 }
                 alt={`${selectedPack().name} preview ${currentImageIndex() + 1}`}
@@ -118,7 +118,7 @@ export function MarketplacePackPage() {
                 </Button>
               </div>
               <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {selectedPack().previewImages.map((_, index) => (
+                {selectedPack().previewImageUrls.map((_, index) => (
                   <button
                     class={`h-1.5 w-1.5 rounded-full ${index === currentImageIndex() ? 'bg-white' : 'bg-white/50'}`}
                     onClick={() => setCurrentImageIndex(index)}
@@ -192,6 +192,9 @@ export function MarketplacePackPage() {
                     <TabsTrigger value="readme">Readme</TabsTrigger>
                     <TabsTrigger value="widgets">
                       Included widgets
+                      <Badge class="ml-1" variant="secondary">
+                        {selectedPack().widgetNames.length}
+                      </Badge>
                     </TabsTrigger>
                     <TabsTrigger value="versions">
                       Versions

@@ -22,11 +22,8 @@ export function MarketplacePage() {
       const searchQuery = filterQueryForm.value.search;
 
       const matchesSearch =
-        pack.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pack.description
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        pack.author.toLowerCase().includes(searchQuery.toLowerCase());
+        pack.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pack.description.toLowerCase().includes(searchQuery.toLowerCase());
 
       return matchesSearch;
     }),
@@ -63,7 +60,7 @@ export function MarketplacePage() {
             <A href={`/marketplace/packs/${pack.id}`} class="block">
               <div class="overflow-hidden rounded-lg aspect-[3/2] bg-muted">
                 <img
-                  src={pack.previewImages[0] || '/placeholder.svg'}
+                  src={pack.previewImageUrls?.[0] || '/placeholder.svg'}
                   alt={`Preview of ${pack.name}`}
                   width={600}
                   height={400}
@@ -74,7 +71,7 @@ export function MarketplacePage() {
                 <div class="space-y-1">
                   <h3 class="font-medium leading-none">{pack.name}</h3>
                   <p class="text-sm text-muted-foreground">
-                    by {pack.author}
+                    by {pack.id.split('.')[0]}
                   </p>
                 </div>
                 <div class="flex items-center gap-2">

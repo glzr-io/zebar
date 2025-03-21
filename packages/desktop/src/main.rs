@@ -32,6 +32,7 @@ mod cli;
 mod commands;
 mod common;
 mod config;
+mod marketplace;
 mod monitor_state;
 mod providers;
 mod publish;

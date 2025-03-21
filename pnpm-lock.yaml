@@ -110,8 +110,8 @@ importers:
         specifier: 1.2.0
         version: link:../../../glzr-components
       '@glzr/data-access':
-        specifier: 0.0.5
-        version: 0.0.5(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)
+        specifier: 0.0.7
+        version: 0.0.7(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)
       '@solidjs/router':
         specifier: 0.14.8
         version: 0.14.8(solid-js@1.9.3)
@@ -917,11 +917,11 @@ packages:
   '@floating-ui/utils@0.2.8':
     resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
 
-  '@glzr/backend@0.0.2':
-    resolution: {integrity: sha512-o3xcu/kN6Qixgg8BC/FUw8g8VoJlY25+A+W+qm2QOEQoyUnLHFNCxlo6eKL3t2lTrF7Ysa+pSALVo+4NkKLRXw==}
+  '@glzr/backend@0.0.4':
+    resolution: {integrity: sha512-kR40BJvTllP75uXDI6P/NjlUWfHzCb7Rayfq8rhdzXrfkPwXUlBeyjkBjzCsrXsMZz59KI+9HXIKh2ZG92Fo/g==}
 
-  '@glzr/data-access@0.0.5':
-    resolution: {integrity: sha512-S2wjmpicY3tAGu9oTthRKv7LwOetVv3/HciUt3uHp+nqWsD6aY3kQEdO1mko2Oku/3i+u39ek5BkHfLcb6rNow==}
+  '@glzr/data-access@0.0.7':
+    resolution: {integrity: sha512-XYMRNRriLHnlkvzE4Gv+puMhh1bGYMPWRIgxmbMEd8+1NOPhuqd5DsMYBnndkB/zr3yG0hXCTJPg1/oagtaghw==}
 
   '@glzr/style-guide@1.1.0':
     resolution: {integrity: sha512-/AtA3ZXIbbJGaWjTjxK0BfM3IE92FxysIp3ltCzd9dbMrjRXBvQI6TZ0zUFJorZHV3f0vhyDSqEgjSTbAufv7w==}
@@ -3190,15 +3190,15 @@ snapshots:
 
   '@floating-ui/utils@0.2.8': {}
 
-  '@glzr/backend@0.0.2(typescript@5.3.3)':
+  '@glzr/backend@0.0.4(typescript@5.3.3)':
     dependencies:
       '@trpc/server': 11.0.0-rc.819(typescript@5.3.3)
     transitivePeerDependencies:
       - typescript
 
-  '@glzr/data-access@0.0.5(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)':
+  '@glzr/data-access@0.0.7(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)':
     dependencies:
-      '@glzr/backend': 0.0.2(typescript@5.3.3)
+      '@glzr/backend': 0.0.4(typescript@5.3.3)
       '@trpc/client': 11.0.0-rc.819(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)
       better-auth: 1.2.2(typescript@5.3.3)
       solid-js: 1.9.5

@@ -44,8 +44,7 @@ pub async fn publish_widget_pack(
 
   // Upload to marketplace.
   let response =
-    upload_to_marketplace(&pack_config.config.name, args, &tarball_path)
-      .await?;
+    upload_to_marketplace(&pack_config_path, &tarball_path, args).await?;
 
   // Clean up temporary tarball.
   if let Err(err) = fs::remove_file(&tarball_path) {
@@ -144,14 +143,15 @@ fn create_tarball(
 
 /// Uploads the widget pack to the Zebar marketplace.
 async fn upload_to_marketplace(
-  name: &str,
-  args: &PublishArgs,
+  pack_config_path: &Path,
   tarball_path: &Path,
+  args: &PublishArgs,
 ) -> anyhow::Result<UploadResponse> {
   // Create multipart form.
   let mut form = Form::new()
-    .text("name", name.to_string())
     .text("version", args.version.to_string())
+    .file("packConfig", pack_config_path)
+    .await?
     .file("tarball", tarball_path)
     .await?;
 
