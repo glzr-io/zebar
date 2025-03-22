@@ -304,20 +304,10 @@ impl WidgetFactory {
       .decorations(false)
       .resizable(widget_config.resizable)
       .initialization_script(&self.initialization_script(&state)?)
-      .data_directory(
-        // TODO: Add this as an ext method on the Tauri window.
-        self
-          .app_handle
-          .path()
-          .resolve(
-            // Widgets from the same pack share their browser cache (i.e.
-            // `localStorage`, `sessionStorage`, SW cache, etc.).
-            format!("zebar/webview-cache/{}", pack_id),
-            BaseDirectory::Data,
-          )
-          .context("Unable to get data directory.")
-          .unwrap(),
-      )
+      // Widgets from the same pack share their browser cache (i.e.
+      // `localStorage`, `sessionStorage`, SW cache, etc.).
+      // TODO: Add this as an ext method on the Tauri window.
+      .data_directory(self.app_settings.webview_cache_dir.join(pack_id))
       .build()?;
 
       // Widget coordinates might be modified when docked to an edge.

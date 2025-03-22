@@ -15,7 +15,7 @@ use crate::{
     AppSettings, FrontendTemplate, TemplateResource, VERSION_NUMBER,
   },
   common::{read_and_parse_json, LengthValue, PathExt},
-  marketplace_installer::MarketplacePackMetadata,
+  marketplace_installer::{MarketplaceInstaller, MarketplacePackMetadata},
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -69,11 +69,11 @@ pub struct WidgetPackConfig {
   pub widgets: Vec<WidgetConfig>,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WidgetPackType {
   Local,
-  Marketplace,
+  Marketplace(MarketplacePackMetadata),
 }
 
 /// Deserialized widget config.
@@ -367,10 +367,14 @@ impl Config {
       WidgetPackType::Local,
     )?);
 
-    packs.extend(Self::read_widget_packs_of_type(
-      &app_settings.marketplace_download_dir,
-      WidgetPackType::Marketplace,
-    )?);
+    for (pack_id, metadata) in
+      MarketplaceInstaller::read_metadata_files(&app_settings)?
+    {
+      packs.extend(Self::read_widget_packs_of_type(
+        &app_settings.marketplace_download_dir,
+        WidgetPackType::Marketplace(metadata),
+      )?);
+    }
 
     Ok(packs)
   }
@@ -456,7 +460,10 @@ impl Config {
     })?;
 
     let pack = WidgetPack {
-      id: pack_config.name.to_string(),
+      id: match r#type {
+        WidgetPackType::Local => pack_config.name.to_string(),
+        WidgetPackType::Marketplace(metadata) => metadata.pack_id.clone(),
+      },
       r#type: r#type.clone(),
       config_path: config_path.to_path_buf(),
       directory_path: pack_dir.to_path_buf(),

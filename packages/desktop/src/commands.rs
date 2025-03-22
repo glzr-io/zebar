@@ -197,7 +197,7 @@ pub async fn install_widget_pack(
   tarball_url: String,
   is_preview: bool,
   marketplace_manager: State<'_, Arc<MarketplaceInstaller>>,
-) -> anyhow::Result<(), String> {
+) -> anyhow::Result<WidgetPack, String> {
   marketplace_manager
     .install(&pack_id, &version, &tarball_url, is_preview)
     .await

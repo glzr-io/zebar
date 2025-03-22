@@ -144,6 +144,9 @@ pub struct AppSettings {
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
+  /// Directory where webview cache files are stored.
+  pub webview_cache_dir: PathBuf,
+
   /// Directory where marketplace metadata files are stored.
   pub marketplace_meta_dir: PathBuf,
 
@@ -171,15 +174,22 @@ impl AppSettings {
         .resolve(".glzr/zebar", BaseDirectory::Home)
         .context("Unable to get home directory.")?,
     };
+
+    let webview_cache_dir = app_handle
+      .path()
+      .resolve("zebar/webview-cache", BaseDirectory::Data)
+      .context("Unable to resolve app data directory.")?;
+
     let marketplace_meta_dir = config_dir.join(".marketplace");
 
     let marketplace_download_dir = app_handle
       .path()
-      .resolve("downloads", BaseDirectory::AppData)
+      .resolve("zebar/downloads", BaseDirectory::Data)
       .context("Unable to resolve app data directory.")?;
 
     for dir in [
       &config_dir,
+      &webview_cache_dir,
       &marketplace_meta_dir,
       &marketplace_download_dir,
     ] {
@@ -192,6 +202,7 @@ impl AppSettings {
     Ok(Self {
       app_handle: app_handle.clone(),
       config_dir: config_dir.canonicalize_pretty()?,
+      webview_cache_dir: webview_cache_dir.canonicalize_pretty()?,
       marketplace_meta_dir: marketplace_meta_dir.canonicalize_pretty()?,
       marketplace_download_dir: marketplace_download_dir
         .canonicalize_pretty()?,

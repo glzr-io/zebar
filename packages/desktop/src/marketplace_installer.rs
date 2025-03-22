@@ -1,4 +1,5 @@
 use std::{
+  collections::HashMap,
   fs::{self},
   path::PathBuf,
   sync::Arc,
@@ -10,17 +11,21 @@ use flate2::read::GzDecoder;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tar::Archive;
-use tokio::{sync::mpsc, task};
+use tokio::{
+  sync::{mpsc, Mutex},
+  task,
+};
 
 use crate::{
   app_settings::AppSettings,
+  common::read_and_parse_json,
   config::{Config, WidgetPack, WidgetPackType},
 };
 
 /// Metadata about an installed marketplace widget pack.
 ///
 /// These are stored in `%userprofile%/.glzr/zebar/.marketplace`.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketplacePackMetadata {
   /// Unique identifier for the pack.
@@ -37,9 +42,14 @@ pub struct MarketplacePackMetadata {
 }
 
 /// Manages installation of marketplace widget packs.
+#[derive(Debug)]
 pub struct MarketplaceInstaller {
   /// Reference to `AppSettings`.
   app_settings: Arc<AppSettings>,
+
+  /// Map of pack ID's to their metadata.
+  // downloaded_packs: Arc<Mutex<HashMap<String,
+  // MarketplacePackMetadata>>>,
 
   /// Sender channel for newly installed widget packs.
   installed_tx: mpsc::Sender<WidgetPack>,
@@ -74,6 +84,23 @@ impl MarketplaceInstaller {
       .join(format!("{}.json", pack_id))
   }
 
+  /// Reads all pack metadata files.
+  pub fn read_metadata_files(
+    app_settings: &AppSettings,
+  ) -> anyhow::Result<HashMap<String, MarketplacePackMetadata>> {
+    let mut map = HashMap::new();
+
+    for entry in fs::read_dir(&app_settings.marketplace_meta_dir)? {
+      let entry = entry?;
+      let (metadata, _) =
+        read_and_parse_json::<MarketplacePackMetadata>(&entry.path())?;
+
+      map.insert(metadata.pack_id.clone(), metadata);
+    }
+
+    Ok(map)
+  }
+
   /// Installs a widget pack from the marketplace.
   pub async fn install(
     &self,
@@ -81,7 +108,7 @@ impl MarketplaceInstaller {
     version: &str,
     tarball_url: &str,
     is_preview: bool,
-  ) -> anyhow::Result<()> {
+  ) -> anyhow::Result<WidgetPack> {
     let pack_dir = self.pack_download_dir(pack_id);
 
     // Download and extract the pack. Skip the download if the directory
@@ -106,7 +133,7 @@ impl MarketplaceInstaller {
       fs::create_dir_all(&self.app_settings.marketplace_meta_dir)?;
 
       fs::write(
-        &self.pack_metadata_file_path(pack_id),
+        self.pack_metadata_file_path(pack_id),
         serde_json::to_string_pretty(&metadata)? + "\n",
       )?;
     }
@@ -115,13 +142,13 @@ impl MarketplaceInstaller {
 
     let pack = Config::read_widget_pack(
       &pack_dir.join("zpack.json"),
-      &WidgetPackType::Marketplace,
+      &WidgetPackType::Marketplace(metadata),
     )?;
 
     // Broadcast the installation event.
-    self.installed_tx.send(pack).await?;
+    self.installed_tx.send(pack.clone()).await?;
 
-    Ok(())
+    Ok(pack)
   }
 
   /// Downloads and extracts a widget pack.
@@ -142,7 +169,7 @@ impl MarketplaceInstaller {
     let bytes = response.bytes().await?;
 
     // Create the pack directory.
-    fs::create_dir_all(&pack_dir)?;
+    fs::create_dir_all(pack_dir)?;
     tracing::info!("Extracting widget pack to {}", pack_dir.display());
 
     // Extract the tarball.
@@ -152,9 +179,7 @@ impl MarketplaceInstaller {
       move || {
         let decoder = GzDecoder::new(&bytes[..]);
         let mut archive = Archive::new(decoder);
-
-        archive.unpack(&pack_dir)?;
-        anyhow::Ok(())
+        archive.unpack(&pack_dir)
       }
     })
     .await??;

@@ -9,6 +9,7 @@ import {
   useContext,
 } from 'solid-js';
 import { createResource } from 'solid-js';
+import { WidgetPack } from 'zebar';
 
 import { useApiClient } from '../api-client';
 
@@ -56,18 +57,19 @@ export function MarketplacePacksProvider(props: {
 
   async function startPreview(
     pack: MarketplaceWidgetPack,
-    widgetName: string,
+    widgetName?: string,
   ) {
-    await invoke<void>('install_widget_pack', {
+    const installedPack = await invoke<WidgetPack>('install_widget_pack', {
       packId: pack.id,
       version: pack.latestVersion,
       tarballUrl: pack.tarballUrl,
       isPreview: true,
     });
 
-    await invoke<void>('start_widget', {
+    await invoke<void>('start_widget_preset', {
       packId: pack.id,
-      widgetName,
+      widgetName: widgetName ?? installedPack.widgets[0].name,
+      presetName: installedPack.widgets[0].presets[0].name,
       isPreview: true,
     });
 
