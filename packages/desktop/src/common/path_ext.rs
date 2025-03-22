@@ -17,6 +17,8 @@ where
   /// let path = PathBuf::from("\\?\C:\\Users\\John\\Desktop\\test");
   /// path.canonicalize_pretty().unwrap(); // "C:\\Users\\John\\Desktop\\test"
   /// ```
+  ///
+  /// Returns the formatted path, or an error if the path does not exist.
   fn canonicalize_pretty(&self) -> anyhow::Result<PathBuf>;
 
   /// Strips the given base path. Path delimiters get normalized to forward
@@ -27,7 +29,8 @@ where
 
   /// Joins the given base path.
   ///
-  /// Returns an absolute path (e.g. 'C:\\Users\\John\\Desktop\\test').
+  /// Returns an absolute path (e.g. 'C:\\Users\\John\\Desktop\\test'), or
+  /// an error if the path does not exist.
   fn to_absolute(&self, base_path: &Path) -> anyhow::Result<PathBuf>;
 
   /// Converts the path to a unicode string.

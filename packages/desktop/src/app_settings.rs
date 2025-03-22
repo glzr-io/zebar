@@ -144,6 +144,12 @@ pub struct AppSettings {
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
+  /// Directory where marketplace metadata files are stored.
+  pub marketplace_meta_dir: PathBuf,
+
+  /// Directory where downloaded marketplace widget packs are stored.
+  pub marketplace_download_dir: PathBuf,
+
   /// Parsed app settings value.
   pub value: Arc<Mutex<AppSettingsValue>>,
 
@@ -165,6 +171,20 @@ impl AppSettings {
         .resolve(".glzr/zebar", BaseDirectory::Home)
         .context("Unable to get home directory.")?,
     };
+    let marketplace_meta_dir = config_dir.join(".marketplace");
+
+    let marketplace_download_dir = app_handle
+      .path()
+      .resolve("downloads", BaseDirectory::AppData)
+      .context("Unable to resolve app data directory.")?;
+
+    for dir in [
+      &config_dir,
+      &marketplace_meta_dir,
+      &marketplace_download_dir,
+    ] {
+      fs::create_dir_all(dir)?;
+    }
 
     let settings = Self::read_settings_or_init(&config_dir)?;
     let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
@@ -172,6 +192,9 @@ impl AppSettings {
     Ok(Self {
       app_handle: app_handle.clone(),
       config_dir: config_dir.canonicalize_pretty()?,
+      marketplace_meta_dir: marketplace_meta_dir.canonicalize_pretty()?,
+      marketplace_download_dir: marketplace_download_dir
+        .canonicalize_pretty()?,
       value: Arc::new(Mutex::new(settings)),
       _settings_change_rx,
       settings_change_tx,

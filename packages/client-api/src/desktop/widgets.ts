@@ -32,6 +32,14 @@ export interface Widget {
    * The window of the widget.
    */
   window: WidgetWindow;
+
+  /**
+   * Whether the widget is in preview mode.
+   *
+   * Widgets get marked as previews if they are opened from another
+   * preview widget.
+   */
+  isPreview: boolean;
 }
 
 function getWidgetState(): Widget {
@@ -58,6 +66,7 @@ export function currentWidget(): Widget {
     configPath: state.configPath,
     htmlPath: state.htmlPath,
     window: currentWindow(),
+    isPreview: state.isPreview,
   };
 }
 
@@ -77,6 +86,7 @@ export async function startWidget(
     args.packId ?? currentWidget().packId,
     widgetName,
     placement,
+    getWidgetState().isPreview,
   );
 }
 
@@ -96,5 +106,6 @@ export async function startWidgetPreset(
     args?.packId ?? currentWidget().packId,
     widgetName,
     presetName,
+    getWidgetState().isPreview,
   );
 }

@@ -15,6 +15,7 @@ use crate::{
     AppSettings, FrontendTemplate, TemplateResource, VERSION_NUMBER,
   },
   common::{read_and_parse_json, LengthValue, PathExt},
+  marketplace_installer::MarketplacePackMetadata,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -351,21 +352,45 @@ impl Config {
     Ok(())
   }
 
+  /// Reads all widget packs from:
+  ///  - The user's config directory.
+  ///  - The marketplace directory.
+  ///
+  /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
+  fn read_widget_packs(
+    app_settings: &AppSettings,
+  ) -> anyhow::Result<HashMap<String, WidgetPack>> {
+    let mut packs = HashMap::new();
+
+    packs.extend(Self::read_widget_packs_of_type(
+      &app_settings.config_dir,
+      WidgetPackType::Local,
+    )?);
+
+    packs.extend(Self::read_widget_packs_of_type(
+      &app_settings.marketplace_download_dir,
+      WidgetPackType::Marketplace,
+    )?);
+
+    Ok(packs)
+  }
+
   /// Finds all valid widget packs within the user's config directory.
   ///
   /// Widget packs are at the 2nd-level of the config directory
   /// (i.e. `<CONFIG_DIR>/*/zpack.json`).
   ///
   /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
-  fn read_widget_packs(
-    app_settings: &AppSettings,
+  fn read_widget_packs_of_type(
+    config_dir: &Path,
+    r#type: WidgetPackType,
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
     // Get paths to the subdirectories within the config directory.
-    let pack_dirs = fs::read_dir(&app_settings.config_dir)
+    let pack_dirs = fs::read_dir(config_dir)
       .with_context(|| {
         format!(
           "Failed to read config directory: {}",
-          app_settings.config_dir.display()
+          config_dir.display()
         )
       })?
       .filter_map(|entry| Some(entry.ok()?.path()))
@@ -386,7 +411,7 @@ impl Config {
         continue;
       }
 
-      match Self::read_widget_pack(&pack_config_path) {
+      match Self::read_widget_pack(&pack_config_path, &r#type) {
         Ok(pack) => {
           tracing::info!(
             "Found valid widget pack at: {}",
@@ -410,6 +435,7 @@ impl Config {
   /// Returns a `WidgetPack` instance.
   pub fn read_widget_pack(
     config_path: &Path,
+    r#type: &WidgetPackType,
   ) -> anyhow::Result<WidgetPack> {
     let (pack_config, _) = read_and_parse_json::<WidgetPackConfig>(
       config_path,
@@ -431,7 +457,7 @@ impl Config {
 
     let pack = WidgetPack {
       id: pack_config.name.to_string(),
-      r#type: WidgetPackType::Local,
+      r#type: r#type.clone(),
       config_path: config_path.to_path_buf(),
       directory_path: pack_dir.to_path_buf(),
       config: pack_config,
@@ -532,7 +558,10 @@ impl Config {
       .current_dir(&pack_dir)
       .output();
 
-    let pack = Self::read_widget_pack(&pack_dir.join("zpack.json"))?;
+    let pack = Self::read_widget_pack(
+      &pack_dir.join("zpack.json"),
+      &WidgetPackType::Local,
+    )?;
 
     // Add the new widget pack to state.
     {
@@ -717,10 +746,10 @@ impl Config {
     Ok(())
   }
 
-  /// Registers a widget pack from the marketplace.
-  pub fn register_widget_pack(&self, metadata: MarketplacePackMetadata) {
+  /// Registers a newly installed widget pack.
+  pub async fn register_widget_pack(&self, pack: WidgetPack) {
     let mut widget_packs = self.widget_packs.lock().await;
-    widget_packs.insert(metadata.pack_id, metadata);
+    widget_packs.insert(pack.id.clone(), pack);
   }
 }
 

@@ -6,7 +6,10 @@ use std::{env, sync::Arc};
 
 use app_settings::AppSettings;
 use clap::Parser;
-use marketplace_installer::MarketplaceInstaller;
+use config::WidgetPack;
+use marketplace_installer::{
+  MarketplaceInstaller, MarketplacePackMetadata,
+};
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
@@ -108,8 +111,7 @@ async fn main() -> anyhow::Result<()> {
       commands::unlisten_provider,
       commands::call_provider_function,
       commands::install_widget_pack,
-      commands::start_widget_preview,
-      commands::stop_widget_preview,
+      commands::stop_all_preview_widgets,
       commands::set_always_on_top,
       commands::set_skip_taskbar,
       commands::shell_exec,
@@ -171,7 +173,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
 
   // Initialize `MarketplaceInstaller` in Tauri state.
   let (marketplace_installer, install_rx) =
-    MarketplaceInstaller::new(app.handle(), app_settings.clone());
+    MarketplaceInstaller::new(app_settings.clone());
   app.manage(marketplace_installer.clone());
 
   // Initialize `Config` in Tauri state.
@@ -235,8 +237,8 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     widget_factory,
     tray,
     manager,
-    install_rx,
     emit_rx,
+    install_rx,
   );
 
   Ok(())
@@ -253,7 +255,7 @@ fn listen_events(
   tray: SysTray,
   manager: Arc<ProviderManager>,
   mut emit_rx: mpsc::UnboundedReceiver<ProviderEmission>,
-  mut install_rx: mpsc::UnboundedReceiver<MarketplacePackMetadata>,
+  mut install_rx: mpsc::Receiver<WidgetPack>,
 ) {
   let app_handle = app_handle.clone();
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
@@ -298,9 +300,9 @@ fn listen_events(
           manager.update_cache(provider_emission).await;
           Ok(())
         },
-        Some(metadata) = install_rx.recv() => {
-          info!("Widget pack installed: {:?}", metadata);
-          config.register_widget_pack(metadata);
+        Some(pack) = install_rx.recv() => {
+          info!("Widget pack installed: {:?}", pack);
+          config.register_widget_pack(pack).await;
           Ok(())
         },
       };
@@ -368,6 +370,7 @@ async fn open_widgets_by_cli_command(
             },
             dock_to_edge: Default::default(),
           }),
+          false,
         )
         .await
     }
@@ -377,6 +380,7 @@ async fn open_widgets_by_cli_command(
           &args.pack_id,
           &args.widget_name,
           &WidgetOpenOptions::Preset(args.preset_name),
+          false,
         )
         .await
     }

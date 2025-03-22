@@ -392,6 +392,7 @@ impl SysTray {
                 &pack_id,
                 &widget_name,
                 &WidgetOpenOptions::Preset(preset),
+                false,
               )
               .await
           }

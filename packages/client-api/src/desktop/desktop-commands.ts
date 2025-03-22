@@ -70,11 +70,13 @@ function startWidget(
   packId: string,
   widgetName: string,
   placement: WidgetPlacement,
+  isPreview: boolean,
 ): Promise<void> {
   return invoke<void>('start_widget', {
     packId,
     widgetName,
     placement,
+    isPreview,
   });
 }
 
@@ -82,11 +84,13 @@ function startWidgetPreset(
   packId: string,
   widgetName: string,
   presetName: string,
+  isPreview: boolean,
 ): Promise<void> {
   return invoke<void>('start_widget_preset', {
     packId,
     widgetName,
     presetName,
+    isPreview,
   });
 }
 

@@ -103,7 +103,7 @@ const widgetPack = z.object({
         .refine(url => !url.startsWith('http'), {
           message: 'Preview image must be a file within the widget pack.',
         })
-        .refine(url => url.includes(':\\') || url.startsWith('/'), {
+        .refine(url => !url.includes(':\\') && !url.startsWith('/'), {
           message:
             'Preview image must be a relative file path (e.g. "resources/preview.png")',
         }),

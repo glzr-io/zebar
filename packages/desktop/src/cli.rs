@@ -56,7 +56,7 @@ pub enum CliCommand {
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct StartWidgetArgs {
   /// Widget pack ID.
-  #[clap(long)]
+  #[clap(long = "pack")]
   pub pack_id: String,
 
   /// Widget name.
@@ -100,7 +100,7 @@ pub enum MonitorType {
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct StartWidgetPresetArgs {
   /// Widget pack ID.
-  #[clap(long)]
+  #[clap(long = "pack")]
   pub pack_id: String,
 
   /// Widget name.

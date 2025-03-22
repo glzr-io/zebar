@@ -10,7 +10,10 @@ use reqwest::{multipart::Form, StatusCode};
 use serde::Deserialize;
 use tar::Builder;
 
-use crate::{cli::PublishArgs, config::Config};
+use crate::{
+  cli::PublishArgs,
+  config::{Config, WidgetPackType},
+};
 
 #[derive(Debug, Deserialize)]
 struct UploadResponse {
@@ -34,7 +37,8 @@ pub async fn publish_widget_pack(
     );
   }
 
-  let pack_config = Config::read_widget_pack(&pack_config_path)?;
+  let pack_config =
+    Config::read_widget_pack(&pack_config_path, &WidgetPackType::Local)?;
 
   // Create the tarball of the widget pack.
   let tarball_path = create_tarball(

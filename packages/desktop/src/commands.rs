@@ -39,6 +39,7 @@ pub async fn start_widget(
   pack_id: String,
   widget_name: String,
   placement: WidgetPlacement,
+  is_preview: bool,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
@@ -46,6 +47,7 @@ pub async fn start_widget(
       &pack_id,
       &widget_name,
       &WidgetOpenOptions::Standalone(placement),
+      is_preview,
     )
     .await
     .map_err(|err| err.to_string())
@@ -56,6 +58,7 @@ pub async fn start_widget_preset(
   pack_id: String,
   widget_name: String,
   preset_name: String,
+  is_preview: bool,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
@@ -63,6 +66,7 @@ pub async fn start_widget_preset(
       &pack_id,
       &widget_name,
       &WidgetOpenOptions::Preset(preset_name),
+      is_preview,
     )
     .await
     .map_err(|err| err.to_string())
@@ -195,29 +199,17 @@ pub async fn install_widget_pack(
   marketplace_manager: State<'_, Arc<MarketplaceInstaller>>,
 ) -> anyhow::Result<(), String> {
   marketplace_manager
-    .install_widget_pack(&pack_id, &version, &tarball_url, is_preview)
+    .install(&pack_id, &version, &tarball_url, is_preview)
     .await
     .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-pub async fn start_widget_preview(
-  pack_id: String,
-  widget_name: String,
+pub async fn stop_all_preview_widgets(
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
-    .start_preview(&pack_id, &widget_name)
-    .await
-    .map_err(|err| err.to_string())
-}
-
-#[tauri::command]
-pub async fn stop_widget_preview(
-  widget_factory: State<'_, Arc<WidgetFactory>>,
-) -> anyhow::Result<(), String> {
-  widget_factory
-    .stop_preview()
+    .stop_all_previews()
     .await
     .map_err(|err| err.to_string())
 }

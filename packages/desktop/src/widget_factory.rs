@@ -81,6 +81,9 @@ pub struct WidgetState {
   /// Unique identifier for the widget pack.
   pub pack_id: String,
 
+  /// Whether the widget is a preview.
+  pub is_preview: bool,
+
   /// Handle to the underlying Tauri window.
   ///
   /// This is only available on Windows.
@@ -284,6 +287,7 @@ impl WidgetFactory {
         config: widget_config.clone(),
         html_path: html_path.canonicalize_pretty()?,
         open_options: open_options.clone(),
+        is_preview,
       };
 
       let window = WebviewWindowBuilder::new(
@@ -511,6 +515,7 @@ impl WidgetFactory {
           &startup_config.pack_id,
           &startup_config.widget_name,
           &WidgetOpenOptions::Preset(startup_config.preset),
+          false,
         )
         .await?;
     }
@@ -695,6 +700,28 @@ impl WidgetFactory {
     Ok(())
   }
 
+  /// Stops any currently running preview widget(s).
+  pub async fn stop_all_previews(&self) -> anyhow::Result<()> {
+    tracing::info!("Stopping all preview widgets.");
+
+    // Find widget states marked as previews.
+    let preview_widget_ids = {
+      let widget_states = self.widget_states.lock().await;
+      widget_states
+        .iter()
+        .filter(|(_, state)| state.is_preview)
+        .map(|(id, _)| id.clone())
+        .collect::<Vec<_>>()
+    };
+
+    // Stop each preview widget.
+    for widget_id in preview_widget_ids {
+      self.stop_by_id(&widget_id)?;
+    }
+
+    Ok(())
+  }
+
   /// Relaunches all currently open widgets.
   pub async fn relaunch_all(&self) -> anyhow::Result<()> {
     let widget_ids =
@@ -740,6 +767,7 @@ impl WidgetFactory {
           &widget_state.pack_id,
           &widget_state.name,
           &widget_state.open_options,
+          false,
         )
         .await?;
     }
@@ -792,121 +820,5 @@ impl WidgetFactory {
   /// Returns a widget state by its widget ID.
   pub async fn state_by_id(&self, widget_id: &str) -> Option<WidgetState> {
     self.widget_states.lock().await.get(widget_id).cloned()
-  }
-
-  /// Starts a preview of a widget.
-  pub async fn start_preview(
-    &self,
-    pack_id: &str,
-    widget_name: &str,
-  ) -> anyhow::Result<()> {
-    // First, stop any existing preview.
-    self.stop_preview().await?;
-
-    let widget_pack = self
-      .config
-      .widget_pack_by_id(pack_id)
-      .await
-      .with_context(|| {
-        format!("No widget pack found for '{}'.", pack_id)
-      })?;
-
-    let widget_config = widget_pack
-      .config
-      .widgets
-      .iter()
-      .find(|entry| entry.name == widget_name)
-      .with_context(|| {
-        format!(
-          "No widget named '{}' found in widget pack '{}'.",
-          widget_name, pack_id
-        )
-      })?;
-
-    // Find the widget config within the pack
-    let widget_config = pack
-      .config
-      .widgets
-      .iter()
-      .find(|w| w.name == widget_name)
-      .ok_or_else(|| {
-        anyhow::anyhow!("Widget not found in pack: {}", widget_name)
-      })?;
-
-    // Create a centered placement for the preview
-    let placement = WidgetPlacement {
-      anchor: AnchorPoint::Center,
-      offset_x: LengthValue::Pixels(0),
-      offset_y: LengthValue::Pixels(0),
-      width: LengthValue::Percentage(50),
-      height: LengthValue::Percentage(50),
-      monitor_selection: MonitorSelection::Primary,
-      dock_to_edge: DockToEdge {
-        enabled: false,
-        edge: None,
-        window_margin: LengthValue::Pixels(0),
-      },
-    };
-
-    // Generate a unique ID for the preview widget
-    let preview_id = format!("preview-{}-{}", pack_id, widget_name);
-
-    // Store the preview information for later cleanup
-    {
-      let mut widget_states = self.widget_states.lock().await;
-      widget_states.insert(
-        preview_id.clone(),
-        WidgetState {
-          id: preview_id.clone(),
-          pack_id: pack_id.to_string(),
-          name: widget_name.to_string(),
-          open_options: WidgetOpenOptions::Preview,
-          is_preview: true,
-        },
-      );
-    }
-
-    // Start the widget with the preview placement
-    self.open_widget(
-      &preview_id,
-      pack,
-      widget_config,
-      &placement,
-      true, // is_preview
-    )?;
-
-    tracing::info!(
-      "Started preview for widget: {}/{}",
-      pack_id,
-      widget_name
-    );
-
-    Ok(())
-  }
-
-  /// Stops the currently running preview widget(s).
-  pub async fn stop_preview(&self) -> anyhow::Result<()> {
-    // Find all widget states marked as previews.
-    let preview_widget_ids = {
-      let widget_states = self.widget_states.lock().await;
-      widget_states
-        .iter()
-        .filter(|(_, state)| state.is_preview)
-        .map(|(id, _)| id.clone())
-        .collect::<Vec<_>>()
-    };
-
-    // Stop each preview widget
-    for widget_id in preview_widget_ids {
-      self.stop_by_id(&widget_id)?;
-
-      // Remove from widget states
-      let mut widget_states = self.widget_states.lock().await;
-      widget_states.remove(&widget_id);
-    }
-
-    tracing::info!("Stopped all preview widgets");
-
-    Ok(())
   }
 }

@@ -65,17 +65,17 @@ export function MarketplacePacksProvider(props: {
       isPreview: true,
     });
 
-    await invoke<void>('start_widget_preview', {
+    await invoke<void>('start_widget', {
       packId: pack.id,
-      version: pack.latestVersion,
       widgetName,
+      isPreview: true,
     });
 
     setPreviewPack(pack);
   }
 
   async function stopPreview() {
-    await invoke<void>('stop_widget_preview');
+    await invoke<void>('stop_all_preview_widgets');
     setPreviewPack(null);
   }
 
