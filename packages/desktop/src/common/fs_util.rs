@@ -11,15 +11,13 @@ use serde::de::DeserializeOwned;
 /// Returns the parsed type `T` if successful.
 pub fn read_and_parse_json<T: DeserializeOwned>(
   path: &Path,
-) -> anyhow::Result<(T, String)> {
+) -> anyhow::Result<T> {
   let content = fs::read_to_string(path)
     .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-  let parsed = serde_json::from_str(&content).with_context(|| {
+  serde_json::from_str(&content).with_context(|| {
     format!("Failed to parse JSON from file: {}", path.display())
-  })?;
-
-  Ok((parsed, content))
+  })
 }
 
 /// Returns whether the path has the given extension.

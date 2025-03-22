@@ -367,8 +367,8 @@ impl Config {
       WidgetPackType::Local,
     )?);
 
-    for (pack_id, metadata) in
-      MarketplaceInstaller::read_metadata_files(&app_settings)?
+    for metadata in
+      MarketplaceInstaller::installed_packs_metadata(app_settings)?
     {
       packs.extend(Self::read_widget_packs_of_type(
         &app_settings.marketplace_download_dir,
@@ -441,16 +441,14 @@ impl Config {
     config_path: &Path,
     r#type: &WidgetPackType,
   ) -> anyhow::Result<WidgetPack> {
-    let (pack_config, _) = read_and_parse_json::<WidgetPackConfig>(
-      config_path,
-    )
-    .map_err(|err| {
-      anyhow::anyhow!(
-        "Failed to parse widget pack at '{}': {:?}",
-        config_path.display(),
-        err
-      )
-    })?;
+    let pack_config = read_and_parse_json::<WidgetPackConfig>(config_path)
+      .map_err(|err| {
+        anyhow::anyhow!(
+          "Failed to parse widget pack at '{}': {:?}",
+          config_path.display(),
+          err
+        )
+      })?;
 
     let pack_dir = config_path.parent().with_context(|| {
       format!(

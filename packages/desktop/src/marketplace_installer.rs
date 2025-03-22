@@ -1,5 +1,4 @@
 use std::{
-  collections::HashMap,
   fs::{self},
   path::PathBuf,
   sync::Arc,
@@ -11,10 +10,7 @@ use flate2::read::GzDecoder;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tar::Archive;
-use tokio::{
-  sync::{mpsc, Mutex},
-  task,
-};
+use tokio::{sync::mpsc, task};
 
 use crate::{
   app_settings::AppSettings,
@@ -46,10 +42,6 @@ pub struct MarketplacePackMetadata {
 pub struct MarketplaceInstaller {
   /// Reference to `AppSettings`.
   app_settings: Arc<AppSettings>,
-
-  /// Map of pack ID's to their metadata.
-  // downloaded_packs: Arc<Mutex<HashMap<String,
-  // MarketplacePackMetadata>>>,
 
   /// Sender channel for newly installed widget packs.
   installed_tx: mpsc::Sender<WidgetPack>,
@@ -84,21 +76,23 @@ impl MarketplaceInstaller {
       .join(format!("{}.json", pack_id))
   }
 
-  /// Reads all pack metadata files.
-  pub fn read_metadata_files(
+  /// Returns a vector of `MarketplacePackMetadata` instances for all
+  /// installed packs.
+  pub fn installed_packs_metadata(
     app_settings: &AppSettings,
-  ) -> anyhow::Result<HashMap<String, MarketplacePackMetadata>> {
-    let mut map = HashMap::new();
+  ) -> anyhow::Result<Vec<MarketplacePackMetadata>> {
+    let packs_metadata = fs::read_dir(&app_settings.marketplace_meta_dir)?
+      .filter_map(|entry| {
+        let metadata = read_and_parse_json::<MarketplacePackMetadata>(
+          &entry.ok()?.path(),
+        )
+        .ok()?;
 
-    for entry in fs::read_dir(&app_settings.marketplace_meta_dir)? {
-      let entry = entry?;
-      let (metadata, _) =
-        read_and_parse_json::<MarketplacePackMetadata>(&entry.path())?;
+        Some(metadata)
+      })
+      .collect();
 
-      map.insert(metadata.pack_id.clone(), metadata);
-    }
-
-    Ok(map)
+    Ok(packs_metadata)
   }
 
   /// Installs a widget pack from the marketplace.

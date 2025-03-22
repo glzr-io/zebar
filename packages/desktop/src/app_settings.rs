@@ -255,8 +255,7 @@ impl AppSettings {
 
     match settings_path.exists() {
       false => Ok(None),
-      true => read_and_parse_json(&settings_path)
-        .map(|(settings, _)| Some(settings)),
+      true => read_and_parse_json(&settings_path),
     }
   }
 
