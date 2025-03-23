@@ -15,7 +15,7 @@ use tokio::{sync::mpsc, task};
 use crate::{
   app_settings::AppSettings,
   common::read_and_parse_json,
-  config::{Config, WidgetPack, WidgetPackType},
+  config::{Config, WidgetPack},
 };
 
 /// Metadata about an installed marketplace widget pack.
@@ -124,7 +124,7 @@ impl MarketplaceInstaller {
 
     let pack = Config::read_widget_pack(
       &pack_dir.join("zpack.json"),
-      &WidgetPackType::Marketplace(metadata.clone()),
+      Some(&metadata),
     )?;
 
     if !is_preview {

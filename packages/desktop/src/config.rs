@@ -31,6 +31,9 @@ pub struct WidgetPack {
   #[serde(flatten)]
   pub config: WidgetPackConfig,
 
+  /// Metadata for the pack (if it's a marketplace pack).
+  pub metadata: Option<MarketplacePackMetadata>,
+
   /// Path to the pack config file.
   pub config_path: PathBuf,
 
@@ -73,7 +76,7 @@ pub struct WidgetPackConfig {
 #[serde(rename_all = "camelCase")]
 pub enum WidgetPackType {
   Local,
-  Marketplace(MarketplacePackMetadata),
+  Marketplace,
 }
 
 /// Deserialized widget config.
@@ -364,7 +367,7 @@ impl Config {
 
     packs.extend(Self::read_widget_packs_of_type(
       &app_settings.config_dir,
-      WidgetPackType::Local,
+      None,
     )?);
 
     for metadata in
@@ -372,7 +375,7 @@ impl Config {
     {
       packs.extend(Self::read_widget_packs_of_type(
         &app_settings.marketplace_download_dir,
-        WidgetPackType::Marketplace(metadata),
+        Some(&metadata),
       )?);
     }
 
@@ -387,7 +390,7 @@ impl Config {
   /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
   fn read_widget_packs_of_type(
     config_dir: &Path,
-    r#type: WidgetPackType,
+    metadata: Option<&MarketplacePackMetadata>,
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
     // Get paths to the subdirectories within the config directory.
     let pack_dirs = fs::read_dir(config_dir)
@@ -415,7 +418,7 @@ impl Config {
         continue;
       }
 
-      match Self::read_widget_pack(&pack_config_path, &r#type) {
+      match Self::read_widget_pack(&pack_config_path, metadata) {
         Ok(pack) => {
           tracing::info!(
             "Found valid widget pack at: {}",
@@ -439,7 +442,7 @@ impl Config {
   /// Returns a `WidgetPack` instance.
   pub fn read_widget_pack(
     config_path: &Path,
-    r#type: &WidgetPackType,
+    metadata: Option<&MarketplacePackMetadata>,
   ) -> anyhow::Result<WidgetPack> {
     let pack_config = read_and_parse_json::<WidgetPackConfig>(config_path)
       .map_err(|err| {
@@ -458,14 +461,18 @@ impl Config {
     })?;
 
     let pack = WidgetPack {
-      id: match r#type {
-        WidgetPackType::Local => pack_config.name.to_string(),
-        WidgetPackType::Marketplace(metadata) => metadata.pack_id.clone(),
+      id: match metadata {
+        Some(metadata) => metadata.pack_id.clone(),
+        None => pack_config.name.to_string(),
       },
-      r#type: r#type.clone(),
+      r#type: match metadata {
+        Some(_) => WidgetPackType::Marketplace,
+        None => WidgetPackType::Local,
+      },
       config_path: config_path.to_path_buf(),
       directory_path: pack_dir.to_path_buf(),
       config: pack_config,
+      metadata: metadata.cloned(),
     };
 
     Ok(pack)
@@ -563,10 +570,7 @@ impl Config {
       .current_dir(&pack_dir)
       .output();
 
-    let pack = Self::read_widget_pack(
-      &pack_dir.join("zpack.json"),
-      &WidgetPackType::Local,
-    )?;
+    let pack = Self::read_widget_pack(&pack_dir.join("zpack.json"), None)?;
 
     // Add the new widget pack to state.
     {

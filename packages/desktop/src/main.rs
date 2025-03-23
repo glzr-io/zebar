@@ -7,9 +7,7 @@ use std::{env, sync::Arc};
 use app_settings::AppSettings;
 use clap::Parser;
 use config::WidgetPack;
-use marketplace_installer::{
-  MarketplaceInstaller, MarketplacePackMetadata,
-};
+use marketplace_installer::MarketplaceInstaller;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };

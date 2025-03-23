@@ -10,8 +10,8 @@ use std::{
 use anyhow::{bail, Context};
 use serde::Serialize;
 use tauri::{
-  self, path::BaseDirectory, AppHandle, Manager, PhysicalPosition,
-  PhysicalSize, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  self, AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
+  WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
