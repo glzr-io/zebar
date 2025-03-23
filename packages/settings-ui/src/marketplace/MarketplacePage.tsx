@@ -18,11 +18,13 @@ export function MarketplacePage() {
   });
 
   const filteredPacks = createMemo(() =>
-    marketplacePacks.allPacks().filter(pack => {
+    (marketplacePacks.allPacks() ?? []).filter(pack => {
       const searchQuery = filterQueryForm.value.search;
 
       const matchesSearch =
-        pack.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pack.publishedId
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
         pack.description.toLowerCase().includes(searchQuery.toLowerCase());
 
       return matchesSearch;
@@ -57,7 +59,10 @@ export function MarketplacePage() {
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredPacks().map(pack => (
           <div class="group relative">
-            <A href={`/marketplace/packs/${pack.id}`} class="block">
+            <A
+              href={`/marketplace/packs/${pack.publishedId}`}
+              class="block"
+            >
               <div class="overflow-hidden rounded-lg aspect-[3/2] bg-muted">
                 <img
                   src={pack.previewImageUrls?.[0] || '/placeholder.svg'}
@@ -71,7 +76,7 @@ export function MarketplacePage() {
                 <div class="space-y-1">
                   <h3 class="font-medium leading-none">{pack.name}</h3>
                   <p class="text-sm text-muted-foreground">
-                    by {pack.id.split('.')[0]}
+                    by {pack.publishedId.split('.')[0]}
                   </p>
                 </div>
                 <div class="flex items-center gap-2">

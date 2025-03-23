@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@glzr/components": "1.2.0",
-    "@glzr/data-access": "0.0.7",
+    "@glzr/data-access": "0.0.9",
     "@solidjs/router": "0.14.8",
     "@tabler/icons-solidjs": "3.19.0",
     "@tauri-apps/api": "2.0.2",

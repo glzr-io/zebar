@@ -19,7 +19,7 @@ type MarketplacePacksContextState = {
   install: (pack: MarketplaceWidgetPack) => Promise<void>;
   startPreview: (
     pack: MarketplaceWidgetPack,
-    widgetName: string,
+    widgetName?: string,
   ) => Promise<void>;
   stopPreview: () => Promise<void>;
 };
@@ -48,7 +48,7 @@ export function MarketplacePacksProvider(props: {
 
   async function install(pack: MarketplaceWidgetPack) {
     await invoke<void>('install_widget_pack', {
-      packId: pack.id,
+      packId: pack.publishedId,
       version: pack.latestVersion,
       tarballUrl: pack.tarballUrl,
       isPreview: false,
@@ -60,14 +60,14 @@ export function MarketplacePacksProvider(props: {
     widgetName?: string,
   ) {
     const installedPack = await invoke<WidgetPack>('install_widget_pack', {
-      packId: pack.id,
+      packId: pack.publishedId,
       version: pack.latestVersion,
       tarballUrl: pack.tarballUrl,
       isPreview: true,
     });
 
     await invoke<void>('start_widget_preset', {
-      packId: pack.id,
+      packId: pack.publishedId,
       widgetName: widgetName ?? installedPack.widgets[0].name,
       presetName: installedPack.widgets[0].presets[0].name,
       isPreview: true,

@@ -34,7 +34,7 @@ export function MarketplacePackPage() {
   const [currentImageIndex, setCurrentImageIndex] = createSignal(0);
 
   const [pack] = createResource(() =>
-    apiClient.widgetPack.getById.query({ id: params.id }),
+    apiClient.widgetPack.getByPublishedId.query({ id: params.id }),
   );
 
   function nextImage(selectedPack: MarketplaceWidgetPack) {
@@ -78,7 +78,9 @@ export function MarketplacePackPage() {
 
               <div class="flex items-center gap-4 text-sm text-muted-foreground">
                 <div class="flex items-center gap-2">
-                  <span>by {selectedPack().id.split('.')[0]}</span>
+                  <span>
+                    by {selectedPack().publishedId.split('.')[0]}
+                  </span>
                 </div>
                 <span>
                   Published{' '}
