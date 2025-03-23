@@ -66,11 +66,10 @@ export function MarketplacePacksProvider(props: {
       isPreview: true,
     });
 
-    await invoke<void>('start_widget_preset', {
-      packId: pack.publishedId,
+    await invoke<void>('start_preview_widget', {
+      packConfig: installedPack,
       widgetName: widgetName ?? installedPack.widgets[0].name,
       presetName: installedPack.widgets[0].presets[0].name,
-      isPreview: true,
     });
 
     setPreviewPack(pack);

@@ -28,7 +28,7 @@ use crate::{
   asset_server::create_init_url,
   common::PathExt,
   config::{
-    AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
+    AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig, WidgetPack,
     WidgetPlacement,
   },
   monitor_state::{Monitor, MonitorState},
@@ -182,10 +182,8 @@ impl WidgetFactory {
     }
   }
 
-  /// Opens widget from a given config path.
-  ///
-  /// Config path must be absolute.
-  pub async fn start_widget(
+  /// Opens widget by a given widget pack ID and widget name.
+  pub async fn start_widget_by_id(
     &self,
     pack_id: &str,
     widget_name: &str,
@@ -200,6 +198,24 @@ impl WidgetFactory {
         format!("No widget pack found for '{}'.", pack_id)
       })?;
 
+    self
+      .start_widget_by_pack(
+        &widget_pack,
+        widget_name,
+        open_options,
+        is_preview,
+      )
+      .await
+  }
+
+  /// Opens widget from a resolved widget pack and widget name.
+  pub async fn start_widget_by_pack(
+    &self,
+    widget_pack: &WidgetPack,
+    widget_name: &str,
+    open_options: &WidgetOpenOptions,
+    is_preview: bool,
+  ) -> anyhow::Result<()> {
     let widget_config = widget_pack
       .config
       .widgets
@@ -208,7 +224,7 @@ impl WidgetFactory {
       .with_context(|| {
         format!(
           "No widget named '{}' found in widget pack '{}'.",
-          widget_name, pack_id
+          widget_name, widget_pack.id
         )
       })?;
 
@@ -221,8 +237,8 @@ impl WidgetFactory {
           .await
           .values()
           .find(|state| {
-            state.pack_id == *pack_id
-              && state.name == *widget_config.name
+            state.pack_id == widget_pack.id
+              && state.name == widget_config.name
               && state.open_options == *open_options
           })
           .is_some()
@@ -282,7 +298,7 @@ impl WidgetFactory {
       let mut state = WidgetState {
         id: widget_id.clone(),
         name: widget_name.to_string(),
-        pack_id: pack_id.to_string(),
+        pack_id: widget_pack.id.clone(),
         window_handle: None,
         config: widget_config.clone(),
         html_path: html_path.canonicalize_pretty()?,
@@ -295,7 +311,7 @@ impl WidgetFactory {
         widget_id.clone(),
         webview_url,
       )
-      .title(format!("Zebar - {} / {}", pack_id, widget_name))
+      .title(format!("Zebar - {} / {}", widget_pack.id, widget_name))
       .focused(widget_config.focused)
       .skip_taskbar(!widget_config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
@@ -307,7 +323,9 @@ impl WidgetFactory {
       // Widgets from the same pack share their browser cache (i.e.
       // `localStorage`, `sessionStorage`, SW cache, etc.).
       // TODO: Add this as an ext method on the Tauri window.
-      .data_directory(self.app_settings.webview_cache_dir.join(pack_id))
+      .data_directory(
+        self.app_settings.webview_cache_dir.join(&widget_pack.id),
+      )
       .build()?;
 
       // Widget coordinates might be modified when docked to an edge.
@@ -501,7 +519,7 @@ impl WidgetFactory {
 
     for startup_config in startup_configs {
       self
-        .start_widget(
+        .start_widget_by_id(
           &startup_config.pack_id,
           &startup_config.widget_name,
           &WidgetOpenOptions::Preset(startup_config.preset),
@@ -753,7 +771,7 @@ impl WidgetFactory {
       let _ = self.stop_by_id(&widget_state.id);
 
       self
-        .start_widget(
+        .start_widget_by_id(
           &widget_state.pack_id,
           &widget_state.name,
           &widget_state.open_options,

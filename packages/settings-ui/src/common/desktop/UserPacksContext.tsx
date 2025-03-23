@@ -228,12 +228,14 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
         packId,
         widgetName,
         presetName,
+        isPreview: false,
       });
     } else {
       await invoke<void>('start_widget_preset', {
         packId,
         widgetName,
         presetName,
+        isPreview: false,
       });
     }
   }

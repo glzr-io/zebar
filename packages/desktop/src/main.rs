@@ -111,6 +111,7 @@ async fn main() -> anyhow::Result<()> {
       commands::unlisten_provider,
       commands::call_provider_function,
       commands::install_widget_pack,
+      commands::start_preview_widget,
       commands::stop_all_preview_widgets,
       commands::set_always_on_top,
       commands::set_skip_taskbar,
@@ -204,10 +205,14 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   #[cfg(target_os = "macos")]
   app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-  // Allow assets to be resolved from the config directory.
-  app
-    .asset_protocol_scope()
-    .allow_directory(&app_settings.config_dir, true)?;
+  // Allow assets to be resolved from the config directory and the
+  // marketplace download directory.
+  for dir in [
+    &app_settings.config_dir,
+    &app_settings.marketplace_download_dir,
+  ] {
+    app.asset_protocol_scope().allow_directory(dir, true)?;
+  }
 
   app.manage(ShellState::new(app.handle(), widget_factory.clone()));
   app.handle().plugin(tauri_plugin_dialog::init())?;
@@ -354,7 +359,7 @@ async fn open_widgets_by_cli_command(
   let res = match cli.command() {
     CliCommand::StartWidget(args) => {
       widget_factory
-        .start_widget(
+        .start_widget_by_id(
           &args.pack_id,
           &args.widget_name,
           &WidgetOpenOptions::Standalone(WidgetPlacement {
@@ -376,7 +381,7 @@ async fn open_widgets_by_cli_command(
     }
     CliCommand::StartWidgetPreset(args) => {
       widget_factory
-        .start_widget(
+        .start_widget_by_id(
           &args.pack_id,
           &args.widget_name,
           &WidgetOpenOptions::Preset(args.preset_name),

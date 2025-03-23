@@ -122,25 +122,25 @@ impl MarketplaceInstaller {
         .as_secs(),
     };
 
-    // Write metadata to file.
+    let pack = Config::read_widget_pack(
+      &pack_dir.join("zpack.json"),
+      &WidgetPackType::Marketplace(metadata.clone()),
+    )?;
+
     if !is_preview {
       fs::create_dir_all(&self.app_settings.marketplace_meta_dir)?;
 
+      // Write metadata to file.
       fs::write(
         self.pack_metadata_file_path(pack_id),
         serde_json::to_string_pretty(&metadata)? + "\n",
       )?;
+
+      // Broadcast the installation event.
+      self.installed_tx.send(pack.clone()).await?;
     }
 
     tracing::info!("Installed widget pack: {}", pack_id);
-
-    let pack = Config::read_widget_pack(
-      &pack_dir.join("zpack.json"),
-      &WidgetPackType::Marketplace(metadata),
-    )?;
-
-    // Broadcast the installation event.
-    self.installed_tx.send(pack.clone()).await?;
 
     Ok(pack)
   }

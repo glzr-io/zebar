@@ -388,7 +388,7 @@ impl SysTray {
         } => match enable {
           true => {
             widget_factory
-              .start_widget(
+              .start_widget_by_id(
                 &pack_id,
                 &widget_name,
                 &WidgetOpenOptions::Preset(preset),
