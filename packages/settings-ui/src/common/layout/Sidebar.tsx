@@ -72,12 +72,12 @@ export function Sidebar(props: SidebarProps) {
         tooltip="Marketplace"
         href="/marketplace"
       >
-        <div class="truncate">Browse Community</div>
+        <div class="truncate">Marketplace</div>
       </SidebarItem>
 
       {!isCollapsed() && (
         <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
-          Downloads
+          Downloaded packs
         </h3>
       )}
 
@@ -89,7 +89,7 @@ export function Sidebar(props: SidebarProps) {
 
       {!isCollapsed() && (
         <h3 class="px-4 text-xs font-medium text-muted-foreground truncate mt-3">
-          Personal
+          Custom packs
         </h3>
       )}
 

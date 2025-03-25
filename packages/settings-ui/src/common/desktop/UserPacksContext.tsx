@@ -1,73 +1,20 @@
 import {
   createContext,
-  createMemo,
-  type Accessor,
   type JSX,
   Resource,
   useContext,
+  createEffect,
 } from 'solid-js';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event } from '@tauri-apps/api/event';
 import { createResource } from 'solid-js';
 import type { Widget, WidgetConfig } from 'zebar';
 
-const downloadedPacksMock: WidgetPack[] = [
-  {
-    id: 'glzr-io.system-monitor',
-    name: 'System Monitor',
-    author: 'glzr-io',
-    type: 'marketplace' as const,
-    directoryPath: 'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa',
-    description: 'CPU, memory, and disk usage widgets',
-    version: '1.0.0',
-    tags: ['system', 'monitor', 'cpu', 'memory', 'disk'],
-    widgets: [
-      {
-        name: 'cpu-usage',
-        htmlPath: 'cpu-usage.html',
-      } as any as WidgetConfig,
-      {
-        name: 'memory-usage',
-        htmlPath: 'memory-usage.html',
-      } as any as WidgetConfig,
-      {
-        name: 'disk-space',
-        htmlPath: 'disk-space.html',
-      } as any as WidgetConfig,
-    ],
-    previewImages: [],
-    excludeFiles: '',
-  },
-  {
-    id: 'glzr-io.weather-widgets',
-    name: 'Weather Pack',
-    author: 'glzr-io',
-    type: 'marketplace' as const,
-    directoryPath: 'C:\\Users\\larsb\\.glzr\\zebar\\fdsafdsafdsa',
-    description: 'Current weather and forecast widgets',
-    version: '2.1.0',
-    tags: ['weather', 'forecast', 'current'],
-    widgets: [
-      {
-        name: 'current-weather',
-        htmlPath: 'current-weather.html',
-      } as any as WidgetConfig,
-      {
-        name: 'weekly-forecast',
-        htmlPath: 'weekly-forecast.html',
-      } as any as WidgetConfig,
-    ],
-    previewImages: [],
-    excludeFiles: '',
-  },
-];
-
 export type WidgetPack =
   | {
       type: 'marketplace';
       id: string;
       name: string;
-      author: string;
       previewImages: string[];
       excludeFiles: string;
       directoryPath: string;
@@ -75,6 +22,11 @@ export type WidgetPack =
       version: string;
       widgets: WidgetConfig[];
       tags: string[];
+      metadata: {
+        packId: string;
+        installedAt: number;
+        version: string;
+      };
     }
   | {
       type: 'local';
@@ -113,7 +65,7 @@ export type CreateWidgetArgs = {
 type UserPacksContextState = {
   downloadedPacks: Resource<WidgetPack[]>;
   localPacks: Resource<WidgetPack[]>;
-  allPacks: Accessor<WidgetPack[]>;
+  allPacks: Resource<WidgetPack[]>;
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (args: CreateWidgetPackArgs) => Promise<WidgetPack>;
   createWidget: (args: CreateWidgetArgs) => Promise<WidgetConfig>;
@@ -138,19 +90,22 @@ type UserPacksContextState = {
 const UserPacksContext = createContext<UserPacksContextState>();
 
 export function UserPacksProvider(props: { children: JSX.Element }) {
-  // TODO: Fetch installed marketplace packs from the backend.
-  const [downloadedPacks] = createResource(
-    async () => downloadedPacksMock,
+  const [allPacks, { mutate: mutatePacks }] = createResource(async () =>
+    invoke<WidgetPack[]>('widget_packs'),
   );
 
-  const [localPacks, { mutate: mutateLocalPacks }] = createResource(
-    async () => invoke<WidgetPack[]>('widget_packs'),
+  const [downloadedPacks] = createResource(allPacks, packs =>
+    packs?.filter(pack => pack.type === 'marketplace'),
   );
 
-  const allPacks = createMemo(() => [
-    ...(downloadedPacks() ?? []),
-    ...(localPacks() ?? []),
-  ]);
+  const [localPacks] = createResource(allPacks, packs =>
+    packs?.filter(pack => pack.type === 'local'),
+  );
+
+  createEffect(() => {
+    console.log('localPacks', localPacks());
+    console.log('downloadedPacks', downloadedPacks());
+  });
 
   const [widgetStates, { mutate: mutateWidgetStates }] = createResource(
     async () => invoke<Record<string, Widget>>('widget_states'),
@@ -188,7 +143,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
       },
     );
 
-    mutateLocalPacks(packs =>
+    mutatePacks(packs =>
       packs?.map(pack =>
         pack.id === packId && pack.type === 'local'
           ? {
@@ -242,7 +197,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
   async function createPack(args: CreateWidgetPackArgs) {
     const pack = await invoke<WidgetPack>('create_widget_pack', { args });
-    mutateLocalPacks(packs => [...(packs ?? []), pack]);
+    mutatePacks(packs => [...(packs ?? []), pack]);
     return pack;
   }
 
@@ -254,7 +209,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
       },
     );
 
-    mutateLocalPacks(packs =>
+    mutatePacks(packs =>
       packs?.map(pack => {
         return pack.id === args.packId && pack.type === 'local'
           ? {
@@ -270,7 +225,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
   async function deletePack(packId: string) {
     await invoke<void>('delete_widget_pack', { packId });
-    mutateLocalPacks(packs => packs?.filter(pack => pack.id !== packId));
+    mutatePacks(packs => packs?.filter(pack => pack.id !== packId));
   }
 
   async function updatePack(packId: string, args: UpdateWidgetPackArgs) {
@@ -279,7 +234,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
       args,
     });
 
-    mutateLocalPacks(packs =>
+    mutatePacks(packs =>
       packs?.map(p => (p.id === packId ? updatedPack : p)),
     );
 
@@ -289,7 +244,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
   async function deleteWidget(packId: string, widgetName: string) {
     await invoke<void>('delete_widget_config', { packId, widgetName });
 
-    mutateLocalPacks(packs =>
+    mutatePacks(packs =>
       packs?.map(pack => {
         return {
           ...pack,

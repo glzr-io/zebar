@@ -38,7 +38,8 @@ export function WidgetPackSidebarItem(props: WidgetPackSidebarItemProps) {
               <>
                 <span class="truncate block">{props.pack.name}</span>
                 <span class="truncate block text-xs text-muted-foreground font-normal">
-                  {props.pack.author} • v{props.pack.version}
+                  {props.pack.metadata.packId.split('.')[0]} • v
+                  {props.pack.metadata.version}
                 </span>
               </>
             )}
