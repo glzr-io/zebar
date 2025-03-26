@@ -4,7 +4,11 @@ import { IconDownload, IconEye } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
 import { createMemo } from 'solid-js';
 
-import { AppBreadcrumbs, useMarketplacePacks } from '~/common';
+import {
+  AppBreadcrumbs,
+  useMarketplacePacks,
+  useWidgetPreview,
+} from '~/common';
 
 type FilterQuery = {
   search: string;
@@ -12,6 +16,7 @@ type FilterQuery = {
 
 export function MarketplacePage() {
   const marketplacePacks = useMarketplacePacks();
+  const widgetPreview = useWidgetPreview();
 
   const filterQueryForm = createForm<FilterQuery>({
     search: '',
@@ -86,7 +91,7 @@ export function MarketplacePage() {
                     class="h-8 w-8"
                     onClick={e => {
                       e.preventDefault();
-                      marketplacePacks.startPreview(pack);
+                      widgetPreview.startPreview(pack);
                     }}
                   >
                     <IconEye class="h-4 w-4" />

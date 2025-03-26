@@ -10,14 +10,14 @@ import { RouteSectionProps } from '@solidjs/router';
 
 import { Sidebar } from './Sidebar';
 import { PreviewBar } from './PreviewBar';
-import { useMarketplacePacks } from '~/common';
+import { useWidgetPreview } from '~/common';
 
 export interface AppLayoutProps {
   children: JSX.Element;
 }
 
 export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
-  const marketplacePacks = useMarketplacePacks();
+  const widgetPreview = useWidgetPreview();
   const [sizes, setSizes] = createSignal<number[]>([0.2, 0.8]);
 
   // Disable the right-click context menu.
@@ -42,11 +42,14 @@ export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
         </ResizablePanel>
       </Resizable>
 
-      <Show when={marketplacePacks.previewPack()}>
+      <Show when={widgetPreview.previewPack()}>
         {pack => (
           <PreviewBar
             pack={pack()}
-            onStop={marketplacePacks.stopPreview}
+            widgetName={widgetPreview.previewWidgetName()!}
+            presetName={widgetPreview.previewPresetName()!}
+            onStop={widgetPreview.stopPreview}
+            onChange={widgetPreview.changePreview}
           />
         )}
       </Show>

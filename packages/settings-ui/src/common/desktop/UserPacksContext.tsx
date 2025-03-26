@@ -8,37 +8,7 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event } from '@tauri-apps/api/event';
 import { createResource } from 'solid-js';
-import type { Widget, WidgetConfig } from 'zebar';
-
-export type WidgetPack =
-  | {
-      type: 'marketplace';
-      id: string;
-      name: string;
-      previewImages: string[];
-      excludeFiles: string;
-      directoryPath: string;
-      description: string;
-      version: string;
-      widgets: WidgetConfig[];
-      tags: string[];
-      metadata: {
-        packId: string;
-        installedAt: number;
-        version: string;
-      };
-    }
-  | {
-      type: 'local';
-      id: string;
-      name: string;
-      previewImages: string[];
-      excludeFiles: string;
-      directoryPath: string;
-      description: string;
-      widgets: WidgetConfig[];
-      tags: string[];
-    };
+import type { Widget, WidgetConfig, WidgetPack } from 'zebar';
 
 export type CreateWidgetPackArgs = {
   name: string;
