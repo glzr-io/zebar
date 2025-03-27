@@ -4,11 +4,13 @@ use std::{
 };
 
 use flate2::{write::GzEncoder, Compression};
+use globset::{Glob, GlobBuilder, GlobSetBuilder};
 use reqwest::{multipart::Form, StatusCode};
 use serde::Deserialize;
 
 use crate::{
   cli::PublishArgs,
+  common::visit_deep,
   config::{Config, WidgetPack},
 };
 
@@ -62,15 +64,29 @@ fn create_tarball(pack: &WidgetPack) -> anyhow::Result<PathBuf> {
   let tarball_path = std::env::temp_dir().join("zebar-pack.tar.gz");
   let tarball_file = File::create(&tarball_path)?;
 
-  let mut included_files = Vec::new();
-  included_files.push(pack.config_path.clone());
+  let mut included_files = vec![pack.config_path.clone()];
 
-  for widget in &pack.config.widgets {
-    for entry in glob::glob(&widget.include_files)? {
-      let entry = entry?;
-      included_files.push(entry);
+  let glob_set = {
+    let mut builder = GlobSetBuilder::new();
+
+    for widget in &pack.config.widgets {
+      for pattern in widget.include_files.split('\n') {
+        builder.add(Glob::new(pattern)?);
+      }
     }
-  }
+
+    builder.build()?
+  };
+
+  visit_deep(&pack.directory_path, &mut |entry| {
+    let path = entry.path();
+    let relative_path = path.strip_prefix(&pack.directory_path).unwrap();
+    // TODO: If the path is a directory, we need to add all files in the
+    // directory to the tarball.
+    if entry.path().is_file() && glob_set.is_match(relative_path) {
+      included_files.push(path.to_path_buf());
+    }
+  })?;
 
   let encoder = GzEncoder::new(tarball_file, Compression::default());
   let mut builder = tar::Builder::new(encoder);
@@ -79,8 +95,9 @@ fn create_tarball(pack: &WidgetPack) -> anyhow::Result<PathBuf> {
 
   // Add files to the tarball, printing them as they are added.
   for entry in &included_files {
-    println!("  {}", entry.strip_prefix(&pack.directory_path)?.display());
-    builder.append_path(entry)?;
+    let relative_path = entry.strip_prefix(&pack.directory_path)?;
+    println!("  {}", relative_path.display());
+    builder.append_file(relative_path, &mut File::open(entry)?)?;
   }
 
   builder.finish()?;

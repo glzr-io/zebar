@@ -41,7 +41,7 @@ pub fn copy_dir_all(
 ) -> anyhow::Result<()> {
   fs::create_dir_all(dest_dir)?;
 
-  visit_deep(src_dir, &|entry| {
+  visit_deep(src_dir, &mut |entry| {
     let Ok(dest_path) = entry
       .path()
       .strip_prefix(src_dir)
@@ -65,10 +65,10 @@ pub fn copy_dir_all(
 /// Recursively visit files in a directory.
 ///
 /// The callback is invoked for each entry in the directory.
-pub fn visit_deep(
-  dir: &Path,
-  callback: &dyn Fn(&DirEntry),
-) -> anyhow::Result<()> {
+pub fn visit_deep<F>(dir: &Path, callback: &mut F) -> anyhow::Result<()>
+where
+  F: FnMut(&DirEntry),
+{
   if dir.is_dir() {
     let read_dir = std::fs::read_dir(dir).with_context(|| {
       format!("Failed to read directory {}.", dir.display())

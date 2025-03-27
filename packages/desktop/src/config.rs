@@ -488,8 +488,8 @@ impl Config {
         Some(_) => WidgetPackType::Marketplace,
         None => WidgetPackType::Local,
       },
-      config_path: config_path.to_path_buf(),
-      directory_path: pack_dir.to_path_buf(),
+      config_path: config_path.canonicalize_pretty()?,
+      directory_path: pack_dir.canonicalize_pretty()?,
       config: pack_config,
       metadata: metadata.cloned(),
     };

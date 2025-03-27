@@ -7469,7 +7469,7 @@ dependencies = [
  "cocoa 0.25.0",
  "crossbeam",
  "flate2",
- "glob",
+ "globset",
  "komorebi-util",
  "netdev",
  "regex",

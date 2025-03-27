@@ -427,7 +427,7 @@ impl AppSettings {
     let context = tera::Context::from_serialize(context)?;
 
     // Run Tera template engine on all files with a `.tera` extension.
-    visit_deep(dest_dir, &|entry| {
+    visit_deep(dest_dir, &mut |entry| {
       if let Some(file_name) = entry.file_name().to_str() {
         if file_name.ends_with(".tera") {
           let path = entry.path();
