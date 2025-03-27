@@ -4,6 +4,6 @@
   "description": "{{ PACK_DESCRIPTION }}",
   "tags": ["desktop", "widget"],
   "previewImages": ["./resources/preview-image-1.png"],
-  "excludeFiles": "src\ntest",
+  "repositoryUrl": "{{ REPOSITORY_URL }}",
   "widgets": []
 }

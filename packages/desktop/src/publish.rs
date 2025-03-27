@@ -39,7 +39,8 @@ pub async fn publish_widget_pack(
   // Create the tarball of the widget pack.
   let tarball_path = create_tarball(
     &pack_config.directory_path,
-    &pack_config.config.exclude_files,
+    // &pack_config.config.exclude_files,
+    "todo",
   )?;
 
   // Upload to marketplace.

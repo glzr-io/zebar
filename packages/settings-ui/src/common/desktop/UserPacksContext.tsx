@@ -15,7 +15,7 @@ export type CreateWidgetPackArgs = {
   name: string;
   description: string;
   tags: string[];
-  excludeFiles: string;
+  repositoryUrl: string;
 };
 
 export type UpdateWidgetPackArgs = {
@@ -23,7 +23,7 @@ export type UpdateWidgetPackArgs = {
   description?: string;
   tags?: string[];
   previewImages?: string[];
-  excludeFiles?: string;
+  repositoryUrl?: string;
   widgets?: string[];
 };
 

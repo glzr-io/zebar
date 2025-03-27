@@ -110,10 +110,8 @@ const widgetPack = z.object({
     )
     .min(1, 'At least one preview image is required.')
     .max(6, 'At most 6 preview images are allowed.'),
-  excludeFiles: z
-    .string()
-    .max(1000, 'File exclusion list cannot exceed 1000 characters.'),
   widgets: z.array(widget),
+  repositoryUrl: z.string().url().or(z.literal('')),
 });
 
 export const configSchemas = {

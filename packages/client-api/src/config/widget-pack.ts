@@ -6,7 +6,7 @@ export type WidgetPack =
       id: string;
       name: string;
       previewImages: string[];
-      excludeFiles: string;
+      repositoryUrl: string;
       directoryPath: string;
       description: string;
       version: string;
@@ -23,7 +23,7 @@ export type WidgetPack =
       id: string;
       name: string;
       previewImages: string[];
-      excludeFiles: string;
+      repositoryUrl: string;
       directoryPath: string;
       description: string;
       widgets: WidgetConfig[];

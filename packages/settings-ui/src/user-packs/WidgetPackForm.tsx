@@ -33,7 +33,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
       description: '',
       tags: [],
       previewImages: [],
-      excludeFiles: '',
+      repositoryUrl: '',
     },
     { schema: configSchemas.widgetPack },
   );
@@ -60,7 +60,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
             description: props.pack.description,
             tags: props.pack.tags,
             previewImages: props.pack.previewImages,
-            excludeFiles: props.pack.excludeFiles,
+            repositoryUrl: props.pack.repositoryUrl,
           });
         }
       },
@@ -150,11 +150,11 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
             />
           </FormField>
 
-          <Field of={form} path="excludeFiles">
+          <Field of={form} path="repositoryUrl">
             {(inputProps, field) => (
-              <TextAreaField
-                label="Exclude files"
-                description="A list of file patterns to exclude from the pack separated by new lines."
+              <TextField
+                label="Repository URL (optional)"
+                description="The URL of the repository containing the widget pack."
                 disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}

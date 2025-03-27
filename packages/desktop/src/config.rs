@@ -57,18 +57,23 @@ pub struct WidgetPackConfig {
   pub name: String,
 
   /// Description of the pack.
+  #[serde(default)]
   pub description: String,
 
   /// Tags of the pack.
+  #[serde(default)]
   pub tags: Vec<String>,
 
   /// Preview images of the pack.
+  #[serde(default)]
   pub preview_images: Vec<String>,
 
-  /// Files to exclude from the pack during publishing.
-  pub exclude_files: String,
+  /// URL of the repository containing the pack.
+  #[serde(default)]
+  pub repository_url: String,
 
   /// Widgets in the pack.
+  #[serde(default)]
   pub widgets: Vec<WidgetConfig>,
 }
 
@@ -277,7 +282,7 @@ pub struct CreateWidgetPackArgs {
   pub name: String,
   pub description: String,
   pub tags: Vec<String>,
-  pub exclude_files: String,
+  pub repository_url: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
@@ -287,7 +292,7 @@ pub struct UpdateWidgetPackArgs {
   pub description: Option<String>,
   pub tags: Option<Vec<String>>,
   pub preview_images: Option<Vec<String>>,
-  pub exclude_files: Option<String>,
+  pub repository_url: Option<String>,
   pub widgets: Option<Vec<WidgetConfig>>,
 }
 
@@ -569,6 +574,7 @@ impl Config {
         ("PACK_NAME", args.name),
         ("PACK_DESCRIPTION", args.description),
         ("PACK_TAGS", args.tags.join(",")),
+        ("REPOSITORY_URL", args.repository_url),
         ("ZEBAR_VERSION", VERSION_NUMBER.to_string()),
       ]),
     )?;
@@ -610,8 +616,8 @@ impl Config {
     pack.config.tags = args.tags.unwrap_or(pack.config.tags);
     pack.config.preview_images =
       args.preview_images.unwrap_or(pack.config.preview_images);
-    pack.config.exclude_files =
-      args.exclude_files.unwrap_or(pack.config.exclude_files);
+    pack.config.repository_url =
+      args.repository_url.unwrap_or(pack.config.repository_url);
     pack.config.widgets = args.widgets.unwrap_or(pack.config.widgets);
 
     // Write the updated pack config to file.

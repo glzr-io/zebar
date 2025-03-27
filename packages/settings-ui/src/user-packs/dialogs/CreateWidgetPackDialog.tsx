@@ -9,19 +9,13 @@ import {
   Button,
 } from '@glzr/components';
 import { createForm, Field } from 'smorf';
+import { configSchemas } from 'zebar';
 import { z } from 'zod';
 
 import { CreateWidgetPackArgs } from '~/common';
 
 const formSchema = z.object({
-  name: z
-    .string()
-    .min(2, 'Name must be at least 2 characters.')
-    .max(24, 'Name cannot exceed 24 characters.')
-    .regex(
-      /^[a-z0-9][a-z0-9-_]*$/,
-      'Only lowercase letters, numbers, and the characters - and _ are allowed.',
-    ),
+  name: configSchemas.name,
   description: z.string(),
 });
 
@@ -48,7 +42,7 @@ export function CreateWidgetPackDialog(
     props.onSubmit({
       ...packForm.value,
       tags: [],
-      excludeFiles: '',
+      repositoryUrl: '',
     });
   }
 
