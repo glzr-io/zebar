@@ -30,7 +30,7 @@ export function PreviewBar(props: PreviewBarProps) {
   );
 
   return (
-    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black rounded-lg px-4 py-3 shadow-lg flex items-center gap-4 text-white">
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black rounded-lg px-4 py-3 shadow-lg flex items-center gap-4 text-white z-50">
       <p>
         Previewing <span class="font-medium">{props.pack.name}</span>
       </p>

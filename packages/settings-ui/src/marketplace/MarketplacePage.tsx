@@ -1,4 +1,4 @@
-import { Button, TextField } from '@glzr/components';
+import { Button, TextField, toaster } from '@glzr/components';
 import { A } from '@solidjs/router';
 import { IconDownload, IconEye } from '@tabler/icons-solidjs';
 import { createForm, Field } from 'smorf';
@@ -101,9 +101,14 @@ export function MarketplacePage() {
                     variant="ghost"
                     size="icon"
                     class="h-8 w-8"
-                    onClick={e => {
+                    onClick={async e => {
                       e.preventDefault();
-                      marketplacePacks.install(pack);
+                      await marketplacePacks.install(pack);
+                      toaster.show({
+                        title: 'Widget pack installed!',
+                        description: `Widget pack ${pack.name} v${pack.latestVersion} installed successfully.`,
+                        variant: 'default',
+                      });
                     }}
                   >
                     <IconDownload class="h-4 w-4" />

@@ -12,8 +12,8 @@ import {
 import { useNavigate } from '@solidjs/router';
 import { IconPackage, IconTrash } from '@tabler/icons-solidjs';
 import { Show } from 'solid-js';
+import type { WidgetPack } from 'zebar';
 
-import { WidgetPack } from '~/common';
 import { DeleteWidgetPackDialog } from './dialogs';
 
 export interface WidgetPackCardProps {
@@ -38,14 +38,14 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
 
               {props.pack.type === 'marketplace' && (
                 <Badge variant="outline" class="ml-2">
-                  {props.pack.version}
+                  {props.pack.metadata.version}
                 </Badge>
               )}
             </CardTitle>
 
             {props.pack.type === 'marketplace' && (
               <CardDescription class="mt-1">
-                by {props.pack.author}
+                by {props.pack.metadata.packId.split('.')[0]}
               </CardDescription>
             )}
           </div>
@@ -79,9 +79,7 @@ export function WidgetPackCard(props: WidgetPackCardProps) {
 
         <div class="flex flex-wrap gap-2 mb-4">
           {props.pack.tags.map(tag => (
-            <Badge key={tag} variant="secondary">
-              {tag}
-            </Badge>
+            <Badge variant="secondary">{tag}</Badge>
           ))}
         </div>
 

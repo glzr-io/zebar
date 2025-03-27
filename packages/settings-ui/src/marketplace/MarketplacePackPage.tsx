@@ -7,6 +7,7 @@ import {
   TabsTrigger,
   Card,
   CardContent,
+  toaster,
 } from '@glzr/components';
 import { useParams } from '@solidjs/router';
 import {
@@ -24,12 +25,14 @@ import {
   MarketplaceWidgetPack,
   useApiClient,
   useMarketplacePacks,
+  useWidgetPreview,
 } from '~/common';
 
 export function MarketplacePackPage() {
   const params = useParams();
   const apiClient = useApiClient();
   const marketplacePacks = useMarketplacePacks();
+  const widgetPreview = useWidgetPreview();
 
   const [currentImageIndex, setCurrentImageIndex] = createSignal(0);
 
@@ -135,9 +138,14 @@ export function MarketplacePackPage() {
                 <div class="flex flex-col gap-2">
                   <Button
                     class="w-full"
-                    onClick={() =>
-                      marketplacePacks.install(selectedPack())
-                    }
+                    onClick={async () => {
+                      await marketplacePacks.install(selectedPack());
+                      toaster.show({
+                        title: 'Widget pack installed!',
+                        description: `Widget pack ${selectedPack().name} v${selectedPack().latestVersion} installed successfully.`,
+                        variant: 'default',
+                      });
+                    }}
                   >
                     <IconDownload class="mr-2 h-4 w-4" />
                     Install
@@ -146,10 +154,7 @@ export function MarketplacePackPage() {
                     variant="outline"
                     class="w-full"
                     onClick={() =>
-                      marketplacePacks.startPreview(
-                        selectedPack(),
-                        selectedPack().widgetNames[0],
-                      )
+                      widgetPreview.startPreview(selectedPack())
                     }
                   >
                     <IconEye class="mr-2 h-4 w-4" />
