@@ -21,6 +21,7 @@ import { WidgetCachingSubform } from './WidgetCachingSubform';
 export interface WidgetConfigFormProps {
   config: WidgetConfig;
   packId: string;
+  disabled?: boolean;
   onChange: (form: FormState<WidgetConfig>) => void;
 }
 
@@ -146,6 +147,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 id="html-path"
                 label="HTML path"
                 placeholder="path/to/widget.html"
+                disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}
               />
@@ -158,6 +160,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                 id="z-order"
                 label="Z-order"
                 placeholder="Select z-order"
+                disabled={props.disabled}
                 error={field.error()}
                 options={[
                   {
@@ -183,6 +186,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <SwitchField
                 id="shown-in-taskbar"
                 label="Shown in taskbar"
+                disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}
               />
@@ -194,6 +198,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <SwitchField
                 id="focused"
                 label="Focused on launch"
+                disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}
               />
@@ -205,6 +210,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <SwitchField
                 id="resizable"
                 label="Resizable"
+                disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}
               />
@@ -216,6 +222,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <SwitchField
                 id="transparent"
                 label="Transparent"
+                disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}
               />
@@ -225,6 +232,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
           <WidgetCachingSubform
             value={configForm.value.caching}
             onChange={value => configForm.setFieldValue('caching', value)}
+            disabled={props.disabled}
           />
 
           <h3 class="text-lg font-semibold">Shell privileges</h3>
@@ -245,6 +253,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`privilege-program-${index}`}
                       label="Program"
                       placeholder="Program name or full path"
+                      disabled={props.disabled}
                       error={field.error()}
                       {...inputProps()}
                     />
@@ -260,6 +269,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`privilege-args-${index}`}
                       label="Arguments regex (use .* to allow all)"
                       placeholder="Regular expression for allowed arguments"
+                      disabled={props.disabled}
                       error={field.error()}
                       {...inputProps()}
                     />
@@ -274,6 +284,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       {...props}
                       variant="secondary"
                       size="icon"
+                      disabled={props.disabled}
                       onClick={() => deleteShellCommand(index)}
                     >
                       <IconTrash class="size-4" />
@@ -288,6 +299,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
           <Button
             class="block"
             variant="outline"
+            disabled={props.disabled}
             onClick={addNewShellCommand}
           >
             Add allowed shell command +
@@ -310,6 +322,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`name-${index}`}
                       label="Preset name"
                       error={field.error()}
+                      disabled={props.disabled}
                       {...inputProps()}
                     />
                   )}
@@ -339,6 +352,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`anchor-${index}`}
                       label="Anchor"
                       error={field.error()}
+                      disabled={props.disabled}
                       options={
                         [
                           { value: 'top_left', label: 'Top left' },
@@ -386,6 +400,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`monitor-${index}`}
                       label="Target monitor(s)"
                       error={field.error()}
+                      disabled={props.disabled}
                       options={
                         [
                           { value: 'primary', label: 'Primary' },
@@ -407,6 +422,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`offset-x-${index}`}
                       label="Offset X"
                       error={field.error()}
+                      disabled={props.disabled}
                       {...inputProps()}
                     />
                   )}
@@ -419,6 +435,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`offset-y-${index}`}
                       label="Offset Y"
                       error={field.error()}
+                      disabled={props.disabled}
                       {...inputProps()}
                     />
                   )}
@@ -433,6 +450,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`width-${index}`}
                       label="Width"
                       error={field.error()}
+                      disabled={props.disabled}
                       {...inputProps()}
                     />
                   )}
@@ -445,6 +463,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       id={`height-${index}`}
                       label="Height"
                       error={field.error()}
+                      disabled={props.disabled}
                       {...inputProps()}
                     />
                   )}
@@ -463,6 +482,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                       label="Dock to edge (Windows-only)"
                       description="Whether to dock the widget to the monitor edge and reserve screen space for it."
                       error={field.error()}
+                      disabled={props.disabled}
                       {...inputProps()}
                     />
                   )}
@@ -505,6 +525,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                             label="Dock to nearest detected edge"
                             class="flex items-center gap-x-4"
                             error={field.error()}
+                            disabled={props.disabled}
                             onBlur={() => inputProps().onBlur()}
                             onChange={enabled =>
                               inputProps().onChange(
@@ -523,6 +544,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                             <SelectField
                               id={`dock-edge-dropdown-${index}`}
                               label="Edge"
+                              disabled={props.disabled}
                               options={(
                                 [
                                   { value: 'top', label: 'Top' },
@@ -553,6 +575,7 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
                           label="Margin after window"
                           description="Margin to reserve after the widget window. Can be positive or negative."
                           error={field.error()}
+                          disabled={props.disabled}
                           {...inputProps()}
                         />
                       )}
@@ -562,7 +585,11 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
             </div>
           ))}
 
-          <Button onClick={addNewPreset} class="w-full">
+          <Button
+            onClick={addNewPreset}
+            class="w-full"
+            disabled={props.disabled}
+          >
             Add new preset +
           </Button>
         </CardContent>

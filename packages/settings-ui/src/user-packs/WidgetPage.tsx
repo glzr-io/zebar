@@ -112,6 +112,7 @@ export function WidgetPage() {
               <WidgetConfigForm
                 config={config()}
                 packId={selectedPack().id}
+                disabled={selectedPack().type === 'marketplace'}
                 onChange={form => {
                   if (form.isDirty() && !form.hasError()) {
                     updateWidgetConfig(

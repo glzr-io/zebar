@@ -11,6 +11,7 @@ import type { WidgetCaching } from 'zebar';
 
 export interface WidgetCachingSubformProps {
   value?: WidgetCaching;
+  disabled?: boolean;
   onChange: (caching: WidgetCaching) => void;
 }
 
@@ -55,6 +56,7 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
             <CacheDurationField
               id="default-duration"
               label="Default cache duration"
+              disabled={props.disabled}
               {...inputProps()}
             />
           )}
@@ -71,6 +73,7 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
                   id="rule-url"
                   placeholder="URL regex"
                   class="flex-grow"
+                  disabled={props.disabled}
                   {...inputProps()}
                 />
               )}
@@ -80,6 +83,7 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
               {inputProps => (
                 <CacheDurationField
                   id={`rule-duration-${index}`}
+                  disabled={props.disabled}
                   {...inputProps()}
                 />
               )}
@@ -89,6 +93,7 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
               type="button"
               variant="outline"
               size="icon"
+              disabled={props.disabled}
               onClick={() =>
                 cachingForm.setFieldValue('rules', rules =>
                   rules.filter((_, i) => i !== index),
@@ -104,6 +109,7 @@ export function WidgetCachingSubform(props: WidgetCachingSubformProps) {
         <Button
           type="button"
           variant="outline"
+          disabled={props.disabled}
           onClick={() =>
             cachingForm.setFieldValue('rules', rules => [
               ...rules,
@@ -123,6 +129,7 @@ interface CacheDurationFieldProps {
   id?: string;
   label?: string;
   value: number;
+  disabled?: boolean;
   onChange: (value: number) => void;
   onBlur: () => void;
 }
@@ -195,6 +202,7 @@ function CacheDurationField(props: CacheDurationFieldProps) {
         id={props.id}
         placeholder="Select cache duration"
         label={props.label}
+        disabled={props.disabled}
         options={
           [
             { value: SelectOptions.OneHour, label: '1 hour' },
@@ -223,6 +231,7 @@ function CacheDurationField(props: CacheDurationFieldProps) {
           id={props.id}
           placeholder="Cache duration (seconds)"
           value={customValue()}
+          disabled={props.disabled}
           onChange={value => {
             setCustomValue(value);
             props.onChange(value);
