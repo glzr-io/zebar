@@ -18,7 +18,7 @@ async-trait = "0.1"
 clap = { version = "4", features = ["derive", "env"] }
 crossbeam = "0.8"
 flate2 = "1"
-ignore = "0.4"
+globset = "0.4"
 netdev = "0.33"
 regex = "1"
 reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
