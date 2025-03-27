@@ -64,8 +64,11 @@ impl MarketplaceInstaller {
   }
 
   /// Returns the path to the extracted pack directory.
-  fn pack_download_dir(&self, pack_id: &str) -> PathBuf {
-    self.app_settings.marketplace_download_dir.join(pack_id)
+  fn pack_download_dir(&self, pack_id: &str, version: &str) -> PathBuf {
+    self
+      .app_settings
+      .marketplace_download_dir
+      .join(format!("{}@{}", pack_id, version))
   }
 
   /// Returns the path to the metadata file for a pack.
@@ -103,7 +106,7 @@ impl MarketplaceInstaller {
     tarball_url: &str,
     is_preview: bool,
   ) -> anyhow::Result<WidgetPack> {
-    let pack_dir = self.pack_download_dir(pack_id);
+    let pack_dir = self.pack_download_dir(pack_id, version);
 
     // Download and extract the pack. Skip the download if the directory
     // already exists.
