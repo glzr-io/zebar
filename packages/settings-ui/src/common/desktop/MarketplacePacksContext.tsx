@@ -9,6 +9,8 @@ import {
 } from 'solid-js';
 
 import { useApiClient } from '../api-client';
+import { useUserPacks } from './UserPacksContext';
+import { WidgetPack } from 'zebar';
 
 type MarketplacePacksContextState = {
   allPacks: Resource<MarketplaceWidgetPack[]>;
@@ -25,6 +27,7 @@ export function MarketplacePacksProvider(props: {
   children: JSX.Element;
 }) {
   const apiClient = useApiClient();
+  const userPacks = useUserPacks();
 
   // Fetch marketplace packs from the backend.
   const [allPacks] = createResource(
@@ -35,11 +38,27 @@ export function MarketplacePacksProvider(props: {
   );
 
   async function install(pack: MarketplaceWidgetPack) {
-    await invoke<void>('install_widget_pack', {
+    const installedPack = await invoke<WidgetPack>('install_widget_pack', {
       packId: pack.publishedId,
       version: pack.latestVersion,
       tarballUrl: pack.tarballUrl,
       isPreview: false,
+    });
+
+    userPacks.mutatePacks(packs => {
+      const existingPackIndex = packs?.findIndex(
+        pack => pack.id === installedPack.id,
+      );
+
+      // Update in place if the pack already exists. Otherwise, append the
+      // new pack.
+      if (existingPackIndex !== undefined && existingPackIndex >= 0) {
+        const updatedPacks = [...(packs ?? [])];
+        updatedPacks[existingPackIndex] = installedPack;
+        return updatedPacks;
+      } else {
+        return [...(packs ?? []), installedPack];
+      }
     });
   }
 

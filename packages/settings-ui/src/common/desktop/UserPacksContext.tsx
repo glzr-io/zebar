@@ -4,6 +4,7 @@ import {
   Resource,
   useContext,
   createEffect,
+  Setter,
 } from 'solid-js';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event } from '@tauri-apps/api/event';
@@ -45,6 +46,7 @@ type UserPacksContextState = {
   ) => Promise<WidgetPack>;
   deletePack: (packId: string) => Promise<void>;
   deleteWidget: (packId: string, widgetName: string) => Promise<void>;
+  mutatePacks: Setter<WidgetPack[] | undefined>;
   updateWidgetConfig: (
     packId: string,
     widgetName: string,
@@ -238,6 +240,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     updatePack,
     deletePack,
     deleteWidget,
+    mutatePacks,
   };
 
   return (
