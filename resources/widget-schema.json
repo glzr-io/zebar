@@ -22,6 +22,9 @@
     "transparent": {
       "type": "boolean"
     },
+    "includeFiles": {
+      "type": "string"
+    },
     "caching": {
       "type": "object",
       "properties": {

@@ -113,6 +113,10 @@ pub struct WidgetConfig {
   /// Whether the Tauri window frame should be transparent.
   pub transparent: bool,
 
+  /// Files to include as part of the widget.
+  #[serde(default)]
+  pub include_files: String,
+
   /// How network requests should be cached.
   #[serde(default)]
   pub caching: WidgetCaching,
@@ -720,6 +724,14 @@ impl Config {
       focused: false,
       resizable: false,
       transparent: false,
+      include_files: match args.template {
+        FrontendTemplate::ReactBuildless => {
+          "**".to_string()
+        }
+        FrontendTemplate::SolidTypescript => {
+          "dist".to_string()
+        }
+      },
       caching: WidgetCaching::default(),
       privileges: WidgetPrivileges::default(),
       presets: vec![WidgetPreset {
