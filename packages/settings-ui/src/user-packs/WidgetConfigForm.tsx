@@ -32,11 +32,15 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
   // Update the form when the config is different.
   createEffect(
     on(
-      () => props.packId,
-      () => {
-        configForm.unsetDirty();
-        configForm.unsetTouched();
-        configForm.setValue(props.config);
+      () => [props.packId, props.config.name],
+      ([id, name], prev) => {
+        const [prevId, prevName] = prev ?? [null, null];
+
+        if (id !== prevId || name !== prevName) {
+          configForm.unsetDirty();
+          configForm.unsetTouched();
+          configForm.setValue(props.config);
+        }
       },
       { defer: true },
     ),

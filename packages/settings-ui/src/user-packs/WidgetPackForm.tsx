@@ -10,10 +10,10 @@ import {
 import { join, sep } from '@tauri-apps/api/path';
 import { createForm, Field, FormState } from 'smorf';
 import { createEffect, createResource, on } from 'solid-js';
-import { configSchemas } from 'zebar';
+import { configSchemas, type WidgetPack } from 'zebar';
 import * as z from 'zod';
 
-import { ImageSelector, WidgetPack } from '~/common';
+import { ImageSelector } from '~/common';
 
 export type WidgetPackFormData = Omit<
   z.infer<typeof configSchemas.widgetPack>,
@@ -53,6 +53,8 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
       () => props.pack.id,
       (id, prevId) => {
         if (id !== prevId) {
+          form.unsetDirty();
+          form.unsetTouched();
           form.setValue({
             name: props.pack.name,
             description: props.pack.description,
@@ -69,9 +71,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
   createEffect(
     on(
       () => form.value,
-      () => {
-        props.onChange?.(form);
-      },
+      () => props.onChange?.(form),
     ),
   );
 
