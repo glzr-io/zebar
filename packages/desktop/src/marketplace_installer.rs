@@ -82,18 +82,19 @@ impl MarketplaceInstaller {
   /// Returns a vector of `MarketplacePackMetadata` instances for all
   /// installed packs.
   pub fn installed_packs_metadata(
-    app_settings: &AppSettings,
+    &self,
   ) -> anyhow::Result<Vec<MarketplacePackMetadata>> {
-    let packs_metadata = fs::read_dir(&app_settings.marketplace_meta_dir)?
-      .filter_map(|entry| {
-        let metadata = read_and_parse_json::<MarketplacePackMetadata>(
-          &entry.ok()?.path(),
-        )
-        .ok()?;
+    let packs_metadata =
+      fs::read_dir(&self.app_settings.marketplace_meta_dir)?
+        .filter_map(|entry| {
+          let metadata = read_and_parse_json::<MarketplacePackMetadata>(
+            &entry.ok()?.path(),
+          )
+          .ok()?;
 
-        Some(metadata)
-      })
-      .collect();
+          Some(metadata)
+        })
+        .collect();
 
     Ok(packs_metadata)
   }
@@ -146,6 +147,17 @@ impl MarketplaceInstaller {
     tracing::info!("Installed widget pack: {}", pack_id);
 
     Ok(pack)
+  }
+
+  /// Deletes the metadata for an installed widget pack.
+  pub fn delete_metadata(&self, pack_id: &str) -> anyhow::Result<()> {
+    let metadata_path = self.pack_metadata_file_path(pack_id);
+
+    if metadata_path.exists() {
+      fs::remove_file(metadata_path)?;
+    }
+
+    Ok(())
   }
 
   /// Downloads and extracts a widget pack.

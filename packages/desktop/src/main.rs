@@ -176,7 +176,10 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.manage(marketplace_installer.clone());
 
   // Initialize `Config` in Tauri state.
-  let config = Arc::new(Config::new(app_settings.clone())?);
+  let config = Arc::new(Config::new(
+    app_settings.clone(),
+    marketplace_installer.clone(),
+  )?);
   app.manage(config.clone());
 
   // Initialize `MonitorState` in Tauri state.

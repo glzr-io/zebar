@@ -304,6 +304,9 @@ pub struct Config {
   /// Reference to `AppSettings`.
   app_settings: Arc<AppSettings>,
 
+  /// Reference to `MarketplaceInstaller`.
+  marketplace_installer: Arc<MarketplaceInstaller>,
+
   /// Map of widget packs by their ID's.
   pub widget_packs: Arc<Mutex<HashMap<String, WidgetPack>>>,
 
@@ -322,8 +325,12 @@ impl Config {
   /// Reads the config files within the config directory.
   ///
   /// Returns a new `Config` instance.
-  pub fn new(app_settings: Arc<AppSettings>) -> anyhow::Result<Self> {
-    let widget_packs = Self::read_widget_packs(&app_settings)?;
+  pub fn new(
+    app_settings: Arc<AppSettings>,
+    marketplace_installer: Arc<MarketplaceInstaller>,
+  ) -> anyhow::Result<Self> {
+    let widget_packs =
+      Self::read_widget_packs(&app_settings, &marketplace_installer)?;
 
     let (widget_packs_change_tx, _widget_packs_change_rx) =
       broadcast::channel(16);
@@ -333,6 +340,7 @@ impl Config {
 
     Ok(Self {
       app_settings,
+      marketplace_installer,
       widget_packs: Arc::new(Mutex::new(widget_packs)),
       _widget_packs_change_rx,
       widget_packs_change_tx,
@@ -343,7 +351,10 @@ impl Config {
 
   /// Re-evaluates widget packs within the config directory.
   pub async fn reload(&self) -> anyhow::Result<()> {
-    let new_widget_packs = Self::read_widget_packs(&self.app_settings)?;
+    let new_widget_packs = Self::read_widget_packs(
+      &self.app_settings,
+      &self.marketplace_installer,
+    )?;
 
     {
       let mut widget_packs = self.widget_packs.lock().await;
@@ -362,6 +373,7 @@ impl Config {
   /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
   fn read_widget_packs(
     app_settings: &AppSettings,
+    marketplace_installer: &MarketplaceInstaller,
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
     let mut packs = HashMap::new();
 
@@ -370,9 +382,7 @@ impl Config {
       None,
     )?);
 
-    for metadata in
-      MarketplaceInstaller::installed_packs_metadata(app_settings)?
-    {
+    for metadata in marketplace_installer.installed_packs_metadata()? {
       packs.extend(Self::read_widget_packs_of_type(
         &app_settings.marketplace_download_dir,
         Some(&metadata),
@@ -638,10 +648,20 @@ impl Config {
     &self,
     pack_id: &str,
   ) -> anyhow::Result<()> {
-    let pack = self.find_local_widget_pack(pack_id).await?;
+    let pack = self
+      .widget_pack_by_id(pack_id)
+      .await
+      .with_context(|| format!("Widget pack not found: {}", pack_id))?;
 
-    // Remove the directory with all widget files.
-    fs::remove_dir_all(&pack.directory_path)?;
+    match pack.r#type {
+      WidgetPackType::Local => {
+        // Remove the directory with all widget files.
+        fs::remove_dir_all(&pack.directory_path)?;
+      }
+      WidgetPackType::Marketplace => {
+        self.marketplace_installer.delete_metadata(pack_id)?;
+      }
+    }
 
     // Remove the pack from state.
     {
