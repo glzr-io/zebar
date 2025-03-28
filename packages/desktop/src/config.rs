@@ -43,6 +43,19 @@ pub struct WidgetPack {
   pub directory_path: PathBuf,
 }
 
+impl WidgetPack {
+  /// Returns a list of file patterns to include for all widgets in the
+  /// pack.
+  pub fn include_files(&self) -> Vec<String> {
+    self
+      .config
+      .widgets
+      .iter()
+      .flat_map(|widget| widget.include_files.clone())
+      .collect()
+  }
+}
+
 /// Deserialized widget pack.
 ///
 /// This is the type of the `zpack.json` file.

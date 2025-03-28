@@ -133,17 +133,11 @@ fn create_tarball(pack: &WidgetPack) -> anyhow::Result<PathBuf> {
     }
   }
 
-  // Collect all include patterns from widgets.
-  let patterns = pack
-    .config
-    .widgets
-    .iter()
-    .flat_map(|widget| widget.include_files.clone())
-    .collect::<Vec<_>>();
-
   // Include all files that match the widgets' include patterns.
-  included_files
-    .extend(glob_util::matched_paths(&pack.directory_path, &patterns)?);
+  included_files.extend(glob_util::matched_paths(
+    &pack.directory_path,
+    &pack.include_files(),
+  )?);
 
   let encoder = GzEncoder::new(tarball_file, Compression::default());
   let mut builder = tar::Builder::new(encoder);

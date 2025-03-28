@@ -292,7 +292,12 @@ impl WidgetFactory {
       }
 
       let webview_url = WebviewUrl::External(
-        create_init_url(&widget_pack.directory_path, &html_path).await?,
+        create_init_url(
+          &widget_pack.directory_path,
+          &html_path,
+          widget_pack.include_files(),
+        )
+        .await?,
       );
 
       let mut state = WidgetState {
