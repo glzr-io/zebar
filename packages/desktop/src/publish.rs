@@ -1,22 +1,57 @@
 use std::{
+  collections::HashSet,
   fs::{self, File},
   path::{Path, PathBuf},
 };
 
 use flate2::{write::GzEncoder, Compression};
-use globset::{Glob, GlobBuilder, GlobSetBuilder};
-use reqwest::{multipart::Form, StatusCode};
+use reqwest::multipart::Form;
 use serde::Deserialize;
 
 use crate::{
   cli::PublishArgs,
-  common::visit_deep,
+  common::{glob_util, PathExt},
   config::{Config, WidgetPack},
 };
 
 #[derive(Debug, Deserialize)]
-struct UploadResponse {
-  created_id: String,
+#[serde(untagged)]
+enum UploadResponse {
+  Error { error: UploadResponseError },
+  Success { result: UploadResponseSuccess },
+}
+
+#[derive(Debug, Deserialize)]
+struct UploadResponseError {
+  json: UploadResponseErrorJson,
+}
+
+#[derive(Debug, Deserialize)]
+struct UploadResponseErrorJson {
+  message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct UploadResponseSuccess {
+  data: UploadResponseSuccessData,
+}
+
+#[derive(Debug, Deserialize)]
+struct UploadResponseSuccessData {
+  json: UploadResponseSuccessJson,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UploadResponseSuccessJson {
+  widget_pack: UploadResponseSuccessWidgetPack,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UploadResponseSuccessWidgetPack {
+  published_id: String,
+  latest_version: String,
 }
 
 /// Publishes a widget pack to the Zebar marketplace.
@@ -51,7 +86,7 @@ pub async fn publish_widget_pack(
 
   Ok(format!(
     "Widget pack '{}' with version {} successfully published!",
-    response.created_id, args.version
+    response.published_id, response.latest_version
   ))
 }
 
@@ -64,29 +99,51 @@ fn create_tarball(pack: &WidgetPack) -> anyhow::Result<PathBuf> {
   let tarball_path = std::env::temp_dir().join("zebar-pack.tar.gz");
   let tarball_file = File::create(&tarball_path)?;
 
-  let mut included_files = vec![pack.config_path.clone()];
+  let mut included_files = HashSet::new();
+  included_files.insert(pack.config_path.clone());
 
-  let glob_set = {
-    let mut builder = GlobSetBuilder::new();
+  // Include preview images.
+  for preview_image in &pack.config.preview_images {
+    included_files.insert(
+      PathBuf::from(preview_image).to_absolute(&pack.directory_path)?,
+    );
+  }
 
-    for widget in &pack.config.widgets {
-      for pattern in widget.include_files.split('\n') {
-        builder.add(Glob::new(pattern)?);
+  let target_files = [
+    "readme.md",
+    "readme",
+    "license.md",
+    "license.txt",
+    "license",
+  ];
+
+  // Include readme and license files if they exist.
+  for entry in
+    std::fs::read_dir(&pack.directory_path)?.filter_map(Result::ok)
+  {
+    let path = entry.path();
+
+    if path.is_file() {
+      // Check case-insensitive match against our target files.
+      if target_files
+        .contains(&path.to_unicode_string().to_lowercase().as_str())
+      {
+        included_files.insert(path.clone());
       }
     }
+  }
 
-    builder.build()?
-  };
+  // Collect all include patterns from widgets.
+  let patterns = pack
+    .config
+    .widgets
+    .iter()
+    .flat_map(|widget| widget.include_files.clone())
+    .collect::<Vec<_>>();
 
-  visit_deep(&pack.directory_path, &mut |entry| {
-    let path = entry.path();
-    let relative_path = path.strip_prefix(&pack.directory_path).unwrap();
-    // TODO: If the path is a directory, we need to add all files in the
-    // directory to the tarball.
-    if entry.path().is_file() && glob_set.is_match(relative_path) {
-      included_files.push(path.to_path_buf());
-    }
-  })?;
+  // Include all files that match the widgets' include patterns.
+  included_files
+    .extend(glob_util::matched_paths(&pack.directory_path, &patterns)?);
 
   let encoder = GzEncoder::new(tarball_file, Compression::default());
   let mut builder = tar::Builder::new(encoder);
@@ -110,7 +167,9 @@ async fn upload_to_marketplace(
   pack_config_path: &Path,
   tarball_path: &Path,
   args: &PublishArgs,
-) -> anyhow::Result<UploadResponse> {
+) -> anyhow::Result<UploadResponseSuccessWidgetPack> {
+  println!("Uploading widget pack to marketplace...");
+
   // Create multipart form.
   let mut form = Form::new()
     .text("version", args.version.to_string())
@@ -144,20 +203,17 @@ async fn upload_to_marketplace(
     .header("X-API-TOKEN", args.token.clone())
     .multipart(form)
     .send()
+    .await?
+    .json::<UploadResponse>()
     .await?;
 
-  match response.status() {
-    StatusCode::OK | StatusCode::CREATED => {
-      let upload_response = response.json::<UploadResponse>().await?;
-      Ok(upload_response)
-    }
-    status => {
-      let error_text = response.text().await?;
+  match response {
+    UploadResponse::Success { result } => Ok(result.data.json.widget_pack),
+    UploadResponse::Error { error } => {
       anyhow::bail!(
-        "Failed to upload widget pack: {} - {}",
-        status,
-        error_text
-      )
+        "Failed to upload widget pack: {}",
+        error.json.message
+      );
     }
   }
 }

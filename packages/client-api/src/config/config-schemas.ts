@@ -27,7 +27,7 @@ const widget = z.object({
   focused: z.boolean(),
   resizable: z.boolean(),
   transparent: z.boolean(),
-  includeFiles: z.string(),
+  includeFiles: z.array(z.string()).default([]),
   caching: z.object({
     defaultDuration: z.number(),
     rules: z.array(

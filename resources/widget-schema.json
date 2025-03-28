@@ -23,7 +23,10 @@
       "type": "boolean"
     },
     "includeFiles": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "caching": {
       "type": "object",

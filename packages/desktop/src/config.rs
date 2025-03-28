@@ -115,7 +115,7 @@ pub struct WidgetConfig {
 
   /// Files to include as part of the widget.
   #[serde(default)]
-  pub include_files: String,
+  pub include_files: Vec<String>,
 
   /// How network requests should be cached.
   #[serde(default)]
@@ -726,10 +726,10 @@ impl Config {
       transparent: false,
       include_files: match args.template {
         FrontendTemplate::ReactBuildless => {
-          "**".to_string()
+          vec!["**".to_string()]
         }
         FrontendTemplate::SolidTypescript => {
-          "dist".to_string()
+          vec!["dist/**".to_string()]
         }
       },
       caching: WidgetCaching::default(),

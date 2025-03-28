@@ -10,7 +10,7 @@ export type WidgetConfig = {
   focused: boolean;
   resizable: boolean;
   transparent: boolean;
-  includeFiles: string;
+  includeFiles: string[];
   caching: WidgetCaching;
   privileges: WidgetPrivileges;
   presets: WidgetPreset[];
