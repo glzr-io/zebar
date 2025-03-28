@@ -128,8 +128,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       smorf:
-        specifier: 1.5.0
-        version: 1.5.0(solid-js@1.9.3)
+        specifier: 1.5.1
+        version: 1.5.1(solid-js@1.9.3)
       solid-js:
         specifier: 1.9.3
         version: 1.9.3
@@ -1238,11 +1238,6 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
-  '@solid-primitives/trigger@1.1.0':
-    resolution: {integrity: sha512-00BbAiXV66WwjHuKZc3wr0+GLb9C24mMUmi3JdTpNFgHBbrQGrIHubmZDg36c5/7wH+E0GQtOOanwQS063PO+A==}
-    peerDependencies:
-      solid-js: ^1.6.12
-
   '@solid-primitives/trigger@1.2.0':
     resolution: {integrity: sha512-sW4/3cDXSjYQampn8CIFZ11BlxgNf2li8r2fXnb3b3YWE6RdZZCl8PhvpPF38Gzl0CnryrbTPJWM7OIkseCDgQ==}
     peerDependencies:
@@ -2288,8 +2283,8 @@ packages:
     resolution: {integrity: sha512-3dOsAHXXUkQTpOYcoAxLIorMTp4gIQr5IW3iVb7A7lFIp0VHhnynm9izx6TssdrIcVIESAlVjtnO2K8bg+Coew==}
     engines: {node: '>=12'}
 
-  smorf@1.5.0:
-    resolution: {integrity: sha512-uAG9ILHNCe98lWOllDOTbDEl1xZ4AtPhYekHDiFIh+89ekTeS+ko9EqCOt+NpTlxnKFrbqX8vz0aHMruxg5JCQ==}
+  smorf@1.5.1:
+    resolution: {integrity: sha512-/DB743mVLAPkd+WFpDvwsgJbgeRgnnpI4h3sD/Dg0fvDndLNGEIvsORrF4umalVDWoRRkBH76uZTRBICuP4hXQ==}
     peerDependencies:
       solid-js: '>=1.7.0'
 
@@ -3455,7 +3450,7 @@ snapshots:
 
   '@solid-primitives/map@0.4.13(solid-js@1.9.3)':
     dependencies:
-      '@solid-primitives/trigger': 1.1.0(solid-js@1.9.3)
+      '@solid-primitives/trigger': 1.2.0(solid-js@1.9.3)
       solid-js: 1.9.3
 
   '@solid-primitives/map@0.6.0(solid-js@1.9.3)':
@@ -3510,11 +3505,6 @@ snapshots:
       solid-js: 1.9.3
 
   '@solid-primitives/static-store@0.0.8(solid-js@1.9.3)':
-    dependencies:
-      '@solid-primitives/utils': 6.2.3(solid-js@1.9.3)
-      solid-js: 1.9.3
-
-  '@solid-primitives/trigger@1.1.0(solid-js@1.9.3)':
     dependencies:
       '@solid-primitives/utils': 6.2.3(solid-js@1.9.3)
       solid-js: 1.9.3
@@ -4670,7 +4660,7 @@ snapshots:
 
   slash@4.0.0: {}
 
-  smorf@1.5.0(solid-js@1.9.3):
+  smorf@1.5.1(solid-js@1.9.3):
     dependencies:
       '@solid-primitives/map': 0.6.0(solid-js@1.9.3)
       '@solid-primitives/set': 0.6.0(solid-js@1.9.3)

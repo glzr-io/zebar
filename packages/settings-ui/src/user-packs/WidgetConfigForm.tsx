@@ -10,7 +10,7 @@ import {
   TooltipContent,
   Tooltip,
   TooltipTrigger,
-  TextAreaField,
+  ChipField,
 } from '@glzr/components';
 import { IconAlertTriangle, IconTrash } from '@tabler/icons-solidjs';
 import { createForm, Field, FormState } from 'smorf';
@@ -155,6 +155,18 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
             )}
           </Field>
 
+          <Field of={configForm} path="includeFiles">
+            {(inputProps, field) => (
+              <ChipField
+                label="Included file paths"
+                description="Files that will be packaged and served with your widget (like HTML, CSS, JS, images). Glob patterns like '*.js' or 'dist/**' are supported."
+                disabled={props.disabled}
+                error={field.error()}
+                {...inputProps()}
+              />
+            )}
+          </Field>
+
           <Field of={configForm} path="zOrder">
             {(inputProps, field) => (
               <SelectField
@@ -223,18 +235,6 @@ export function WidgetConfigForm(props: WidgetConfigFormProps) {
               <SwitchField
                 id="transparent"
                 label="Transparent"
-                disabled={props.disabled}
-                error={field.error()}
-                {...inputProps()}
-              />
-            )}
-          </Field>
-
-          <Field of={configForm} path="includeFiles">
-            {(inputProps, field) => (
-              <TextAreaField
-                label="Include files"
-                description="A list of file patterns to include in the pack separated by new lines."
                 disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}
