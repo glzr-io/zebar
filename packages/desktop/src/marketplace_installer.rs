@@ -30,9 +30,6 @@ pub struct MarketplacePackMetadata {
   /// Version of the installed pack.
   pub version: String,
 
-  /// URL to the tarball.
-  pub tarball_url: String,
-
   /// Installation timestamp, stored as seconds since epoch.
   pub installed_at: u64,
 }
@@ -119,7 +116,6 @@ impl MarketplaceInstaller {
     let metadata = MarketplacePackMetadata {
       pack_id: pack_id.to_string(),
       version: version.to_string(),
-      tarball_url: tarball_url.to_string(),
       installed_at: SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .context("Failed to get timestamp.")?
