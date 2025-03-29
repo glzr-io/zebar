@@ -542,7 +542,7 @@ impl SysTray {
       MenuEvent::EditWidgetPack {
         pack_id: pack.id.clone(),
       },
-      "Settings",
+      "Pack settings",
     );
 
     Ok(pack_menu.build()?)
@@ -611,7 +611,7 @@ impl SysTray {
         pack_id: pack_id.clone(),
         widget_name: widget_config.name.clone(),
       },
-      "Settings",
+      "Widget settings",
     );
 
     // Add a submenu for toggling the widget's presets on startup.

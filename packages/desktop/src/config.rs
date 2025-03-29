@@ -11,9 +11,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, Mutex};
 
 use crate::{
-  app_settings::{
-    AppSettings, FrontendTemplate, TemplateResource, VERSION_NUMBER,
-  },
+  app_settings::{AppSettings, VERSION_NUMBER},
   common::{read_and_parse_json, LengthValue, PathExt},
   marketplace_installer::{MarketplaceInstaller, MarketplacePackMetadata},
 };
@@ -321,6 +319,13 @@ pub struct CreateWidgetConfigArgs {
   pub template: FrontendTemplate,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FrontendTemplate {
+  ReactBuildless,
+  SolidTypescript,
+}
+
 #[derive(Debug)]
 pub struct Config {
   /// Reference to `AppSettings`.
@@ -592,7 +597,7 @@ impl Config {
     context.insert("ZEBAR_VERSION", &VERSION_NUMBER.to_string());
 
     self.app_settings.init_template(
-      TemplateResource::Pack,
+      &Path::new("pack-template"),
       &pack_dir,
       &context,
     )?;
@@ -710,12 +715,19 @@ impl Config {
     let pack = self.find_local_widget_pack(&args.pack_id).await?;
     let widget_dir = pack.directory_path.join(&args.name);
 
+    let template_path = match args.template {
+      FrontendTemplate::ReactBuildless => {
+        "widget-templates/react-buildless"
+      }
+      FrontendTemplate::SolidTypescript => "widget-templates/solid-ts",
+    };
+
     let mut context = tera::Context::new();
     context.insert("WIDGET_NAME", &args.name);
     context.insert("ZEBAR_VERSION", &VERSION_NUMBER.to_string());
 
     self.app_settings.init_template(
-      TemplateResource::Widget(args.template.clone()),
+      &Path::new(template_path),
       &widget_dir,
       &context,
     )?;

@@ -1,5 +1,4 @@
 use std::{
-  collections::HashMap,
   fs::{self},
   path::{Path, PathBuf},
   sync::Arc,
@@ -115,25 +114,6 @@ impl<'de> Deserialize<'de> for StartupConfig {
       },
     })
   }
-}
-
-/// Represents templates that can be initialized from the `templates/`
-/// directory.
-#[derive(Debug)]
-pub enum TemplateResource {
-  /// Template for creating a new widget pack.
-  Pack,
-
-  /// Template for creating a new widget with specified frontend
-  /// framework.
-  Widget(FrontendTemplate),
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum FrontendTemplate {
-  ReactBuildless,
-  SolidTypescript,
 }
 
 #[derive(Debug)]
@@ -388,31 +368,23 @@ impl AppSettings {
   /// Copies and processes a template to the destination directory.
   pub fn init_template(
     &self,
-    template: TemplateResource,
+    template_path: &Path,
     dest_dir: &Path,
     context: &tera::Context,
   ) -> anyhow::Result<()> {
-    // Determine source template path based on template type.
-    let template_path = match template {
-      TemplateResource::Pack => "pack-template",
-      TemplateResource::Widget(frontend) => match frontend {
-        FrontendTemplate::ReactBuildless => {
-          "widget-templates/react-buildless"
-        }
-        FrontendTemplate::SolidTypescript => "widget-templates/solid-ts",
-      },
-    };
-
     // Resolve the full path to template directory.
     let template_dir = self
       .app_handle
       .path()
       .resolve(
-        format!("../../resources/templates/{}", template_path),
+        Path::new("../../resources/templates").join(template_path),
         BaseDirectory::Resource,
       )
       .with_context(|| {
-        format!("Unable to resolve {} template resource.", template_path)
+        format!(
+          "Unable to resolve {} template resource.",
+          template_path.display()
+        )
       })?;
 
     tracing::info!(
