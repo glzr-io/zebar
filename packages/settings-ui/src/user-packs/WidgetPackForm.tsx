@@ -116,7 +116,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
           <Field of={form} path="description">
             {(inputProps, field) => (
               <TextField
-                label="Description"
+                label="Description (optional)"
                 placeholder="A collection of beautiful widgets..."
                 disabled={props.disabled}
                 error={field.error()}
@@ -128,7 +128,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
           <Field of={form} path="tags">
             {(inputProps, field) => (
               <ChipField
-                label="Tags"
+                label="Tags (optional)"
                 placeholder="Press enter to add tags..."
                 disabled={props.disabled}
                 error={field.error()}

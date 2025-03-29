@@ -584,16 +584,17 @@ impl Config {
   ) -> anyhow::Result<WidgetPack> {
     let pack_dir = self.app_settings.config_dir.join(&args.name);
 
+    let mut context = tera::Context::new();
+    context.insert("PACK_NAME", &args.name);
+    context.insert("PACK_DESCRIPTION", &args.description);
+    context.insert("PACK_TAGS", &args.tags);
+    context.insert("REPOSITORY_URL", &args.repository_url);
+    context.insert("ZEBAR_VERSION", &VERSION_NUMBER.to_string());
+
     self.app_settings.init_template(
       TemplateResource::Pack,
       &pack_dir,
-      &HashMap::from([
-        ("PACK_NAME", args.name),
-        ("PACK_DESCRIPTION", args.description),
-        ("PACK_TAGS", args.tags.join(",")),
-        ("REPOSITORY_URL", args.repository_url),
-        ("ZEBAR_VERSION", VERSION_NUMBER.to_string()),
-      ]),
+      &context,
     )?;
 
     // Initialize git repository. Ignore errors (in case Git is not
@@ -709,23 +710,24 @@ impl Config {
     let pack = self.find_local_widget_pack(&args.pack_id).await?;
     let widget_dir = pack.directory_path.join(&args.name);
 
+    let mut context = tera::Context::new();
+    context.insert("WIDGET_NAME", &args.name);
+    context.insert("ZEBAR_VERSION", &VERSION_NUMBER.to_string());
+
     self.app_settings.init_template(
       TemplateResource::Widget(args.template.clone()),
       &widget_dir,
-      &HashMap::from([
-        ("WIDGET_NAME", args.name.clone()),
-        ("ZEBAR_VERSION", VERSION_NUMBER.to_string()),
-      ]),
+      &context,
     )?;
 
     let widget_config = WidgetConfig {
       name: args.name.clone(),
       html_path: match args.template {
         FrontendTemplate::ReactBuildless => {
-          widget_dir.join("index.html").to_relative(&pack.directory_path)?
+          format!("{}/index.html", args.name).into()
         }
         FrontendTemplate::SolidTypescript => {
-          widget_dir.join("dist/index.html").to_relative(&pack.directory_path)?
+          format!("{}/dist/index.html", args.name).into()
         }
       },
       schema: Some(format!(
@@ -739,10 +741,10 @@ impl Config {
       transparent: false,
       include_files: match args.template {
         FrontendTemplate::ReactBuildless => {
-          vec!["**".to_string()]
+          vec![format!("{}/**", args.name)]
         }
         FrontendTemplate::SolidTypescript => {
-          vec!["dist/**".to_string()]
+          vec![format!("{}/dist/**", args.name)]
         }
       },
       caching: WidgetCaching::default(),

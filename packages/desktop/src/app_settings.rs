@@ -390,7 +390,7 @@ impl AppSettings {
     &self,
     template: TemplateResource,
     dest_dir: &Path,
-    context: &HashMap<&str, String>,
+    context: &tera::Context,
   ) -> anyhow::Result<()> {
     // Determine source template path based on template type.
     let template_path = match template {
@@ -424,8 +424,6 @@ impl AppSettings {
     // Copy all template files.
     copy_dir_all(&template_dir, dest_dir, false)?;
 
-    let context = tera::Context::from_serialize(context)?;
-
     // Run Tera template engine on all files with a `.tera` extension.
     visit_deep(dest_dir, &mut |entry| {
       if let Some(file_name) = entry.file_name().to_str() {
@@ -435,7 +433,7 @@ impl AppSettings {
           if let Ok(contents) = fs::read_to_string(&path) {
             // Render the template using Tera.
             if let Ok(result) =
-              tera::Tera::one_off(&contents, &context, true)
+              tera::Tera::one_off(&contents, context, true)
             {
               let _ = fs::write(&path, result);
             }
