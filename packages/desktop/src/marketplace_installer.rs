@@ -34,6 +34,19 @@ pub struct MarketplacePackMetadata {
   pub installed_at: u64,
 }
 
+impl MarketplacePackMetadata {
+  pub fn new(pack_id: &str, version: &str) -> anyhow::Result<Self> {
+    Ok(Self {
+      pack_id: pack_id.to_string(),
+      version: version.to_string(),
+      installed_at: SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .context("Failed to get timestamp.")?
+        .as_secs(),
+    })
+  }
+}
+
 /// Manages installation of marketplace widget packs.
 #[derive(Debug)]
 pub struct MarketplaceInstaller {
@@ -113,14 +126,7 @@ impl MarketplaceInstaller {
     }
 
     // Create metadata.
-    let metadata = MarketplacePackMetadata {
-      pack_id: pack_id.to_string(),
-      version: version.to_string(),
-      installed_at: SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .context("Failed to get timestamp.")?
-        .as_secs(),
-    };
+    let metadata = MarketplacePackMetadata::new(pack_id, version)?;
 
     let pack = Config::read_widget_pack(
       &pack_dir.join("zpack.json"),

@@ -8,14 +8,17 @@
       "items": {
         "type": "object",
         "properties": {
-          "path": {
+          "pack": {
+            "type": "string"
+          },
+          "widget": {
             "type": "string"
           },
           "preset": {
             "type": "string"
           }
         },
-        "required": ["path", "preset"]
+        "required": ["pack", "widget", "preset"]
       }
     }
   },

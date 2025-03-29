@@ -622,8 +622,8 @@ impl SysTray {
       for preset in &widget_config.presets {
         let is_launched_on_startup =
           startup_configs.iter().any(|config| {
-            config.pack_id == *pack_id
-              && config.widget_name == widget_config.name
+            config.pack == *pack_id
+              && config.widget == widget_config.name
               && config.preset == preset.name
           });
 

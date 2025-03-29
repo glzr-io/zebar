@@ -525,8 +525,8 @@ impl WidgetFactory {
     for startup_config in startup_configs {
       self
         .start_widget_by_id(
-          &startup_config.pack_id,
-          &startup_config.widget_name,
+          &startup_config.pack,
+          &startup_config.widget,
           &WidgetOpenOptions::Preset(startup_config.preset),
           false,
         )

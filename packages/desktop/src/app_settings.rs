@@ -30,10 +30,10 @@ pub struct AppSettingsValue {
 #[serde(rename_all = "camelCase")]
 pub struct StartupConfig {
   /// ID of the widget pack to launch on startup.
-  pub pack_id: String,
+  pub pack: String,
 
   /// Name of the widget within the widget pack to launch on startup.
-  pub widget_name: String,
+  pub widget: String,
 
   /// Preset name within the widget config.
   pub preset: String,
@@ -58,8 +58,8 @@ impl<'de> Deserialize<'de> for StartupConfig {
       },
       // Object format from v3.0.0 onwards.
       V3Object {
-        pack_id: String,
-        widget_name: String,
+        pack: String,
+        widget: String,
         preset: String,
       },
     }
@@ -86,30 +86,30 @@ impl<'de> Deserialize<'de> for StartupConfig {
 
     Ok(match value {
       StringOrObject::String(s) => {
-        let (pack_id, widget_name) = parse_path(&PathBuf::from(s));
+        let (pack, widget) = parse_path(&PathBuf::from(s));
 
         StartupConfig {
-          pack_id,
-          widget_name,
+          pack,
+          widget,
           preset: "default".to_string(),
         }
       }
       StringOrObject::V2Object { path, preset } => {
-        let (pack_id, widget_name) = parse_path(&path);
+        let (pack, widget) = parse_path(&path);
 
         StartupConfig {
-          pack_id,
-          widget_name,
+          pack,
+          widget,
           preset,
         }
       }
       StringOrObject::V3Object {
-        pack_id,
-        widget_name,
+        pack,
+        widget,
         preset,
       } => StartupConfig {
-        pack_id,
-        widget_name,
+        pack,
+        widget,
         preset,
       },
     })
@@ -273,8 +273,8 @@ impl AppSettings {
         VERSION_NUMBER
       )),
       startup_configs: vec![StartupConfig {
-        pack_id: "glzr-io/starter".into(),
-        widget_name: match is_app_installed("glazewm") {
+        pack: "glzr-io/starter".into(),
+        widget: match is_app_installed("glazewm") {
           true => "with-glazewm".into(),
           false => "vanilla".into(),
         },
@@ -307,8 +307,8 @@ impl AppSettings {
     let mut new_settings = { self.value.lock().await.clone() };
 
     let startup_config = StartupConfig {
-      pack_id: pack_id.to_string(),
-      widget_name: widget_name.to_string(),
+      pack: pack_id.to_string(),
+      widget: widget_name.to_string(),
       preset: preset_name.to_string(),
     };
 
@@ -330,8 +330,8 @@ impl AppSettings {
     let mut new_settings = { self.value.lock().await.clone() };
 
     new_settings.startup_configs.retain(|config| {
-      config.pack_id != pack_id
-        && config.widget_name != widget_name
+      config.pack != pack_id
+        && config.widget != widget_name
         && config.preset != preset_name
     });
 
