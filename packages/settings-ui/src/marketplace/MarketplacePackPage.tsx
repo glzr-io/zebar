@@ -22,6 +22,7 @@ import { createResource, createSignal, Show } from 'solid-js';
 
 import {
   AppBreadcrumbs,
+  Markdown,
   MarketplaceWidgetPack,
   useApiClient,
   useMarketplacePacks,
@@ -38,6 +39,11 @@ export function MarketplacePackPage() {
 
   const [pack] = createResource(() =>
     apiClient.widgetPack.getByPublishedId.query({ id: params.id }),
+  );
+
+  const [readmeFile] = createResource(
+    () => pack()?.readmeUrl,
+    readmeUrl => fetch(readmeUrl).then(res => res.text()),
   );
 
   function nextImage(selectedPack: MarketplaceWidgetPack) {
@@ -62,8 +68,8 @@ export function MarketplacePackPage() {
                 entries={[
                   { href: '/marketplace', content: 'Marketplace' },
                   {
-                    href: `/marketplace/${selectedPack().id}`,
-                    content: selectedPack().name,
+                    href: `/marketplace/${selectedPack().publishedId}`,
+                    content: selectedPack().publishedId,
                   },
                 ]}
               />
@@ -217,7 +223,11 @@ export function MarketplacePackPage() {
                   <TabsContent value="readme" class="space-y-6">
                     <div class="prose prose-sm dark:prose-invert max-w-none">
                       <div class="whitespace-pre-line">
-                        {selectedPack().description}
+                        <Show when={readmeFile()}>
+                          {readmeFile => (
+                            <Markdown children={readmeFile()} />
+                          )}
+                        </Show>
                       </div>
                     </div>
                   </TabsContent>
