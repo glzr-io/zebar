@@ -1,3 +1,4 @@
+import remarkGfm from 'remark-gfm';
 import { SolidMarkdown } from 'solid-markdown';
 
 export type MarkdownProps = {
@@ -8,6 +9,7 @@ export function Markdown(props: MarkdownProps) {
   return (
     <SolidMarkdown
       children={props.children}
+      remarkPlugins={[remarkGfm]}
       components={{
         code: props => (
           <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-sm">
