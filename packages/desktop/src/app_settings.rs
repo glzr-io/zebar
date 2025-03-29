@@ -408,7 +408,7 @@ impl AppSettings {
       .app_handle
       .path()
       .resolve(
-        format!("../../templates/{}", template_path),
+        format!("../../resources/templates/{}", template_path),
         BaseDirectory::Resource,
       )
       .with_context(|| {
