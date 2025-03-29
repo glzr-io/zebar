@@ -124,11 +124,11 @@ fn create_tarball(pack: &WidgetPack) -> anyhow::Result<PathBuf> {
     let path = entry.path();
 
     if path.is_file() {
-      // Check case-insensitive match against our target files.
-      if target_files
-        .contains(&path.to_unicode_string().to_lowercase().as_str())
-      {
-        included_files.insert(path.clone());
+      if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
+        // Check case-insensitive match against our target files.
+        if target_files.contains(&file_name.to_lowercase().as_str()) {
+          included_files.insert(path.clone());
+        }
       }
     }
   }
