@@ -10,11 +10,12 @@ use flate2::read::GzDecoder;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tar::Archive;
+use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::{sync::mpsc, task};
 
 use crate::{
-  app_settings::AppSettings,
-  common::read_and_parse_json,
+  app_settings::{AppSettings, VERSION_NUMBER},
+  common::{copy_dir_all, read_and_parse_json},
   config::{Config, WidgetPack},
 };
 
@@ -50,6 +51,9 @@ impl MarketplacePackMetadata {
 /// Manages installation of marketplace widget packs.
 #[derive(Debug)]
 pub struct MarketplaceInstaller {
+  /// Handle to the Tauri application.
+  app_handle: AppHandle,
+
   /// Reference to `AppSettings`.
   app_settings: Arc<AppSettings>,
 
@@ -60,17 +64,24 @@ pub struct MarketplaceInstaller {
 impl MarketplaceInstaller {
   /// Creates a new `MarketplaceInstaller` instance.
   pub fn new(
+    app_handle: &AppHandle,
     app_settings: Arc<AppSettings>,
-  ) -> (Arc<Self>, mpsc::Receiver<WidgetPack>) {
+  ) -> anyhow::Result<(Arc<Self>, mpsc::Receiver<WidgetPack>)> {
     let (installed_tx, installed_rx) = mpsc::channel(1);
 
-    (
-      Arc::new(Self {
-        app_settings,
-        installed_tx,
-      }),
-      installed_rx,
-    )
+    let installer = Self {
+      app_handle: app_handle.clone(),
+      app_settings,
+      installed_tx,
+    };
+
+    // Mimic installation of the `glzr-io.starter` widget pack if this
+    // is the first run.
+    if installer.app_settings.is_first_run {
+      installer.install_starter_pack()?;
+    }
+
+    Ok((Arc::new(installer), installed_rx))
   }
 
   /// Returns the path to the extracted pack directory.
@@ -194,6 +205,41 @@ impl MarketplaceInstaller {
       }
     })
     .await??;
+
+    Ok(())
+  }
+
+  /// Installs the `glzr-io.starter` widget pack from the embedded
+  /// `starter` resource.
+  fn install_starter_pack(&self) -> anyhow::Result<()> {
+    const STARTER_PACK_ID: &str = "glzr-io.starter";
+
+    let starter_pack_dir = self
+      .app_handle
+      .path()
+      .resolve("../../resources/starter", BaseDirectory::Resource)
+      .context("Unable to resolve starter pack resource.")?;
+
+    let dest_dir = self
+      .app_settings
+      .marketplace_download_dir
+      .join(format!("{}@{}", STARTER_PACK_ID, VERSION_NUMBER));
+
+    // Copy the starter pack files.
+    fs::create_dir_all(&dest_dir)?;
+    copy_dir_all(&starter_pack_dir, &dest_dir, true)?;
+
+    let metadata =
+      MarketplacePackMetadata::new(STARTER_PACK_ID, VERSION_NUMBER)?;
+
+    // Write metadata file.
+    fs::write(
+      self
+        .app_settings
+        .marketplace_meta_dir
+        .join(format!("{}.json", STARTER_PACK_ID)),
+      serde_json::to_string_pretty(&metadata)? + "\n",
+    )?;
 
     Ok(())
   }

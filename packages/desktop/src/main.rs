@@ -172,7 +172,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
 
   // Initialize `MarketplaceInstaller` in Tauri state.
   let (marketplace_installer, install_rx) =
-    MarketplaceInstaller::new(app_settings.clone());
+    MarketplaceInstaller::new(app.handle(), app_settings.clone())?;
   app.manage(marketplace_installer.clone());
 
   // Initialize `Config` in Tauri state.

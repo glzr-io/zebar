@@ -121,6 +121,9 @@ pub struct AppSettings {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
 
+  /// Indicates if the settings file was created during initialization.
+  pub is_first_run: bool,
+
   /// Directory where config files are stored.
   pub config_dir: PathBuf,
 
@@ -176,11 +179,14 @@ impl AppSettings {
       fs::create_dir_all(dir)?;
     }
 
-    let settings = Self::read_settings_or_init(&config_dir)?;
+    let (settings, is_first_run) =
+      Self::read_settings_or_init(&config_dir)?;
+
     let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
 
     Ok(Self {
       app_handle: app_handle.clone(),
+      is_first_run,
       config_dir: config_dir.canonicalize_pretty()?,
       webview_cache_dir: webview_cache_dir.canonicalize_pretty()?,
       marketplace_meta_dir: marketplace_meta_dir.canonicalize_pretty()?,
@@ -194,7 +200,7 @@ impl AppSettings {
 
   /// Re-evaluates app settings and broadcasts the change.
   pub async fn reload(&self) -> anyhow::Result<()> {
-    let new_settings = Self::read_settings_or_init(&self.config_dir)?;
+    let (new_settings, _) = Self::read_settings_or_init(&self.config_dir)?;
 
     {
       let mut settings = self.value.lock().await;
@@ -208,19 +214,23 @@ impl AppSettings {
 
   /// Reads the app settings file or initializes it with the template.
   ///
-  /// Returns the parsed `AppSettingsValue`.
+  /// Returns the parsed `AppSettingsValue` and a boolean indicating if
+  /// the settings file was created.
   fn read_settings_or_init(
     dir: &Path,
-  ) -> anyhow::Result<AppSettingsValue> {
+  ) -> anyhow::Result<(AppSettingsValue, bool)> {
     let settings = Self::read_settings(dir)?;
 
     match settings {
-      Some(settings) => Ok(settings),
+      Some(settings) => Ok((settings, false)),
       None => {
         Self::create_default(dir)?;
 
-        Self::read_settings(dir)?
-          .context("Failed to create settings config.")
+        Ok((
+          Self::read_settings(dir)?
+            .context("Failed to create settings config.")?,
+          true,
+        ))
       }
     }
   }
