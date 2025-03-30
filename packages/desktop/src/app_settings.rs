@@ -283,7 +283,7 @@ impl AppSettings {
         VERSION_NUMBER
       )),
       startup_configs: vec![StartupConfig {
-        pack: "glzr-io/starter".into(),
+        pack: "glzr-io.starter".into(),
         widget: match is_app_installed("glazewm") {
           true => "with-glazewm".into(),
           false => "vanilla".into(),

@@ -171,6 +171,12 @@ pub async fn serve(
     || !glob_util::is_match(&asset_path, &token_access.file_patterns)
       .ok()?
   {
+    tracing::warn!(
+      "Asset path {} is inaccessable with token {:?}.",
+      asset_path.display(),
+      token_access
+    );
+
     return None;
   }
 
