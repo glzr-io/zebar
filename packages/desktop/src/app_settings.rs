@@ -429,6 +429,22 @@ impl AppSettings {
       }
     })
   }
+
+  /// Returns the path to the extracted marketplace pack directory.
+  pub fn marketplace_pack_download_dir(
+    &self,
+    pack_id: &str,
+    version: &str,
+  ) -> PathBuf {
+    self
+      .marketplace_download_dir
+      .join(format!("{}@{}", pack_id, version))
+  }
+
+  /// Returns the path to the metadata file for a marketplace pack.
+  pub fn marketplace_pack_metadata_path(&self, pack_id: &str) -> PathBuf {
+    self.marketplace_meta_dir.join(format!("{}.json", pack_id))
+  }
 }
 
 /// Checks if an application is installed and available in the system PATH.

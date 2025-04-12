@@ -87,22 +87,6 @@ impl MarketplaceInstaller {
     Ok((Arc::new(installer), installed_rx))
   }
 
-  /// Returns the path to the extracted pack directory.
-  fn pack_download_dir(&self, pack_id: &str, version: &str) -> PathBuf {
-    self
-      .app_settings
-      .marketplace_download_dir
-      .join(format!("{}@{}", pack_id, version))
-  }
-
-  /// Returns the path to the metadata file for a pack.
-  fn pack_metadata_file_path(&self, pack_id: &str) -> PathBuf {
-    self
-      .app_settings
-      .marketplace_meta_dir
-      .join(format!("{}.json", pack_id))
-  }
-
   /// Returns a vector of `MarketplacePackMetadata` instances for all
   /// installed packs.
   pub fn installed_packs_metadata(
@@ -131,7 +115,9 @@ impl MarketplaceInstaller {
     tarball_url: &str,
     is_preview: bool,
   ) -> anyhow::Result<WidgetPack> {
-    let pack_dir = self.pack_download_dir(pack_id, version);
+    let pack_dir = self
+      .app_settings
+      .marketplace_pack_download_dir(pack_id, version);
 
     // Download and extract the pack. Skip the download if the directory
     // already exists.
@@ -152,7 +138,7 @@ impl MarketplaceInstaller {
 
       // Write metadata to file.
       fs::write(
-        self.pack_metadata_file_path(pack_id),
+        self.app_settings.marketplace_pack_metadata_path(pack_id),
         serde_json::to_string_pretty(&metadata)? + "\n",
       )?;
 
@@ -167,7 +153,8 @@ impl MarketplaceInstaller {
 
   /// Deletes the metadata for an installed widget pack.
   pub fn delete_metadata(&self, pack_id: &str) -> anyhow::Result<()> {
-    let metadata_path = self.pack_metadata_file_path(pack_id);
+    let metadata_path =
+      self.app_settings.marketplace_pack_metadata_path(pack_id);
 
     if metadata_path.exists() {
       fs::remove_file(metadata_path)?;
@@ -221,7 +208,9 @@ impl MarketplaceInstaller {
       .resolve("../../resources/starter", BaseDirectory::Resource)
       .context("Unable to resolve starter pack resource.")?;
 
-    let dest_dir = self.pack_download_dir(STARTER_PACK_ID, VERSION_NUMBER);
+    let dest_dir = self
+      .app_settings
+      .marketplace_pack_download_dir(STARTER_PACK_ID, VERSION_NUMBER);
 
     // Copy the starter pack files.
     fs::create_dir_all(&dest_dir)?;
@@ -234,8 +223,7 @@ impl MarketplaceInstaller {
     fs::write(
       self
         .app_settings
-        .marketplace_meta_dir
-        .join(format!("{}.json", STARTER_PACK_ID)),
+        .marketplace_pack_metadata_path(STARTER_PACK_ID),
       serde_json::to_string_pretty(&metadata)? + "\n",
     )?;
 

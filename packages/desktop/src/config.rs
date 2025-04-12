@@ -409,10 +409,11 @@ impl Config {
 
     for metadata in marketplace_installer.installed_packs_metadata()? {
       let pack = Self::read_widget_pack(
-        // TODO: Use a helper function to get the pack config path.
         &app_settings
-          .marketplace_download_dir
-          .join(&format!("{}@{}", metadata.pack_id, metadata.version))
+          .marketplace_pack_download_dir(
+            &metadata.pack_id,
+            &metadata.version,
+          )
           .join("zpack.json"),
         Some(&metadata),
       )?;
