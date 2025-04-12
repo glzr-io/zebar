@@ -291,10 +291,6 @@ impl WidgetFactory {
         )
       }
 
-      // *** TODO: There is an issue with how marketplace packs are read on
-      // startup. `glzr-io.starter` is being read from `larsbe.starter`
-      // (probably because the name is the same).
-
       let webview_url = WebviewUrl::External(
         create_init_url(
           &widget_pack.directory_path,

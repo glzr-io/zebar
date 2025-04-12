@@ -9,8 +9,9 @@ use serde::{Deserialize, Deserializer, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
 
-use crate::common::{
-  copy_dir_all, read_and_parse_json, visit_deep, PathExt,
+use crate::{
+  common::{copy_dir_all, read_and_parse_json, visit_deep, PathExt},
+  marketplace_installer::STARTER_PACK_ID,
 };
 
 pub const VERSION_NUMBER: &str = env!("VERSION_NUMBER");
@@ -283,7 +284,7 @@ impl AppSettings {
         VERSION_NUMBER
       )),
       startup_configs: vec![StartupConfig {
-        pack: "glzr-io.starter".into(),
+        pack: STARTER_PACK_ID.into(),
         widget: match is_app_installed("glazewm") {
           true => "with-glazewm".into(),
           false => "vanilla".into(),

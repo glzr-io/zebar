@@ -404,16 +404,20 @@ impl Config {
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
     let mut packs = HashMap::new();
 
-    packs.extend(Self::read_widget_packs_of_type(
-      &app_settings.config_dir,
-      None,
-    )?);
+    packs
+      .extend(Self::read_custom_widget_packs(&app_settings.config_dir)?);
 
     for metadata in marketplace_installer.installed_packs_metadata()? {
-      packs.extend(Self::read_widget_packs_of_type(
-        &app_settings.marketplace_download_dir,
+      let pack = Self::read_widget_pack(
+        // TODO: Use a helper function to get the pack config path.
+        &app_settings
+          .marketplace_download_dir
+          .join(&format!("{}@{}", metadata.pack_id, metadata.version))
+          .join("zpack.json"),
         Some(&metadata),
-      )?);
+      )?;
+
+      packs.insert(metadata.pack_id.clone(), pack);
     }
 
     Ok(packs)
@@ -425,9 +429,8 @@ impl Config {
   /// (i.e. `<CONFIG_DIR>/*/zpack.json`).
   ///
   /// Returns a hashmap of widget pack ID's to `WidgetPack` instances.
-  fn read_widget_packs_of_type(
+  fn read_custom_widget_packs(
     config_dir: &Path,
-    metadata: Option<&MarketplacePackMetadata>,
   ) -> anyhow::Result<HashMap<String, WidgetPack>> {
     // Get paths to the subdirectories within the config directory.
     let pack_dirs = fs::read_dir(config_dir)
@@ -455,7 +458,7 @@ impl Config {
         continue;
       }
 
-      match Self::read_widget_pack(&pack_config_path, metadata) {
+      match Self::read_widget_pack(&pack_config_path, None) {
         Ok(pack) => {
           tracing::info!(
             "Found valid widget pack at: {}",
@@ -526,6 +529,7 @@ impl Config {
     pack_id: &str,
   ) -> Option<WidgetPack> {
     let widget_packs = self.widget_packs.lock().await;
+    println!("widget_packs: {:?}", widget_packs);
     widget_packs.get(pack_id).cloned()
   }
 

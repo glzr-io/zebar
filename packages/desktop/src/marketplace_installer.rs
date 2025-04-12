@@ -19,6 +19,9 @@ use crate::{
   config::{Config, WidgetPack},
 };
 
+/// The ID of the built-in starter pack.
+pub const STARTER_PACK_ID: &str = "glzr-io.starter";
+
 /// Metadata about an installed marketplace widget pack.
 ///
 /// These are stored in `%userprofile%/.glzr/zebar/.marketplace`.
@@ -212,18 +215,13 @@ impl MarketplaceInstaller {
   /// Installs the `glzr-io.starter` widget pack from the embedded
   /// `starter` resource.
   fn install_starter_pack(&self) -> anyhow::Result<()> {
-    const STARTER_PACK_ID: &str = "glzr-io.starter";
-
     let starter_pack_dir = self
       .app_handle
       .path()
       .resolve("../../resources/starter", BaseDirectory::Resource)
       .context("Unable to resolve starter pack resource.")?;
 
-    let dest_dir = self
-      .app_settings
-      .marketplace_download_dir
-      .join(format!("{}@{}", STARTER_PACK_ID, VERSION_NUMBER));
+    let dest_dir = self.pack_download_dir(STARTER_PACK_ID, VERSION_NUMBER);
 
     // Copy the starter pack files.
     fs::create_dir_all(&dest_dir)?;
