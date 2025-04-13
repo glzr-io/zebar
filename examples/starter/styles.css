@@ -13,7 +13,7 @@
   --icon-color-light: LightSteelBlue; 
   --icon-color-dark: rgba(115 130 175 / 95%);  
 
-  --background-color-light: rgba(238 238 238, 90%);
+  --background-color-light: rgba(238 238 238 / 90%);
   --background-color-dark: linear-gradient(rgb(0 0 0 / 90%), rgb(5 2 20 / 85%));
 }
 
