@@ -8,8 +8,7 @@ use crossbeam::channel::{self, at, never};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 use windows::Win32::{
-  Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
-  Media::Audio::{
+  Devices::FunctionDiscovery::PKEY_Device_FriendlyName, Media::Audio::{
     eAll, eCapture, eMultimedia, eRender, EDataFlow, ERole,
     Endpoints::{
       IAudioEndpointVolume, IAudioEndpointVolumeCallback,
@@ -18,9 +17,7 @@ use windows::Win32::{
     IMMDevice, IMMDeviceEnumerator, IMMEndpoint, IMMNotificationClient,
     IMMNotificationClient_Impl, MMDeviceEnumerator,
     AUDIO_VOLUME_NOTIFICATION_DATA, DEVICE_STATE, DEVICE_STATE_ACTIVE,
-  },
-  System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ},
-  UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY},
+  }, System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ}, UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY}
 };
 use windows_core::{Interface, GUID, HSTRING, PCWSTR};
 
@@ -55,6 +52,7 @@ pub struct AudioDevice {
   pub volume: u32,
   pub is_default_playback: bool,
   pub is_default_recording: bool,
+  pub is_muted: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -89,6 +87,7 @@ enum AudioEvent {
   DeviceRemoved(String),
   DefaultDeviceChanged(String, DeviceType),
   VolumeChanged(String, f32),
+  MuteChanged(String, bool),
 }
 
 /// Holds the state of an audio device.
@@ -98,6 +97,7 @@ struct DeviceState {
   device_id: String,
   device_type: DeviceType,
   volume: u32,
+  is_muted: bool,
   com_volume: IAudioEndpointVolume,
   com_volume_callback: IAudioEndpointVolumeCallback,
 }
@@ -301,6 +301,7 @@ impl AudioProvider {
         is_default_playback: self.default_playback_id.as_ref() == Some(id),
         is_default_recording: self.default_recording_id.as_ref()
           == Some(id),
+        is_muted: state.is_muted,
       };
 
       output.all_devices.push(device.clone());
@@ -380,6 +381,7 @@ impl AudioProvider {
       self.register_volume_callback(&com_device, device_id.clone())?;
 
     let volume = unsafe { com_volume.GetMasterVolumeLevelScalar() }?;
+    let is_muted = unsafe { com_volume.GetMute()?.as_bool() };
 
     let device_state = DeviceState {
       name: self.device_name(&com_device)?,
@@ -388,6 +390,7 @@ impl AudioProvider {
       volume: (volume * 100.0).round() as u32,
       com_volume,
       com_volume_callback,
+      is_muted: is_muted,
     };
 
     self.device_states.insert(device_id, device_state);
@@ -436,6 +439,11 @@ impl AudioProvider {
           state.volume = (new_volume * 100.0).round() as u32;
         }
       }
+      AudioEvent::MuteChanged(device_id, new_mute) => {
+        if let Some(state) = self.device_states.get_mut(&device_id) {
+          state.is_muted = new_mute;
+        }
+      }
     }
 
     Ok(())
@@ -446,26 +454,37 @@ impl AudioProvider {
     &mut self,
     function: AudioFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
+    // Get target device - use specified ID or default playback
+    // device.
+    let get_device_state = |device_id: &Option<String>| -> Result<&DeviceState, anyhow::Error> {
+      if let Some(id) = device_id {
+        self
+          .device_states
+          .get(id)
+          .context("Specified device not found.")
+      } else {
+        self
+          .default_playback_id
+          .as_ref()
+          .and_then(|id| self.device_states.get(id))
+          .context("No active playback device.")
+      }
+    };
     match function {
       AudioFunction::SetVolume(args) => {
-        // Get target device - use specified ID or default playback
-        // device.
-        let device_state = if let Some(id) = &args.device_id {
-          self
-            .device_states
-            .get(id)
-            .context("Specified device not found.")?
-        } else {
-          self
-            .default_playback_id
-            .as_ref()
-            .and_then(|id| self.device_states.get(id))
-            .context("No active playback device.")?
-        };
-
         unsafe {
-          device_state.com_volume.SetMasterVolumeLevelScalar(
+          get_device_state(&args.device_id)?.com_volume.SetMasterVolumeLevelScalar(
             args.volume / 100.,
+            &GUID::zeroed(),
+          )
+        }?;
+
+        Ok(ProviderFunctionResponse::Null)
+      }
+      AudioFunction::SetMute(args) => {
+        unsafe {
+          get_device_state(&args.device_id)?.com_volume.SetMute(
+            args.mute,
             &GUID::zeroed(),
           )
         }?;
@@ -521,6 +540,10 @@ impl IAudioEndpointVolumeCallback_Impl for VolumeCallback_Impl {
       let _ = self.event_tx.send(AudioEvent::VolumeChanged(
         self.device_id.clone(),
         data.fMasterVolume,
+      ));
+      let _ = self.event_tx.send(AudioEvent::MuteChanged(
+        self.device_id.clone(),
+        data.bMuted.as_bool(),
       ));
     }
 

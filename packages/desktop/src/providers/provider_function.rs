@@ -12,11 +12,18 @@ pub enum ProviderFunction {
 #[serde(tag = "name", content = "args", rename_all = "snake_case")]
 pub enum AudioFunction {
   SetVolume(SetVolumeArgs),
+  SetMute(SetMuteArgs),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetVolumeArgs {
   pub volume: f32,
+  pub device_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetMuteArgs{
+  pub mute: bool,
   pub device_id: Option<String>,
 }
 
