@@ -1,3 +1,8 @@
+import { createWindowProvider } from './window/create-window-provider';
+import type {
+  WindowProviderConfig,
+  WindowProvider
+} from './window/window-provider-types';
 import { createAudioProvider } from './audio/create-audio-provider';
 import type {
   AudioProviderConfig,
@@ -72,6 +77,7 @@ import type {
 } from './systray/systray-provider-types';
 
 export interface ProviderConfigMap {
+  window: WindowProviderConfig;  
   audio: AudioProviderConfig;
   battery: BatteryProviderConfig;
   cpu: CpuProviderConfig;
@@ -90,6 +96,7 @@ export interface ProviderConfigMap {
 }
 
 export interface ProviderMap {
+  window: WindowProvider;  
   audio: AudioProvider;
   battery: BatteryProvider;
   cpu: CpuProvider;
@@ -128,6 +135,8 @@ export function createProvider<T extends ProviderConfig>(
   config: T,
 ): ProviderMap[T['type']] {
   switch (config.type) {
+    case 'window':
+      return createWindowProvider(config) as any;    
     case 'audio':
       return createAudioProvider(config) as any;
     case 'battery':

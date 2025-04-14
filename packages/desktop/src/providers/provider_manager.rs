@@ -11,7 +11,7 @@ use tracing::info;
 
 #[cfg(windows)]
 use super::{
-  audio::AudioProvider, keyboard::KeyboardProvider,
+  window::WindowProvider, audio::AudioProvider, keyboard::KeyboardProvider,
   komorebi::KomorebiProvider, media::MediaProvider,
   systray::SystrayProvider,
 };
@@ -286,6 +286,10 @@ impl ProviderManager {
       RuntimeType::Sync => task::spawn_blocking(move || {
         match config {
           #[cfg(windows)]
+          ProviderConfig::Window(config) => {
+            let mut provider = WindowProvider::new(config, common);
+            provider.start_sync();
+          }          
           ProviderConfig::Audio(config) => {
             let mut provider = AudioProvider::new(config, common);
             provider.start_sync();

@@ -2,7 +2,7 @@ use serde::Serialize;
 
 #[cfg(windows)]
 use super::{
-  audio::AudioOutput, keyboard::KeyboardOutput, komorebi::KomorebiOutput,
+  window::WindowOutput, audio::AudioOutput, keyboard::KeyboardOutput, komorebi::KomorebiOutput,
   media::MediaOutput, systray::SystrayOutput,
 };
 use super::{
@@ -28,6 +28,7 @@ macro_rules! impl_provider_output {
 #[serde(untagged)]
 pub enum ProviderOutput {
   #[cfg(windows)]
+  Window(WindowOutput),
   Audio(AudioOutput),
   Battery(BatteryOutput),
   Cpu(CpuOutput),
@@ -60,6 +61,7 @@ impl_provider_output! {
 
 #[cfg(windows)]
 impl_provider_output! {
+  Window(WindowOutput),
   Audio(AudioOutput),
   Komorebi(KomorebiOutput),
   Media(MediaOutput),

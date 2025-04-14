@@ -7,7 +7,7 @@ use super::{
   systray::SystrayProviderConfig,
 };
 use super::{
-  battery::BatteryProviderConfig, cpu::CpuProviderConfig,
+  window::WindowProviderConfig, battery::BatteryProviderConfig, cpu::CpuProviderConfig,
   disk::DiskProviderConfig, host::HostProviderConfig,
   ip::IpProviderConfig, memory::MemoryProviderConfig,
   network::NetworkProviderConfig, weather::WeatherProviderConfig,
@@ -17,6 +17,7 @@ use super::{
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ProviderConfig {
   #[cfg(windows)]
+  Window(WindowProviderConfig),
   Audio(AudioProviderConfig),
   Battery(BatteryProviderConfig),
   Cpu(CpuProviderConfig),

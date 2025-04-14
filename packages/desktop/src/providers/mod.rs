@@ -1,4 +1,5 @@
 #[cfg(windows)]
+mod window;
 mod audio;
 mod battery;
 mod cpu;
