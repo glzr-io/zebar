@@ -146,126 +146,125 @@ function App() {
     <div class="app">
       <div class="left">
         <i class="logo nf nf-fa-windows" onClick={() => toggleDropdown()}></i>
-        <div class="menu" id="dropdown">
-          <ul>
-            <li onClick={() => openWindowsSettings()}><span>About This PC</span></li>
-            <hr />
-            <li onClick={() => openSystemSettings()}><span>System Preferences</span></li>
-            <li onClick={() => openMicrosoftStore()}><span>App Store</span></li>
-            <hr />
-            {showSleepOptions() ? (
-              <li>
-                <button onClick={() => resetAllOptions()}>Cancel</button>
-                <button onClick={() => sleepWindows()}>Sleep ({countdown()}s)</button>
-              </li>
-            ) : (
-              <li onClick={() => { resetAllOptions(); setShowSleepOptions(true); startCountdown(sleepWindows); }}>
-                <span>Sleep</span>
-              </li>
-            )}
-            {showShutdownOptions() ? (
-              <li>
-                <button onClick={() => resetAllOptions()}>Cancel</button>
-                <button onClick={() => shutdownWindows()}>Shut Down ({countdown()}s)</button>
-              </li>
-            ) : (
-              <li onClick={() => { resetAllOptions(); setShowShutdownOptions(true); startCountdown(shutdownWindows); }}>
-                <span>Shut Down</span>
-              </li>
-            )}
-            {showRestartOptions() ? (
-              <li>
-                <button onClick={() => resetAllOptions()}>Cancel</button>
-                <button onClick={() => restartWindows()}>Restart ({countdown()}s)</button>
-              </li>
-            ) : (
-              <li onClick={() => { resetAllOptions(); setShowRestartOptions(true); startCountdown(restartWindows); }}>
-                <span>Restart</span>
-              </li>
-            )}
-            {showLogOutOptions() ? (
-              <li>
-                <button onClick={() => resetAllOptions()}>Cancel</button>
-                <button onClick={() => logOut()}>Log Out ({countdown()}s)</button>
-              </li>
-            ) : (
-              <li onClick={() => { resetAllOptions(); setShowLogOutOptions(true); startCountdown(logOut); }}>
-                <span>Log Out</span>
-              </li>
-            )}
-          </ul>
-        </div>
-        <div class="menu">
-          <ul>
+        <ul id="dropdown">
+          <li onClick={() => openWindowsSettings()}><button>About This PC</button></li>
+          <li onClick={() => openSystemSettings()}><button>System Preferences</button></li>
+          <li onClick={() => openMicrosoftStore()}><button>App Store</button></li>
+          {showSleepOptions() ? (
             <li>
-              <b
-                onClick={() => {
-                  if (output.window?.title === 'File Explorer') {
-                    openFileExplorer();
-                  }
-                }}
-              >
-                {output.window?.title || 'File Explorer'}
-              </b>
+              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
+              <button class="act" onClick={() => sleepWindows()}>Sleep ({countdown()}s)</button>
             </li>
-          </ul>
-        </div>
+          ) : (
+            <li onClick={() => { resetAllOptions(); setShowSleepOptions(true); startCountdown(sleepWindows); }}>
+              <button>Sleep</button>
+            </li>
+          )}
+          {showShutdownOptions() ? (
+            <li>
+              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
+              <button class="act" onClick={() => shutdownWindows()}>Shut Down ({countdown()}s)</button>
+            </li>
+          ) : (
+            <li onClick={() => { resetAllOptions(); setShowShutdownOptions(true); startCountdown(shutdownWindows); }}>
+              <button>Shut Down</button>
+            </li>
+          )}
+          {showRestartOptions() ? (
+            <li>
+              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
+              <button class="act" onClick={() => restartWindows()}>Restart ({countdown()}s)</button>
+            </li>
+          ) : (
+            <li onClick={() => { resetAllOptions(); setShowRestartOptions(true); startCountdown(restartWindows); }}>
+              <button>Restart</button>
+            </li>
+          )}
+          {showLogOutOptions() ? (
+            <li>
+              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
+              <button class="act" onClick={() => logOut()}>Log Out ({countdown()}s)</button>
+            </li>
+          ) : (
+            <li onClick={() => { resetAllOptions(); setShowLogOutOptions(true); startCountdown(logOut); }}>
+              <button>Log Out</button>
+            </li>
+          )}
+        </ul>
+        <ul>
+          <li>
+            <button class="app"
+              onClick={() => {
+                if (output.window?.title === 'File Explorer') {
+                  openFileExplorer();
+                }
+              }}
+            >
+              {output.window?.title || 'File Explorer'}
+            </button>
+          </li>
+        </ul>
       </div>
 
       <div class="right">
-        {output.cpu && (
-          <div class="chip">
-            <i class="nf nf-oct-cpu"></i>
-
-            <span class={output.cpu.usage > 85 ? 'high-usage' : ''}>
-              {Math.round(output.cpu.usage)}%
-            </span>
-          </div>
-        )}
-
-        {output.memory && (
-          <div class="chip">
-            <i class="nf nf-fae-chip"></i>
-            {Math.round(output.memory.usage)}%
-          </div>
-        )}
-
-        {output.audio?.defaultPlaybackDevice && (
-            <div class="chip volume">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="2"
-              value={output.audio.defaultPlaybackDevice.volume}
-              onChange={(e: Event & { target: HTMLInputElement }) =>
-              output.audio.setVolume(e.target.valueAsNumber)
-              }
-            />
-            </div>
-        )}
-
-        {output.systray && (
-          <div class="chip">
-            {output.systray.icons.map(icon => (
-              <img
-                class="systray-icon"
-                src={icon.iconUrl}
-                title={icon.tooltip}
-                onClick={e => {
-                  e.preventDefault();
-                  output.systray.onLeftClick(icon.id);
-                }}
-                onContextMenu={e => {
-                  e.preventDefault();
-                  output.systray.onRightClick(icon.id);
-                }}
+        <ul>
+          {output.cpu && (
+            <li>
+              <i class="nf nf-oct-cpu"></i>
+              <span class={output.cpu.usage > 85 ? 'high-usage' : ''}>
+                {Math.round(output.cpu.usage)}%
+              </span>
+            </li>
+          )}
+          {output.memory && (
+            <li>
+              <i class="nf nf-fae-chip"></i>
+              {Math.round(output.memory.usage)}%
+            </li>
+          )}
+          {output.audio?.defaultPlaybackDevice && (
+            <li>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="2"
+                value={output.audio.defaultPlaybackDevice.volume}
+                onChange={(e: Event & { target: HTMLInputElement }) =>
+                output.audio.setVolume(e.target.valueAsNumber)
+                }
               />
-            ))}
-          </div>
-        )}
-
-        <div class="chip clock">{output.date?.formatted}</div>
+            </li>
+          )}
+          {output.systray && (
+            <li>
+              <ul>
+                {output.systray.icons.map(icon => (
+                  <li>
+                    <input type="image"
+                      class="systray-icon"
+                      src={icon.iconUrl}
+                      title={icon.tooltip}
+                      onClick={e => {
+                        e.preventDefault();
+                        output.systray.onLeftClick(icon.id);
+                      }}
+                      onContextMenu={e => {
+                        e.preventDefault();
+                        output.systray.onRightClick(icon.id);
+                      }}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </li>
+          )}          
+          {output.date && (
+            <li>
+              {output.date?.formatted}
+            </li>
+          )}
+        </ul>
       </div>
     </div>
   );
