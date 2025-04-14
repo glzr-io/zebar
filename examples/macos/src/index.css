@@ -109,3 +109,7 @@ input[type="image"] {
   margin: 0;
   padding: 0;
 }
+
+input[type="image"].transparent {
+  background-color: #d6d6d6;
+}

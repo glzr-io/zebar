@@ -6,9 +6,9 @@ import * as zebar from 'zebar';
 import { createSignal } from 'solid-js';
 
 const providers = zebar.createProviderGroup({
-  window: { type: 'window' },
-  cpu: { type: 'cpu' },
-  memory: { type: 'memory' },
+  window: { type: 'window', refreshInterval: 1500 },
+  cpu: { type: 'cpu', refreshInterval: 15000  },
+  memory: { type: 'memory', refreshInterval: 15000  },
   audio: { type: 'audio' },
   systray: { type: 'systray' },
   date: { type: 'date', formatting: 'EEE d MMM t' },
@@ -239,26 +239,44 @@ function App() {
           {output.systray && (
             <li>
               <ul>
-                {output.systray.icons.map(icon => (
-                  <li>
-                    <input type="image"
-                      class="systray-icon"
-                      src={icon.iconUrl}
-                      title={icon.tooltip}
-                      onClick={e => {
-                        e.preventDefault();
-                        output.systray.onLeftClick(icon.id);
-                      }}
-                      onContextMenu={e => {
-                        e.preventDefault();
-                        output.systray.onRightClick(icon.id);
-                      }}
-                    />
-                  </li>
-                ))}
+                {output.systray.icons
+                  .filter(icon => !icon.tooltip?.toLowerCase().includes('speakers')) // Exclude icons where tooltip includes "Speakers"
+                  .slice() // Create a copy of the array to avoid mutating the original
+                  .sort((a, b) => {
+                    const priorityKeywords = ["cpu core", "gpu"];
+                    const aPriority = priorityKeywords.findIndex(keyword =>
+                      a.tooltip?.toLowerCase().includes(keyword)
+                    );
+                    const bPriority = priorityKeywords.findIndex(keyword =>
+                      b.tooltip?.toLowerCase().includes(keyword)
+                    );
+
+                    if (aPriority !== -1 && bPriority === -1) return -1; // `a` is a priority
+                    if (aPriority === -1 && bPriority !== -1) return 1;  // `b` is a priority
+                    if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority; // Both are priorities
+                    return 0; // Neither is a priority
+                  })
+                  .map(icon => (
+                    <li>
+                      <input
+                        type="image"
+                        class="systray-icon"
+                        src={icon.iconUrl}
+                        title={icon.tooltip}
+                        onClick={e => {
+                          e.preventDefault();
+                          output.systray.onLeftClick(icon.id);
+                        }}
+                        onContextMenu={e => {
+                          e.preventDefault();
+                          output.systray.onRightClick(icon.id);
+                        }}
+                      />
+                    </li>
+                  ))}
               </ul>
             </li>
-          )}          
+          )}
           {output.date && (
             <li>
               {output.date?.formatted}
