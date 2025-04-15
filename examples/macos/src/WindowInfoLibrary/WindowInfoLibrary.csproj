@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PublishAot>true</PublishAot>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <UseNativeAot>true</UseNativeAot>
+    <StripSymbols>true</StripSymbols>
+    <DebugType>none</DebugType>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>

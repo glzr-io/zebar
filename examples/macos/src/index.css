@@ -77,7 +77,7 @@ li {
   margin-right: 5px;
 }
 
-ul:not(#dropdown) > li:first-child button {
+ul:not(#dropdown):not(#menu) > li:first-child button {
   font-weight: bold;
   text-shadow: none;
 }

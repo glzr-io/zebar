@@ -191,6 +191,7 @@ function App() {
             </li>
           )}
         </ul>
+
         <ul>
           <li>
             <button class="app"
@@ -204,6 +205,16 @@ function App() {
             </button>
           </li>
         </ul>
+
+        <ul id="menu">
+          {output.window?.menu?.map((item) => (
+            <li>
+              <button onClick={() => console.log(`Clicked on ${item.name}`)}>
+                {item.name}
+              </button>
+            </li>
+          ))}
+        </ul>        
       </div>
 
       <div class="right">

@@ -1,0 +1,9 @@
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\obj\Release\net8.0\win-x64\WindowInfoLibrary.GeneratedMSBuildEditorConfig.editorconfig
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\obj\Release\net8.0\win-x64\WindowInfoLibrary.AssemblyInfoInputs.cache
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\obj\Release\net8.0\win-x64\WindowInfoLibrary.AssemblyInfo.cs
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\obj\Release\net8.0\win-x64\WindowInfoLibrary.csproj.CoreCompileInputs.cache
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\bin\Release\net8.0\win-x64\WindowInfoLibrary.deps.json
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\bin\Release\net8.0\win-x64\WindowInfoLibrary.dll
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\obj\Release\net8.0\win-x64\WindowInfoLibrary.dll
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\obj\Release\net8.0\win-x64\refint\WindowInfoLibrary.dll
+\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\obj\Release\net8.0\win-x64\ref\WindowInfoLibrary.dll

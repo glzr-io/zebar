@@ -1,0 +1,35 @@
+﻿"obj\Release\net8.0-windows\win-x64\native\WindowInfoLibrary.obj"
+/OUT:"bin\Release\net8.0-windows\win-x64\native\WindowInfoLibrary.dll"
+/DEF:"obj\Release\net8.0-windows\win-x64\native\WindowInfoLibrary.def"
+/LIBPATH:"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.43.34808\lib\x64"
+/LIBPATH:"C:\Program Files (x86)\Windows Kits\10\lib\10.0.26100.0\ucrt\x64"
+/LIBPATH:"C:\Program Files (x86)\Windows Kits\10\\lib\10.0.26100.0\\um\x64"
+/DLL
+"C:\Users\Kris\.nuget\packages\runtime.win-x64.microsoft.dotnet.ilcompiler\8.0.15\sdk\bootstrapperdll.obj"
+"C:\Users\Kris\.nuget\packages\runtime.win-x64.microsoft.dotnet.ilcompiler\8.0.15\sdk\Runtime.WorkstationGC.lib"
+"C:\Users\Kris\.nuget\packages\runtime.win-x64.microsoft.dotnet.ilcompiler\8.0.15\sdk\eventpipe-disabled.lib"
+"C:\Users\Kris\.nuget\packages\runtime.win-x64.microsoft.dotnet.ilcompiler\8.0.15\sdk\Runtime.VxsortEnabled.lib"
+"C:\Users\Kris\.nuget\packages\runtime.win-x64.microsoft.dotnet.ilcompiler\8.0.15\sdk\System.Globalization.Native.Aot.lib"
+"C:\Users\Kris\.nuget\packages\runtime.win-x64.microsoft.dotnet.ilcompiler\8.0.15\sdk\System.IO.Compression.Native.Aot.lib"
+"advapi32.lib"
+"bcrypt.lib"
+"crypt32.lib"
+"iphlpapi.lib"
+"kernel32.lib"
+"mswsock.lib"
+"ncrypt.lib"
+"normaliz.lib"
+"ntdll.lib"
+"ole32.lib"
+"oleaut32.lib"
+"secur32.lib"
+"user32.lib"
+"version.lib"
+"ws2_32.lib"
+/NOLOGO /MANIFEST:NO
+/INCREMENTAL:NO
+/NATVIS:"C:\Users\Kris\.nuget\packages\microsoft.dotnet.ilcompiler\8.0.15\build\NativeAOT.natvis"
+/NODEFAULTLIB:libucrt.lib
+/DEFAULTLIB:ucrt.lib
+/OPT:REF
+/OPT:ICF
