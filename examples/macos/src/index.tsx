@@ -151,9 +151,9 @@ function App() {
           <li onClick={() => openSystemSettings()}><button>System Preferences</button></li>
           <li onClick={() => openMicrosoftStore()}><button>App Store</button></li>
           {showSleepOptions() ? (
-            <li>
-              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
-              <button class="act" onClick={() => sleepWindows()}>Sleep ({countdown()}s)</button>
+            <li class="act">
+              <button onClick={() => sleepWindows()}>Sleep ({countdown()}s)</button>
+              <button onClick={() => resetAllOptions()}>Cancel</button>
             </li>
           ) : (
             <li onClick={() => { resetAllOptions(); setShowSleepOptions(true); startCountdown(sleepWindows); }}>
@@ -161,9 +161,9 @@ function App() {
             </li>
           )}
           {showShutdownOptions() ? (
-            <li>
-              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
-              <button class="act" onClick={() => shutdownWindows()}>Shut Down ({countdown()}s)</button>
+            <li class="act">
+              <button onClick={() => shutdownWindows()}>Shut Down ({countdown()}s)</button>
+              <button onClick={() => resetAllOptions()}>Cancel</button>
             </li>
           ) : (
             <li onClick={() => { resetAllOptions(); setShowShutdownOptions(true); startCountdown(shutdownWindows); }}>
@@ -171,9 +171,9 @@ function App() {
             </li>
           )}
           {showRestartOptions() ? (
-            <li>
-              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
-              <button class="act" onClick={() => restartWindows()}>Restart ({countdown()}s)</button>
+            <li class="act">
+              <button onClick={() => restartWindows()}>Restart ({countdown()}s)</button>
+              <button onClick={() => resetAllOptions()}>Cancel</button>
             </li>
           ) : (
             <li onClick={() => { resetAllOptions(); setShowRestartOptions(true); startCountdown(restartWindows); }}>
@@ -181,9 +181,9 @@ function App() {
             </li>
           )}
           {showLogOutOptions() ? (
-            <li>
-              <button class="act" onClick={() => resetAllOptions()}>Cancel</button>
-              <button class="act" onClick={() => logOut()}>Log Out ({countdown()}s)</button>
+            <li class="act">
+              <button onClick={() => logOut()}>Log Out ({countdown()}s)</button>
+              <button onClick={() => resetAllOptions()}>Cancel</button>
             </li>
           ) : (
             <li onClick={() => { resetAllOptions(); setShowLogOutOptions(true); startCountdown(logOut); }}>

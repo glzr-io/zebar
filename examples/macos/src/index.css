@@ -77,13 +77,19 @@ li {
   margin-right: 5px;
 }
 
-li:first-child button {
+ul:not(#dropdown) > li:first-child button {
   font-weight: bold;
   text-shadow: none;
 }
 
 ul li ul li:last-child {
   margin-right: 0;
+}
+
+li.act button:first-of-type {
+  background-color: #d6d6d6;
+  color: rgb(0 0 0 / 90%);
+  border-radius: 4px;
 }
 
 button {
