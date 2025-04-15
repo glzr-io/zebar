@@ -7,10 +7,10 @@ import { createSignal } from 'solid-js';
 
 const providers = zebar.createProviderGroup({
   window: { type: 'window', refreshInterval: 1500 },
-  cpu: { type: 'cpu', refreshInterval: 15000  },
-  memory: { type: 'memory', refreshInterval: 15000  },
+  cpu: { type: 'cpu', refreshInterval: 5000  },
+  memory: { type: 'memory', refreshInterval: 5000  },
   audio: { type: 'audio' },
-  systray: { type: 'systray' },
+  systray: { type: 'systray', refreshInterval: 5000 },
   date: { type: 'date', formatting: 'EEE d MMM t' },
 });
 
