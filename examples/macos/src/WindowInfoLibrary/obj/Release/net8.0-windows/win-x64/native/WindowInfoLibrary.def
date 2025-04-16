@@ -1,6 +1,0 @@
-EXPORTS
-   DotNetRuntimeDebugHeader DATA
-   GetActiveWindowTitle
-   FreeActiveWindowTitle
-   GetActiveWindowTopLevelMenuItems
-   FreeActiveWindowMenuItems

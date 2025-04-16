@@ -1,1 +1,0 @@
-\\wsl.localhost\Ubuntu\home\kris\production\zebar\examples\macos\src\WindowInfoLibrary\bin\Release\net8.0\win-x64\publish\WindowInfoLibrary.dll
