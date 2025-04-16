@@ -31,7 +31,8 @@ pub struct WindowOutput {
 pub struct WindowProvider {
     config: WindowProviderConfig,
     common: CommonProviderState,
-    replace_titles: Vec<&'static str>,
+    replace_title: Vec<&'static str>,
+    default_title: &'static str,
 }
 
 impl WindowProvider {
@@ -39,10 +40,11 @@ impl WindowProvider {
         WindowProvider {
             config,
             common,
-            replace_titles: vec![
+            replace_title: vec![
                 "Zebar - macos/macos",
                 "Program Manager",
             ],
+            default_title: "File Explorer",
         }
     }
 
@@ -50,12 +52,14 @@ impl WindowProvider {
         unsafe {
             let hwnd: HWND = GetForegroundWindow();
             if hwnd.0.is_null() {
-                return Err(anyhow::anyhow!("No foreground window"));
+                //return Err(anyhow::anyhow!("No foreground window"));
+                return Ok(self.default_title.to_string());
             }
     
             let length = GetWindowTextLengthW(hwnd);
             if length == 0 {
-                return Err(anyhow::anyhow!("Empty window title"));
+                //return Err(anyhow::anyhow!("Empty window title"));
+                return Ok(self.default_title.to_string());
             }
     
             let mut buffer: Vec<u16> = vec![0; (length + 1) as usize];
@@ -63,14 +67,15 @@ impl WindowProvider {
             let copied = GetWindowTextW(hwnd, &mut buffer);
     
             if copied == 0 {
-                return Err(anyhow::anyhow!("Failed to get window text"));
+                //return Err(anyhow::anyhow!("Failed to get window text"));
+                return Ok(self.default_title.to_string());
             }
 
             let os_string = OsString::from_wide(&buffer[..copied as usize]);
             let full_title = os_string.to_string_lossy().to_string();
 
-            let normalized = if self.replace_titles.contains(&full_title.as_str()) {
-                "File Explorer".to_string()
+            let normalized = if self.replace_title.contains(&full_title.as_str()) {
+                self.default_title.to_string()
             } else {
                 let processed_title = full_title
                 .replace(" – ", " - ") // Replace en-dash with space-hyphen-space
@@ -94,9 +99,8 @@ impl WindowProvider {
         let title = match self.get_active_window_title() {
             Ok(t) => t,
             Err(err) => {
-                let status_msg = format!("Window title error: {}", err);
                 return Ok(WindowOutput {
-                    title: status_msg
+                    title: self.default_title.to_string()
                 });
             }
         };

@@ -3,7 +3,7 @@ import './index.css';
 import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
 import * as zebar from 'zebar';
-import { createSignal } from 'solid-js';
+import { createSignal, createEffect, createMemo } from 'solid-js';
 
 const providers = zebar.createProviderGroup({
   window: { type: 'window', refreshInterval: 1500 },
@@ -25,6 +25,55 @@ function App() {
   const [showLogOutOptions, setShowLogOutOptions] = createSignal(false);
   const [countdown, setCountdown] = createSignal(60);
   let countdownInteval: number | undefined;
+
+  // Subscribe to provider updates
+  createEffect(() => {
+    providers.onOutput((outputMap) => {
+      setOutput(() => outputMap);
+    });
+  });
+
+  // Memoize the systray icons to avoid unnecessary re-renders
+  const SystrayIcons = createMemo(() =>
+    output.systray ? (
+      <ul>
+        {output.systray.icons
+          .filter((icon) => !icon.tooltip?.toLowerCase().includes('speakers'))
+          .sort((a, b) => {
+            const priorityKeywords = ['cpu core', 'gpu'];
+            const aPriority = priorityKeywords.findIndex((keyword) =>
+              a.tooltip?.toLowerCase().includes(keyword)
+            );
+            const bPriority = priorityKeywords.findIndex((keyword) =>
+              b.tooltip?.toLowerCase().includes(keyword)
+            );
+
+            if (aPriority !== -1 && bPriority === -1) return -1;
+            if (aPriority === -1 && bPriority !== -1) return 1;
+            if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+            return 0;
+          })
+          .map((icon) => (
+            <li key={icon.id}>
+              <input
+                type="image"
+                class="systray-icon"
+                src={icon.iconUrl}
+                title={icon.tooltip}
+                onClick={(e) => {
+                  e.preventDefault();
+                  output.systray.onLeftClick(icon.id);
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  output.systray.onRightClick(icon.id);
+                }}
+              />
+            </li>
+          ))}
+      </ul>
+    ) : null
+  );
 
   function startCountdown(action: () => void) {
     countdownInteval = setInterval(() => {
@@ -52,22 +101,13 @@ function App() {
     }
   }
 
-  providers.onOutput(outputMap => setOutput(outputMap));
-
   function toggleDropdown() {
     const dropdownMenu = document.getElementById('dropdown');
     const appleIcon = document.querySelector('.logo');
-  
     if (dropdownMenu && appleIcon) {
       const isVisible = dropdownMenu.style.display === 'block';
       dropdownMenu.style.display = isVisible ? 'none' : 'block';
-  
-      // Toggle the 'active' class on the Apple icon
-      if (isVisible) {
-        appleIcon.classList.remove('active');
-      } else {
-        appleIcon.classList.add('active');
-      }
+      appleIcon.classList.toggle('active', !isVisible);
     }
   }
 
@@ -160,6 +200,7 @@ function App() {
               <button>Sleep</button>
             </li>
           )}
+
           {showShutdownOptions() ? (
             <li class="act">
               <button onClick={() => shutdownWindows()}>Shut Down ({countdown()}s)</button>
@@ -170,6 +211,7 @@ function App() {
               <button>Shut Down</button>
             </li>
           )}
+
           {showRestartOptions() ? (
             <li class="act">
               <button onClick={() => restartWindows()}>Restart ({countdown()}s)</button>
@@ -180,6 +222,7 @@ function App() {
               <button>Restart</button>
             </li>
           )}
+
           {showLogOutOptions() ? (
             <li class="act">
               <button onClick={() => logOut()}>Log Out ({countdown()}s)</button>
@@ -227,12 +270,14 @@ function App() {
               </span>
             </li>
           )}
+
           {output.memory && (
             <li>
               <i class="nf nf-fae-chip"></i>
               {Math.round(output.memory.usage)}%
             </li>
           )}
+
           {output.audio?.defaultPlaybackDevice && (
             <li>
               <input
@@ -247,47 +292,9 @@ function App() {
               />
             </li>
           )}
-          {output.systray && (
-            <li>
-              <ul>
-                {output.systray.icons
-                  .filter(icon => !icon.tooltip?.toLowerCase().includes('speakers')) // Exclude icons where tooltip includes "Speakers"
-                  .slice() // Create a copy of the array to avoid mutating the original
-                  .sort((a, b) => {
-                    const priorityKeywords = ["cpu core", "gpu"];
-                    const aPriority = priorityKeywords.findIndex(keyword =>
-                      a.tooltip?.toLowerCase().includes(keyword)
-                    );
-                    const bPriority = priorityKeywords.findIndex(keyword =>
-                      b.tooltip?.toLowerCase().includes(keyword)
-                    );
 
-                    if (aPriority !== -1 && bPriority === -1) return -1; // `a` is a priority
-                    if (aPriority === -1 && bPriority !== -1) return 1;  // `b` is a priority
-                    if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority; // Both are priorities
-                    return 0; // Neither is a priority
-                  })
-                  .map(icon => (
-                    <li>
-                      <input
-                        type="image"
-                        class="systray-icon"
-                        src={icon.iconUrl}
-                        title={icon.tooltip}
-                        onClick={e => {
-                          e.preventDefault();
-                          output.systray.onLeftClick(icon.id);
-                        }}
-                        onContextMenu={e => {
-                          e.preventDefault();
-                          output.systray.onRightClick(icon.id);
-                        }}
-                      />
-                    </li>
-                  ))}
-              </ul>
-            </li>
-          )}
+          {SystrayIcons()}
+
           {output.date && (
             <li>
               {output.date?.formatted}
