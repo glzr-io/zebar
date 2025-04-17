@@ -2,105 +2,106 @@
 import './index.css';
 import { render } from 'solid-js/web';
 import { createStore } from 'solid-js/store';
-import * as zebar from 'zebar';
+import { createProviderGroup, shellExec } from 'zebar';
 import { createSignal, createEffect, createMemo } from 'solid-js';
 
-const providers = zebar.createProviderGroup({
+const providers = createProviderGroup({
   window: { type: 'window', refreshInterval: 1500 },
   cpu: { type: 'cpu', refreshInterval: 5000  },
   memory: { type: 'memory', refreshInterval: 5000  },
   audio: { type: 'audio' },
   systray: { type: 'systray', refreshInterval: 5000 },
   date: { type: 'date', formatting: 'EEE d MMM t' },
+  fullDate: { type: 'date', formatting: 'EEEE, MMMM d, yyyy' },
 });
-
-render(() => <App />, document.getElementById('root')!);
 
 function App() {
   const [output, setOutput] = createStore(providers.outputMap);
-
-  const [showSleepOptions, setShowSleepOptions] = createSignal(false);
-  const [showShutdownOptions, setShowShutdownOptions] = createSignal(false);
-  const [showRestartOptions, setShowRestartOptions] = createSignal(false);
-  const [showLogOutOptions, setShowLogOutOptions] = createSignal(false);
   const [countdown, setCountdown] = createSignal(60);
+  const [countdownActive, setCountdownActive] = createSignal(false);
   let countdownInteval: number | undefined;
 
-  // Subscribe to provider updates
-  createEffect(() => {
-    providers.onOutput((outputMap) => {
-      setOutput(() => outputMap);
-    });
-  });
+  const performAction = async (command, params = []) => {
+    try {
+      if (command === 'rundll32.exe') {
+        // For sleep action, we need to run it in a separate process
+        await shellExec('rundll32.exe', ['powrprof.dll,SetSuspendState', '0', '1', '0']);
+      }
+      else {
+        await shellExec('powershell', ['/c', 'start', command, ...params]);
+      }
+    } catch (err) {
+      console.error('Error in executing command:', err);
+    }
+  };
 
-  // Memoize the systray icons to avoid unnecessary re-renders
-  const SystrayIcons = createMemo(() =>
-    output.systray ? (
-      <ul>
-        {output.systray.icons
-          .filter((icon) => !icon.tooltip?.toLowerCase().includes('speakers'))
-          .sort((a, b) => {
-            const priorityKeywords = ['cpu core', 'gpu'];
-            const aPriority = priorityKeywords.findIndex((keyword) =>
-              a.tooltip?.toLowerCase().includes(keyword)
-            );
-            const bPriority = priorityKeywords.findIndex((keyword) =>
-              b.tooltip?.toLowerCase().includes(keyword)
-            );
+  const dropdownOptions = [
+    { name: 'About This PC', action: () => performAction('ms-settings:') },
+    { name: 'System Preferences', action: () => performAction('ms-settings:system') },
+    { name: 'App Store', action: () => performAction('ms-windows-store:') }
+  ];
+  
+  const countdownOptions = [
+    { name: 'Sleep', action: () => performAction('rundll32.exe', ['powrprof.dll,SetSuspendState', '0', '1', '0']) },
+    { name: 'Shut Down', action: () => performAction('shutdown', ['/s', '/t', '0']) },
+    { name: 'Restart', action: () => performAction('shutdown', ['/r', '/t', '0']) },
+    { name: 'Log Out', action: () => performAction('shutdown', ['/l']) }
+  ];
 
-            if (aPriority !== -1 && bPriority === -1) return -1;
-            if (aPriority === -1 && bPriority !== -1) return 1;
-            if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
-            return 0;
-          })
-          .map((icon) => (
-            <li key={icon.id}>
-              <img
-                class="systray-icon"
-                src={icon.iconUrl}
-                title={icon.tooltip}
-                onClick={e => {
-                  e.preventDefault();
-                  output.systray.onLeftClick(icon.id);
-                }}
-                onContextMenu={e => {
-                  e.preventDefault();
-                  output.systray.onRightClick(icon.id);
-                }}
-              />
-            </li>
-          ))}
-      </ul>
-    ) : null
+  createEffect(() => providers.onOutput(setOutput));
+
+  const renderIcon = (icon) => (
+    <li key={icon.id}>
+      <img
+        class="systray-icon"
+        src={icon.iconUrl}
+        title={icon.tooltip}
+        onClick={(e) => output.systray.onLeftClick(icon.id)}
+        onContextMenu={(e) => output.systray.onRightClick(icon.id)}
+      />
+    </li>
   );
+  const sortByPriority = (a, b) => ['cpu core', 'gpu'].some((keyword) => a.tooltip?.includes(keyword) ? -1 : b.tooltip?.includes(keyword) ? 1 : 0);
+  const renderIcons = (icons) =>
+    icons
+      .filter((icon) => !icon.tooltip?.toLowerCase().includes('speakers'))
+      .sort(sortByPriority)
+      .map(renderIcon);
 
-  function startCountdown(action: () => void) {
+  const SystrayIcons = createMemo(() =>
+    output.systray ? renderIcons(output.systray.icons) : null
+  );      
+
+  const startCountdown = (name, action) => {
+    if (countdownActive() === name) {
+      resetCountdown();
+      action();
+      return;
+    }
+
+    resetCountdown();
+    
+    setCountdownActive(name);
     countdownInteval = setInterval(() => {
-      setCountdown(prev => {
+      setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(countdownInteval);
+          resetCountdown();
           action();
-          resetAllOptions();
-          return 60;
+          return;
         }
         return prev - 1;
       });
     }, 1000);
-  }
+  };
   
-  function resetAllOptions() {
-    setShowShutdownOptions(false);
-    setShowSleepOptions(false);
-    setShowRestartOptions(false);
-    setShowLogOutOptions(false);
+  const resetCountdown = () => {
+    clearInterval(countdownInteval);
+    countdownInteval = undefined;
+    setCountdownActive(false);
     setCountdown(60);
-    if (countdownInteval !== undefined) {
-      clearInterval(countdownInteval);
-      countdownInteval = undefined;
-    }
-  }
+  };
 
-  function toggleDropdown() {
+  const toggleDropdown = () => {
     const dropdownMenu = document.getElementById('dropdown');
     const appleIcon = document.querySelector('.logo');
     if (dropdownMenu && appleIcon) {
@@ -108,155 +109,35 @@ function App() {
       dropdownMenu.style.display = isVisible ? 'none' : 'block';
       appleIcon.classList.toggle('active', !isVisible);
     }
-  }
-
-  async function openWindowsSettings() {
-    try {
-      const result = await zebar.shellExec('powershell', ['/c', 'start', 'ms-settings:']);
-      console.log('Windows Settings opened:', result.stdout);
-    } catch (err) {
-      console.error('Failed to open Windows Settings:', err);
-    }
-  }
-
-  async function openSystemSettings() {
-    try {
-      const result = await zebar.shellExec('powershell', ['/c', 'start', 'ms-settings:system']);
-      console.log('System Settings opened:', result.stdout);
-    } catch (err) {
-      console.error('Failed to open System Settings:', err);
-    }
-  }
-
-  async function openMicrosoftStore() {
-    try {
-      const result = await zebar.shellExec('powershell', ['/c', 'start', 'ms-windows-store:']);
-      console.log('Microsoft Store opened:', result.stdout);
-    } catch (err) {
-      console.error('Failed to open Microsoft Store:', err);
-    }
-  }
-
-  async function sleepWindows() {
-    try {
-      const result = await zebar.shellExec('rundll32.exe', ['powrprof.dll,SetSuspendState', '0', '1', '0']);
-      console.log('Sleep command executed:', result.stdout);
-    } catch (err) {
-      console.error('Failed to put the system to sleep:', err);
-    }
-  }
-
-  async function restartWindows() {
-    try {
-      const result = await zebar.shellExec('shutdown', ['/r', '/t', '0']); // Restart immediately
-      console.log('Restart command executed:', result.stdout);
-    } catch (err) {
-      console.error('Failed to restart:', err);
-    }
-  }
-
-  async function shutdownWindows() {
-    try {
-      const result = await zebar.shellExec('shutdown', ['/s', '/t', '0']); // Shut down immediately
-      console.log('Shutdown command executed:', result.stdout);
-    } catch (err) {
-      console.error('Failed to shut down:', err);
-    }
-  }
-
-  async function logOut() {
-    try {
-      const result = await zebar.shellExec('shutdown', ['/l']); // Log out
-      console.log('Log out command executed:', result.stdout);
-    } catch (err) {
-      console.error('Failed to log out:', err);
-    }
-  }
-
-  async function openFileExplorer() {
-    try {
-      await zebar.shellExec('powershell', ['-Command', 'Start-Process $HOME']);
-    } catch (err) {
-      console.error('Failed to open File Explorer:', err);
-    }
-  }
+  };
 
   return (
     <div class="app">
       <div class="left">
         <i class="logo nf nf-fa-windows" onClick={() => toggleDropdown()}></i>
         <ul id="dropdown">
-          <li onClick={() => openWindowsSettings()}><button>About This PC</button></li>
-          <li onClick={() => openSystemSettings()}><button>System Preferences</button></li>
-          <li onClick={() => openMicrosoftStore()}><button>App Store</button></li>
-          {showSleepOptions() ? (
-            <li class="act">
-              <button onClick={() => sleepWindows()}>Sleep ({countdown()}s)</button>
-              <button onClick={() => resetAllOptions()}>Cancel</button>
+          {dropdownOptions.map(({ name, action }) => (
+            <li onClick={action}><button>{name}</button></li>
+          ))}
+          {countdownOptions.map(({ name, action }) => (
+            <li class={countdownActive() == name && `act`}>
+              <button onClick={() => { startCountdown(name, action); }}>
+                {name} {countdownActive() == name && `(${countdown()}s)`}
+              </button>
+              {countdownActive() == name && (
+                <button onClick={resetCountdown}>Cancel</button>
+              )}
             </li>
-          ) : (
-            <li onClick={() => { resetAllOptions(); setShowSleepOptions(true); startCountdown(sleepWindows); }}>
-              <button>Sleep</button>
-            </li>
-          )}
-
-          {showShutdownOptions() ? (
-            <li class="act">
-              <button onClick={() => shutdownWindows()}>Shut Down ({countdown()}s)</button>
-              <button onClick={() => resetAllOptions()}>Cancel</button>
-            </li>
-          ) : (
-            <li onClick={() => { resetAllOptions(); setShowShutdownOptions(true); startCountdown(shutdownWindows); }}>
-              <button>Shut Down</button>
-            </li>
-          )}
-
-          {showRestartOptions() ? (
-            <li class="act">
-              <button onClick={() => restartWindows()}>Restart ({countdown()}s)</button>
-              <button onClick={() => resetAllOptions()}>Cancel</button>
-            </li>
-          ) : (
-            <li onClick={() => { resetAllOptions(); setShowRestartOptions(true); startCountdown(restartWindows); }}>
-              <button>Restart</button>
-            </li>
-          )}
-
-          {showLogOutOptions() ? (
-            <li class="act">
-              <button onClick={() => logOut()}>Log Out ({countdown()}s)</button>
-              <button onClick={() => resetAllOptions()}>Cancel</button>
-            </li>
-          ) : (
-            <li onClick={() => { resetAllOptions(); setShowLogOutOptions(true); startCountdown(logOut); }}>
-              <button>Log Out</button>
-            </li>
-          )}
+          ))}
         </ul>
 
         <ul>
           <li>
-            <button class="app"
-              onClick={() => {
-                if (output.window?.title === 'File Explorer') {
-                  openFileExplorer();
-                }
-              }}
-            >
+            <button onClick={output.window?.title === 'File Explorer' ? performAction('$HOME') : undefined}>
               {output.window?.title || 'File Explorer'}
             </button>
           </li>
         </ul>
-
-        <ul id="menu">
-          {output.window?.menu?.map((item) => (
-            <li>
-              <button onClick={() => console.log(`Clicked on ${item.name}`)}>
-                {item.name}
-              </button>
-            </li>
-          ))}
-        </ul>        
       </div>
 
       <div class="right">
@@ -295,7 +176,7 @@ function App() {
           {SystrayIcons()}
 
           {output.date && (
-            <li>
+            <li title={output.fullDate?.formatted}>
               {output.date?.formatted}
             </li>
           )}
@@ -304,3 +185,5 @@ function App() {
     </div>
   );
 }
+
+render(() => <App />, document.getElementById('root')!);
