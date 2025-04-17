@@ -148,7 +148,11 @@ function App() {
 
         <ul>
           <li>
-            <button onClick={output.window?.title === 'File Explorer' ? performAction('$HOME') : undefined}>
+            <button onClick={() => {
+              if (output.window?.title === 'File Explorer') {
+                performAction('$HOME');
+              }
+            }}>
               {output.window?.title || 'File Explorer'}
             </button>
           </li>
