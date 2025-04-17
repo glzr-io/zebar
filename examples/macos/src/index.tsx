@@ -55,16 +55,15 @@ function App() {
           })
           .map((icon) => (
             <li key={icon.id}>
-              <input
-                type="image"
+              <img
                 class="systray-icon"
                 src={icon.iconUrl}
                 title={icon.tooltip}
-                onClick={(e) => {
+                onClick={e => {
                   e.preventDefault();
                   output.systray.onLeftClick(icon.id);
                 }}
-                onContextMenu={(e) => {
+                onContextMenu={e => {
                   e.preventDefault();
                   output.systray.onRightClick(icon.id);
                 }}

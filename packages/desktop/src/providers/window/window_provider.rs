@@ -1,9 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(target_os = "windows")]
 use windows::Win32::UI::WindowsAndMessaging::{
     GetForegroundWindow, GetWindowTextW, GetWindowTextLengthW,
 };
+
+#[cfg(target_os = "windows")]
 use windows::Win32::Foundation::HWND;
+
 use std::ptr;
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStringExt;
