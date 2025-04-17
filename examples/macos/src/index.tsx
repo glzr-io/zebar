@@ -23,12 +23,19 @@ function App() {
 
   const performAction = async (command, params = []) => {
     try {
-      if (command === 'rundll32.exe') {
-        // For sleep action, we need to run it in a separate process
-        await shellExec('rundll32.exe', ['powrprof.dll,SetSuspendState', '0', '1', '0']);
-      }
-      else {
-        await shellExec('powershell', ['/c', 'start', command, ...params]);
+      switch (command) {
+        case '$HOME':
+        case 'ms-settings:':
+        case 'ms-settings:system':
+        case 'ms-windows-store:':
+          await shellExec('powershell', ['/c', 'start', command]);
+          break;
+        case 'rundll32.exe':
+          await shellExec('rundll32.exe', ['powrprof.dll,SetSuspendState', '0', '1', '0']);
+          break;
+        default:
+          await shellExec(command, params);
+          break;
       }
     } catch (err) {
       console.error('Error in executing command:', err);
