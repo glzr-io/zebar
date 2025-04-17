@@ -30,9 +30,6 @@ function App() {
         case 'ms-windows-store:':
           await shellExec('powershell', ['/c', 'start', command]);
           break;
-        case 'rundll32.exe':
-          await shellExec('rundll32.exe', ['powrprof.dll,SetSuspendState', '0', '1', '0']);
-          break;
         default:
           await shellExec(command, params);
           break;
@@ -68,7 +65,18 @@ function App() {
       />
     </li>
   );
-  const sortByPriority = (a, b) => ['cpu core', 'gpu'].some((keyword) => a.tooltip?.includes(keyword) ? -1 : b.tooltip?.includes(keyword) ? 1 : 0);
+
+  const sortByPriority = (a, b) => {
+    const getPriority = (icon) => {
+      const tooltip = icon.tooltip?.toLowerCase() || '';
+      if (tooltip.includes('cpu core')) return 1;
+      if (tooltip.includes('gpu')) return 2;
+      return 99; // everything else gets a lower priority
+    };
+  
+    return getPriority(a) - getPriority(b);
+  };
+
   const renderIcons = (icons) =>
     icons
       .filter((icon) => !icon.tooltip?.toLowerCase().includes('speakers'))
@@ -77,7 +85,7 @@ function App() {
 
   const SystrayIcons = createMemo(() =>
     output.systray ? renderIcons(output.systray.icons) : null
-  );      
+  );
 
   const startCountdown = (name, action) => {
     if (countdownActive() === name) {
