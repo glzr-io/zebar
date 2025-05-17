@@ -5,12 +5,13 @@ use std::{
 };
 
 use anyhow::Context;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
 
 use crate::{
   common::{copy_dir_all, read_and_parse_json, visit_deep, PathExt},
+  config_migration::apply_config_migrations,
   marketplace_installer::STARTER_PACK_ID,
 };
 
@@ -21,13 +22,13 @@ pub const VERSION_NUMBER: &str = env!("VERSION_NUMBER");
 pub struct AppSettingsValue {
   /// JSON schema URL to validate the settings file.
   #[serde(rename = "$schema")]
-  schema: Option<String>,
+  pub schema: Option<String>,
 
   /// Widget configs to be launched on startup.
   pub startup_configs: Vec<StartupConfig>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StartupConfig {
   /// ID of the widget pack to launch on startup.
@@ -38,83 +39,6 @@ pub struct StartupConfig {
 
   /// Preset name within the widget config.
   pub preset: String,
-}
-
-// Deserializer for `StartupConfig` that handles the different formats
-// from v2.3.0 to v3.0.0.
-impl<'de> Deserialize<'de> for StartupConfig {
-  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrObject {
-      // String format from v2.3.0 and earlier.
-      String(String),
-      // Object format from v2.7.0 and earlier.
-      V2Object {
-        path: PathBuf,
-        preset: String,
-      },
-      // Object format from v3.0.0 onwards.
-      V3Object {
-        pack: String,
-        widget: String,
-        preset: String,
-      },
-    }
-
-    fn parse_path(path: &Path) -> (String, String) {
-      let path = path.to_string_lossy();
-      let path = path
-        .trim_start_matches('.')
-        .trim_start_matches('/')
-        .trim_start_matches('\\')
-        .trim_end_matches(".zebar.json");
-
-      // TODO: Transform pack ID if necessary. It might include special
-      // symbols or spaces.
-      path.split_once(['/', '\\']).map_or(
-        (path.to_string(), String::new()),
-        |(pack_dir, widget_name)| {
-          (pack_dir.to_string(), widget_name.to_string())
-        },
-      )
-    }
-
-    let value = StringOrObject::deserialize(deserializer)?;
-
-    Ok(match value {
-      StringOrObject::String(s) => {
-        let (pack, widget) = parse_path(&PathBuf::from(s));
-
-        StartupConfig {
-          pack,
-          widget,
-          preset: "default".to_string(),
-        }
-      }
-      StringOrObject::V2Object { path, preset } => {
-        let (pack, widget) = parse_path(&path);
-
-        StartupConfig {
-          pack,
-          widget,
-          preset,
-        }
-      }
-      StringOrObject::V3Object {
-        pack,
-        widget,
-        preset,
-      } => StartupConfig {
-        pack,
-        widget,
-        preset,
-      },
-    })
-  }
 }
 
 #[derive(Debug)]
@@ -218,36 +142,21 @@ impl AppSettings {
   /// Returns the parsed `AppSettingsValue` and a boolean indicating if
   /// the settings file was created.
   fn read_settings_or_init(
-    dir: &Path,
+    config_dir: &Path,
   ) -> anyhow::Result<(AppSettingsValue, bool)> {
-    let settings = Self::read_settings(dir)?;
+    let settings_path = config_dir.join("settings.json");
+    let is_found = settings_path.exists();
 
-    match settings {
-      Some(settings) => Ok((settings, false)),
-      None => {
-        Self::create_default(dir)?;
-
-        Ok((
-          Self::read_settings(dir)?
-            .context("Failed to create settings config.")?,
-          true,
-        ))
-      }
+    // Apply any pending config migrations before reading the settings
+    // file. If the file does not exist, initialize a default.
+    if is_found {
+      apply_config_migrations(config_dir)?;
+    } else {
+      Self::create_default(config_dir)?;
     }
-  }
 
-  /// Reads the app settings file.
-  ///
-  /// Returns the parsed `AppSettingsValue` if found.
-  fn read_settings(
-    dir: &Path,
-  ) -> anyhow::Result<Option<AppSettingsValue>> {
-    let settings_path = dir.join("settings.json");
-
-    match settings_path.exists() {
-      false => Ok(None),
-      true => read_and_parse_json(&settings_path),
-    }
+    let settings = read_and_parse_json(&settings_path)?;
+    Ok((settings, !is_found))
   }
 
   /// Writes to the app settings file.
