@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
   app_settings::{AppSettingsValue, StartupConfig},
   common::{has_extension, read_and_parse_json},
+  config::{WidgetConfig, WidgetPackConfig},
 };
 
 /// Migrations that can be applied to the config files.
@@ -83,10 +84,14 @@ fn migrate_startup_config(config_dir: &Path) -> anyhow::Result<()> {
     .and_then(|configs| {
       serde_json::from_value::<Vec<StartupConfigFormat>>(configs.clone())
         .ok()
+        .map(|configs| {
+          configs
+            .into_iter()
+            .filter_map(|config| TryInto::try_into(config).ok())
+            .collect::<Vec<_>>()
+        })
     })
-    .map_or_else(Vec::new, |configs| {
-      configs.into_iter().map(Into::into).collect()
-    });
+    .unwrap_or_default();
 
   // Create new settings with updated schema.
   let new_settings = AppSettingsValue {
@@ -133,35 +138,35 @@ fn migrate_widget_config(config_dir: &Path) -> anyhow::Result<()> {
       }
     };
 
-    let pack_name = pack_dir
+    let pack_dir_name = pack_dir
       .file_name()
       .and_then(|name| name.to_str())
-      .unwrap_or("unknown")
-      .to_string();
+      .context("Failed to get directory name.")?;
 
     // Create a new pack config.
-    let mut pack_config = serde_json::json!({
-      "$schema": format!(
+    let mut pack_config = WidgetPackConfig {
+      schema: Some(format!(
         "https://github.com/glzr-io/zebar/raw/v{}/resources/pack-schema.json",
         crate::app_settings::VERSION_NUMBER
-      ),
-      "name": pack_name,
-      "description": "",
-      "tags": [],
-      "previewImages": [],
-      "repositoryUrl": "",
-      "widgets": []
-    });
+      )),
+      name: sanitize_name(pack_dir_name),
+      description: "".to_string(),
+      tags: vec![],
+      preview_images: vec![],
+      repository_url: "".to_string(),
+      widgets: vec![],
+    };
 
     // Process each widget config file, adding it to the pack config.
     for config_path in widget_configs {
       // Extract widget name from filename.
-      let widget_name = config_path
-        .file_stem()
-        .and_then(|name| name.to_str())
-        .unwrap_or("unknown")
-        .trim_end_matches(".zebar")
-        .to_string();
+      let widget_name = sanitize_name(
+        config_path
+          .file_stem()
+          .and_then(|name| name.to_str())
+          .context("Failed to get filename of widget config.")?
+          .trim_end_matches(".zebar"),
+      );
 
       // Read the legacy widget config.
       match read_and_parse_json::<serde_json::Value>(&config_path) {
@@ -174,13 +179,18 @@ fn migrate_widget_config(config_dir: &Path) -> anyhow::Result<()> {
             );
 
             // Add new required `includeFiles` field.
-            legacy_obj
-              .insert("includeFiles".to_string(), serde_json::json!([]));
+            legacy_obj.insert(
+              "includeFiles".to_string(),
+              serde_json::json!(["**/**"]),
+            );
 
             // Add the migrated widget config to the pack.
-            if let Some(widgets) = pack_config["widgets"].as_array_mut() {
-              widgets.push(legacy_config);
-            }
+            pack_config.widgets.push(
+              serde_json::from_value::<WidgetConfig>(legacy_config)
+                .context(
+                  "Failed to convert legacy widget config to new format.",
+                )?,
+            );
 
             tracing::info!(
               "Migrated widget config: {}",
@@ -255,55 +265,60 @@ enum StartupConfigFormat {
 }
 
 /// Converts a v2 startup config to a v3 startup config.
-impl From<StartupConfigFormat> for StartupConfig {
-  fn from(value: StartupConfigFormat) -> Self {
+impl TryFrom<StartupConfigFormat> for StartupConfig {
+  type Error = anyhow::Error;
+
+  fn try_from(value: StartupConfigFormat) -> Result<Self, Self::Error> {
     match value {
       StartupConfigFormat::String(s) => {
-        let (pack, widget) = parse_legacy_path(&PathBuf::from(s));
+        let (pack, widget) = parse_legacy_path(&PathBuf::from(s))?;
 
-        StartupConfig {
+        Ok(StartupConfig {
           pack,
           widget,
           preset: "default".to_string(),
-        }
+        })
       }
       StartupConfigFormat::Object { path, preset } => {
-        let (pack, widget) = parse_legacy_path(&path);
+        let (pack, widget) = parse_legacy_path(&path)?;
 
-        StartupConfig {
+        Ok(StartupConfig {
           pack,
           widget,
           preset,
-        }
+        })
       }
-      StartupConfigFormat::Current(config) => config,
+      StartupConfigFormat::Current(config) => Ok(config),
     }
   }
 }
 
-/// Parses a path to a pack and widget name.
-fn parse_legacy_path(path: &Path) -> (String, String) {
+/// Parses a legacy widget config path to a pack and widget name.
+fn parse_legacy_path(path: &Path) -> anyhow::Result<(String, String)> {
   let path = path.to_string_lossy();
   let path = path
     .trim_start_matches(['.', '/', '\\'])
     .trim_end_matches(".zebar.json");
 
-  // Split the path into pack and widget name.
-  // TODO: Transform pack ID if necessary. It might include special
-  // symbols or spaces.
-  path.split_once(['/', '\\']).map_or(
-    (path.to_string(), String::new()),
-    |(pack_dir, widget_name)| {
-      (pack_dir.to_string(), widget_name.to_string())
-    },
-  )
+  let components: Vec<&str> = path.split(['/', '\\']).collect();
+
+  let pack_name =
+    sanitize_name(components.first().context("Path is empty.")?);
+
+  let widget_name = sanitize_name(
+    components
+      .last()
+      .context("Path does not point to a widget config.")?,
+  );
+
+  Ok((pack_name, widget_name))
 }
 
 /// Sanitizes a pack/widget name to match the schema requirements:
 /// - 2-24 characters.
 /// - Only lowercase letters, numbers, hyphens, and underscores.
 /// - Must start with a letter or number.
-fn sanitize_name(name: String) -> String {
+fn sanitize_name(name: &str) -> String {
   // Convert to lowercase.
   let name = name.to_lowercase();
 
@@ -324,13 +339,9 @@ fn sanitize_name(name: String) -> String {
     .collect::<String>();
 
   // Ensure it starts with a letter or number.
-  let sanitized = if !(sanitized.is_empty()
-    || sanitized.chars().next().unwrap().is_ascii_lowercase()
-    || sanitized.chars().next().unwrap().is_ascii_digit())
-  {
-    format!("x{}", sanitized)
-  } else {
-    sanitized
+  let sanitized = match sanitized.chars().next() {
+    Some(c) if c.is_ascii_lowercase() || c.is_ascii_digit() => sanitized,
+    _ => format!("x{}", sanitized),
   };
 
   // Ensure minimum length.

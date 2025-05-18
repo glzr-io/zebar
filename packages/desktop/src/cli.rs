@@ -169,12 +169,7 @@ pub struct PublishArgs {
   /// API URL to send requests to.
   ///
   /// This is internally used for development and testing.
-  #[clap(
-    long,
-    env = "GLZR_API_URL",
-    default_value = "https://api.glzr.io",
-    hide = true
-  )]
+  #[clap(long, default_value = "https://api.glzr.io", hide = true)]
   pub api_url: String,
 }
 

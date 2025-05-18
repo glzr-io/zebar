@@ -62,7 +62,7 @@ impl WidgetPack {
 pub struct WidgetPackConfig {
   /// JSON schema URL to validate the widget pack file.
   #[serde(rename = "$schema")]
-  schema: Option<String>,
+  pub schema: Option<String>,
 
   /// Name of the pack.
   pub name: String,
