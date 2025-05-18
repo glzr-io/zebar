@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/glzr-io/zebar/raw/v2.8.0/resources/pack-schema.json",
+  "$schema": "https://github.com/glzr-io/zebar/raw/v3.0.0/resources/pack-schema.json",
   "name": "starter",
   "description": "A basic widget pack for testing and development.",
   "tags": ["topbar"],
@@ -7,7 +7,6 @@
   "repositoryUrl": "",
   "widgets": [
     {
-      "$schema": null,
       "name": "vanilla",
       "htmlPath": "./vanilla.html",
       "zOrder": "normal",
@@ -43,7 +42,6 @@
       ]
     },
     {
-      "$schema": "https://github.com/glzr-io/zebar/raw/v2.1.0/resources/widget-schema.json",
       "name": "with-glazewm",
       "htmlPath": "./with-glazewm.html",
       "zOrder": "normal",
