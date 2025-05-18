@@ -9,10 +9,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
   app_settings::{AppSettingsValue, StartupConfig},
-  common::read_and_parse_json,
+  common::{has_extension, read_and_parse_json},
 };
 
-#[derive(Debug, Deserialize, Serialize)]
+/// Migrations that can be applied to the config files.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 enum ConfigMigration {
   V3_0_0StartupConfig,
@@ -33,10 +34,19 @@ impl ConfigMigration {
 
 /// Migrates config files to the latest version.
 pub fn apply_config_migrations(config_dir: &Path) -> anyhow::Result<()> {
-  let migration_file = config_dir.join(".migrations.json");
-  let migrations = migrations_to_apply(&migration_file);
+  // TODO: Should be stored in data dir instead.
+  let migration_path = config_dir.join(".migrations.json");
 
-  for migration in migrations {
+  let mut applied_migrations =
+    read_and_parse_json::<Vec<ConfigMigration>>(&migration_path)
+      .unwrap_or_default();
+
+  // Get migrations that need to be applied to the config files.
+  let migrations_to_apply = ConfigMigration::iter()
+    .filter(|migration| !applied_migrations.contains(migration))
+    .collect::<Vec<_>>();
+
+  for migration in migrations_to_apply {
     match migration {
       ConfigMigration::V3_0_0StartupConfig => {
         migrate_startup_config(config_dir)?;
@@ -45,46 +55,33 @@ pub fn apply_config_migrations(config_dir: &Path) -> anyhow::Result<()> {
         migrate_widget_config(config_dir)?;
       }
     }
+
+    applied_migrations.push(migration.clone());
+
+    // Update the migration file.
+    fs::write(
+      &migration_path,
+      serde_json::to_string_pretty(&applied_migrations)? + "\n",
+    )
+    .context("Failed to write migration file.")?;
   }
 
   Ok(())
 }
 
-/// Returns the migrations that need to be applied to the config files.
-fn migrations_to_apply(migration_file: &Path) -> Vec<ConfigMigration> {
-  if !migration_file.exists() {
-    return vec![
-      ConfigMigration::V3_0_0StartupConfig,
-      ConfigMigration::V3_0_0WidgetConfig,
-    ];
-  }
-
-  let migrations =
-    read_and_parse_json::<Vec<ConfigMigration>>(migration_file)
-      .unwrap_or_default();
-
-  // TODO: Should be the inverse of the applied migrations.
-
-  migrations
-}
-
 /// Migrates the startup config to the latest version.
 fn migrate_startup_config(config_dir: &Path) -> anyhow::Result<()> {
-  let settings_file = config_dir.join("settings.json");
-
-  // Read the settings file.
-  let settings_content = fs::read_to_string(&settings_file)
-    .context("Failed to read settings.json")?;
+  let settings_path = config_dir.join("settings.json");
 
   let settings_json =
-    serde_json::from_str::<serde_json::Value>(&settings_content)
+    read_and_parse_json::<serde_json::Value>(&settings_path)
       .context("Failed to parse settings.json")?;
 
   // Extract and migrate startup configs if they exist.
   let new_startup_configs = settings_json
     .get("startupConfigs")
     .and_then(|configs| {
-      serde_json::from_value::<Vec<LegacyStartupConfig>>(configs.clone())
+      serde_json::from_value::<Vec<StartupConfigFormat>>(configs.clone())
         .ok()
     })
     .map_or_else(Vec::new, |configs| {
@@ -102,7 +99,7 @@ fn migrate_startup_config(config_dir: &Path) -> anyhow::Result<()> {
 
   // Write the migrated settings back to the file.
   fs::write(
-    &settings_file,
+    &settings_path,
     serde_json::to_string_pretty(&new_settings)? + "\n",
   )
   .context("Failed to write migrated settings.")?;
@@ -115,9 +112,10 @@ fn migrate_widget_config(config_dir: &Path) -> anyhow::Result<()> {
   todo!()
 }
 
+/// Legacy and current structure for startup configs.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-enum LegacyStartupConfig {
+enum StartupConfigFormat {
   /// String format from v2.3.0 and earlier.
   String(String),
 
@@ -129,11 +127,11 @@ enum LegacyStartupConfig {
 }
 
 /// Converts a v2 startup config to a v3 startup config.
-impl From<LegacyStartupConfig> for StartupConfig {
-  fn from(value: LegacyStartupConfig) -> Self {
+impl From<StartupConfigFormat> for StartupConfig {
+  fn from(value: StartupConfigFormat) -> Self {
     match value {
-      LegacyStartupConfig::String(s) => {
-        let (pack, widget) = parse_path(&PathBuf::from(s));
+      StartupConfigFormat::String(s) => {
+        let (pack, widget) = parse_legacy_path(&PathBuf::from(s));
 
         StartupConfig {
           pack,
@@ -141,8 +139,8 @@ impl From<LegacyStartupConfig> for StartupConfig {
           preset: "default".to_string(),
         }
       }
-      LegacyStartupConfig::Object { path, preset } => {
-        let (pack, widget) = parse_path(&path);
+      StartupConfigFormat::Object { path, preset } => {
+        let (pack, widget) = parse_legacy_path(&path);
 
         StartupConfig {
           pack,
@@ -150,12 +148,13 @@ impl From<LegacyStartupConfig> for StartupConfig {
           preset,
         }
       }
-      LegacyStartupConfig::Current(config) => config,
+      StartupConfigFormat::Current(config) => config,
     }
   }
 }
 
-fn parse_path(path: &Path) -> (String, String) {
+/// Parses a path to a pack and widget name.
+fn parse_legacy_path(path: &Path) -> (String, String) {
   let path = path.to_string_lossy();
   let path = path
     .trim_start_matches('.')
