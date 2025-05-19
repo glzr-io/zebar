@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/glzr-io/zebar/raw/v{{ ZEBAR_VERSION }}/resources/pack-schema.json",
+  "$schema": "https://github.com/glzr-io/zebar/raw/v{{ ZEBAR_VERSION }}/resources/zpack-schema.json",
   "name": "{{ PACK_NAME }}",
   "description": "{{ PACK_DESCRIPTION }}",
   "tags": {{ PACK_TAGS | json_encode() | safe }},

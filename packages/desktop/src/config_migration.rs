@@ -146,7 +146,7 @@ fn migrate_widget_config(config_dir: &Path) -> anyhow::Result<()> {
     // Create a new pack config.
     let mut pack_config = WidgetPackConfig {
       schema: Some(format!(
-        "https://github.com/glzr-io/zebar/raw/v{}/resources/pack-schema.json",
+        "https://github.com/glzr-io/zebar/raw/v{}/resources/zpack-schema.json",
         crate::app_settings::VERSION_NUMBER
       )),
       name: sanitize_name(pack_dir_name),

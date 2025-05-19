@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/glzr-io/zebar/raw/v3.0.0/resources/pack-schema.json",
+  "$schema": "https://github.com/glzr-io/zebar/raw/v3.0.0/resources/zpack-schema.json",
   "name": "starter",
   "description": "A basic widget pack for testing and development.",
   "tags": ["topbar"],
