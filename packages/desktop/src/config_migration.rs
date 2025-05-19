@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
   app_settings::{AppSettingsValue, StartupConfig},
   common::{has_extension, read_and_parse_json},
-  config::{WidgetConfig, WidgetPackConfig},
+  widget_pack::{WidgetConfig, WidgetPackConfig},
 };
 
 /// Migrations that can be applied to the config files.

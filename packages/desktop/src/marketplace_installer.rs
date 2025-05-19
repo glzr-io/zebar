@@ -16,7 +16,7 @@ use tokio::{sync::mpsc, task};
 use crate::{
   app_settings::{AppSettings, VERSION_NUMBER},
   common::{copy_dir_all, read_and_parse_json},
-  config::{Config, WidgetPack},
+  widget_pack::{Config, WidgetPack},
 };
 
 /// The ID of the built-in starter pack.

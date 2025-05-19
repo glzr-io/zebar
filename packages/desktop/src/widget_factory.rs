@@ -27,11 +27,11 @@ use crate::{
   app_settings::AppSettings,
   asset_server::create_init_url,
   common::PathExt,
-  config::{
+  monitor_state::{Monitor, MonitorState},
+  widget_pack::{
     AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig, WidgetPack,
     WidgetPlacement,
   },
-  monitor_state::{Monitor, MonitorState},
 };
 
 /// Manages the creation of Zebar widgets.
@@ -367,7 +367,7 @@ impl WidgetFactory {
       // to truly be always on top.
       #[cfg(target_os = "macos")]
       {
-        if widget_config.z_order == crate::config::ZOrder::TopMost {
+        if widget_config.z_order == crate::widget_pack::ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
       }

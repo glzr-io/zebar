@@ -4,10 +4,7 @@
 
 use std::{env, sync::Arc};
 
-use app_settings::AppSettings;
 use clap::Parser;
-use config::WidgetPack;
-use marketplace_installer::MarketplaceInstaller;
 use tauri::{
   async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
 };
@@ -18,14 +15,16 @@ use tracing_subscriber::EnvFilter;
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
+  app_settings::AppSettings,
   asset_server::setup_asset_server,
   cli::{Cli, CliCommand, MonitorType, QueryArgs},
-  config::{Config, MonitorSelection, WidgetPlacement},
+  marketplace_installer::MarketplaceInstaller,
   monitor_state::MonitorState,
   providers::{ProviderEmission, ProviderManager},
   shell_state::ShellState,
   sys_tray::SysTray,
   widget_factory::{WidgetFactory, WidgetOpenOptions},
+  widget_pack::{Config, MonitorSelection, WidgetPack, WidgetPlacement},
 };
 
 mod app_settings;
@@ -33,7 +32,6 @@ mod asset_server;
 mod cli;
 mod commands;
 mod common;
-mod config;
 mod config_migration;
 mod marketplace_installer;
 mod monitor_state;
@@ -42,6 +40,7 @@ mod publish;
 mod shell_state;
 mod sys_tray;
 mod widget_factory;
+mod widget_pack;
 
 #[macro_use]
 extern crate rocket;

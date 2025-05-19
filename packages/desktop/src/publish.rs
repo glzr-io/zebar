@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::{
   cli::PublishArgs,
   common::{glob_util, PathExt},
-  config::{Config, WidgetPack},
+  widget_pack::{Config, WidgetPack},
 };
 
 #[derive(Debug, Deserialize)]

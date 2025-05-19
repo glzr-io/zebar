@@ -3,7 +3,7 @@ use std::{path::PathBuf, process};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::{
-  app_settings::VERSION_NUMBER, common::LengthValue, config::AnchorPoint,
+  app_settings::VERSION_NUMBER, common::LengthValue, widget_pack::AnchorPoint,
 };
 
 #[derive(Clone, Debug, Parser)]

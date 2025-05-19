@@ -7,10 +7,6 @@ use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
-  config::{
-    Config, CreateWidgetConfigArgs, CreateWidgetPackArgs,
-    UpdateWidgetPackArgs, WidgetConfig, WidgetPack, WidgetPlacement,
-  },
   marketplace_installer::MarketplaceInstaller,
   providers::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
@@ -18,6 +14,10 @@ use crate::{
   },
   shell_state::{ShellCommandArgs, ShellState},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
+  widget_pack::{
+    Config, CreateWidgetConfigArgs, CreateWidgetPackArgs,
+    UpdateWidgetPackArgs, WidgetConfig, WidgetPack, WidgetPlacement,
+  },
 };
 
 #[tauri::command]

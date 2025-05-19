@@ -20,7 +20,7 @@ use tracing::{error, info};
 
 use crate::{
   app_settings::{AppSettings, StartupConfig, VERSION_NUMBER},
-  config::{Config, WidgetConfig, WidgetPack},
+  widget_pack::{Config, WidgetConfig, WidgetPack},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
 };
 
