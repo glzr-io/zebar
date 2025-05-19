@@ -61,8 +61,8 @@ importers:
         specifier: 1.2.0
         version: 1.2.0(solid-js@1.9.3)
       '@glzr/data-access':
-        specifier: 0.0.9
-        version: 0.0.9(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)
+        specifier: 0.0.10
+        version: 0.0.10(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)
       '@solidjs/router':
         specifier: 0.14.8
         version: 0.14.8(solid-js@1.9.3)
@@ -695,8 +695,8 @@ packages:
     peerDependencies:
       solid-js: '>=1.7.0'
 
-  '@glzr/data-access@0.0.9':
-    resolution: {integrity: sha512-ngyR7KMAnglXSMrxSCddVUR0BII8evQFOLDg3AjRjyDhKQ+vVR+pSJfj2n/O3gUxxwqvRUfeXDOnaHzAAEKqig==}
+  '@glzr/data-access@0.0.10':
+    resolution: {integrity: sha512-Q9S4c/yh9MO6BCWZR6TzJA5T/uTRiCLXl5gYf9cXze4zZaognXZ2Zi7CsQtJGFnj3b/Im6gUygvF7A1Pl145tg==}
 
   '@glzr/style-guide@1.1.0':
     resolution: {integrity: sha512-/AtA3ZXIbbJGaWjTjxK0BfM3IE92FxysIp3ltCzd9dbMrjRXBvQI6TZ0zUFJorZHV3f0vhyDSqEgjSTbAufv7w==}
@@ -2874,7 +2874,7 @@ snapshots:
       solid-js: 1.9.3
       tailwind-merge: 2.5.4
 
-  '@glzr/data-access@0.0.9(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)':
+  '@glzr/data-access@0.0.10(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)':
     dependencies:
       '@glzr/backend': 0.0.6(typescript@5.3.3)
       '@trpc/client': 11.0.0-rc.819(@trpc/server@11.0.0-rc.819(typescript@5.3.3))(typescript@5.3.3)
