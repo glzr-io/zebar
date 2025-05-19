@@ -19,7 +19,7 @@ export type WidgetPack =
       };
     }
   | {
-      type: 'local';
+      type: 'custom';
       id: string;
       name: string;
       previewImages: string[];

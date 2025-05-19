@@ -93,7 +93,7 @@ export function Sidebar(props: SidebarProps) {
         </h3>
       )}
 
-      <For each={userPacks.localPacks()}>
+      <For each={userPacks.customPacks()}>
         {pack => (
           <WidgetPackSidebarItem pack={pack} isCollapsed={isCollapsed()} />
         )}

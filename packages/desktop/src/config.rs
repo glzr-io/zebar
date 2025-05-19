@@ -91,7 +91,7 @@ pub struct WidgetPackConfig {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WidgetPackType {
-  Local,
+  Custom,
   Marketplace,
 }
 
@@ -508,7 +508,7 @@ impl Config {
       },
       r#type: match metadata {
         Some(_) => WidgetPackType::Marketplace,
-        None => WidgetPackType::Local,
+        None => WidgetPackType::Custom,
       },
       config_path: config_path.canonicalize_pretty()?,
       directory_path: pack_dir.canonicalize_pretty()?,
@@ -534,19 +534,19 @@ impl Config {
     widget_packs.get(pack_id).cloned()
   }
 
-  /// Finds a local widget pack by ID.
+  /// Finds a custom widget pack by ID.
   ///
   /// Returns an error if the widget pack is not found or is not a
-  /// local pack.
-  async fn find_local_widget_pack(
+  /// custom pack.
+  async fn find_custom_widget_pack(
     &self,
     pack_id: &str,
   ) -> anyhow::Result<WidgetPack> {
     self
       .widget_pack_by_id(pack_id)
       .await
-      .filter(|pack| pack.r#type == WidgetPackType::Local)
-      .context(format!("Local widget pack not found: {}", pack_id))
+      .filter(|pack| pack.r#type == WidgetPackType::Custom)
+      .context(format!("Custom widget pack not found: {}", pack_id))
   }
 
   /// Updates the widget config for the given pack and widget name.
@@ -558,7 +558,7 @@ impl Config {
   ) -> anyhow::Result<WidgetConfig> {
     tracing::info!("Updating widget config for {}.", widget_name);
 
-    let pack = self.find_local_widget_pack(pack_id).await?;
+    let pack = self.find_custom_widget_pack(pack_id).await?;
 
     let mut widgets = pack.config.widgets.clone();
     let widget_index = widgets
@@ -635,7 +635,7 @@ impl Config {
     pack_id: &str,
     args: UpdateWidgetPackArgs,
   ) -> anyhow::Result<WidgetPack> {
-    let mut pack = self.find_local_widget_pack(pack_id).await?;
+    let mut pack = self.find_custom_widget_pack(pack_id).await?;
     let pack_id = pack.id.clone();
 
     // Update pack config fields.
@@ -688,7 +688,7 @@ impl Config {
       .with_context(|| format!("Widget pack not found: {}", pack_id))?;
 
     match pack.r#type {
-      WidgetPackType::Local => {
+      WidgetPackType::Custom => {
         // Remove the directory with all widget files.
         fs::remove_dir_all(&pack.directory_path)?;
       }
@@ -717,7 +717,7 @@ impl Config {
     &self,
     args: CreateWidgetConfigArgs,
   ) -> anyhow::Result<WidgetConfig> {
-    let pack = self.find_local_widget_pack(&args.pack_id).await?;
+    let pack = self.find_custom_widget_pack(&args.pack_id).await?;
     let widget_dir = pack.directory_path.join(&args.name);
 
     let template_path = match args.template {
@@ -806,7 +806,7 @@ impl Config {
     pack_id: &str,
     widget_name: &str,
   ) -> anyhow::Result<()> {
-    let pack = self.find_local_widget_pack(pack_id).await?;
+    let pack = self.find_custom_widget_pack(pack_id).await?;
 
     // Remove widget from pack config.
     let mut widgets = pack.config.widgets.clone();

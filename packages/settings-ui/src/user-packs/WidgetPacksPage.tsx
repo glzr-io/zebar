@@ -52,17 +52,17 @@ export function WidgetPacksPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="installed" class="w-full">
+      <Tabs defaultValue="downloaded" class="w-full">
         <TabsList>
-          <TabsTrigger value="installed">
-            Installed ({userPacks.downloadedPacks()?.length})
+          <TabsTrigger value="downloaded">
+            Downloaded ({userPacks.downloadedPacks()?.length})
           </TabsTrigger>
-          <TabsTrigger value="local">
-            Local ({userPacks.localPacks()?.length})
+          <TabsTrigger value="custom">
+            Custom ({userPacks.customPacks()?.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="installed" class="mt-6">
+        <TabsContent value="downloaded" class="mt-6">
           <For each={userPacks.downloadedPacks()}>
             {pack => (
               <WidgetPackCard
@@ -73,8 +73,8 @@ export function WidgetPacksPage() {
           </For>
         </TabsContent>
 
-        <TabsContent value="local" class="mt-6">
-          <For each={userPacks.localPacks()}>
+        <TabsContent value="custom" class="mt-6">
+          <For each={userPacks.customPacks()}>
             {pack => (
               <WidgetPackCard
                 pack={pack}

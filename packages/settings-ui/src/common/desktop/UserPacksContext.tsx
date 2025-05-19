@@ -35,7 +35,7 @@ export type CreateWidgetArgs = {
 
 type UserPacksContextState = {
   downloadedPacks: Resource<WidgetPack[]>;
-  localPacks: Resource<WidgetPack[]>;
+  customPacks: Resource<WidgetPack[]>;
   allPacks: Resource<WidgetPack[]>;
   widgetStates: Resource<Record<string, Widget>>;
   createPack: (args: CreateWidgetPackArgs) => Promise<WidgetPack>;
@@ -70,12 +70,12 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     packs?.filter(pack => pack.type === 'marketplace'),
   );
 
-  const [localPacks] = createResource(allPacks, packs =>
-    packs?.filter(pack => pack.type === 'local'),
+  const [customPacks] = createResource(allPacks, packs =>
+    packs?.filter(pack => pack.type === 'custom'),
   );
 
   createEffect(() => {
-    console.log('localPacks', localPacks());
+    console.log('customPacks', customPacks());
     console.log('downloadedPacks', downloadedPacks());
   });
 
@@ -117,7 +117,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
     mutatePacks(packs =>
       packs?.map(pack =>
-        pack.id === packId && pack.type === 'local'
+        pack.id === packId && pack.type === 'custom'
           ? {
               ...pack,
               widgets: pack.widgets.map(configEntry =>
@@ -142,6 +142,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
     console.log(states);
 
     const configStates = Object.values(states).filter(
+      // @ts-ignore - TODO
       state => state.packId === packId && state.name === widgetName,
     );
 
@@ -183,7 +184,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
     mutatePacks(packs =>
       packs?.map(pack => {
-        return pack.id === args.packId && pack.type === 'local'
+        return pack.id === args.packId && pack.type === 'custom'
           ? {
               ...pack,
               widgets: [...pack.widgets, configEntry],
@@ -230,7 +231,7 @@ export function UserPacksProvider(props: { children: JSX.Element }) {
 
   const store: UserPacksContextState = {
     downloadedPacks,
-    localPacks,
+    customPacks,
     allPacks,
     widgetStates,
     updateWidgetConfig,
