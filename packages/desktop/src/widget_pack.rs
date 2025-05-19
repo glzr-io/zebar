@@ -327,7 +327,7 @@ pub enum FrontendTemplate {
 }
 
 #[derive(Debug)]
-pub struct Config {
+pub struct WidgetPackManager {
   /// Reference to `AppSettings`.
   app_settings: Arc<AppSettings>,
 
@@ -348,10 +348,10 @@ pub struct Config {
   pub widget_configs_change_tx: broadcast::Sender<(String, WidgetConfig)>,
 }
 
-impl Config {
-  /// Reads the config files within the config directory.
+impl WidgetPackManager {
+  /// Reads the pack config files within the config directory.
   ///
-  /// Returns a new `Config` instance.
+  /// Returns a new `WidgetPackManager` instance.
   pub fn new(
     app_settings: Arc<AppSettings>,
     marketplace_installer: Arc<MarketplaceInstaller>,

@@ -16,7 +16,7 @@ use tokio::{sync::mpsc, task};
 use crate::{
   app_settings::{AppSettings, VERSION_NUMBER},
   common::{copy_dir_all, read_and_parse_json},
-  widget_pack::{Config, WidgetPack},
+  widget_pack::{WidgetPackManager, WidgetPack},
 };
 
 /// The ID of the built-in starter pack.
@@ -128,7 +128,7 @@ impl MarketplaceInstaller {
     // Create metadata.
     let metadata = MarketplacePackMetadata::new(pack_id, version)?;
 
-    let pack = Config::read_widget_pack(
+    let pack = WidgetPackManager::read_widget_pack(
       &pack_dir.join("zpack.json"),
       Some(&metadata),
     )?;

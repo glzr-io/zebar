@@ -20,8 +20,8 @@ use tracing::{error, info};
 
 use crate::{
   app_settings::{AppSettings, StartupConfig, VERSION_NUMBER},
-  widget_pack::{Config, WidgetConfig, WidgetPack},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
+  widget_pack::{WidgetConfig, WidgetPack, WidgetPackManager},
 };
 
 #[derive(Debug, Clone)]
@@ -153,9 +153,9 @@ enum SettingsRoute {
 pub struct SysTray {
   app_handle: AppHandle,
   app_settings: Arc<AppSettings>,
-  config: Arc<Config>,
-  widget_factory: Arc<WidgetFactory>,
   tray_icon: Option<TrayIcon>,
+  widget_factory: Arc<WidgetFactory>,
+  widget_pack_manager: Arc<WidgetPackManager>,
 }
 
 impl SysTray {
@@ -163,15 +163,15 @@ impl SysTray {
   pub async fn new(
     app_handle: &AppHandle,
     app_settings: Arc<AppSettings>,
-    config: Arc<Config>,
+    widget_pack_manager: Arc<WidgetPackManager>,
     widget_factory: Arc<WidgetFactory>,
   ) -> anyhow::Result<SysTray> {
     let mut sys_tray = Self {
       app_handle: app_handle.clone(),
       app_settings,
-      config,
-      widget_factory,
       tray_icon: None,
+      widget_factory,
+      widget_pack_manager,
     };
 
     sys_tray.tray_icon = Some(sys_tray.create_tray_icon().await?);
@@ -191,8 +191,8 @@ impl SysTray {
       .tooltip(tooltip)
       .on_menu_event({
         let app_settings = self.app_settings.clone();
-        let config = self.config.clone();
         let widget_factory = self.widget_factory.clone();
+        let widget_pack_manager = self.widget_pack_manager.clone();
 
         move |app_handle, event| {
           if let Ok(menu_event) = MenuEvent::from_str(event.id.as_ref()) {
@@ -200,8 +200,8 @@ impl SysTray {
               menu_event,
               app_handle.clone(),
               app_settings.clone(),
-              config.clone(),
               widget_factory.clone(),
+              widget_pack_manager.clone(),
             );
           }
         }
@@ -215,8 +215,8 @@ impl SysTray {
         .on_tray_icon_event({
           let app_handle = self.app_handle.clone();
           let app_settings = self.app_settings.clone();
-          let config = self.config.clone();
           let widget_factory = self.widget_factory.clone();
+          let widget_pack_manager = self.widget_pack_manager.clone();
 
           move |_, event| {
             if let TrayIconEvent::Click {
@@ -229,8 +229,8 @@ impl SysTray {
                 MenuEvent::OpenSettings,
                 app_handle.clone(),
                 app_settings.clone(),
-                config.clone(),
                 widget_factory.clone(),
+                widget_pack_manager.clone(),
               );
             }
           }
@@ -262,7 +262,7 @@ impl SysTray {
 
   /// Creates and returns the main system tray menu.
   async fn create_tray_menu(&self) -> anyhow::Result<Menu<Wry>> {
-    let widget_packs = self.config.widget_packs().await;
+    let widget_packs = self.widget_pack_manager.widget_packs().await;
     let widget_states = self.widget_factory.states().await;
     let startup_configs = self.app_settings.startup_configs().await;
 
@@ -336,8 +336,8 @@ impl SysTray {
     event: MenuEvent,
     app_handle: AppHandle,
     app_settings: Arc<AppSettings>,
-    config: Arc<Config>,
     widget_factory: Arc<WidgetFactory>,
+    widget_pack_manager: Arc<WidgetPackManager>,
   ) {
     task::spawn(async move {
       info!("Received tray menu event: {:?}", event);
@@ -351,7 +351,7 @@ impl SysTray {
 
           // TODO: Error handling.
           let _ = app_settings.reload().await;
-          config.reload().await
+          widget_pack_manager.reload().await
         }
         MenuEvent::OpenSettings => {
           Self::open_settings_window(&app_handle, SettingsRoute::Index)

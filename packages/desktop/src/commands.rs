@@ -15,16 +15,23 @@ use crate::{
   shell_state::{ShellCommandArgs, ShellState},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
   widget_pack::{
-    Config, CreateWidgetConfigArgs, CreateWidgetPackArgs,
-    UpdateWidgetPackArgs, WidgetConfig, WidgetPack, WidgetPlacement,
+    CreateWidgetConfigArgs, CreateWidgetPackArgs, UpdateWidgetPackArgs,
+    WidgetConfig, WidgetPack, WidgetPackManager, WidgetPlacement,
   },
 };
 
 #[tauri::command]
 pub async fn widget_packs(
-  config: State<'_, Arc<Config>>,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
 ) -> Result<Vec<WidgetPack>, String> {
-  Ok(config.widget_packs().await.values().cloned().collect())
+  Ok(
+    widget_pack_manager
+      .widget_packs()
+      .await
+      .values()
+      .cloned()
+      .collect(),
+  )
 }
 
 #[tauri::command]
@@ -88,9 +95,9 @@ pub async fn stop_widget_preset(
 #[tauri::command]
 pub async fn create_widget_pack(
   args: CreateWidgetPackArgs,
-  config: State<'_, Arc<Config>>,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
 ) -> anyhow::Result<WidgetPack, String> {
-  config
+  widget_pack_manager
     .create_widget_pack(args)
     .await
     .map_err(|err| err.to_string())
@@ -100,9 +107,9 @@ pub async fn create_widget_pack(
 pub async fn update_widget_pack(
   pack_id: String,
   args: UpdateWidgetPackArgs,
-  config: State<'_, Arc<Config>>,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
 ) -> anyhow::Result<WidgetPack, String> {
-  config
+  widget_pack_manager
     .update_widget_pack(&pack_id, args)
     .await
     .map_err(|err| err.to_string())
@@ -111,9 +118,9 @@ pub async fn update_widget_pack(
 #[tauri::command]
 pub async fn delete_widget_pack(
   pack_id: String,
-  config: State<'_, Arc<Config>>,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
 ) -> anyhow::Result<(), String> {
-  config
+  widget_pack_manager
     .delete_widget_pack(&pack_id)
     .await
     .map_err(|err| err.to_string())
@@ -122,9 +129,9 @@ pub async fn delete_widget_pack(
 #[tauri::command]
 pub async fn create_widget_config(
   args: CreateWidgetConfigArgs,
-  config: State<'_, Arc<Config>>,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
 ) -> anyhow::Result<WidgetConfig, String> {
-  config
+  widget_pack_manager
     .create_widget_config(args)
     .await
     .map_err(|err| err.to_string())
@@ -135,9 +142,9 @@ pub async fn update_widget_config(
   pack_id: String,
   widget_name: String,
   new_config: WidgetConfig,
-  config: State<'_, Arc<Config>>,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
 ) -> Result<WidgetConfig, String> {
-  config
+  widget_pack_manager
     .update_widget_config(&pack_id, &widget_name, new_config)
     .await
     .map_err(|err| err.to_string())
@@ -147,9 +154,9 @@ pub async fn update_widget_config(
 pub async fn delete_widget_config(
   pack_id: String,
   widget_name: String,
-  config: State<'_, Arc<Config>>,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
 ) -> anyhow::Result<(), String> {
-  config
+  widget_pack_manager
     .delete_widget_config(&pack_id, &widget_name)
     .await
     .map_err(|err| err.to_string())

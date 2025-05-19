@@ -29,8 +29,8 @@ use crate::{
   common::PathExt,
   monitor_state::{Monitor, MonitorState},
   widget_pack::{
-    AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig, WidgetPack,
-    WidgetPlacement,
+    AnchorPoint, DockConfig, DockEdge, WidgetConfig, WidgetPack,
+    WidgetPackManager, WidgetPlacement,
   },
 };
 
@@ -47,8 +47,8 @@ pub struct WidgetFactory {
 
   pub close_tx: broadcast::Sender<String>,
 
-  /// Reference to `Config`.
-  config: Arc<Config>,
+  /// Reference to `WidgetPackManager`.
+  widget_pack_manager: Arc<WidgetPackManager>,
 
   _open_rx: broadcast::Receiver<WidgetState>,
 
@@ -162,7 +162,7 @@ impl WidgetFactory {
   pub fn new(
     app_handle: &AppHandle,
     app_settings: Arc<AppSettings>,
-    config: Arc<Config>,
+    widget_pack_manager: Arc<WidgetPackManager>,
     monitor_state: Arc<MonitorState>,
   ) -> Self {
     let (open_tx, _open_rx) = broadcast::channel(16);
@@ -173,7 +173,7 @@ impl WidgetFactory {
       app_settings,
       _close_rx,
       close_tx,
-      config,
+      widget_pack_manager,
       _open_rx,
       open_tx,
       monitor_state,
@@ -191,7 +191,7 @@ impl WidgetFactory {
     is_preview: bool,
   ) -> anyhow::Result<()> {
     let widget_pack = self
-      .config
+      .widget_pack_manager
       .widget_pack_by_id(pack_id)
       .await
       .with_context(|| {

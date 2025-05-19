@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::{
   cli::PublishArgs,
   common::{glob_util, PathExt},
-  widget_pack::{Config, WidgetPack},
+  widget_pack::{WidgetPackManager, WidgetPack},
 };
 
 #[derive(Debug, Deserialize)]
@@ -72,7 +72,7 @@ pub async fn publish_widget_pack(
   }
 
   // Create the tarball of the widget pack.
-  let pack = Config::read_widget_pack(&pack_config_path, None)?;
+  let pack = WidgetPackManager::read_widget_pack(&pack_config_path, None)?;
   let tarball_path = create_tarball(&pack)?;
 
   // Upload to marketplace.

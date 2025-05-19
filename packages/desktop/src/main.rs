@@ -24,7 +24,9 @@ use crate::{
   shell_state::ShellState,
   sys_tray::SysTray,
   widget_factory::{WidgetFactory, WidgetOpenOptions},
-  widget_pack::{Config, MonitorSelection, WidgetPack, WidgetPlacement},
+  widget_pack::{
+    MonitorSelection, WidgetPack, WidgetPackManager, WidgetPlacement,
+  },
 };
 
 mod app_settings;
@@ -175,12 +177,12 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
     MarketplaceInstaller::new(app.handle(), app_settings.clone())?;
   app.manage(marketplace_installer.clone());
 
-  // Initialize `Config` in Tauri state.
-  let config = Arc::new(Config::new(
+  // Initialize `WidgetPackManager` in Tauri state.
+  let widget_pack_manager = Arc::new(WidgetPackManager::new(
     app_settings.clone(),
     marketplace_installer.clone(),
   )?);
-  app.manage(config.clone());
+  app.manage(widget_pack_manager.clone());
 
   // Initialize `MonitorState` in Tauri state.
   let monitor_state = Arc::new(MonitorState::new(app.handle()));
@@ -190,7 +192,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   let widget_factory = Arc::new(WidgetFactory::new(
     app.handle(),
     app_settings.clone(),
-    config.clone(),
+    widget_pack_manager.clone(),
     monitor_state.clone(),
   ));
   app.manage(widget_factory.clone());
@@ -230,7 +232,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   let tray = SysTray::new(
     app.handle(),
     app_settings.clone(),
-    config.clone(),
+    widget_pack_manager.clone(),
     widget_factory.clone(),
   )
   .await?;
@@ -238,7 +240,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   listen_events(
     app.handle(),
     app_settings,
-    config,
+    widget_pack_manager,
     monitor_state,
     widget_factory,
     tray,
@@ -255,7 +257,7 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
 fn listen_events(
   app_handle: &AppHandle,
   app_settings: Arc<AppSettings>,
-  config: Arc<Config>,
+  widget_pack_manager: Arc<WidgetPackManager>,
   monitor_state: Arc<MonitorState>,
   widget_factory: Arc<WidgetFactory>,
   tray: SysTray,
@@ -269,7 +271,7 @@ fn listen_events(
   let mut settings_change_rx = app_settings.settings_change_tx.subscribe();
   let mut monitors_change_rx = monitor_state.change_tx.subscribe();
   let mut widget_configs_change_rx =
-    config.widget_configs_change_tx.subscribe();
+    widget_pack_manager.widget_configs_change_tx.subscribe();
 
   task::spawn(async move {
     loop {
@@ -308,7 +310,7 @@ fn listen_events(
         },
         Some(pack) = install_rx.recv() => {
           info!("Widget pack installed: {:?}", pack);
-          config.register_widget_pack(pack).await;
+          widget_pack_manager.register_widget_pack(pack).await;
           Ok(())
         },
       };
