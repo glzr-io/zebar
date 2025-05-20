@@ -9,6 +9,7 @@ import {
 } from '@glzr/components';
 import { useNavigate } from '@solidjs/router';
 import { IconBrandGithub, IconFolderPlus } from '@tabler/icons-solidjs';
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
 import { For } from 'solid-js';
 
 import {
@@ -45,7 +46,14 @@ export function WidgetPacksPage() {
             <CreateWidgetPackDialog onSubmit={onCreatePack} />
           </Dialog>
 
-          <Button variant="outline">
+          <Button
+            variant="outline"
+            onClick={() => {
+              shellOpen(
+                'https://github.com/glzr-io/zebar/blob/main/MARKETPLACE.md',
+              );
+            }}
+          >
             <IconBrandGithub class="mr-2 h-4 w-4" />
             Submit to marketplace
           </Button>
