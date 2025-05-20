@@ -27,7 +27,7 @@ export function WidgetPackPage() {
   const userPacks = useUserPacks();
 
   const selectedPack = createMemo(() =>
-    userPacks.allPacks().find(pack => pack.id === params.packId),
+    userPacks.allPacks()?.find(pack => pack.id === params.packId),
   );
 
   const isMarketplacePack = createMemo(

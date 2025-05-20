@@ -27,7 +27,7 @@ export function WidgetPage() {
     useUserPacks();
 
   const selectedPack = createMemo(() =>
-    allPacks().find(pack => pack.id === params.packId),
+    allPacks()?.find(pack => pack.id === params.packId),
   );
 
   const selectedConfig = createMemo(() =>
