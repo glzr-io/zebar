@@ -61,6 +61,9 @@ pub struct AppSettings {
   /// Directory where downloaded marketplace widget packs are stored.
   pub marketplace_download_dir: PathBuf,
 
+  /// Path to the config migration file.
+  pub migration_file: PathBuf,
+
   /// Parsed app settings value.
   pub value: Arc<Mutex<AppSettingsValue>>,
 
@@ -95,6 +98,11 @@ impl AppSettings {
       .resolve("zebar/downloads", BaseDirectory::Data)
       .context("Unable to resolve app data directory.")?;
 
+    let migration_file = app_handle
+      .path()
+      .resolve("zebar/.migrations.json", BaseDirectory::Data)
+      .context("Unable to resolve config migration file.")?;
+
     for dir in [
       &config_dir,
       &webview_cache_dir,
@@ -105,7 +113,7 @@ impl AppSettings {
     }
 
     let (settings, is_first_run) =
-      Self::read_settings_or_init(&config_dir)?;
+      Self::read_settings_or_init(&config_dir, &migration_file)?;
 
     let (settings_change_tx, _settings_change_rx) = broadcast::channel(16);
 
@@ -117,6 +125,7 @@ impl AppSettings {
       marketplace_meta_dir: marketplace_meta_dir.canonicalize_pretty()?,
       marketplace_download_dir: marketplace_download_dir
         .canonicalize_pretty()?,
+      migration_file,
       value: Arc::new(Mutex::new(settings)),
       _settings_change_rx,
       settings_change_tx,
@@ -125,7 +134,8 @@ impl AppSettings {
 
   /// Re-evaluates app settings and broadcasts the change.
   pub async fn reload(&self) -> anyhow::Result<()> {
-    let (new_settings, _) = Self::read_settings_or_init(&self.config_dir)?;
+    let (new_settings, _) =
+      Self::read_settings_or_init(&self.config_dir, &self.migration_file)?;
 
     {
       let mut settings = self.value.lock().await;
@@ -143,6 +153,7 @@ impl AppSettings {
   /// the settings file was created.
   fn read_settings_or_init(
     config_dir: &Path,
+    migration_file: &Path,
   ) -> anyhow::Result<(AppSettingsValue, bool)> {
     let settings_path = config_dir.join("settings.json");
     let is_found = settings_path.exists();
@@ -150,7 +161,7 @@ impl AppSettings {
     // Apply any pending config migrations before reading the settings
     // file. If the file does not exist, initialize a default.
     if is_found {
-      apply_config_migrations(config_dir)?;
+      apply_config_migrations(config_dir, migration_file)?;
     } else {
       Self::create_default(config_dir)?;
     }

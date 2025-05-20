@@ -34,12 +34,12 @@ impl ConfigMigration {
 }
 
 /// Migrates config files to the latest version.
-pub fn apply_config_migrations(config_dir: &Path) -> anyhow::Result<()> {
-  // TODO: Should be stored in data dir instead.
-  let migration_path = config_dir.join(".migrations.json");
-
+pub fn apply_config_migrations(
+  config_dir: &Path,
+  migration_file: &Path,
+) -> anyhow::Result<()> {
   let mut applied_migrations =
-    read_and_parse_json::<Vec<ConfigMigration>>(&migration_path)
+    read_and_parse_json::<Vec<ConfigMigration>>(migration_file)
       .unwrap_or_default();
 
   // Get migrations that have not been applied yet.
@@ -61,7 +61,7 @@ pub fn apply_config_migrations(config_dir: &Path) -> anyhow::Result<()> {
 
     // Update the migration file.
     fs::write(
-      &migration_path,
+      migration_file,
       serde_json::to_string_pretty(&applied_migrations)? + "\n",
     )
     .context("Failed to update migration file.")?;
