@@ -1,16 +1,11 @@
 import type { RouterOutputs } from '@glzr/data-access';
 import { invoke } from '@tauri-apps/api/core';
-import {
-  createContext,
-  createResource,
-  type JSX,
-  Resource,
-  useContext,
-} from 'solid-js';
+import { createContext, type JSX, Resource, useContext } from 'solid-js';
+import type { WidgetPack } from 'zebar';
 
 import { useApiClient } from '../api-client';
 import { useUserPacks } from './UserPacksContext';
-import { WidgetPack } from 'zebar';
+import { createSafeResource } from '../create-safe-resource';
 
 type MarketplacePacksContextState = {
   allPacks: Resource<MarketplaceWidgetPack[]>;
@@ -30,11 +25,8 @@ export function MarketplacePacksProvider(props: {
   const userPacks = useUserPacks();
 
   // Fetch marketplace packs from the backend.
-  const [allPacks] = createResource(
-    async () => {
-      return apiClient.widgetPack.getAll.query();
-    },
-    { initialValue: [] },
+  const [allPacks] = createSafeResource(async () =>
+    apiClient.widgetPack.getAll.query(),
   );
 
   async function install(pack: MarketplaceWidgetPack) {

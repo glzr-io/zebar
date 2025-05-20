@@ -18,7 +18,7 @@
     "@tauri-apps/plugin-shell": "2.0.0",
     "remark-gfm": "4.0.1",
     "smorf": "1.5.1",
-    "solid-js": "1.9.3",
+    "solid-js": "1.9.7",
     "solid-markdown": "2.0.14",
     "zebar": "^3.0.0",
     "zod": "3.24.2"
