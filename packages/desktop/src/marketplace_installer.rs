@@ -14,7 +14,7 @@ use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::{sync::mpsc, task};
 
 use crate::{
-  app_settings::{AppSettings, VERSION_NUMBER},
+  app_settings::AppSettings,
   common::{copy_dir_all, read_and_parse_json},
   widget_pack::{WidgetPack, WidgetPackConfig, WidgetPackManager},
 };

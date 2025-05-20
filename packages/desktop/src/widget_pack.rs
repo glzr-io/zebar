@@ -68,7 +68,6 @@ pub struct WidgetPackConfig {
   pub name: String,
 
   /// Version of the pack.
-  #[serde(default = "default_version")]
   pub version: String,
 
   /// Description of the pack.
@@ -103,10 +102,6 @@ pub enum WidgetPackType {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetConfig {
-  /// JSON schema URL to validate the widget config file.
-  #[serde(rename = "$schema")]
-  schema: Option<String>,
-
   /// Name of the widget.
   pub name: String,
 
@@ -414,7 +409,7 @@ impl WidgetPackManager {
       .extend(Self::read_custom_widget_packs(&app_settings.config_dir)?);
 
     for metadata in marketplace_installer.installed_packs_metadata()? {
-      let pack = Self::read_widget_pack(
+      if let Ok(pack) = Self::read_widget_pack(
         &app_settings
           .marketplace_pack_download_dir(
             &metadata.pack_id,
@@ -422,9 +417,14 @@ impl WidgetPackManager {
           )
           .join("zpack.json"),
         Some(&metadata),
-      )?;
-
-      packs.insert(metadata.pack_id.clone(), pack);
+      ) {
+        packs.insert(metadata.pack_id.clone(), pack);
+      } else {
+        tracing::warn!(
+          "Skipping marketplace pack at '{}' because it is invalid.",
+          metadata.pack_id
+        );
+      }
     }
 
     Ok(packs)
@@ -752,10 +752,6 @@ impl WidgetPackManager {
           format!("{}/dist/index.html", args.name).into()
         }
       },
-      schema: Some(format!(
-        "https://github.com/glzr-io/zebar/raw/v{}/resources/widget-schema.json",
-        VERSION_NUMBER
-      )),
       z_order: ZOrder::Normal,
       shown_in_taskbar: false,
       focused: false,
@@ -846,10 +842,4 @@ const fn default_bool<const V: bool>() -> bool {
 /// `WidgetPreset::name` field.
 fn default_preset_name() -> String {
   "default".into()
-}
-
-/// Helper function for setting the default value for a
-/// `WidgetPackConfig::version` field.
-fn default_version() -> String {
-  "0.0.0".into()
 }
