@@ -1,6 +1,7 @@
 {
   "$schema": "https://github.com/glzr-io/zebar/raw/v3.0.0/resources/zpack-schema.json",
   "name": "starter",
+  "version": "0.0.0",
   "description": "A basic widget pack for testing and development.",
   "tags": ["topbar"],
   "previewImages": ["./resources/preview-image-1.png"],

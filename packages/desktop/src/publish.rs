@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::{
   cli::PublishArgs,
   common::{glob_util, PathExt},
-  widget_pack::{WidgetPackManager, WidgetPack},
+  widget_pack::{WidgetPack, WidgetPackManager},
 };
 
 #[derive(Debug, Deserialize)]
@@ -166,11 +166,14 @@ async fn upload_to_marketplace(
 
   // Create multipart form.
   let mut form = Form::new()
-    .text("version", args.version.to_string())
     .file("packConfig", pack_config_path)
     .await?
     .file("tarball", tarball_path)
     .await?;
+
+  if let Some(version_override) = &args.version_override {
+    form = form.text("versionOverride", version_override.to_string());
+  }
 
   if let Some(commit_sha) = &args.commit_sha {
     form = form.text("commitSha", commit_sha.to_string());

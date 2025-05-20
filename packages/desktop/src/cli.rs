@@ -3,7 +3,8 @@ use std::{path::PathBuf, process};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::{
-  app_settings::VERSION_NUMBER, common::LengthValue, widget_pack::AnchorPoint,
+  app_settings::VERSION_NUMBER, common::LengthValue,
+  widget_pack::AnchorPoint,
 };
 
 #[derive(Clone, Debug, Parser)]
@@ -142,11 +143,12 @@ pub struct PublishArgs {
   #[clap(long, env = "ZEBAR_PUBLISH_TOKEN")]
   pub token: String,
 
-  /// Version number to publish (e.g. `1.0.0`).
+  /// Override the version number (e.g. `1.0.0`) in the pack config
+  /// (optional).
   ///
   /// Must be a valid semver string.
   #[clap(long)]
-  pub version: String,
+  pub version_override: Option<String>,
 
   /// Commit SHA associated with this release (optional).
   ///

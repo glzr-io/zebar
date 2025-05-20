@@ -5,11 +5,11 @@ export type WidgetPack =
       type: 'marketplace';
       id: string;
       name: string;
+      version: string;
       previewImages: string[];
       repositoryUrl: string;
       directoryPath: string;
       description: string;
-      version: string;
       widgets: WidgetConfig[];
       tags: string[];
       metadata: {
@@ -22,6 +22,7 @@ export type WidgetPack =
       type: 'custom';
       id: string;
       name: string;
+      version: string;
       previewImages: string[];
       repositoryUrl: string;
       directoryPath: string;

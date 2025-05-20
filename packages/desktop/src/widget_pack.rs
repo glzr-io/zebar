@@ -67,6 +67,10 @@ pub struct WidgetPackConfig {
   /// Name of the pack.
   pub name: String,
 
+  /// Version of the pack.
+  #[serde(default = "default_version")]
+  pub version: String,
+
   /// Description of the pack.
   #[serde(default)]
   pub description: String,
@@ -295,6 +299,7 @@ impl DockEdge {
 #[serde(rename_all = "camelCase")]
 pub struct CreateWidgetPackArgs {
   pub name: String,
+  pub version: String,
   pub description: String,
   pub tags: Vec<String>,
   pub repository_url: String,
@@ -304,6 +309,7 @@ pub struct CreateWidgetPackArgs {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWidgetPackArgs {
   pub name: Option<String>,
+  pub version: Option<String>,
   pub description: Option<String>,
   pub tags: Option<Vec<String>>,
   pub preview_images: Option<Vec<String>>,
@@ -530,7 +536,6 @@ impl WidgetPackManager {
     pack_id: &str,
   ) -> Option<WidgetPack> {
     let widget_packs = self.widget_packs.lock().await;
-    println!("widget_packs: {:?}", widget_packs);
     widget_packs.get(pack_id).cloned()
   }
 
@@ -596,13 +601,14 @@ impl WidgetPackManager {
 
     let mut context = tera::Context::new();
     context.insert("PACK_NAME", &args.name);
+    context.insert("PACK_VERSION", &args.version);
     context.insert("PACK_DESCRIPTION", &args.description);
     context.insert("PACK_TAGS", &args.tags);
     context.insert("REPOSITORY_URL", &args.repository_url);
     context.insert("ZEBAR_VERSION", &VERSION_NUMBER.to_string());
 
     self.app_settings.init_template(
-      &Path::new("pack-template"),
+      Path::new("pack-template"),
       &pack_dir,
       &context,
     )?;
@@ -639,6 +645,8 @@ impl WidgetPackManager {
     let pack_id = pack.id.clone();
 
     // Update pack config fields.
+    pack.config.name = args.name.clone().unwrap_or(pack.config.name);
+    pack.config.version = args.version.unwrap_or(pack.config.version);
     pack.config.description =
       args.description.unwrap_or(pack.config.description);
     pack.config.tags = args.tags.unwrap_or(pack.config.tags);
@@ -654,16 +662,13 @@ impl WidgetPackManager {
       serde_json::to_string_pretty(&pack.config)? + "\n",
     )?;
 
-    {
+    // Update the pack ID and remove the old entry if a new name is
+    // provided.
+    if let Some(new_name) = args.name {
+      pack.id = new_name;
+
       let mut widget_packs = self.widget_packs.lock().await;
-
-      // Update the pack ID and remove the old entry if a new name is
-      // provided.
-      if let Some(new_name) = args.name {
-        pack.id = new_name;
-        widget_packs.remove(&pack_id);
-      }
-
+      widget_packs.remove(&pack_id);
       widget_packs.insert(pack.id.clone(), pack.clone());
     }
 
@@ -841,4 +846,10 @@ const fn default_bool<const V: bool>() -> bool {
 /// `WidgetPreset::name` field.
 fn default_preset_name() -> String {
   "default".into()
+}
+
+/// Helper function for setting the default value for a
+/// `WidgetPackConfig::version` field.
+fn default_version() -> String {
+  "0.0.0".into()
 }

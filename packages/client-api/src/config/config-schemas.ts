@@ -16,6 +16,13 @@ const name = z
     'Only lowercase letters, numbers, and the characters - and _ are allowed.',
   );
 
+const version = z
+  .string()
+  .regex(
+    /^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$/,
+    'Version must be in the format "x.y.z" (e.g. "1.0.0").',
+  );
+
 const widget = z.object({
   name,
   htmlPath: z.string().refine(path => path.endsWith('.html'), {
@@ -93,6 +100,7 @@ const widget = z.object({
 
 const widgetPack = z.object({
   name,
+  version,
   description: z
     .string()
     .max(1000, 'Description cannot exceed 1000 characters.'),
@@ -118,6 +126,7 @@ const widgetPack = z.object({
 export const configSchemas = {
   length,
   name,
+  version,
   widget,
   widgetPack,
 };

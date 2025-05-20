@@ -150,6 +150,7 @@ fn migrate_widget_config(config_dir: &Path) -> anyhow::Result<()> {
         crate::app_settings::VERSION_NUMBER
       )),
       name: sanitize_name(pack_dir_name),
+      version: "0.0.0".to_string(),
       description: "".to_string(),
       tags: vec![],
       preview_images: vec![],

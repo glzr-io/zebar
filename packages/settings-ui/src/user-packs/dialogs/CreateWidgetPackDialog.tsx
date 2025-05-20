@@ -41,6 +41,7 @@ export function CreateWidgetPackDialog(
 
     props.onSubmit({
       ...packForm.value,
+      version: '0.0.0',
       tags: [],
       repositoryUrl: '',
     });

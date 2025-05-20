@@ -3,7 +3,6 @@ import {
   CardContent,
   TextField,
   ChipField,
-  TextAreaField,
   FormField,
   toaster,
 } from '@glzr/components';
@@ -31,6 +30,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
     {
       name: '',
       description: '',
+      version: '0.0.0',
       tags: [],
       previewImages: [],
       repositoryUrl: '',
@@ -57,6 +57,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
           form.unsetTouched();
           form.setValue({
             name: props.pack.name,
+            version: props.pack.version,
             description: props.pack.description,
             tags: props.pack.tags,
             previewImages: props.pack.previewImages,
@@ -105,7 +106,19 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
               <TextField
                 label="Name"
                 placeholder="My widget pack"
-                description="This is used as the directory name."
+                disabled={props.disabled}
+                error={field.error()}
+                {...inputProps()}
+              />
+            )}
+          </Field>
+
+          <Field of={form} path="version">
+            {(inputProps, field) => (
+              <TextField
+                label="Version"
+                placeholder="0.0.0"
+                description="Version number when published to the marketplace."
                 disabled={props.disabled}
                 error={field.error()}
                 {...inputProps()}

@@ -13,6 +13,7 @@ import type { Widget, WidgetConfig, WidgetPack } from 'zebar';
 
 export type CreateWidgetPackArgs = {
   name: string;
+  version: string;
   description: string;
   tags: string[];
   repositoryUrl: string;

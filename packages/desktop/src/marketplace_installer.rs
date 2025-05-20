@@ -16,7 +16,7 @@ use tokio::{sync::mpsc, task};
 use crate::{
   app_settings::{AppSettings, VERSION_NUMBER},
   common::{copy_dir_all, read_and_parse_json},
-  widget_pack::{WidgetPackManager, WidgetPack},
+  widget_pack::{WidgetPack, WidgetPackConfig, WidgetPackManager},
 };
 
 /// The ID of the built-in starter pack.
@@ -208,16 +208,21 @@ impl MarketplaceInstaller {
       .resolve("../../resources/starter", BaseDirectory::Resource)
       .context("Unable to resolve starter pack resource.")?;
 
-    let dest_dir = self
-      .app_settings
-      .marketplace_pack_download_dir(STARTER_PACK_ID, VERSION_NUMBER);
+    let pack_config = read_and_parse_json::<WidgetPackConfig>(
+      &starter_pack_dir.join("zpack.json"),
+    )?;
+
+    let dest_dir = self.app_settings.marketplace_pack_download_dir(
+      STARTER_PACK_ID,
+      &pack_config.version,
+    );
 
     // Copy the starter pack files.
     fs::create_dir_all(&dest_dir)?;
     copy_dir_all(&starter_pack_dir, &dest_dir, true)?;
 
     let metadata =
-      MarketplacePackMetadata::new(STARTER_PACK_ID, VERSION_NUMBER)?;
+      MarketplacePackMetadata::new(STARTER_PACK_ID, &pack_config.version)?;
 
     // Write metadata file.
     fs::write(

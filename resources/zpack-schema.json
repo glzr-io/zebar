@@ -3,9 +3,12 @@
   "title": "Zebar widget pack",
   "description": "A widget pack for Zebar.",
   "type": "object",
-  "required": ["name", "widgets"],
+  "required": ["name", "version", "widgets"],
   "properties": {
     "name": {
+      "type": "string"
+    },
+    "version": {
       "type": "string"
     },
     "description": {

@@ -1,6 +1,7 @@
 {
   "$schema": "https://github.com/glzr-io/zebar/raw/v{{ ZEBAR_VERSION }}/resources/zpack-schema.json",
   "name": "{{ PACK_NAME }}",
+  "version": "{{ PACK_VERSION }}",
   "description": "{{ PACK_DESCRIPTION }}",
   "tags": {{ PACK_TAGS | json_encode() | safe }},
   "previewImages": ["./resources/preview-image-1.png"],
