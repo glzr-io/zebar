@@ -234,7 +234,7 @@ impl Util {
         if mask_alpha == 255 {
           // Make pixel transparent.
           chunk[3] = 0;
-        } else if chunk[0] != 0 || chunk[1] != 0 || chunk[2] != 0 {
+        } else {
           // Make pixel solid.
           chunk[3] = 255;
         }
