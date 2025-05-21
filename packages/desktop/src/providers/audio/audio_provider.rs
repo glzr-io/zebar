@@ -89,8 +89,7 @@ enum AudioEvent {
   DeviceAdded(String),
   DeviceRemoved(String),
   DefaultDeviceChanged(String, DeviceType),
-  VolumeChanged(String, f32),
-  MuteChanged(String, bool),
+  VolumeChanged(String, f32, bool),
 }
 
 /// Holds the state of an audio device.
@@ -437,13 +436,9 @@ impl AudioProvider {
           }
         }
       }
-      AudioEvent::VolumeChanged(device_id, new_volume) => {
+      AudioEvent::VolumeChanged(device_id, new_volume, new_mute) => {
         if let Some(state) = self.device_states.get_mut(&device_id) {
           state.volume = (new_volume * 100.0).round() as u32;
-        }
-      }
-      AudioEvent::MuteChanged(device_id, new_mute) => {
-        if let Some(state) = self.device_states.get_mut(&device_id) {
           state.is_muted = new_mute;
         }
       }
@@ -457,41 +452,40 @@ impl AudioProvider {
     &mut self,
     function: AudioFunction,
   ) -> anyhow::Result<ProviderFunctionResponse> {
+    let device_id = match function {
+      AudioFunction::SetVolume(ref args) => args.device_id.as_ref(),
+      AudioFunction::SetMute(ref args) => args.device_id.as_ref(),
+    };
+
     // Get target device - use specified ID or default playback
     // device.
-    let get_device_state =
-      |device_id: &Option<String>| -> Result<&DeviceState, anyhow::Error> {
-        if let Some(id) = device_id {
-          self
-            .device_states
-            .get(id)
-            .context("Specified device not found.")
-        } else {
-          self
-            .default_playback_id
-            .as_ref()
-            .and_then(|id| self.device_states.get(id))
-            .context("No active playback device.")
-        }
-      };
+    let device_state = if let Some(id) = device_id {
+      self
+        .device_states
+        .get(id)
+        .context("Specified device not found.")?
+    } else {
+      self
+        .default_playback_id
+        .as_ref()
+        .and_then(|id| self.device_states.get(id))
+        .context("No active playback device.")?
+    };
+
     match function {
       AudioFunction::SetVolume(args) => {
         unsafe {
-          get_device_state(&args.device_id)?
-            .com_volume
-            .SetMasterVolumeLevelScalar(
-              args.volume / 100.,
-              &GUID::zeroed(),
-            )
+          device_state.com_volume.SetMasterVolumeLevelScalar(
+            args.volume / 100.,
+            &GUID::zeroed(),
+          )
         }?;
 
         Ok(ProviderFunctionResponse::Null)
       }
       AudioFunction::SetMute(args) => {
         unsafe {
-          get_device_state(&args.device_id)?
-            .com_volume
-            .SetMute(args.mute, &GUID::zeroed())
+          device_state.com_volume.SetMute(args.mute, &GUID::zeroed())
         }?;
 
         Ok(ProviderFunctionResponse::Null)
@@ -545,9 +539,6 @@ impl IAudioEndpointVolumeCallback_Impl for VolumeCallback_Impl {
       let _ = self.event_tx.send(AudioEvent::VolumeChanged(
         self.device_id.clone(),
         data.fMasterVolume,
-      ));
-      let _ = self.event_tx.send(AudioEvent::MuteChanged(
-        self.device_id.clone(),
         data.bMuted.as_bool(),
       ));
     }

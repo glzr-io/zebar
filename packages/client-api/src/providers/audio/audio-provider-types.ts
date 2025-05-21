@@ -12,10 +12,14 @@ export interface AudioOutput {
   playbackDevices: AudioDevice[];
   recordingDevices: AudioDevice[];
   setVolume(volume: number, options?: SetVolumeOptions): Promise<void>;
-  setMute(mute: boolean): Promise<void>;
+  setMute(mute: boolean, options?: SetMuteOptions): Promise<void>;
 }
 
 export interface SetVolumeOptions {
+  deviceId?: string;
+}
+
+export interface SetMuteOptions {
   deviceId?: string;
 }
 

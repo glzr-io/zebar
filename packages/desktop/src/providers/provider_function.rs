@@ -16,12 +16,14 @@ pub enum AudioFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SetVolumeArgs {
   pub volume: f32,
   pub device_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SetMuteArgs {
   pub mute: bool,
   pub device_id: Option<String>,

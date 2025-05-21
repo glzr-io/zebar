@@ -6,6 +6,7 @@ import type {
   AudioOutput,
   AudioProvider,
   AudioProviderConfig,
+  SetMuteOptions,
   SetVolumeOptions,
 } from './audio-provider-types';
 
@@ -36,12 +37,12 @@ export function createAudioProvider(
                 },
               });
             },
-            setMute: (mute: boolean) => {
+            setMute: (mute: boolean, options?: SetMuteOptions) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'audio',
                 function: {
                   name: 'set_mute',
-                  args: { mute },
+                  args: { mute, deviceId: options?.deviceId },
                 },
               });
             },
