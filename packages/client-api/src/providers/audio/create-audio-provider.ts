@@ -42,9 +42,9 @@ export function createAudioProvider(
                 function: {
                   name: 'set_mute',
                   args: { mute },
-                }
+                },
               });
-            }
+            },
           });
         }
       },

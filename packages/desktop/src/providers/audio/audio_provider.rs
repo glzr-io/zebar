@@ -8,7 +8,8 @@ use crossbeam::channel::{self, at, never};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 use windows::Win32::{
-  Devices::FunctionDiscovery::PKEY_Device_FriendlyName, Media::Audio::{
+  Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
+  Media::Audio::{
     eAll, eCapture, eMultimedia, eRender, EDataFlow, ERole,
     Endpoints::{
       IAudioEndpointVolume, IAudioEndpointVolumeCallback,
@@ -17,7 +18,9 @@ use windows::Win32::{
     IMMDevice, IMMDeviceEnumerator, IMMEndpoint, IMMNotificationClient,
     IMMNotificationClient_Impl, MMDeviceEnumerator,
     AUDIO_VOLUME_NOTIFICATION_DATA, DEVICE_STATE, DEVICE_STATE_ACTIVE,
-  }, System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ}, UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY}
+  },
+  System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ},
+  UI::Shell::PropertiesSystem::{IPropertyStore, PROPERTYKEY},
 };
 use windows_core::{Interface, GUID, HSTRING, PCWSTR};
 
@@ -390,7 +393,7 @@ impl AudioProvider {
       volume: (volume * 100.0).round() as u32,
       com_volume,
       com_volume_callback,
-      is_muted: is_muted,
+      is_muted,
     };
 
     self.device_states.insert(device_id, device_state);
@@ -456,37 +459,39 @@ impl AudioProvider {
   ) -> anyhow::Result<ProviderFunctionResponse> {
     // Get target device - use specified ID or default playback
     // device.
-    let get_device_state = |device_id: &Option<String>| -> Result<&DeviceState, anyhow::Error> {
-      if let Some(id) = device_id {
-        self
-          .device_states
-          .get(id)
-          .context("Specified device not found.")
-      } else {
-        self
-          .default_playback_id
-          .as_ref()
-          .and_then(|id| self.device_states.get(id))
-          .context("No active playback device.")
-      }
-    };
+    let get_device_state =
+      |device_id: &Option<String>| -> Result<&DeviceState, anyhow::Error> {
+        if let Some(id) = device_id {
+          self
+            .device_states
+            .get(id)
+            .context("Specified device not found.")
+        } else {
+          self
+            .default_playback_id
+            .as_ref()
+            .and_then(|id| self.device_states.get(id))
+            .context("No active playback device.")
+        }
+      };
     match function {
       AudioFunction::SetVolume(args) => {
         unsafe {
-          get_device_state(&args.device_id)?.com_volume.SetMasterVolumeLevelScalar(
-            args.volume / 100.,
-            &GUID::zeroed(),
-          )
+          get_device_state(&args.device_id)?
+            .com_volume
+            .SetMasterVolumeLevelScalar(
+              args.volume / 100.,
+              &GUID::zeroed(),
+            )
         }?;
 
         Ok(ProviderFunctionResponse::Null)
       }
       AudioFunction::SetMute(args) => {
         unsafe {
-          get_device_state(&args.device_id)?.com_volume.SetMute(
-            args.mute,
-            &GUID::zeroed(),
-          )
+          get_device_state(&args.device_id)?
+            .com_volume
+            .SetMute(args.mute, &GUID::zeroed())
         }?;
 
         Ok(ProviderFunctionResponse::Null)

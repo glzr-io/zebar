@@ -88,7 +88,9 @@ impl From<NdInterfaceType> for InterfaceType {
         InterfaceType::Atm
       }
       NdInterfaceType::GenericModem => InterfaceType::GenericModem,
-      NdInterfaceType::ProprietaryVirtual => InterfaceType::ProprietaryVirtual,
+      NdInterfaceType::ProprietaryVirtual => {
+        InterfaceType::ProprietaryVirtual
+      }
       NdInterfaceType::Isdn
       | NdInterfaceType::BasicIsdn
       | NdInterfaceType::PrimaryIsdn => InterfaceType::Isdn,

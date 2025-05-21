@@ -22,7 +22,7 @@ pub struct SetVolumeArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SetMuteArgs{
+pub struct SetMuteArgs {
   pub mute: bool,
   pub device_id: Option<String>,
 }
