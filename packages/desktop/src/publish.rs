@@ -189,7 +189,7 @@ async fn upload_to_marketplace(
 
   // Construct the full API endpoint URL.
   let upload_url = format!(
-    "{}/api/trpc/widgetPack.publishVersion",
+    "{}/v1/trpc/widgetPack.publishVersion",
     args.api_url.trim_end_matches('/')
   );
 
