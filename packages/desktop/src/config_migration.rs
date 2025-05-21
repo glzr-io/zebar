@@ -33,7 +33,10 @@ impl ConfigMigration {
   }
 }
 
-/// Migrates config files to the latest version.
+/// Migrates existing config files to the latest version.
+///
+/// Any migrations that have already been applied will be skipped. If
+/// no migrations are needed, the function will no-op.
 pub fn apply_config_migrations(
   config_dir: &Path,
   migration_file: &Path,
@@ -73,6 +76,11 @@ pub fn apply_config_migrations(
 /// Migrates the startup config to the latest version.
 fn migrate_startup_config(config_dir: &Path) -> anyhow::Result<()> {
   let settings_path = config_dir.join("settings.json");
+
+  // Skip if the settings file does not exist.
+  if !settings_path.exists() {
+    return Ok(());
+  }
 
   let settings_json =
     read_and_parse_json::<serde_json::Value>(&settings_path)

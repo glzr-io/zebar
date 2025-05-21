@@ -155,14 +155,15 @@ impl AppSettings {
     config_dir: &Path,
     migration_file: &Path,
   ) -> anyhow::Result<(AppSettingsValue, bool)> {
+    // Apply any pending config migrations before reading the settings
+    // file.
+    apply_config_migrations(config_dir, migration_file)?;
+
     let settings_path = config_dir.join("settings.json");
     let is_found = settings_path.exists();
 
-    // Apply any pending config migrations before reading the settings
-    // file. If the file does not exist, initialize a default.
-    if is_found {
-      apply_config_migrations(config_dir, migration_file)?;
-    } else {
+    // If the file does not exist, initialize a default.
+    if !is_found {
       Self::create_default(config_dir)?;
     }
 
