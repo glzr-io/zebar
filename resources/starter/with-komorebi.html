@@ -49,6 +49,8 @@
           switch (networkOutput.defaultInterface?.type) {
             case 'ethernet':
               return <i className="nf nf-md-ethernet_cable"></i>;
+            case 'proprietary_virtual':
+              return <i className="nf nf-md-shield_lock_outline"></i>;
             case 'wifi':
               if (networkOutput.defaultGateway?.signalStrength >= 80) {
                 return <i className="nf nf-md-wifi_strength_4"></i>;

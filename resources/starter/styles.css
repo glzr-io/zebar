@@ -4,15 +4,67 @@
  */
 @import 'https://www.nerdfonts.com/assets/css/webfont.css';
 
+:root {
+  --text-size: 12px;
+  --icon-size: 12px;
+
+  --text-color-light: rgba(0 0 0 / 95%);
+  --text-color-dark: rgba(255 255 255 / 95%);
+
+  --icon-color-light: LightSteelBlue;
+  --icon-color-dark: rgba(115 130 175 / 95%);
+
+  --background-color-light: rgba(238 238 238 / 90%);
+  --background-color-dark: linear-gradient(
+    rgb(0 0 0 / 90%),
+    rgb(5 2 20 / 85%)
+  );
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    color: var(--text-color-light);
+  }
+
+  i {
+    color: var(--icon-color-light);
+  }
+
+  #root {
+    background: var(--background-color-light);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: var(--text-color-dark);
+  }
+
+  i {
+    color: var(--icon-color-dark);
+  }
+
+  #root {
+    background: var(--background-color-dark);
+  }
+}
+
 i {
-  color: rgb(115 130 175 / 95%);
   margin-right: 7px;
+  font-size: var(--icon-size);
 }
 
 body {
-  color: rgb(255 255 255 / 90%);
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: var(--text-size);
+  overflow: hidden;
+}
+
+div,
+span,
+p {
+  cursor: default;
+  user-select: none;
 }
 
 html,
@@ -23,7 +75,6 @@ body,
 
 #root {
   border-bottom: 1px solid rgb(255 255 255 / 5%);
-  background: linear-gradient(rgb(0 0 0 / 90%), rgb(5 2 20 / 85%));
 }
 
 .app {
@@ -52,6 +103,7 @@ body,
 .logo,
 .binding-mode,
 .tiling-direction,
+.paused-button,
 .network,
 .memory,
 .cpu,
@@ -84,7 +136,8 @@ body,
 }
 
 .binding-mode,
-.tiling-direction {
+.tiling-direction,
+.paused-button {
   background: rgb(255 255 255 / 15%);
   color: rgb(255 255 255 / 90%);
   border-radius: 2px;
@@ -102,9 +155,13 @@ body,
   color: #900029;
 }
 
+.battery {
+  position: relative;
+}
+
 .battery .charging-icon {
   position: absolute;
-  font-size: 11px;
-  left: 7px;
-  top: 2px;
+  font-size: 7px;
+  left: -8px;
+  top: 3px;
 }
