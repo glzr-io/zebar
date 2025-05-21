@@ -1,5 +1,3 @@
-import { join } from '@tauri-apps/api/path';
-
 import { desktopCommands } from './desktop-commands';
 import type { WidgetPlacement } from '~/config';
 import { currentWindow, type WidgetWindow } from './windows';
@@ -9,6 +7,16 @@ export interface Widget {
    * Unique identifier for the widget instance.
    */
   id: string;
+
+  /**
+   * Name of the widget.
+   */
+  name: string;
+
+  /**
+   * Unique identifier for the widget pack.
+   */
+  packId: string;
 
   /**
    * Absolute path to the widget's config file.
@@ -24,6 +32,14 @@ export interface Widget {
    * The window of the widget.
    */
   window: WidgetWindow;
+
+  /**
+   * Whether the widget is in preview mode.
+   *
+   * Widgets get marked as previews if they are opened from another
+   * preview widget.
+   */
+  isPreview: boolean;
 }
 
 function getWidgetState(): Widget {
@@ -45,54 +61,51 @@ export function currentWidget(): Widget {
 
   return {
     id: state.id,
+    name: state.name,
+    packId: state.packId,
     configPath: state.configPath,
     htmlPath: state.htmlPath,
     window: currentWindow(),
+    isPreview: state.isPreview,
   };
 }
 
-/**
- * Opens a widget by its config path and chosen placement.
- *
- * Config path is relative within the Zebar config directory.
- */
-export async function startWidget(
-  configPath: string,
-  placement: WidgetPlacement,
-) {
-  // Ensure the config path ends with '.zebar.json'.
-  const filePath = configPath.endsWith('.zebar.json')
-    ? configPath
-    : `${configPath}.zebar.json`;
-
-  const absolutePath = await join(
-    getWidgetState().configPath,
-    '../',
-    filePath,
-  );
-
-  return desktopCommands.startWidget(absolutePath, placement);
+export interface StartWidgetArgs {
+  packId?: string;
 }
 
 /**
- * Opens a widget by its config path and a preset name.
- *
- * Config path is relative within the Zebar config directory.
+ * Opens a widget by its name and chosen placement.
+ */
+export async function startWidget(
+  widgetName: string,
+  placement: WidgetPlacement,
+  args: StartWidgetArgs,
+) {
+  return desktopCommands.startWidget(
+    args.packId ?? currentWidget().packId,
+    widgetName,
+    placement,
+    getWidgetState().isPreview,
+  );
+}
+
+export interface StartWidgetPresetArgs {
+  packId?: string;
+}
+
+/**
+ * Opens a widget by its name and a preset name.
  */
 export async function startWidgetPreset(
-  configPath: string,
+  widgetName: string,
   presetName: string,
+  args?: StartWidgetPresetArgs,
 ) {
-  // Ensure the config path ends with '.zebar.json'.
-  const filePath = configPath.endsWith('.zebar.json')
-    ? configPath
-    : `${configPath}.zebar.json`;
-
-  const absolutePath = await join(
-    getWidgetState().configPath,
-    '../',
-    filePath,
+  return desktopCommands.startWidgetPreset(
+    args?.packId ?? currentWidget().packId,
+    widgetName,
+    presetName,
+    getWidgetState().isPreview,
   );
-
-  return desktopCommands.startPreset(absolutePath, presetName);
 }

@@ -5,7 +5,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::app_bar;
-use crate::config::DockEdge;
+use crate::widget_pack::DockEdge;
 
 pub trait WindowExtWindows {
   fn set_tool_window(&self, enable: bool) -> anyhow::Result<()>;

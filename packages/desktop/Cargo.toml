@@ -15,18 +15,20 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
-base64 = "0.22"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 crossbeam = "0.8"
-netdev = "0.33.0"
+flate2 = "1"
+globset = "0.4"
+netdev = "0.33"
 regex = "1"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
 rocket = { version = "0.5", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 shell-util = { path = "../../crates/shell-util" }
 starship-battery = "0.8"
 sysinfo = "0.30"
+tar = "0.4"
 tauri = { version = "2", features = [
   "devtools",
   "macos-private-api",
@@ -35,6 +37,8 @@ tauri = { version = "2", features = [
 ] }
 tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-shell = "2"
+tera = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

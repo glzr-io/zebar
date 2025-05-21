@@ -9,9 +9,12 @@ export default defineConfig({
   },
   build: { target: 'esnext' },
   base: './',
+  optimizeDeps: {
+    include: ['solid-markdown > micromark', 'solid-markdown > unified'],
+  },
   resolve: {
     alias: {
-      '~': path.resolve(__dirname, './src/app'),
+      '~': path.resolve(__dirname, './src'),
     },
   },
 });

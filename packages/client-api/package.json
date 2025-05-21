@@ -1,6 +1,6 @@
 {
   "name": "zebar",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Client API for Zebar - a tool for creating customizable taskbars, desktop widgets, and popups.",
   "repository": "github:glzr-io/zebar",
   "license": "GPL-3.0-only",
@@ -21,16 +21,16 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
-    "dev": "npm run build -- --watch src",
-    "dev:local": "npm run build -- --watch src",
-    "prepublishOnly": "npm run build"
+    "dev": "pnpm build -- --watch src",
+    "dev:local": "pnpm dev",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@tauri-apps/api": "2.0.2",
     "@tauri-apps/plugin-dialog": "2.0.0",
     "glazewm": "1.7.0",
     "luxon": "3.4.4",
-    "zod": "3.22.4"
+    "zod": "3.24.2"
   },
   "devDependencies": {
     "@types/luxon": "3.4.2",

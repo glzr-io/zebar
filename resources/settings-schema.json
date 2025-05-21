@@ -1,23 +1,27 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Zebar Settings Schema",
+  "title": "Zebar settings",
+  "description": "General settings for Zebar.",
   "type": "object",
+  "required": ["startupConfigs"],
   "properties": {
     "startupConfigs": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "path": {
+          "pack": {
+            "type": "string"
+          },
+          "widget": {
             "type": "string"
           },
           "preset": {
             "type": "string"
           }
         },
-        "required": ["path", "preset"]
+        "required": ["pack", "widget", "preset"]
       }
     }
-  },
-  "required": ["startupConfigs"]
+  }
 }

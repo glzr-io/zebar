@@ -1,5 +1,6 @@
 mod format_bytes;
 mod fs_util;
+pub mod glob_util;
 mod interval;
 mod length_value;
 #[cfg(target_os = "macos")]

@@ -11,7 +11,7 @@ const logger = createLogger('desktop-commands');
 
 export const desktopCommands = {
   startWidget,
-  startPreset,
+  startWidgetPreset,
   listenProvider,
   unlistenProvider,
   callProviderFunction,
@@ -67,17 +67,31 @@ export interface SystrayFunction {
 }
 
 function startWidget(
-  configPath: string,
+  packId: string,
+  widgetName: string,
   placement: WidgetPlacement,
+  isPreview: boolean,
 ): Promise<void> {
-  return invoke<void>('start_widget', { configPath, placement });
+  return invoke<void>('start_widget', {
+    packId,
+    widgetName,
+    placement,
+    isPreview,
+  });
 }
 
-function startPreset(
-  configPath: string,
+function startWidgetPreset(
+  packId: string,
+  widgetName: string,
   presetName: string,
+  isPreview: boolean,
 ): Promise<void> {
-  return invoke<void>('start_preset', { configPath, presetName });
+  return invoke<void>('start_widget_preset', {
+    packId,
+    widgetName,
+    presetName,
+    isPreview,
+  });
 }
 
 function listenProvider(args: {

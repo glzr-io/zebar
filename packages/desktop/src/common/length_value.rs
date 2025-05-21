@@ -10,7 +10,7 @@ pub struct LengthValue {
   pub unit: LengthUnit,
 }
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Clone, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LengthUnit {
   Percentage,

@@ -8,11 +8,10 @@ use std::{
 };
 
 use anyhow::{bail, Context};
-use base64::prelude::*;
 use serde::Serialize;
 use tauri::{
-  self, path::BaseDirectory, AppHandle, Manager, PhysicalPosition,
-  PhysicalSize, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+  self, AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
+  WebviewWindowBuilder, WindowEvent,
 };
 use tokio::{
   sync::{broadcast, Mutex},
@@ -25,13 +24,14 @@ use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
+  app_settings::AppSettings,
   asset_server::create_init_url,
   common::PathExt,
-  config::{
-    AnchorPoint, Config, DockConfig, DockEdge, WidgetConfig,
-    WidgetPlacement,
-  },
   monitor_state::{Monitor, MonitorState},
+  widget_pack::{
+    AnchorPoint, DockConfig, DockEdge, WidgetConfig, WidgetPack,
+    WidgetPackManager, WidgetPlacement,
+  },
 };
 
 /// Manages the creation of Zebar widgets.
@@ -40,12 +40,15 @@ pub struct WidgetFactory {
   /// Handle to the Tauri application.
   app_handle: AppHandle,
 
+  /// Reference to `AppSettings`.
+  app_settings: Arc<AppSettings>,
+
   _close_rx: broadcast::Receiver<String>,
 
   pub close_tx: broadcast::Sender<String>,
 
-  /// Reference to `Config`.
-  config: Arc<Config>,
+  /// Reference to `WidgetPackManager`.
+  widget_pack_manager: Arc<WidgetPackManager>,
 
   _open_rx: broadcast::Receiver<WidgetState>,
 
@@ -72,6 +75,15 @@ pub struct WidgetState {
   /// Used as the Tauri window label.
   pub id: String,
 
+  /// Name of the widget.
+  pub name: String,
+
+  /// Unique identifier for the widget pack.
+  pub pack_id: String,
+
+  /// Whether the widget is a preview.
+  pub is_preview: bool,
+
   /// Handle to the underlying Tauri window.
   ///
   /// This is only available on Windows.
@@ -79,9 +91,6 @@ pub struct WidgetState {
 
   /// User-defined config for the widget.
   pub config: WidgetConfig,
-
-  /// Absolute path to the widget's config file.
-  pub config_path: PathBuf,
 
   /// Absolute path to the widget's HTML file.
   pub html_path: PathBuf,
@@ -152,7 +161,8 @@ impl WidgetFactory {
   /// Creates a new `WidgetFactory` instance.
   pub fn new(
     app_handle: &AppHandle,
-    config: Arc<Config>,
+    app_settings: Arc<AppSettings>,
+    widget_pack_manager: Arc<WidgetPackManager>,
     monitor_state: Arc<MonitorState>,
   ) -> Self {
     let (open_tx, _open_rx) = broadcast::channel(16);
@@ -160,9 +170,10 @@ impl WidgetFactory {
 
     Self {
       app_handle: app_handle.clone(),
+      app_settings,
       _close_rx,
       close_tx,
-      config,
+      widget_pack_manager,
       _open_rx,
       open_tx,
       monitor_state,
@@ -171,20 +182,50 @@ impl WidgetFactory {
     }
   }
 
-  /// Opens widget from a given config path.
-  ///
-  /// Config path must be absolute.
-  pub async fn start_widget(
+  /// Opens widget by a given widget pack ID and widget name.
+  pub async fn start_widget_by_id(
     &self,
-    config_path: &PathBuf,
+    pack_id: &str,
+    widget_name: &str,
     open_options: &WidgetOpenOptions,
+    is_preview: bool,
   ) -> anyhow::Result<()> {
-    let (config_path, widget_config) = self
-      .config
-      .widget_config_by_path(config_path)
+    let widget_pack = self
+      .widget_pack_manager
+      .widget_pack_by_id(pack_id)
       .await
       .with_context(|| {
-        format!("No config found at path '{}'.", config_path.display())
+        format!("No widget pack found for '{}'.", pack_id)
+      })?;
+
+    self
+      .start_widget_by_pack(
+        &widget_pack,
+        widget_name,
+        open_options,
+        is_preview,
+      )
+      .await
+  }
+
+  /// Opens widget from a resolved widget pack and widget name.
+  pub async fn start_widget_by_pack(
+    &self,
+    widget_pack: &WidgetPack,
+    widget_name: &str,
+    open_options: &WidgetOpenOptions,
+    is_preview: bool,
+  ) -> anyhow::Result<()> {
+    let widget_config = widget_pack
+      .config
+      .widgets
+      .iter()
+      .find(|entry| entry.name == widget_name)
+      .with_context(|| {
+        format!(
+          "No widget named '{}' found in widget pack '{}'.",
+          widget_name, widget_pack.id
+        )
       })?;
 
     // No-op if preset is already open.
@@ -196,7 +237,8 @@ impl WidgetFactory {
           .await
           .values()
           .find(|state| {
-            state.config_path == config_path
+            state.pack_id == widget_pack.id
+              && state.name == widget_config.name
               && state.open_options == *open_options
           })
           .is_some()
@@ -219,7 +261,7 @@ impl WidgetFactory {
             format!(
               "No preset with name '{}' at config '{}'.",
               name,
-              config_path.display()
+              widget_pack.config_path.display()
             )
           })?
           .placement
@@ -234,51 +276,47 @@ impl WidgetFactory {
       let widget_id = format!("widget-{}", new_count);
 
       info!(
-        "Creating window for {} from {}",
-        widget_id,
-        config_path.display()
+        "Creating window {} for {} from {}",
+        widget_id, widget_name, widget_pack.id
       );
 
-      let parent_dir =
-        config_path.parent().context("No parent directory.")?;
-
-      let html_path = parent_dir.join(&widget_config.html_path);
+      let html_path =
+        widget_pack.directory_path.join(&widget_config.html_path);
 
       if !html_path.exists() {
         bail!(
           "HTML file not found at '{}' for config '{}'.",
           widget_config.html_path.display(),
-          config_path.display()
+          widget_pack.config_path.display()
         )
       }
 
       let webview_url = WebviewUrl::External(
-        create_init_url(&parent_dir, &html_path).await?,
+        create_init_url(
+          &widget_pack.directory_path,
+          &html_path,
+          widget_pack.include_files(),
+        )
+        .await?,
       );
 
       let mut state = WidgetState {
         id: widget_id.clone(),
+        name: widget_name.to_string(),
+        pack_id: widget_pack.id.clone(),
         window_handle: None,
         config: widget_config.clone(),
-        config_path: config_path.clone(),
-        html_path: html_path.clone(),
+        html_path: html_path.canonicalize_pretty()?,
         open_options: open_options.clone(),
+        is_preview,
       };
-
-      // Widgets from the same top-level directory share their browser
-      // cache (i.e. `localStorage`, `sessionStorage`, SW cache, etc.).
-      let cache_id =
-        BASE64_STANDARD.encode(parent_dir.to_unicode_string());
 
       let window = WebviewWindowBuilder::new(
         &self.app_handle,
         widget_id.clone(),
         webview_url,
       )
-      .title(format!(
-        "Zebar - {}",
-        self.config.formatted_widget_path(&config_path)
-      ))
+      .title(format!("Zebar - {} / {}", widget_pack.id, widget_name))
       .focused(widget_config.focused)
       .skip_taskbar(!widget_config.shown_in_taskbar)
       .visible_on_all_workspaces(true)
@@ -287,17 +325,11 @@ impl WidgetFactory {
       .decorations(false)
       .resizable(widget_config.resizable)
       .initialization_script(&self.initialization_script(&state)?)
+      // Widgets from the same pack share their browser cache (i.e.
+      // `localStorage`, `sessionStorage`, SW cache, etc.).
+      // TODO: Add this as an ext method on the Tauri window.
       .data_directory(
-        // TODO: Add this as an ext method on the Tauri window.
-        self
-          .app_handle
-          .path()
-          .resolve(
-            format!(".glzr/zebar/tmp-{}", cache_id),
-            BaseDirectory::Home,
-          )
-          .context("Unable to get home directory.")
-          .unwrap(),
+        self.app_settings.webview_cache_dir.join(&widget_pack.id),
       )
       .build()?;
 
@@ -335,7 +367,7 @@ impl WidgetFactory {
       // to truly be always on top.
       #[cfg(target_os = "macos")]
       {
-        if widget_config.z_order == crate::config::ZOrder::TopMost {
+        if widget_config.z_order == crate::widget_pack::ZOrder::TopMost {
           let _ = window.as_ref().window().set_above_menu_bar();
         }
       }
@@ -488,13 +520,15 @@ impl WidgetFactory {
 
   /// Opens presets that are configured to be launched on startup.
   pub async fn startup(&self) -> anyhow::Result<()> {
-    let startup_configs = self.config.startup_configs().await;
+    let startup_configs = self.app_settings.startup_configs().await;
 
     for startup_config in startup_configs {
       self
-        .start_widget(
-          &startup_config.path,
+        .start_widget_by_id(
+          &startup_config.pack,
+          &startup_config.widget,
           &WidgetOpenOptions::Preset(startup_config.preset),
+          false,
         )
         .await?;
     }
@@ -654,16 +688,23 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Closes all widgets with the given config path.
-  pub async fn _stop_by_path(
+  /// Closes all widgets of the given preset name.
+  pub async fn stop_by_preset(
     &self,
-    config_path: &PathBuf,
+    pack_id: &str,
+    widget_name: &str,
+    preset_name: &str,
   ) -> anyhow::Result<()> {
-    let widget_states = self.states_by_path().await;
+    let widget_states = self.states().await;
 
-    let found_widget_states = widget_states
-      .get(config_path)
-      .context("No widgets found with the given config path.")?;
+    let found_widget_states = widget_states.values().filter(|state| {
+      state.pack_id == *pack_id
+        && state.name == *widget_name
+        && matches!(
+          &state.open_options,
+          WidgetOpenOptions::Preset(name) if name == preset_name
+        )
+    });
 
     for widget_state in found_widget_states {
       self.stop_by_id(&widget_state.id)?;
@@ -672,27 +713,23 @@ impl WidgetFactory {
     Ok(())
   }
 
-  /// Closes all widgets of the given preset name.
-  pub async fn stop_by_preset(
-    &self,
-    config_path: &PathBuf,
-    preset_name: &str,
-  ) -> anyhow::Result<()> {
-    let widget_states = self.states_by_path().await;
+  /// Stops any currently running preview widget(s).
+  pub async fn stop_all_previews(&self) -> anyhow::Result<()> {
+    tracing::info!("Stopping all preview widgets.");
 
-    let found_widget_states = widget_states
-      .get(config_path)
-      .context("No widgets found with the given config path.")?
-      .iter()
-      .filter(|state| {
-        matches!(
-          &state.open_options,
-          WidgetOpenOptions::Preset(name) if name == preset_name
-        )
-      });
+    // Find widget states marked as previews.
+    let preview_widget_ids = {
+      let widget_states = self.widget_states.lock().await;
+      widget_states
+        .iter()
+        .filter(|(_, state)| state.is_preview)
+        .map(|(id, _)| id.clone())
+        .collect::<Vec<_>>()
+    };
 
-    for widget_state in found_widget_states {
-      self.stop_by_id(&widget_state.id)?;
+    // Stop each preview widget.
+    for widget_id in preview_widget_ids {
+      self.stop_by_id(&widget_id)?;
     }
 
     Ok(())
@@ -732,17 +769,18 @@ impl WidgetFactory {
 
     for widget_state in &changed_states {
       info!(
-        "Relaunching widget #{} from {}",
-        widget_state.id,
-        widget_state.config_path.display()
+        "Relaunching widget {} from {} (#{}).",
+        widget_state.name, widget_state.pack_id, widget_state.id
       );
 
       let _ = self.stop_by_id(&widget_state.id);
 
       self
-        .start_widget(
-          &widget_state.config_path,
+        .start_widget_by_id(
+          &widget_state.pack_id,
+          &widget_state.name,
           &widget_state.open_options,
+          false,
         )
         .await?;
     }
@@ -751,9 +789,10 @@ impl WidgetFactory {
   }
 
   /// Relaunches widgets with the given config paths.
-  pub async fn relaunch_by_paths(
+  pub async fn relaunch_by_name(
     &self,
-    config_paths: &Vec<PathBuf>,
+    pack_id: &str,
+    widget_name: &str,
   ) -> anyhow::Result<()> {
     let widget_ids = {
       self
@@ -761,7 +800,9 @@ impl WidgetFactory {
         .lock()
         .await
         .iter()
-        .filter(|(_, state)| config_paths.contains(&state.config_path))
+        .filter(|(_, state)| {
+          state.pack_id == *pack_id && state.name == *widget_name
+        })
         .map(|(id, _)| id.clone())
         .collect::<Vec<_>>()
     };
@@ -792,22 +833,5 @@ impl WidgetFactory {
   /// Returns a widget state by its widget ID.
   pub async fn state_by_id(&self, widget_id: &str) -> Option<WidgetState> {
     self.widget_states.lock().await.get(widget_id).cloned()
-  }
-
-  /// Returns widget states grouped by their config paths.
-  pub async fn states_by_path(
-    &self,
-  ) -> HashMap<PathBuf, Vec<WidgetState>> {
-    self.widget_states.lock().await.values().fold(
-      HashMap::new(),
-      |mut acc, state| {
-        acc
-          .entry(state.config_path.clone())
-          .or_insert_with(Vec::new)
-          .push(state.clone());
-
-        acc
-      },
-    )
   }
 }

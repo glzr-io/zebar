@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use tauri::{State, Window};
 
@@ -7,20 +7,31 @@ use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
-  config::{Config, WidgetConfig, WidgetPlacement},
+  marketplace_installer::MarketplaceInstaller,
   providers::{
     ProviderConfig, ProviderFunction, ProviderFunctionResponse,
     ProviderManager,
   },
   shell_state::{ShellCommandArgs, ShellState},
   widget_factory::{WidgetFactory, WidgetOpenOptions, WidgetState},
+  widget_pack::{
+    CreateWidgetConfigArgs, CreateWidgetPackArgs, UpdateWidgetPackArgs,
+    WidgetConfig, WidgetPack, WidgetPackManager, WidgetPlacement,
+  },
 };
 
 #[tauri::command]
-pub async fn widget_configs(
-  config: State<'_, Arc<Config>>,
-) -> Result<HashMap<PathBuf, WidgetConfig>, String> {
-  Ok(config.widget_configs().await)
+pub async fn widget_packs(
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
+) -> Result<Vec<WidgetPack>, String> {
+  Ok(
+    widget_pack_manager
+      .widget_packs()
+      .await
+      .values()
+      .cloned()
+      .collect(),
+  )
 }
 
 #[tauri::command]
@@ -32,54 +43,121 @@ pub async fn widget_states(
 
 #[tauri::command]
 pub async fn start_widget(
-  config_path: String,
+  pack_id: String,
+  widget_name: String,
   placement: WidgetPlacement,
+  is_preview: bool,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
-    .start_widget(
-      &PathBuf::from(config_path),
+    .start_widget_by_id(
+      &pack_id,
+      &widget_name,
       &WidgetOpenOptions::Standalone(placement),
+      is_preview,
     )
     .await
     .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-pub async fn start_preset(
-  config_path: String,
+pub async fn start_widget_preset(
+  pack_id: String,
+  widget_name: String,
   preset_name: String,
+  is_preview: bool,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
-    .start_widget(
-      &PathBuf::from(config_path),
+    .start_widget_by_id(
+      &pack_id,
+      &widget_name,
       &WidgetOpenOptions::Preset(preset_name),
+      is_preview,
     )
     .await
     .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
-pub async fn stop_preset(
-  config_path: String,
+pub async fn stop_widget_preset(
+  pack_id: String,
+  widget_name: String,
   preset_name: String,
   widget_factory: State<'_, Arc<WidgetFactory>>,
 ) -> anyhow::Result<(), String> {
   widget_factory
-    .stop_by_preset(&PathBuf::from(config_path), &preset_name)
+    .stop_by_preset(&pack_id, &widget_name, &preset_name)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn create_widget_pack(
+  args: CreateWidgetPackArgs,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
+) -> anyhow::Result<WidgetPack, String> {
+  widget_pack_manager
+    .create_widget_pack(args)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn update_widget_pack(
+  pack_id: String,
+  args: UpdateWidgetPackArgs,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
+) -> anyhow::Result<WidgetPack, String> {
+  widget_pack_manager
+    .update_widget_pack(&pack_id, args)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_widget_pack(
+  pack_id: String,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
+) -> anyhow::Result<(), String> {
+  widget_pack_manager
+    .delete_widget_pack(&pack_id)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn create_widget_config(
+  args: CreateWidgetConfigArgs,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
+) -> anyhow::Result<WidgetConfig, String> {
+  widget_pack_manager
+    .create_widget_config(args)
     .await
     .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
 pub async fn update_widget_config(
-  config_path: String,
+  pack_id: String,
+  widget_name: String,
   new_config: WidgetConfig,
-  config: State<'_, Arc<Config>>,
-) -> Result<(), String> {
-  config
-    .update_widget_config(&PathBuf::from(config_path), new_config)
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
+) -> Result<WidgetConfig, String> {
+  widget_pack_manager
+    .update_widget_config(&pack_id, &widget_name, new_config)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_widget_config(
+  pack_id: String,
+  widget_name: String,
+  widget_pack_manager: State<'_, Arc<WidgetPackManager>>,
+) -> anyhow::Result<(), String> {
+  widget_pack_manager
+    .delete_widget_config(&pack_id, &widget_name)
     .await
     .map_err(|err| err.to_string())
 }
@@ -115,6 +193,48 @@ pub async fn call_provider_function(
 ) -> anyhow::Result<ProviderFunctionResponse, String> {
   provider_manager
     .call_function(config_hash, function)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn install_widget_pack(
+  pack_id: String,
+  version: String,
+  tarball_url: String,
+  is_preview: bool,
+  marketplace_manager: State<'_, Arc<MarketplaceInstaller>>,
+) -> anyhow::Result<WidgetPack, String> {
+  marketplace_manager
+    .install(&pack_id, &version, &tarball_url, is_preview)
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn start_preview_widget(
+  pack_config: WidgetPack,
+  widget_name: String,
+  preset_name: String,
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  widget_factory
+    .start_widget_by_pack(
+      &pack_config,
+      &widget_name,
+      &WidgetOpenOptions::Preset(preset_name),
+      true,
+    )
+    .await
+    .map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub async fn stop_all_preview_widgets(
+  widget_factory: State<'_, Arc<WidgetFactory>>,
+) -> anyhow::Result<(), String> {
+  widget_factory
+    .stop_all_previews()
     .await
     .map_err(|err| err.to_string())
 }

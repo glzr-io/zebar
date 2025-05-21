@@ -9,7 +9,7 @@ use windows::Win32::{
   },
 };
 
-use crate::config::DockEdge;
+use crate::widget_pack::DockEdge;
 
 pub fn create_app_bar(
   window_handle: isize,

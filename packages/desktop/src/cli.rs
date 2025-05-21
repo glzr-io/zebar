@@ -2,12 +2,13 @@ use std::{path::PathBuf, process};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use crate::{common::LengthValue, config::AnchorPoint};
-
-const VERSION: &'static str = env!("VERSION_NUMBER");
+use crate::{
+  app_settings::VERSION_NUMBER, common::LengthValue,
+  widget_pack::AnchorPoint,
+};
 
 #[derive(Clone, Debug, Parser)]
-#[clap(author, version = VERSION, about, long_about = None)]
+#[clap(author, version = VERSION_NUMBER, about, long_about = None)]
 pub struct Cli {
   #[command(subcommand)]
   command: Option<CliCommand>,
@@ -21,18 +22,12 @@ impl Cli {
 
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum CliCommand {
-  /// Opens a widget by its config path and chosen placement.
-  ///
-  /// Config path is relative within the Zebar config directory, e.g.
-  /// `zebar start-widget --path starter/vanilla`.
+  /// Opens a widget by its name and chosen placement.
   ///
   /// Starts Zebar if it is not already running.
   StartWidget(StartWidgetArgs),
 
-  /// Opens a widget by its config path and a preset name.
-  ///
-  /// Config path is relative within the Zebar config directory, e.g.
-  /// `zebar start-widget-preset --path starter/vanilla --preset default`.
+  /// Opens a widget by its name and a preset name.
   ///
   /// Starts Zebar if it is not already running.
   StartWidgetPreset(StartWidgetPresetArgs),
@@ -48,6 +43,9 @@ pub enum CliCommand {
   #[clap(subcommand)]
   Query(QueryArgs),
 
+  /// Publishes a widget pack to the Zebar marketplace.
+  Publish(PublishArgs),
+
   /// Used when Zebar is launched with no arguments.
   ///
   /// If Zebar is already running, this command will no-op, otherwise it
@@ -58,10 +56,13 @@ pub enum CliCommand {
 
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct StartWidgetArgs {
-  /// Relative file path to widget config within the Zebar config
-  /// directory.
-  #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
-  pub config_path: PathBuf,
+  /// Widget pack ID.
+  #[clap(long = "pack")]
+  pub pack_id: String,
+
+  /// Widget name.
+  #[clap(long)]
+  pub widget_name: String,
 
   /// Anchor-point of the widget.
   #[clap(long)]
@@ -99,10 +100,13 @@ pub enum MonitorType {
 
 #[derive(Args, Clone, Debug, PartialEq)]
 pub struct StartWidgetPresetArgs {
-  /// Relative file path to widget config within the Zebar config
-  /// directory.
-  #[clap(long = "path", value_hint = clap::ValueHint::FilePath)]
-  pub config_path: PathBuf,
+  /// Widget pack ID.
+  #[clap(long = "pack")]
+  pub pack_id: String,
+
+  /// Widget name.
+  #[clap(long)]
+  pub widget_name: String,
 
   /// Name of the preset within the target widget config.
   #[clap(long = "preset")]
@@ -122,6 +126,53 @@ pub struct StartupArgs {
 pub enum QueryArgs {
   /// Outputs available monitors.
   Monitors,
+}
+
+#[derive(Args, Clone, Debug, PartialEq)]
+pub struct PublishArgs {
+  /// Path to the pack config file.
+  ///
+  /// The default path is `./zpack.json`.
+  #[clap(long, value_hint = clap::ValueHint::FilePath, default_value = "./zpack.json")]
+  pub pack_config: PathBuf,
+
+  /// API token for authentication.
+  ///
+  /// The widget pack gets published under the account that this token
+  /// belongs to.
+  #[clap(long, env = "ZEBAR_PUBLISH_TOKEN")]
+  pub token: String,
+
+  /// Override the version number (e.g. `1.0.0`) in the pack config
+  /// (optional).
+  ///
+  /// Must be a valid semver string.
+  #[clap(long)]
+  pub version_override: Option<String>,
+
+  /// Commit SHA associated with this release (optional).
+  ///
+  /// Will be shown on the Zebar marketplace page.
+  #[clap(long)]
+  pub commit_sha: Option<String>,
+
+  /// Release notes for this version (optional).
+  ///
+  /// Will be shown on the Zebar marketplace page.
+  #[clap(long)]
+  pub release_notes: Option<String>,
+
+  /// URL to the release page (optional).
+  ///
+  /// Will be shown on the Zebar marketplace page.
+  #[clap(long)]
+  pub release_url: Option<String>,
+
+  /// API URL to send requests to.
+  ///
+  /// This is internally used for development and testing.
+  #[clap(long, default_value = "https://api.glzr.io", hide = true)]
+  pub api_url: String,
 }
 
 /// Prints to stdout/stderror and exits the process.

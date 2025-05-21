@@ -8,7 +8,7 @@ use tokio::{
 };
 use tracing::info;
 
-use crate::config::MonitorSelection;
+use crate::widget_pack::MonitorSelection;
 
 #[derive(Debug)]
 pub struct MonitorState {

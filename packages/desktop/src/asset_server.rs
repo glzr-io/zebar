@@ -15,14 +15,24 @@ use rocket::{
 use tokio::{sync::Mutex, task};
 use uuid::Uuid;
 
-use crate::common::PathExt;
+use crate::common::{glob_util, PathExt};
 
 /// Port for the localhost asset server.
 const ASSET_SERVER_PORT: u16 = 6124;
 
-/// Map of tokens to their corresponding path.
-static ASSET_SERVER_TOKENS: LazyLock<Mutex<HashMap<String, PathBuf>>> =
+/// Map of tokens to their corresponding path and file patterns.
+static ASSET_SERVER_TOKENS: LazyLock<Mutex<HashMap<String, TokenAccess>>> =
   LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Access information for a given token.
+#[derive(Clone, Debug)]
+struct TokenAccess {
+  /// Base directory for the token.
+  base_dir: PathBuf,
+
+  /// File patterns for accessible files.
+  file_patterns: Vec<String>,
+}
 
 pub fn setup_asset_server() {
   task::spawn(async move {
@@ -41,10 +51,11 @@ pub fn setup_asset_server() {
 pub async fn create_init_url(
   parent_dir: &Path,
   html_path: &Path,
+  file_patterns: Vec<String>,
 ) -> anyhow::Result<tauri::Url> {
   // Generate a unique token to identify requests from the widget to the
   // asset server.
-  let token = upsert_or_get_token(parent_dir).await;
+  let token = upsert_or_get_token(parent_dir, file_patterns).await;
 
   let redirect = format!(
     "/{}",
@@ -63,22 +74,38 @@ pub async fn create_init_url(
 ///
 /// If the directory does not have an existing token, a new one is
 /// generated and inserted.
-async fn upsert_or_get_token(directory: &Path) -> String {
+async fn upsert_or_get_token(
+  directory: &Path,
+  file_patterns: Vec<String>,
+) -> String {
   let mut asset_server_tokens = ASSET_SERVER_TOKENS.lock().await;
 
   // Find existing token for this path.
   let found_token = asset_server_tokens
     .iter()
-    .find(|(_, path)| *path == directory)
+    .find(|(_, token)| token.base_dir == directory)
     .map(|(token, _)| token.clone());
 
-  found_token.unwrap_or_else(|| {
+  if let Some(token) = found_token {
+    // Update the file patterns for the existing token.
+    if let Some(access) = asset_server_tokens.get_mut(&token) {
+      access.file_patterns = file_patterns;
+    }
+
+    token
+  } else {
     let new_token = Uuid::new_v4().to_string();
 
-    asset_server_tokens.insert(new_token.clone(), directory.to_path_buf());
+    asset_server_tokens.insert(
+      new_token.clone(),
+      TokenAccess {
+        base_dir: directory.to_path_buf(),
+        file_patterns,
+      },
+    );
 
     new_token
-  })
+  }
 }
 
 #[get("/__zebar/init?<token>&<redirect>")]
@@ -127,23 +154,36 @@ pub async fn serve(
   path: Option<PathBuf>,
   token: ServerToken,
 ) -> Option<NamedFile> {
-  // Retrieve base directory for the corresponding token.
-  let base_url =
+  // Retrieve access information for the corresponding token.
+  let token_access =
     { ASSET_SERVER_TOKENS.lock().await.get(&token.0).cloned() }?;
 
-  let asset_path = base_url
-    .join(path.unwrap_or("index.html".into()))
-    .to_absolute()
+  let relative_path = path.unwrap_or("index.html".into());
+  let absolute_path = token_access
+    .base_dir
+    .join(relative_path.clone())
+    .canonicalize_pretty()
     .ok()?;
 
-  // Prevent directory traversal outside of the base URL.
-  if !asset_path.starts_with(&base_url) {
+  // Allow access if:
+  // - The asset path is within the base directory.
+  // - The asset path matches any of the file patterns of the widget pack.
+  if !absolute_path.starts_with(&token_access.base_dir)
+    || !glob_util::is_match(&relative_path, &token_access.file_patterns)
+      .ok()?
+  {
+    tracing::warn!(
+      "Asset path {} is inaccessable with token {:?}.",
+      absolute_path.display(),
+      token_access
+    );
+
     return None;
   }
 
   // Attempt to open and serve the requested file. Currently returns HTML
   // `Content-Type` if not found.
-  NamedFile::open(asset_path).await.ok()
+  NamedFile::open(absolute_path).await.ok()
 }
 
 /// Token for identifying which directory is being accessed.

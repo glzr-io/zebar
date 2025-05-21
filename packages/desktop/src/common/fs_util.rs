@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+  fs::{self, DirEntry},
+  path::Path,
+};
 
 use anyhow::Context;
 use serde::de::DeserializeOwned;
@@ -7,20 +10,18 @@ use serde::de::DeserializeOwned;
 ///
 /// Returns the parsed type `T` if successful.
 pub fn read_and_parse_json<T: DeserializeOwned>(
-  path: &PathBuf,
+  path: &Path,
 ) -> anyhow::Result<T> {
   let content = fs::read_to_string(path)
     .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-  let parsed = serde_json::from_str(&content).with_context(|| {
+  serde_json::from_str(&content).with_context(|| {
     format!("Failed to parse JSON from file: {}", path.display())
-  })?;
-
-  Ok(parsed)
+  })
 }
 
 /// Returns whether the path has the given extension.
-pub fn has_extension(path: &PathBuf, extension: &str) -> bool {
+pub fn has_extension(path: &Path, extension: &str) -> bool {
   path
     .file_name()
     .and_then(|name| name.to_str())
@@ -34,20 +35,54 @@ pub fn has_extension(path: &PathBuf, extension: &str) -> bool {
 /// Optionally replaces existing files in the destination directory if
 /// `override_existing` is `true`.
 pub fn copy_dir_all(
-  src_dir: &PathBuf,
-  dest_dir: &PathBuf,
+  src_dir: &Path,
+  dest_dir: &Path,
   override_existing: bool,
 ) -> anyhow::Result<()> {
-  fs::create_dir_all(&dest_dir)?;
+  fs::create_dir_all(dest_dir)?;
 
-  for entry in fs::read_dir(src_dir)? {
-    let entry = entry?;
-    let dest_path = dest_dir.join(entry.file_name());
+  visit_deep(src_dir, &mut |entry| {
+    let Ok(dest_path) = entry
+      .path()
+      .strip_prefix(src_dir)
+      .map(|rel_path| dest_dir.join(rel_path))
+    else {
+      return;
+    };
 
-    if entry.file_type()?.is_dir() {
-      copy_dir_all(&entry.path(), &dest_path, override_existing)?;
+    if entry.path().is_dir() {
+      if let Err(err) = fs::create_dir_all(&dest_path) {
+        error!("Failed to create directory: {}", err);
+      }
     } else if override_existing || !dest_path.exists() {
-      fs::copy(entry.path(), dest_path)?;
+      if let Err(err) = fs::copy(entry.path(), dest_path) {
+        error!("Failed to copy file: {}", err);
+      }
+    }
+  })
+}
+
+/// Recursively visit files in a directory.
+///
+/// The callback is invoked for each entry in the directory.
+pub fn visit_deep<F>(dir: &Path, callback: &mut F) -> anyhow::Result<()>
+where
+  F: FnMut(&DirEntry),
+{
+  if dir.is_dir() {
+    let read_dir = std::fs::read_dir(dir).with_context(|| {
+      format!("Failed to read directory {}.", dir.display())
+    })?;
+
+    for entry in read_dir {
+      let entry = entry?;
+      let path = entry.path();
+
+      callback(&entry);
+
+      if path.is_dir() {
+        visit_deep(&path, callback)?;
+      }
     }
   }
 

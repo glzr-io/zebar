@@ -17,11 +17,8 @@ npm i -g pnpm
 # Install dependencies.
 pnpm i
 
-# Start in development mode. (config: /zebar/examples/)
+# Start in development mode. (config: ~/.glzr/zebar/)
 pnpm dev
-
-# Start in development mode. (config: ~/.glz/zebar/)
-pnpm dev:local
 ```
 
 After making your changes, push to your fork and [submit a pull request](https://github.com/glzr-io/zebar/pulls). Please try to address only a single feature or fix in the PR so that it's easy to review.
