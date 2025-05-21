@@ -36,6 +36,15 @@ export function createAudioProvider(
                 },
               });
             },
+            setMute: (mute: boolean) => {
+              return desktopCommands.callProviderFunction(configHash, {
+                type: 'audio',
+                function: {
+                  name: 'set_mute',
+                  args: { mute },
+                }
+              });
+            }
           });
         }
       },

@@ -31,9 +31,10 @@ export type ProviderFunction =
 export interface AudioFunction {
   type: 'audio';
   function: {
-    name: 'set_volume';
+    name: 'set_volume' | 'set_mute';
     args: {
-      volume: number;
+      volume?: number;
+      mute?: boolean;
       deviceId?: string;
     };
   };
