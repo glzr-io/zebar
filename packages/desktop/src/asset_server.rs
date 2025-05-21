@@ -158,22 +158,23 @@ pub async fn serve(
   let token_access =
     { ASSET_SERVER_TOKENS.lock().await.get(&token.0).cloned() }?;
 
-  let asset_path = token_access
+  let relative_path = path.unwrap_or("index.html".into());
+  let absolute_path = token_access
     .base_dir
-    .join(path.unwrap_or("index.html".into()))
+    .join(relative_path.clone())
     .canonicalize_pretty()
     .ok()?;
 
   // Allow access if:
   // - The asset path is within the base directory.
   // - The asset path matches any of the file patterns of the widget pack.
-  if !asset_path.starts_with(&token_access.base_dir)
-    || !glob_util::is_match(&asset_path, &token_access.file_patterns)
+  if !absolute_path.starts_with(&token_access.base_dir)
+    || !glob_util::is_match(&relative_path, &token_access.file_patterns)
       .ok()?
   {
     tracing::warn!(
       "Asset path {} is inaccessable with token {:?}.",
-      asset_path.display(),
+      absolute_path.display(),
       token_access
     );
 
@@ -182,7 +183,7 @@ pub async fn serve(
 
   // Attempt to open and serve the requested file. Currently returns HTML
   // `Content-Type` if not found.
-  NamedFile::open(asset_path).await.ok()
+  NamedFile::open(absolute_path).await.ok()
 }
 
 /// Token for identifying which directory is being accessed.
