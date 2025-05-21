@@ -626,11 +626,10 @@ impl WidgetPackManager {
     {
       let mut widget_packs = self.widget_packs.lock().await;
       widget_packs.insert(pack.id.clone(), pack.clone());
-    }
 
-    self
-      .widget_packs_change_tx
-      .send(HashMap::from([(pack.id.clone(), pack.clone())]))?;
+      // Broadcast the change.
+      let _ = self.widget_packs_change_tx.send(widget_packs.clone());
+    }
 
     Ok(pack)
   }
@@ -662,20 +661,18 @@ impl WidgetPackManager {
       serde_json::to_string_pretty(&pack.config)? + "\n",
     )?;
 
+    let mut widget_packs = self.widget_packs.lock().await;
+
     // Update the pack ID and remove the old entry if a new name is
     // provided.
     if let Some(new_name) = args.name {
       pack.id = new_name;
-
-      let mut widget_packs = self.widget_packs.lock().await;
       widget_packs.remove(&pack_id);
-      widget_packs.insert(pack.id.clone(), pack.clone());
     }
 
     // Broadcast the change.
-    self
-      .widget_packs_change_tx
-      .send(HashMap::from([(pack.id.clone(), pack.clone())]))?;
+    widget_packs.insert(pack.id.clone(), pack.clone());
+    let _ = self.widget_packs_change_tx.send(widget_packs.clone());
 
     Ok(pack)
   }
@@ -706,9 +703,11 @@ impl WidgetPackManager {
     {
       let mut widget_packs = self.widget_packs.lock().await;
       widget_packs.remove(pack_id);
+
+      // Broadcast the change.
+      let _ = self.widget_packs_change_tx.send(widget_packs.clone());
     }
 
-    // TODO: Broadcast the change.
     // TODO: Kill active widget instances from the removed pack.
 
     Ok(())
@@ -830,6 +829,9 @@ impl WidgetPackManager {
   pub async fn register_widget_pack(&self, pack: WidgetPack) {
     let mut widget_packs = self.widget_packs.lock().await;
     widget_packs.insert(pack.id.clone(), pack);
+
+    // Broadcast the change.
+    let _ = self.widget_packs_change_tx.send(widget_packs.clone());
   }
 }
 

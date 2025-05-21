@@ -272,6 +272,8 @@ fn listen_events(
   let mut monitors_change_rx = monitor_state.change_tx.subscribe();
   let mut widget_configs_change_rx =
     widget_pack_manager.widget_configs_change_tx.subscribe();
+  let mut widget_packs_change_rx =
+    widget_pack_manager.widget_packs_change_tx.subscribe();
 
   task::spawn(async move {
     loop {
@@ -290,6 +292,10 @@ fn listen_events(
         },
         Ok(_) = settings_change_rx.recv() => {
           info!("Settings changed.");
+          tray.refresh().await
+        },
+        Ok(_) = widget_packs_change_rx.recv() => {
+          info!("Widget packs changed.");
           tray.refresh().await
         },
         Ok(_) = monitors_change_rx.recv() => {
