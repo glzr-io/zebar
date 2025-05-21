@@ -4,9 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Base styles for better consistency across platforms (aka. CSS reset). -->
-    <link rel="stylesheet" type="text/css" href="../normalize.css" />
-
     <!-- Custom styles. -->
     <link rel="stylesheet" type="text/css" href="./styles.css" />
 
@@ -26,7 +23,7 @@
         useEffect,
       } from 'https://esm.sh/react@18?dev';
       import { createRoot } from 'https://esm.sh/react-dom@18/client?dev';
-      import * as zebar from 'https://esm.sh/zebar@2';
+      import * as zebar from 'https://esm.sh/zebar@3.0';
 
       const providers = zebar.createProviderGroup({
         network: { type: 'network' },

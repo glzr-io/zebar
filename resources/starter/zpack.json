@@ -14,7 +14,7 @@
       "shownInTaskbar": false,
       "focused": false,
       "resizable": false,
-      "transparent": false,
+      "transparent": true,
       "includeFiles": ["*.html", "*.css"],
       "caching": {
         "defaultDuration": 604800,
@@ -49,7 +49,42 @@
       "shownInTaskbar": false,
       "focused": false,
       "resizable": true,
-      "transparent": false,
+      "transparent": true,
+      "includeFiles": ["*.html", "*.css"],
+      "caching": {
+        "defaultDuration": 604800,
+        "rules": []
+      },
+      "privileges": {
+        "shellCommands": []
+      },
+      "presets": [
+        {
+          "name": "default",
+          "anchor": "top_left",
+          "offsetX": "0px",
+          "offsetY": "0px",
+          "width": "100%",
+          "height": "40px",
+          "monitorSelection": {
+            "type": "all"
+          },
+          "dockToEdge": {
+            "enabled": false,
+            "edge": null,
+            "windowMargin": "0px"
+          }
+        }
+      ]
+    },
+    {
+      "name": "with-komorebi",
+      "htmlPath": "./with-komorebi.html",
+      "zOrder": "normal",
+      "shownInTaskbar": false,
+      "focused": false,
+      "resizable": true,
+      "transparent": true,
       "includeFiles": ["*.html", "*.css"],
       "caching": {
         "defaultDuration": 604800,
