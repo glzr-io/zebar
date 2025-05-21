@@ -35,12 +35,10 @@
     "macOSPrivateApi": true,
     "security": {
       "csp": {
-        "default-src": "'self'",
-        "style-src": "'self' 'unsafe-inline' *",
-        "script-src": "'self' 'unsafe-eval' asset: http://asset.localhost http://127.0.0.1:6124",
-        "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:6123",
-        "font-src": "'self' *",
-        "img-src": "'self' asset: http://asset.localhost http://127.0.0.1:6124 blob: data: *"
+        "default-src": "'self' asset:",
+        "connect-src": "ipc: http://ipc.localhost https://api.glzr.io",
+        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "style-src": "'self' 'unsafe-inline'"
       },
       "assetProtocol": {
         "enable": true

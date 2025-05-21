@@ -8,6 +8,7 @@ export default defineConfig({
     port: 4200,
   },
   build: { target: 'esnext' },
+  publicDir: './resources',
   base: './',
   optimizeDeps: {
     include: ['solid-markdown > micromark', 'solid-markdown > unified'],
