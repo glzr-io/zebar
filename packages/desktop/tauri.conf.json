@@ -37,7 +37,7 @@
       "csp": {
         "default-src": "'self' asset:",
         "connect-src": "ipc: http://ipc.localhost https://api.glzr.io",
-        "img-src": "'self' *",
+        "img-src": "data: blob: *",
         "style-src": "'self' 'unsafe-inline'"
       },
       "assetProtocol": {
