@@ -35,7 +35,7 @@ export function Sidebar(props: SidebarProps) {
     >
       <div class="flex justify-between items-center">
         <img
-          src="/resources/logo-128x128.png"
+          src="/logo-128x128.png"
           alt="Zebar logo"
           class={cn(
             'w-8 h-8 m-2 ml-4 transition-all',
