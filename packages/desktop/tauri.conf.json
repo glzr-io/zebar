@@ -36,7 +36,7 @@
     "security": {
       "csp": {
         "default-src": "'self' asset:",
-        "connect-src": "ipc: http://ipc.localhost https://api.glzr.io",
+        "connect-src": "ipc: http://ipc.localhost https://api.glzr.io https://*.supabase.co",
         "img-src": "data: blob: *",
         "style-src": "'self' 'unsafe-inline'"
       },
