@@ -708,6 +708,12 @@ impl WidgetPackManager {
       let _ = self.widget_packs_change_tx.send(widget_packs.clone());
     }
 
+    // Remove startup configs for the removed pack.
+    self
+      .app_settings
+      .remove_startup_config(pack_id, None, None)
+      .await?;
+
     // TODO: Kill active widget instances from the removed pack.
 
     Ok(())

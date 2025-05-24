@@ -523,14 +523,17 @@ impl WidgetFactory {
     let startup_configs = self.app_settings.startup_configs().await;
 
     for startup_config in startup_configs {
-      self
+      if let Err(err) = self
         .start_widget_by_id(
           &startup_config.pack,
           &startup_config.widget,
           &WidgetOpenOptions::Preset(startup_config.preset),
           false,
         )
-        .await?;
+        .await
+      {
+        tracing::error!("Failed to start widget on startup: {:?}", err);
+      }
     }
 
     Ok(())

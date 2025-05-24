@@ -252,19 +252,22 @@ impl AppSettings {
     self.write_settings(new_settings).await
   }
 
-  /// Removes the given config from being launched on startup.
+  /// Removes startup configs matching the given criteria.
+  ///
+  /// Matches `pack_id` and optionally `widget_name` and `preset_name`.
+  /// When optional parameters are `None`, they match any value.
   pub async fn remove_startup_config(
     &self,
     pack_id: &str,
-    widget_name: &str,
-    preset_name: &str,
+    widget_name: Option<&str>,
+    preset_name: Option<&str>,
   ) -> anyhow::Result<()> {
     let mut new_settings = { self.value.lock().await.clone() };
 
     new_settings.startup_configs.retain(|config| {
       config.pack != pack_id
-        || config.widget != widget_name
-        || config.preset != preset_name
+        || widget_name.map_or(false, |w| config.widget != w)
+        || preset_name.map_or(false, |p| config.preset != p)
     });
 
     self.write_settings(new_settings).await

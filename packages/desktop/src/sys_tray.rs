@@ -415,7 +415,11 @@ impl SysTray {
           }
           false => {
             app_settings
-              .remove_startup_config(&pack_id, &widget_name, &preset)
+              .remove_startup_config(
+                &pack_id,
+                Some(&widget_name),
+                Some(&preset),
+              )
               .await
           }
         },
