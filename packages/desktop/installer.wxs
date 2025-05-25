@@ -11,7 +11,7 @@
   <?error Unsupported value of sys.BUILDARCH=$(sys.BUILDARCH) ?>
 <?endif?>
 
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <Product
     Id="*"
     Name="Zebar"
@@ -38,6 +38,9 @@
 
     <!-- Allow version downgrades. -->
     <MajorUpgrade Schedule="afterInstallInitialize" AllowDowngrades="yes" />
+
+    <!-- Close application if it is already running. -->
+    <util:CloseApplication Id="CloseZebar" Target="zebar.exe" CloseMessage="yes" RebootPrompt="no" TerminateProcess="1" />
 
     <InstallExecuteSequence>
       <RemoveShortcuts>Installed AND NOT UPGRADINGPRODUCTCODE</RemoveShortcuts>
