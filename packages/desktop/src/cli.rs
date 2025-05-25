@@ -1,6 +1,7 @@
 use std::{path::PathBuf, process};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use tracing::Level;
 
 use crate::{
   app_settings::VERSION_NUMBER, common::LengthValue,
@@ -120,6 +121,66 @@ pub struct StartupArgs {
   /// The default path is `%userprofile%/.glzr/zebar/`
   #[clap(long, value_hint = clap::ValueHint::FilePath)]
   pub config_dir: Option<PathBuf>,
+
+  /// Logging verbosity.
+  #[clap(flatten)]
+  pub verbosity: Verbosity,
+}
+
+/// Verbosity flags to be used with `#[command(flatten)]`.
+#[derive(Args, Clone, Debug, PartialEq)]
+#[clap(about = None, long_about = None)]
+pub struct Verbosity {
+  /// Enables verbose logging.
+  #[clap(short = 'v', long, action)]
+  verbose: bool,
+
+  /// Disables logging.
+  #[clap(short = 'q', long, action, conflicts_with = "verbose")]
+  quiet: bool,
+
+  /// Set log level directly (overrides verbose/quiet flags).
+  ///
+  /// Can also be set via `LOG_LEVEL` environment variable.
+  #[clap(long, env = "LOG_LEVEL", value_enum)]
+  log_level: Option<LogLevel>,
+}
+
+impl Verbosity {
+  /// Gets the log level based on the verbosity flags.
+  #[must_use]
+  pub fn level(&self) -> Level {
+    // If log_level is explicitly set (via CLI or env), use that.
+    if let Some(level) = &self.log_level {
+      return level.clone().into();
+    }
+
+    // Otherwise fall back to verbose/quiet flags.
+    match (self.verbose, self.quiet) {
+      (true, _) => Level::DEBUG,
+      (_, true) => Level::ERROR,
+      _ => Level::INFO,
+    }
+  }
+}
+
+#[derive(Clone, Debug, PartialEq, ValueEnum)]
+pub enum LogLevel {
+  Debug,
+  Info,
+  Warn,
+  Error,
+}
+
+impl From<LogLevel> for Level {
+  fn from(log_level: LogLevel) -> Self {
+    match log_level {
+      LogLevel::Debug => Level::DEBUG,
+      LogLevel::Info => Level::INFO,
+      LogLevel::Warn => Level::WARN,
+      LogLevel::Error => Level::ERROR,
+    }
+  }
 }
 
 #[derive(Clone, Debug, Parser, PartialEq)]

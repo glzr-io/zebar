@@ -76,16 +76,8 @@ impl AppSettings {
   /// Creates a new `AppSettings` instance.
   pub fn new(
     app_handle: &AppHandle,
-    config_dir_override: Option<PathBuf>,
+    config_dir: PathBuf,
   ) -> anyhow::Result<Self> {
-    let config_dir = match config_dir_override {
-      Some(dir) => dir,
-      None => app_handle
-        .path()
-        .resolve(".glzr/zebar", BaseDirectory::Home)
-        .context("Unable to get home directory.")?,
-    };
-
     let webview_cache_dir = app_handle
       .path()
       .resolve("zebar/webview-cache", BaseDirectory::Data)

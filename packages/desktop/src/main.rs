@@ -2,15 +2,20 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![feature(iterator_try_collect)]
 
-use std::{env, sync::Arc};
+use std::{env, path::Path, sync::Arc};
 
+use anyhow::Context;
 use clap::Parser;
 use tauri::{
-  async_runtime::block_on, AppHandle, Emitter, Manager, RunEvent,
+  async_runtime::block_on, path::BaseDirectory, AppHandle, Emitter,
+  Manager, RunEvent,
 };
 use tokio::{sync::mpsc, task};
-use tracing::{error, info, level_filters::LevelFilter};
-use tracing_subscriber::EnvFilter;
+use tracing::{error, info, Level};
+use tracing_subscriber::{
+  fmt::{self, writer::MakeWriterExt},
+  layer::SubscriberExt,
+};
 
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
@@ -155,21 +160,21 @@ fn output_query(app: &tauri::App, args: QueryArgs) -> anyhow::Result<()> {
 
 /// Starts Zebar - either with a specific widget or all widgets.
 async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
-  tracing_subscriber::fmt()
-    .with_env_filter(
-      EnvFilter::from_env("LOG_LEVEL")
-        .add_directive(LevelFilter::INFO.into()),
-    )
-    .init();
-
-  let config_dir_override = match cli.command() {
+  let config_dir = match cli.command() {
     CliCommand::Startup(args) => args.config_dir,
     _ => None,
-  };
+  }
+  .unwrap_or(
+    app
+      .path()
+      .resolve(".glzr/zebar", BaseDirectory::Home)
+      .context("Unable to get home directory.")?,
+  );
+
+  setup_logging(&cli, &config_dir)?;
 
   // Initialize `AppSettings` in Tauri state.
-  let app_settings =
-    Arc::new(AppSettings::new(app.handle(), config_dir_override)?);
+  let app_settings = Arc::new(AppSettings::new(app.handle(), config_dir)?);
   app.manage(app_settings.clone());
 
   // Initialize `MarketplaceInstaller` in Tauri state.
@@ -407,6 +412,37 @@ async fn open_widgets_by_cli_command(
   if let Err(err) = res {
     error!("Failed to open widgets: {:?}", err);
   }
+
+  Ok(())
+}
+
+/// Initialize logging with the verbosity level specified in the CLI args.
+///
+/// Error logs are saved to `~/.glzr/zebar/errors.log`.
+fn setup_logging(cli: &Cli, config_dir: &Path) -> anyhow::Result<()> {
+  let log_level = match cli.command() {
+    CliCommand::Startup(args) => args.verbosity.level(),
+    _ => Level::INFO,
+  };
+
+  let error_writer =
+    tracing_appender::rolling::never(config_dir, "errors.log");
+
+  let subscriber = tracing_subscriber::registry()
+    .with(
+      // Output to stdout with specified verbosity level.
+      fmt::Layer::new()
+        .with_writer(std::io::stdout.with_max_level(log_level)),
+    )
+    .with(
+      // Output to error log file.
+      fmt::Layer::new()
+        .with_writer(error_writer.with_max_level(Level::ERROR)),
+    );
+
+  tracing::subscriber::set_global_default(subscriber)?;
+
+  info!("Starting with log level {:?}.", log_level.to_string());
 
   Ok(())
 }
