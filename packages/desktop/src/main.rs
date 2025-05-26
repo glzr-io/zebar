@@ -207,7 +207,8 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   // guaranteed to be one of the open commands here.
   setup_single_instance(app, widget_factory.clone())?;
 
-  setup_asset_server();
+  // Start the asset server.
+  setup_asset_server().await?;
 
   // Prevent windows from showing up in the dock on MacOS.
   #[cfg(target_os = "macos")]

@@ -34,18 +34,26 @@ struct TokenAccess {
   file_patterns: Vec<String>,
 }
 
-pub fn setup_asset_server() {
-  task::spawn(async move {
-    let rocket = rocket::build()
-      .configure(
-        rocket::Config::figment().merge(("port", ASSET_SERVER_PORT)),
-      )
-      .mount("/", routes![sw_js, normalize_css, init, serve]);
+pub async fn setup_asset_server() -> anyhow::Result<()> {
+  let rocket = rocket::build()
+    .configure(
+      rocket::Config::figment().merge(("port", ASSET_SERVER_PORT)),
+    )
+    .mount("/", routes![sw_js, normalize_css, init, serve]);
 
+  // Test if the server can start (this doesn't block).
+  let rocket = rocket.ignite().await.map_err(|err| {
+    anyhow::anyhow!("Asset server failed to initialize: {:?}", err)
+  })?;
+
+  // Now launch it in the background.
+  task::spawn(async move {
     if let Err(err) = rocket.launch().await {
-      error!("Asset server failed to start: {:?}", err);
+      error!("Asset server failed during runtime: {:?}", err);
     }
   });
+
+  Ok(())
 }
 
 pub async fn create_init_url(
