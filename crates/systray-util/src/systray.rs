@@ -1,6 +1,7 @@
 use std::{
   collections::HashMap,
   fmt::{self, Display},
+  hash::{DefaultHasher, Hash, Hasher},
   io::Cursor,
   str::FromStr,
 };
@@ -105,6 +106,12 @@ pub struct SystrayIcon {
   /// Icon image.
   pub icon_image: Option<image::RgbaImage>,
 
+  /// Hash of the icon image.
+  ///
+  /// Used to determine if the icon image has changed without having to
+  /// compare the entire image.
+  pub icon_image_hash: Option<String>,
+
   /// Application-defined message identifier.
   ///
   /// Used to send messages to the window that contains the icon.
@@ -154,6 +161,13 @@ impl SystrayIcon {
       .map_err(|_| crate::Error::IconConversionFailed)?;
 
     Ok(bytes)
+  }
+
+  /// Computes a hash of the icon image.
+  pub fn icon_image_hash(icon_image: &image::RgbaImage) -> String {
+    let mut hasher = DefaultHasher::new();
+    icon_image.as_raw().hash(&mut hasher);
+    format!("{:x}", hasher.finish())
   }
 }
 
@@ -284,9 +298,13 @@ impl Systray {
             // Avoid re-reading the icon image if it's the same as the
             // existing icon.
             if found_icon.icon_handle != Some(icon_handle) {
-              found_icon.icon_handle = Some(icon_handle);
-              found_icon.icon_image =
-                Util::icon_to_image(icon_handle).ok();
+              if let Ok(new_icon_image) = Util::icon_to_image(icon_handle)
+              {
+                found_icon.icon_handle = Some(icon_handle);
+                found_icon.icon_image_hash =
+                  Some(SystrayIcon::icon_image_hash(&new_icon_image));
+                found_icon.icon_image = Some(new_icon_image);
+              }
             }
           }
 
@@ -317,6 +335,9 @@ impl Systray {
             .icon_handle
             .and_then(|icon_handle| Util::icon_to_image(icon_handle).ok());
 
+          let icon_image_hash =
+            icon_image.as_ref().map(SystrayIcon::icon_image_hash);
+
           let icon = SystrayIcon {
             stable_id,
             uid: icon_data.uid,
@@ -328,6 +349,7 @@ impl Systray {
               .unwrap_or_else(|| "".to_string()),
             icon_handle: icon_data.icon_handle,
             icon_image,
+            icon_image_hash,
             callback_message: icon_data.callback_message,
             version: icon_data.version,
             is_visible: icon_data.is_visible,

@@ -410,7 +410,7 @@ No config options.
 | `iecValue` | Bytes converted in according to the IEC standard. 1024 bytes in a kibibyte. | `number`    |
 | `iecUnit`  | Unit of the converted bytes in according to the IEC standard. KiB, MiB, ... | `string`    |
 
-### Systray 
+### Systray
 
 #### Config
 No config options.
@@ -423,13 +423,15 @@ No config options.
 #### Related Types
 
 #### SystrayIcon
+
 | Variable          | Description | Return type |
 | ----------------- | ----------- | ----------- |
 | `id`         | ID of the icon. |  `string`    |
-| `iconBytes`         | Icon pixel array. |  `number[]`    |
-| `iconBlob`         | Icon in memory. |  `Blob`    |
-| `iconUrl`         | Icon URL ready to be be referenced in `<img>` components.  |  `string`    |
-
+| `iconBytes`         | Icon image as a PNG byte array. |  `number[]`    |
+| `iconBlob`         | Icon image as a PNG blob. |  `Blob`    |
+| `iconHash`         | Hash of the icon image. Used to determine if the icon image has changed.  |  `string`    |
+| `iconUrl`         | Icon image URL ready to be be referenced in `<img>` elements.  |  `string`    |
+| `tooltip`         | Tooltip text when hovering over the icon.  |  `string`    |
 
 ### Weather
 

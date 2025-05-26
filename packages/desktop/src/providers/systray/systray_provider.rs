@@ -23,6 +23,7 @@ pub struct SystrayOutputIcon {
   pub id: String,
   pub tooltip: String,
   pub icon_bytes: Vec<u8>,
+  pub icon_hash: String,
 }
 
 impl TryFrom<SystrayIcon> for SystrayOutputIcon {
@@ -33,6 +34,9 @@ impl TryFrom<SystrayIcon> for SystrayOutputIcon {
       id: icon.stable_id.to_string(),
       tooltip: icon.tooltip.clone(),
       icon_bytes: icon.to_image_format(ImageFormat::Png)?,
+      icon_hash: icon
+        .icon_image_hash
+        .ok_or(anyhow::anyhow!("Missing hash for icon image."))?,
     })
   }
 }

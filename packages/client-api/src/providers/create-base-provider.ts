@@ -51,7 +51,6 @@ export interface Provider<TConfig, TOutput> {
 }
 
 type UnlistenFn = () => void | Promise<void>;
-// type UnlistenFn = () => Promise<void>;
 
 /**
  * Fetches next output or error from the provider.
