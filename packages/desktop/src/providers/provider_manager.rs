@@ -68,7 +68,7 @@ impl ProviderEmitter {
     let send_res = self.emit_tx.send(emission);
 
     if let Err(err) = send_res {
-      tracing::error!("Error sending provider result: {:?}", err);
+      tracing::error!("Error sending provider result: {}", err);
     }
   }
 

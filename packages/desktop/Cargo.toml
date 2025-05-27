@@ -34,6 +34,7 @@ tauri = { version = "2", features = [
   "macos-private-api",
   "protocol-asset",
   "tray-icon",
+  "webview-data-url",
 ] }
 tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
