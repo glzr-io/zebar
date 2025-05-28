@@ -30,7 +30,7 @@ use crate::{
   monitor_state::{Monitor, MonitorState},
   widget_pack::{
     AnchorPoint, DockConfig, DockEdge, WidgetConfig, WidgetPack,
-    WidgetPackManager, WidgetPlacement,
+    WidgetPackManager, WidgetPlacement, ZOrder,
   },
 };
 
@@ -355,6 +355,24 @@ impl WidgetFactory {
         let _ = window.set_position(position);
       }
 
+      // Adjust the z-order of the window.
+      match widget_config.z_order {
+        ZOrder::Normal => {
+          // Default z-order, no special handling needed.
+        }
+        ZOrder::TopMost => {
+          let _ = window.set_always_on_top(true);
+
+          // On MacOS, we need to set the window as above the menu bar for
+          // it to truly be always on top.
+          #[cfg(target_os = "macos")]
+          let _ = window.as_ref().window().set_above_menu_bar();
+        }
+        ZOrder::BottomMost => {
+          let _ = window.set_always_on_bottom(true);
+        }
+      }
+
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
       // so we also set the window as a tool window.
       #[cfg(target_os = "windows")]
@@ -363,15 +381,7 @@ impl WidgetFactory {
         .window()
         .set_tool_window(!widget_config.shown_in_taskbar);
 
-      // On MacOS, we need to set the window as above the menu bar for it
-      // to truly be always on top.
-      #[cfg(target_os = "macos")]
-      {
-        if widget_config.z_order == crate::widget_pack::ZOrder::TopMost {
-          let _ = window.as_ref().window().set_above_menu_bar();
-        }
-      }
-
+      // Store the underlying window handle (Windows only).
       #[cfg(target_os = "windows")]
       {
         state.window_handle = {
