@@ -1,6 +1,6 @@
 type LogMethod = 'log' | 'warn' | 'error';
 
-export function createLogger(section: string) {
+export function createLogger(section?: string) {
   function log(
     consoleLogMethod: LogMethod,
     message: string,
@@ -13,15 +13,12 @@ export function createLogger(section: string) {
       `${date.getSeconds().toString().padStart(2, '0')}:` +
       `${date.getMilliseconds().toString().padStart(3, '0')}`;
 
-    // Clone data to avoid reference changes in Chrome console.
-    const clonedData = data.map(tryClone);
-
     console[consoleLogMethod](
-      `%c${timestamp}%c [${section}] %c${message}`,
+      `%c${timestamp}%c${section ? ` [${section}]` : ''} %c${message}`,
       'color: #f5f9b4',
       'color: #d0b4f9',
       'color: inherit',
-      ...clonedData,
+      ...data.map(data => createLoggablePayload(data)),
     );
   }
 
@@ -49,15 +46,10 @@ export function createLogger(section: string) {
   };
 }
 
-function tryClone(data: unknown) {
-  if (data === null || data === undefined || data instanceof Error) {
-    return data;
-  }
+function createLoggablePayload(obj: unknown): unknown {
+  const stringified = JSON.stringify(obj);
 
-  try {
-    return structuredClone(data);
-  } catch (err) {
-    console.warn('Unable to clone data');
-    return data;
-  }
+  return stringified.length > 300
+    ? `${stringified.slice(0, 300)}  ...`
+    : stringified;
 }
