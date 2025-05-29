@@ -8,8 +8,6 @@ import type { ProviderConfig } from '~/providers';
 import { createLogger, simpleHash } from '~/utils';
 import { desktopCommands } from './desktop-commands';
 
-const logger = createLogger('desktop-events');
-
 let listenPromise: Promise<UnlistenFn> | null = null;
 
 let callbacks: {
@@ -69,7 +67,6 @@ function registerEventCallback<T>(
       return;
     }
 
-    logger.debug('Incoming provider emission:', event.payload);
     callback(event.payload);
   };
 

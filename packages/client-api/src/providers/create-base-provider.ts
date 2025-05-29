@@ -1,4 +1,5 @@
 import type { ProviderConfig } from './create-provider';
+import { createLogger } from '~/utils';
 
 export interface Provider<TConfig, TOutput> {
   /**
@@ -67,6 +68,8 @@ export function createBaseProvider<
   config: TConfig,
   fetcher: ProviderFetcher<TOutput>,
 ): Provider<TConfig, TOutput> {
+  const logger = createLogger(config.type);
+
   const outputListeners = new Set<(output: TOutput) => void>();
   const errorListeners = new Set<(error: string) => void>();
 
@@ -81,10 +84,12 @@ export function createBaseProvider<
   function startFetcher() {
     return fetcher({
       output: output => {
+        logger.debug('Provider output:', output);
         latestEmission = { output, error: null, hasError: false };
         outputListeners.forEach(listener => listener(output));
       },
       error: error => {
+        logger.warn('Provider error:', error);
         latestEmission = { output: null, error, hasError: true };
         errorListeners.forEach(listener => listener(error));
       },

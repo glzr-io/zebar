@@ -1,9 +1,26 @@
+// Clear console every 15 minutes.
+setInterval(
+  () => {
+    console.clear();
+    console.info(
+      '%c[Zebar]%c Console is cleared every 15 minutes to prevent memory buildup from logged data.',
+      'color: #4ade80',
+      'color: inherit',
+    );
+  },
+  1000 * 60 * 15,
+);
+
 if (window.location.host === '127.0.0.1:6124') {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/__zebar/sw.js', { scope: '/' })
       .then(sw => {
-        console.log('[Zebar] Service Worker registered.');
+        console.info(
+          '%c[Zebar]%c Service Worker registered.',
+          'color: #4ade80',
+          'color: inherit',
+        );
 
         const message = {
           type: 'SET_CONFIG',
@@ -15,7 +32,12 @@ if (window.location.host === '127.0.0.1:6124') {
         sw.waiting?.postMessage(message);
       })
       .catch(err =>
-        console.error('[Zebar] Service Worker failed to register:', err),
+        console.error(
+          '%c[Zebar]%c Service Worker failed to register:',
+          'color: #4ade80',
+          'color: inherit',
+          err,
+        ),
       );
   }
 
