@@ -14,11 +14,12 @@ export function createLogger(section?: string) {
       `${date.getMilliseconds().toString().padStart(3, '0')}`;
 
     console[consoleLogMethod](
-      `%c${timestamp}%c${section ? ` [${section}]` : ''} %c${message}`,
+      `%c[Zebar] %c${timestamp}%c${section ? ` (${section})` : ''} %c${message}`,
+      'color: #4ade80',
       'color: #f5f9b4',
       'color: #d0b4f9',
       'color: inherit',
-      ...data.map(data => createLoggablePayload(data)),
+      ...data,
     );
   }
 
@@ -44,12 +45,4 @@ export function createLogger(section?: string) {
     warn,
     error,
   };
-}
-
-function createLoggablePayload(obj: unknown): unknown {
-  const stringified = JSON.stringify(obj);
-
-  return stringified.length > 300
-    ? `${stringified.slice(0, 300)}  ...`
-    : stringified;
 }
