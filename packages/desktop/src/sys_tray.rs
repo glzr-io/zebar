@@ -351,7 +351,8 @@ impl SysTray {
 
           // TODO: Error handling.
           let _ = app_settings.reload().await;
-          widget_pack_manager.reload().await
+          let _ = widget_pack_manager.reload().await;
+          widget_factory.relaunch_all().await
         }
         MenuEvent::OpenSettings => {
           Self::open_settings_window(&app_handle, SettingsRoute::Index)
