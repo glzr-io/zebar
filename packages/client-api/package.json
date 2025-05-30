@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
-    "dev": "pnpm build -- --watch src",
+    "dev": "pnpm build --watch src",
     "dev:local": "pnpm dev",
     "prepublishOnly": "pnpm build"
   },

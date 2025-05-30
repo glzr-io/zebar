@@ -58,3 +58,36 @@ JS package for communicating with the Tauri backend. Published to npm as [`zebar
    3. Add the provider's outputs to the [`ProviderOutput`](https://github.com/glzr-io/zebar/blob/main/packages/desktop/src/providers/provider_output.rs) enum.
    4. Add the provider to the switch statement in [`create_provider(...)`](https://github.com/glzr-io/zebar/blob/main/packages/desktop/src/providers/provider_ref.rs#L163).
    5. Add the provider's exports to [`desktop/src/providers/mod.rs`](https://github.com/glzr-io/zebar/blob/main/packages/desktop/src/providers/mod.rs)
+
+### Using local `zebar` NPM package
+
+Just like in production, when running `pnpm dev`, Zebar will use the widgets found within your config directory (i.e. `~/.glzr/zebar/*`). However, when developing locally, you may want to use a local `zebar` NPM package. To do so, run:
+
+```shell
+cd path/to/your/widget
+
+# If using pnpm:
+pnpm add --link ../../path/to/zebar/packages/client-api
+
+# If using npm:
+npm install ../../path/to/zebar/packages/client-api
+```
+
+This will create a symlink to the local `zebar` NPM package and results in a `package.json` similar to this:
+
+```json
+{
+  "dependencies": {
+    "zebar": "link:../../repos/zebar/packages/client-api"
+  }
+}
+```
+
+### Troubleshooting
+
+#### MacOS: Settings UI using outdated dependencies
+
+On MacOS, the settings UI may use cached versions of dependencies. To resolve this:
+
+1. Delete the `packages/settings-ui/.vite` directory
+2. Run `pnpm dev` again
