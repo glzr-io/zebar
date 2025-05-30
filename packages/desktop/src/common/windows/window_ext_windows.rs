@@ -1,7 +1,10 @@
 use anyhow::Context;
 use tauri::{PhysicalPosition, PhysicalSize, Runtime, Window};
-use windows::Win32::UI::WindowsAndMessaging::{
-  SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
+use windows::Win32::{
+  Foundation::HWND,
+  UI::WindowsAndMessaging::{
+    SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
+  },
 };
 
 use super::app_bar;
@@ -31,12 +34,12 @@ impl<R: Runtime> WindowExtWindows for Window<R> {
     unsafe {
       match enable {
         true => SetWindowLongPtrW(
-          handle,
+          HWND(handle.0 as _),
           GWL_EXSTYLE,
           WS_EX_TOOLWINDOW.0 as isize,
         ),
         false => SetWindowLongPtrW(
-          handle,
+          HWND(handle.0 as _),
           GWL_EXSTYLE,
           WS_EX_APPWINDOW.0 as isize,
         ),
