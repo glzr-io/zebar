@@ -10,7 +10,7 @@ const length = z
 const name = z
   .string()
   .min(2, 'Name must be at least 2 characters.')
-  .max(24, 'Name cannot exceed 24 characters.')
+  .max(28, 'Name cannot exceed 28 characters.')
   .regex(
     /^[a-z0-9][a-z0-9-_]*$/,
     'Only lowercase letters, numbers, and the characters - and _ are allowed.',

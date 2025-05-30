@@ -1,17 +1,11 @@
 import { SelectField, TextField } from '@glzr/components';
 import { createForm, Field, FormState } from 'smorf';
 import { createEffect, on } from 'solid-js';
+import { configSchemas } from 'zebar';
 import { z } from 'zod';
 
 const formSchema = z.object({
-  name: z
-    .string()
-    .min(2, 'Name must be at least 2 characters.')
-    .max(24, 'Name cannot exceed 24 characters.')
-    .regex(
-      /^[a-z0-9][a-z0-9-_]*$/,
-      'Only lowercase letters, numbers, and the characters - and _ are allowed.',
-    ),
+  name: configSchemas.name,
   template: z.enum(['react_buildless', 'solid_typescript']),
 });
 

@@ -324,7 +324,7 @@ fn parse_legacy_path(path: &Path) -> anyhow::Result<(String, String)> {
 }
 
 /// Sanitizes a pack/widget name to match the schema requirements:
-/// - 2-24 characters.
+/// - 2-28 characters.
 /// - Only lowercase letters, numbers, hyphens, and underscores.
 /// - Must start with a letter or number.
 fn sanitize_name(name: &str) -> String {
@@ -361,8 +361,8 @@ fn sanitize_name(name: &str) -> String {
   };
 
   // Truncate if too long.
-  if sanitized.len() > 24 {
-    sanitized[0..24].to_string()
+  if sanitized.len() > 28 {
+    sanitized[0..28].to_string()
   } else {
     sanitized
   }
