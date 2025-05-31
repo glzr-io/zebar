@@ -138,7 +138,7 @@ export function MarketplacePackPage() {
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_minmax(200px,300px)] gap-8">
               {/* Action buttons and repo - full width on mobile, sidebar on desktop. */}
               <div class="space-y-4 md:order-2 md:col-start-2">
                 <div class="flex flex-col gap-2">
@@ -221,15 +221,9 @@ export function MarketplacePackPage() {
                   </TabsList>
 
                   <TabsContent value="readme" class="space-y-6">
-                    <div class="prose prose-sm dark:prose-invert max-w-none">
-                      <div class="whitespace-pre-line">
-                        <Show when={readmeFile()}>
-                          {readmeFile => (
-                            <Markdown children={readmeFile()} />
-                          )}
-                        </Show>
-                      </div>
-                    </div>
+                    <Show when={readmeFile()}>
+                      {readmeFile => <Markdown children={readmeFile()} />}
+                    </Show>
                   </TabsContent>
 
                   <TabsContent value="widgets" class="space-y-6">

@@ -12,9 +12,14 @@ export function Markdown(props: MarkdownProps) {
       remarkPlugins={[remarkGfm]}
       components={{
         code: props => (
-          <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-sm">
+          <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-sm break-words break-all whitespace-pre-wrap overflow-wrap-anywhere">
             {props.children}
           </code>
+        ),
+        pre: props => (
+          <pre class="bg-muted py-3 px-4 rounded my-3 [&_code]:px-0">
+            {props.children}
+          </pre>
         ),
         h1: props => (
           <h1 class="text-2xl font-bold mt-6 mb-4">{props.children}</h1>
