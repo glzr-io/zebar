@@ -38,7 +38,9 @@ export function createSystrayProvider(
             icons: result.output.icons.map(icon => {
               let cachedIcon = iconCache.get(icon.iconHash);
 
-              if (!cachedIcon) {
+              // TODO: `iconHash` null check can be removed after v3
+              // official release.
+              if (!icon.iconHash || !cachedIcon) {
                 // Create a new blob and object URL for this icon.
                 const iconBlob = new Blob(
                   [new Uint8Array(icon.iconBytes)],
