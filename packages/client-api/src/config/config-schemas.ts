@@ -3,7 +3,7 @@ import { z } from 'zod';
 const length = z
   .string()
   .regex(
-    /^([+-]?\d+)(%|px)?$/,
+    /^([+-]?\d+(?:\.\d+)?)(%|px)?$/,
     "Not a valid length value. Must be of format '10px' or '10%'.",
   );
 

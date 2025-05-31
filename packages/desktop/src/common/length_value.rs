@@ -39,14 +39,15 @@ impl FromStr for LengthValue {
   type Err = anyhow::Error;
 
   /// Parses a string containing a number followed by a unit (`px`, `%`).
-  /// Allows for negative numbers.
+  /// Allows for negative and fractional numbers.
   ///
   /// Example:
   /// ```
   /// LengthValue::from_str("100px") // { amount: 100.0, unit: LengthUnit::Pixel }
+  /// LengthValue::from_str("50.5%") // { amount: 50.5, unit: LengthUnit::Percentage }
   /// ```
   fn from_str(unparsed: &str) -> anyhow::Result<Self> {
-    let units_regex = Regex::new(r"([+-]?\d+)(%|px)?")?;
+    let units_regex = Regex::new(r"([+-]?\d+(?:\.\d+)?)(%|px)?")?;
 
     let err_msg = format!(
       "Not a valid length value '{}'. Must be of format '10px' or '10%'.",
