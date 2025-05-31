@@ -6,6 +6,5 @@ export {
   shellExec,
   shellSpawn,
   type Widget,
-  type WidgetWindow,
 } from './desktop';
 export * from './providers';

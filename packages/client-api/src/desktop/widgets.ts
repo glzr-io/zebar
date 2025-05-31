@@ -1,6 +1,7 @@
+import { getCurrentWindow } from '@tauri-apps/api/window';
+
 import { desktopCommands } from './desktop-commands';
 import type { WidgetPlacement } from '~/config';
-import { currentWindow, type WidgetWindow } from './windows';
 
 export interface Widget {
   /**
@@ -30,8 +31,19 @@ export interface Widget {
 
   /**
    * The window of the widget.
+   *
+   * @deprecated Use {@link tauriWindow} and {@link setZOrder} instead
+   * (e.g. `currentWidget().setZOrder('bottom_most')`).
    */
-  window: WidgetWindow;
+  window: {
+    get tauri(): ReturnType<typeof getCurrentWindow>;
+    setZOrder(zOrder: ZOrder): Promise<void>;
+  };
+
+  /**
+   * The underlying Tauri window.
+   */
+  tauriWindow: ReturnType<typeof getCurrentWindow>;
 
   /**
    * Whether the widget is in preview mode.
@@ -40,6 +52,18 @@ export interface Widget {
    * preview widget.
    */
   isPreview: boolean;
+
+  /**
+   * Sets the z-order of the widget's window.
+   */
+  setZOrder(zOrder: ZOrder): Promise<void>;
+
+  /**
+   * Closes the widget's window.
+   *
+   * Same as calling `tauriWindow.close()`.
+   */
+  close(): Promise<void>;
 }
 
 function getWidgetState(): Widget {
@@ -58,6 +82,7 @@ function getWidgetState(): Widget {
 
 export function currentWidget(): Widget {
   const state = getWidgetState();
+  const tauriWindow = getCurrentWindow();
 
   return {
     id: state.id,
@@ -65,9 +90,36 @@ export function currentWidget(): Widget {
     packId: state.packId,
     configPath: state.configPath,
     htmlPath: state.htmlPath,
-    window: currentWindow(),
+    window: {
+      get tauri() {
+        return tauriWindow;
+      },
+      setZOrder: (zOrder: ZOrder) => setZOrder(tauriWindow, zOrder),
+    },
+    tauriWindow,
     isPreview: state.isPreview,
+    setZOrder: (zOrder: ZOrder) => setZOrder(tauriWindow, zOrder),
+    close: () => close(tauriWindow),
   };
+}
+
+export type ZOrder = 'bottom_most' | 'top_most' | 'normal';
+
+async function setZOrder(
+  window: ReturnType<typeof getCurrentWindow>,
+  zOrder: ZOrder,
+) {
+  if (zOrder === 'bottom_most') {
+    await window.setAlwaysOnBottom(true);
+  } else if (zOrder === 'top_most') {
+    await desktopCommands.setAlwaysOnTop();
+  } else {
+    await window.setAlwaysOnTop(false);
+  }
+}
+
+async function close(window: ReturnType<typeof getCurrentWindow>) {
+  await window.close();
 }
 
 export interface StartWidgetArgs {
