@@ -132,10 +132,10 @@ export interface StartWidgetArgs {
 export async function startWidget(
   widgetName: string,
   placement: WidgetPlacement,
-  args: StartWidgetArgs,
+  args?: StartWidgetArgs,
 ) {
   return desktopCommands.startWidget(
-    args.packId ?? currentWidget().packId,
+    args?.packId ?? currentWidget().packId,
     widgetName,
     placement,
     getWidgetState().isPreview,
