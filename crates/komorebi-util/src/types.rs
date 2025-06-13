@@ -111,7 +111,7 @@ impl<'de> Deserialize<'de> for KomorebiWorkspace {
     #[derive(Deserialize)]
     struct Workspace {
       container_padding: Option<i32>,
-      floating_windows: Vec<KomorebiWindow>,
+      floating_windows: WindowElements,
       latest_layout: Vec<Rect>,
       layout: KomorebiLayout,
       layout_flip: Option<KomorebiLayoutFlip>,
@@ -128,11 +128,16 @@ impl<'de> Deserialize<'de> for KomorebiWorkspace {
       focused: usize,
     }
 
+    #[derive(Deserialize)]
+    struct WindowElements {
+      elements: Vec<KomorebiWindow>,
+    }
+
     let workspace = Workspace::deserialize(deserializer)?;
 
     Ok(KomorebiWorkspace {
       container_padding: workspace.container_padding,
-      floating_windows: workspace.floating_windows,
+      floating_windows: workspace.floating_windows.elements,
       focused_container_index: workspace.containers.focused,
       latest_layout: workspace.latest_layout,
       layout: workspace.layout,
