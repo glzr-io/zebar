@@ -42,8 +42,8 @@ impl Provider for KomorebiProvider {
 
     loop {
       tokio::select! {
-        Ok(output) = client.output() => {
-          self.common.emitter.emit_output(Ok(output));
+        output = client.output() => {
+          self.common.emitter.emit_output(output.map_err(|err| anyhow::anyhow!(err)));
         }
         Some(input) = self.common.input.async_rx.recv() => {
           if let ProviderInputMsg::Stop = input {
