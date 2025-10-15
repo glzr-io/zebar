@@ -30,7 +30,7 @@ export interface NetworkInterface {
   ipv4Addresses: string[];
   ipv6Addresses: string[];
   macAddress: string | null;
-  transmitSeed: number | null;
+  transmitSpeed: number | null;
   receiveSpeed: number | null;
   dnsServers: string[];
   isDefault: boolean;
