@@ -26,53 +26,82 @@
 
 For building locally, follow the instructions [here](https://github.com/glzr-io/zebar/blob/main/CONTRIBUTING.md).
 
-## 🏁 Getting started
+## 🚀 Quick start
 
-On first launch, Zebar generates some default widgets to `%userprofile%/.glzr/zebar`. This includes various examples and templates to get you started with creating your own widgets.
+### Accessing Zebar GUI
 
-To create your own widget, a good way to start is by making a copy of one of the boilerplate configs created on first launch.
+Click the Zebar icon in your system tray to open the GUI interface.
 
-Widgets can be shared easily:
-1. Zip your widget configuration.
-2. Unzip it into the `%userprofile%/.glzr/zebar` directory.
+### Installing widgets
+
+Navigate to the marketplace within the GUI to browse and install widget packs.
+
+### Auto-starting widgets
+
+Widgets can be set to run on startup by right clicking the Zebar tray icon then going to `Widget packs` -> `<pack name>` -> `<widget name>` -> `Run on startup` and clicking the widget name to check it.
 
 ## 🌟 Intro to Zebar
 
 Widgets are powered by native webviews (_similar_ to Electron, but more lightweight).
 
-Each widget consists of:
-1. A config file (with a `.zebar.json` extension).
-2. An HTML file for markup and styling.
+## Creating your own widgets
 
-Any frontend framework can be used and boilerplates (e.g. for React, SolidJS) are included in the default widget configs.
+Zebar looks within the `~/.glzr/zebar` directory for directories containing a `zpack.json` file. Each `zpack.json` file defines a widget pack. Each widget pack can contain multiple widgets, each defined  individually within the `zpack.json` file.
 
-Zebar exposes various system information (refered to as "providers") which can be used and displayed by your frontend. This includes stats like CPU usage, battery info, various window manager integrations, and lots more.
+For example, a widget pack config could be located at `~/.glzr/zebar/example-widget/zpack.json`, which would create a widget pack with an id of `example-widget`.
+Zebar only looks for `zpack.json` files one level deep within the `~/.glzr/zebar` directory, so `~/glzr/zebar/example-widget/widget-1/zpack.json` is invalid.
+
+In the `My widgets` tab of the Zebar GUI, you can click `Create new pack` to generate a widget pack scaffold with the given name and description.
+
+Within each widget pack, in the `Widgets` section you can click `Add widget` to create a new widget within that pack. When creating a new widget you can pick between some templates to get you started.
+
+> Apart from the React buildless template, other available templates require you to have Node.js and a package manager (npm/pnpm) installed. For these templates, run the build command (e.g. pnpm build) from the widget directory after any source code changes.
+
+### Modifying marketplace widgets
+
+To edit a marketplace widget without fear of your changes being overridden, you should copy the folder from the marketplace directory (located at `%AppData%/zebar/downloads/`) to your own Zebar directory (located at `~/.glzr/zebar/`).
+
+> **DO NOT** re-publish other peoples widgets without permission.
+
+### Advanced Customization
+
+#### What is the zpack.json file?
+
+Widgets are stored in packs, with each pack being defined by a `zpack.json` file. Each pack can contain multiple widgets, each individually defined within `zpack.json`.
+
+Widgets consist of an HTML file, and any surrounding assets (e.g. CSS, JS, images, etc.).
+
+The schema for `zpack.json` can be found [here](https://github.com/glzr-io/zebar/blob/main/resources/zpack-schema.json) although all options can also be configured via the GUI.
+
+#### Querying system information
+
+Zebar exposes various system information (referred to as "providers") which can be used and displayed by your frontend. This includes stats like CPU usage, battery info, various window manager integrations, and lots more. See [Providers](#-providers) for a list of available providers.
 
 ## ❓ FAQ
 
 **Q: Help! On Windows, Zebar is failing to start?**
 
-In some cases, updating to the latest Microsoft Webview2 version is needed ([standalone download](https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH#download)). Run the "Evergreen Standalone Installer" as adminstrator.
+In some cases, updating to the latest Microsoft Webview2 version is needed ([standalone download](https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH#download)). Run the "Evergreen Standalone Installer" as administrator.
 
 ## 🧩 Providers
 
 Through the `zebar` NPM package, Zebar exposes various system information via reactive "providers". Providers are a collection of functions and variables that can change over time.
 
-- [audio](#Audio)
-- [battery](#Battery)
-- [cpu](#CPU)
-- [date](#Date)
-- [disk](#Disk)
-- [glazewm](#GlazeWM)
-- [host](#Host)
-- [ip](#IP)
-- [keyboard](#Keyboard)
-- [komorebi](#Komorebi)
-- [media](#Media)
-- [memory](#Memory)
-- [network](#Network)
-- [systray](#Systray)
-- [weather](#Weather)
+- [audio](#audio)
+- [battery](#battery)
+- [cpu](#cpu)
+- [date](#date)
+- [disk](#disk)
+- [glazewm](#glazewm)
+- [host](#host)
+- [ip](#ip)
+- [keyboard](#keyboard)
+- [komorebi](#komorebi)
+- [media](#media)
+- [memory](#memory)
+- [network](#network)
+- [systray](#systray)
+- [weather](#weather)
 
 ### Audio
 
@@ -159,7 +188,7 @@ No config options.
 
 | Option             | Description                                        | Option type | Default value |
 | ------------------ | -------------------------------------------------- | ----------- | ------------- |
-| `formatting`         | Formatting of the current date into a custom string format. Affects the output of [`formatted`](#outputs-2). <br><br>Refer to [table of tokens](https://moment.github.io/luxon/#/formatting?id=table-of-tokens) for available date/time tokens. <br><br> **Examples:**<br> - `'yyyy LLL dd'` -> `2023 Feb 13`<br> - `"HH 'hours and' mm 'minutes'"` -> `20 hours and 55 minutes` | `string`    | `EEE	d MMM t`       |
+| `formatting`         | Formatting of the current date into a custom string format. Affects the output of [`formatted`](#outputs-2). <br><br>Refer to [table of tokens](https://moment.github.io/luxon/#/formatting?id=table-of-tokens) for available date/time tokens. <br><br> **Examples:**<br> - `'yyyy LLL dd'` -> `2023 Feb 13`<br> - `"HH 'hours and' mm 'minutes'"` -> `20 hours and 55 minutes` | `string`    | `EEE d MMM t`       |
 | `timezone`         | Either a UTC offset (eg. `UTC+8`) or an IANA timezone (eg. `America/New_York`). Affects the output of [`formatted`](#outputs-2).<br><br> A full list of available IANA timezones can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List).| `string`    | `local`       |
 | `locale`           | An ISO-639-1 locale, which is either a 2-letter language code (eg. `en`) or a 4-letter language + country code (eg. `en-gb`). Affects the output of [`formatted`](#outputs-2).<br><br> A full list of ISO-639-1 locales can be found [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes#Table).  | `string`    |       |
 | `refreshInterval` | How often this provider refreshes in milliseconds. | `number`    | `1000`        |
@@ -413,7 +442,9 @@ No config options.
 ### Systray
 
 #### Config
+
 No config options.
+
 #### Outputs
 
 | Variable          | Description | Return type | Supported OS                                                                                                                                                                                                                                                                                                                                                                                |
@@ -455,7 +486,5 @@ No config options.
 
 [discord-badge]: https://img.shields.io/discord/1041662798196908052.svg?logo=discord&colorB=7289DA
 [discord-link]: https://discord.gg/ud6z3qjRvM
-[downloads-badge]: https://img.shields.io/github/downloads/glzr-io/glazewm/total?logo=github&logoColor=white
-[downloads-link]: https://github.com/glzr-io/glazewm/releases
 [issues-badge]: https://img.shields.io/badge/good_first_issues-7057ff
 [issues-link]: https://github.com/glzr-io/zebar/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22
