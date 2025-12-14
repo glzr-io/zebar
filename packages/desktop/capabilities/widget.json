@@ -29,6 +29,8 @@
     "core:window:allow-set-resizable",
     "core:window:allow-set-position",
     "core:window:allow-set-size",
-    "core:window:allow-set-title"
+    "core:window:allow-set-title",
+    "core:window:allow-set-effects",
+    "core:window:allow-set-ignore-cursor-events"
   ]
 }
