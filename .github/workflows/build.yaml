@@ -66,6 +66,35 @@ jobs:
         run: |
           dotnet tool install --global AzureSignTool --version 5.0.0
 
+      # TODO: This is a temporary workaround for issue with v144 of WebView2 runtime.
+      # - https://github.com/MicrosoftEdge/WebView2Feedback/issues/5492
+      # - https://github.com/glzr-io/zebar/issues/252
+      - name: Add fixed WebView2 runtime (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $WEBVIEW2_VERSION = "143.0.3650.139"
+          $ARCH = if ("${{ matrix.tauri-target }}" -eq "aarch64-pc-windows-msvc") { "ARM64" } else { "X64" }
+          $NUPKG_URL = "https://www.nuget.org/api/v2/package/WebView2.Runtime.$ARCH/$WEBVIEW2_VERSION"
+          $RUNTIME_DIR = "packages/desktop/webview2-runtime"
+
+          # Download the NuGet package
+          Write-Host "Downloading WebView2.Runtime.$ARCH version $WEBVIEW2_VERSION..."
+          Invoke-WebRequest -Uri $NUPKG_URL -OutFile "webview2.nupkg"
+
+          # Extract the nupkg (it's a ZIP file)
+          Expand-Archive -Path "webview2.nupkg" -DestinationPath $RUNTIME_DIR -Force
+
+          # Update tauri.conf.json to use the fixed runtime
+          $confPath = "packages/desktop/tauri.conf.json"
+          $conf = Get-Content $confPath -Raw | ConvertFrom-Json
+          $conf.bundle.windows | Add-Member -NotePropertyName "webviewInstallMode" -NotePropertyValue @{
+            type = "fixedRuntime"
+            path = "./webview2-runtime"
+          } -Force
+          $conf | ConvertTo-Json -Depth 100 | Set-Content $confPath
+          Write-Host "Updated tauri.conf.json with fixed WebView2 runtime configuration"
+
       - run: pnpm i
       - run: pnpm run --filter zebar --filter @zebar/settings-ui build
 
