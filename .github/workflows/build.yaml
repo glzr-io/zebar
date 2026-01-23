@@ -78,12 +78,10 @@ jobs:
           $NUPKG_URL = "https://www.nuget.org/api/v2/package/WebView2.Runtime.$ARCH/$WEBVIEW2_VERSION"
           $RUNTIME_DIR = "packages/desktop/webview2-runtime"
 
-          # Download the NuGet package
-          Write-Host "Downloading WebView2.Runtime.$ARCH version $WEBVIEW2_VERSION..."
+          # Download and extract WebView2 runtime
           Invoke-WebRequest -Uri $NUPKG_URL -OutFile "webview2.nupkg"
-
-          # Extract the nupkg (it's a ZIP file)
-          Expand-Archive -Path "webview2.nupkg" -DestinationPath $RUNTIME_DIR -Force
+          Expand-Archive -Path "webview2.nupkg" -DestinationPath "webview2-temp" -Force
+          Move-Item -Path "webview2-temp/contentFiles/any/any/WebView2" -Destination $RUNTIME_DIR -Force
 
           # Update tauri.conf.json to use the fixed runtime
           $confPath = "packages/desktop/tauri.conf.json"
