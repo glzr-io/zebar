@@ -3,6 +3,8 @@ mod audio;
 mod battery;
 mod cpu;
 mod disk;
+#[cfg(windows)]
+mod gpu;
 mod host;
 mod ip;
 #[cfg(windows)]

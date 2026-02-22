@@ -17,4 +17,5 @@ export interface CpuOutput {
   logicalCoreCount: number;
   physicalCoreCount: number;
   vendor: string;
+  temperature: number | null;
 }

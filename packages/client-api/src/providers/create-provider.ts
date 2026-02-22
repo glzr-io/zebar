@@ -18,6 +18,11 @@ import type {
   DateProviderConfig,
   DateProvider,
 } from './date/date-provider-types';
+import { createGpuProvider } from './gpu/create-gpu-provider';
+import type {
+  GpuProviderConfig,
+  GpuProvider,
+} from './gpu/gpu-provider-types';
 import { createGlazeWmProvider } from './glazewm/create-glazewm-provider';
 import type {
   GlazeWmProviderConfig,
@@ -75,6 +80,7 @@ export interface ProviderConfigMap {
   audio: AudioProviderConfig;
   battery: BatteryProviderConfig;
   cpu: CpuProviderConfig;
+  gpu: GpuProviderConfig;
   date: DateProviderConfig;
   glazewm: GlazeWmProviderConfig;
   host: HostProviderConfig;
@@ -93,6 +99,7 @@ export interface ProviderMap {
   audio: AudioProvider;
   battery: BatteryProvider;
   cpu: CpuProvider;
+  gpu: GpuProvider;
   date: DateProvider;
   glazewm: GlazeWmProvider;
   host: HostProvider;
@@ -134,6 +141,8 @@ export function createProvider<T extends ProviderConfig>(
       return createBatteryProvider(config) as any;
     case 'cpu':
       return createCpuProvider(config) as any;
+    case 'gpu':
+      return createGpuProvider(config) as any;
     case 'date':
       return createDateProvider(config) as any;
     case 'glazewm':

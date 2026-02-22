@@ -47,6 +47,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+nvml-wrapper = "0.10"
+wmi = "0.14"
 systray-util = { path = "../../crates/systray-util" }
 komorebi-util = { path = "../../crates/komorebi-util" }
 windows-core = { workspace = true }

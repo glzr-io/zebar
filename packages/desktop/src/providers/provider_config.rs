@@ -2,7 +2,8 @@ use serde::Deserialize;
 
 #[cfg(windows)]
 use super::{
-  audio::AudioProviderConfig, keyboard::KeyboardProviderConfig,
+  audio::AudioProviderConfig, gpu::GpuProviderConfig,
+  keyboard::KeyboardProviderConfig,
   komorebi::KomorebiProviderConfig, media::MediaProviderConfig,
   systray::SystrayProviderConfig,
 };
@@ -20,6 +21,8 @@ pub enum ProviderConfig {
   Audio(AudioProviderConfig),
   Battery(BatteryProviderConfig),
   Cpu(CpuProviderConfig),
+  #[cfg(windows)]
+  Gpu(GpuProviderConfig),
   Host(HostProviderConfig),
   Ip(IpProviderConfig),
   #[cfg(windows)]
