@@ -5,6 +5,10 @@ use std::{
 
 use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
+
+#[cfg(unix)]
+use std::os::unix::net::{UnixStream, UnixListener};
+#[cfg(windows)]
 use uds_windows::{UnixListener, UnixStream};
 
 use crate::{Error, KomorebiOutput};

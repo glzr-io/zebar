@@ -7,7 +7,6 @@ mod host;
 mod ip;
 #[cfg(windows)]
 mod keyboard;
-#[cfg(windows)]
 mod komorebi;
 #[cfg(windows)]
 mod media;
