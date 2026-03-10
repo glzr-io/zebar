@@ -52,6 +52,7 @@ pub enum SystrayFunction {
   IconHoverLeave(SystrayIconArgs),
   IconHoverMove(SystrayIconArgs),
   IconLeftClick(SystrayIconArgs),
+  IconLeftDoubleClick(SystrayIconArgs),
   IconRightClick(SystrayIconArgs),
   IconMiddleClick(SystrayIconArgs),
 }

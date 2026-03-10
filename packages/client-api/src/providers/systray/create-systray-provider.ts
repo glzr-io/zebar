@@ -97,6 +97,15 @@ export function createSystrayProvider(
                 },
               });
             },
+            onLeftDoubleClick: (iconId: string) => {
+              return desktopCommands.callProviderFunction(configHash, {
+                type: 'systray',
+                function: {
+                  name: 'icon_left_double_click',
+                  args: { iconId },
+                },
+              });
+            },
             onRightClick: (iconId: string) => {
               return desktopCommands.callProviderFunction(configHash, {
                 type: 'systray',
