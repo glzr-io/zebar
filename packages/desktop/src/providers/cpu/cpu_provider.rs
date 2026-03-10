@@ -30,6 +30,48 @@ pub struct CpuProvider {
   common: CommonProviderState,
 }
 
+/// Cached resources for temperature readings to avoid
+/// re-initializing expensive system handles every poll.
+struct TempCache {
+  components: Components,
+  #[cfg(windows)]
+  wmi_connection: Option<wmi::WMIConnection>,
+}
+
+impl TempCache {
+  fn new() -> Self {
+    let components = Components::new_with_refreshed_list();
+
+    #[cfg(windows)]
+    return TempCache {
+      components,
+      wmi_connection: Self::init_wmi(),
+    };
+
+    #[cfg(not(windows))]
+    TempCache { components }
+  }
+
+  #[cfg(windows)]
+  fn init_wmi() -> Option<wmi::WMIConnection> {
+    for namespace in [
+      "root\\LibreHardwareMonitor",
+      "root\\OpenHardwareMonitor",
+    ] {
+      if let Ok(con) =
+        wmi::COMLibrary::new().and_then(|lib| {
+          wmi::WMIConnection::with_namespace_path(
+            namespace, lib,
+          )
+        })
+      {
+        return Some(con);
+      }
+    }
+    None
+  }
+}
+
 impl CpuProvider {
   pub fn new(
     config: CpuProviderConfig,
@@ -38,11 +80,15 @@ impl CpuProvider {
     CpuProvider { config, common }
   }
 
-  fn run_interval(&self) -> anyhow::Result<CpuOutput> {
+  fn run_interval(
+    &self,
+    temp_cache: &mut TempCache,
+  ) -> anyhow::Result<CpuOutput> {
     let mut sysinfo = self.common.sysinfo.blocking_lock();
     sysinfo.refresh_cpu();
 
-    let temperature = Self::get_temperature();
+    let temperature =
+      Self::get_temperature(temp_cache);
 
     Ok(CpuOutput {
       usage: sysinfo.global_cpu_info().cpu_usage(),
@@ -56,21 +102,34 @@ impl CpuProvider {
     })
   }
 
-  fn get_temperature() -> Option<f32> {
-    // Try platform-specific methods first, fall back to sysinfo.
+  fn get_temperature(
+    cache: &mut TempCache,
+  ) -> Option<f32> {
+    // Try platform-specific methods first, fall back to
+    // sysinfo.
     #[cfg(windows)]
     {
-      if let Some(temp) = Self::get_temperature_lhm_http() {
+      if let Some(temp) =
+        Self::get_temperature_lhm_http()
+      {
         return Some(temp);
       }
-      if let Some(temp) = Self::get_temperature_wmi() {
-        return Some(temp);
+      if let Some(ref con) = cache.wmi_connection {
+        if let Some(temp) =
+          Self::get_temperature_wmi(con)
+        {
+          return Some(temp);
+        }
       }
     }
 
-    // Fallback: sysinfo Components (works on Linux/macOS, rarely on Windows).
-    let mut components = Components::new_with_refreshed_list();
-    components.iter_mut().find_map(|c| {
+    // Fallback: sysinfo Components (works on
+    // Linux/macOS, rarely on Windows). Refresh cached
+    // components instead of re-creating them.
+    for c in cache.components.iter_mut() {
+      c.refresh();
+    }
+    cache.components.iter().find_map(|c| {
       let label = c.label().to_lowercase();
       if label.contains("cpu")
         || label.contains("tctl")
@@ -199,9 +258,9 @@ impl CpuProvider {
   /// Note: WMI is broken in LHM v0.9.5+, but kept as a fallback
   /// for older versions and OpenHardwareMonitor.
   #[cfg(windows)]
-  fn get_temperature_wmi() -> Option<f32> {
-    use serde::Deserialize as _;
-
+  fn get_temperature_wmi(
+    con: &wmi::WMIConnection,
+  ) -> Option<f32> {
     #[derive(Deserialize, Debug)]
     #[serde(rename_all = "PascalCase")]
     struct WmiSensor {
@@ -210,60 +269,42 @@ impl CpuProvider {
       value: f32,
     }
 
-    // Try LibreHardwareMonitor first, then OpenHardwareMonitor.
-    for namespace in [
-      "root\\LibreHardwareMonitor",
-      "root\\OpenHardwareMonitor",
-    ] {
-      let con = wmi::COMLibrary::new()
-        .and_then(|lib| {
-          wmi::WMIConnection::with_namespace_path(namespace, lib)
-        })
-        .ok()?;
+    let sensors: Vec<WmiSensor> = con
+      .raw_query(
+        "SELECT SensorType, Name, Value FROM Sensor \
+         WHERE SensorType = 'Temperature'",
+      )
+      .ok()
+      .unwrap_or_default();
 
-      let sensors: Vec<WmiSensor> = con
-        .raw_query(
-          "SELECT SensorType, Name, Value FROM Sensor \
-           WHERE SensorType = 'Temperature'",
-        )
-        .ok()
-        .unwrap_or_default();
+    // Find CPU Package or CPU average temperature.
+    let cpu_temp = sensors.iter().find_map(|s| {
+      let name = s.name.to_lowercase();
+      if s.sensor_type == "Temperature"
+        && (name.contains("cpu package")
+          || name.contains("core (tctl")
+          || name.contains("cpu (tctl"))
+      {
+        Some(s.value)
+      } else {
+        None
+      }
+    });
 
-      // Find CPU Package or CPU average temperature.
-      let cpu_temp = sensors.iter().find_map(|s| {
+    // If no package temp, try any CPU core temperature.
+    cpu_temp.or_else(|| {
+      sensors.iter().find_map(|s| {
         let name = s.name.to_lowercase();
         if s.sensor_type == "Temperature"
-          && (name.contains("cpu package")
-            || name.contains("core (tctl")
-            || name.contains("cpu (tctl"))
+          && (name.starts_with("cpu core")
+            || name.starts_with("core #"))
         {
           Some(s.value)
         } else {
           None
         }
-      });
-
-      // If no package temp, try any CPU core temperature.
-      let temp = cpu_temp.or_else(|| {
-        sensors.iter().find_map(|s| {
-          let name = s.name.to_lowercase();
-          if s.sensor_type == "Temperature"
-            && (name.starts_with("cpu core")
-              || name.starts_with("core #"))
-          {
-            Some(s.value)
-          } else {
-            None
-          }
-        })
-      });
-
-      if temp.is_some() {
-        return temp;
-      }
-    }
-
-    None
+      })
+    })
   }
 }
 
@@ -273,12 +314,15 @@ impl Provider for CpuProvider {
   }
 
   fn start_sync(&mut self) {
-    let mut interval = SyncInterval::new(self.config.refresh_interval);
+    let mut temp_cache = TempCache::new();
+    let mut interval =
+      SyncInterval::new(self.config.refresh_interval);
 
     loop {
       crossbeam::select! {
         recv(interval.tick()) -> _ => {
-          let output = self.run_interval();
+          let output =
+            self.run_interval(&mut temp_cache);
           self.common.emitter.emit_output(output);
         }
         recv(self.common.input.sync_rx) -> input => {

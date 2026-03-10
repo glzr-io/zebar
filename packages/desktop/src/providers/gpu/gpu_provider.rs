@@ -37,8 +37,10 @@ impl GpuProvider {
     GpuProvider { config, common }
   }
 
-  fn run_interval(&self) -> anyhow::Result<GpuOutput> {
-    let nvml = Nvml::init()?;
+  fn run_interval(
+    &self,
+    nvml: &Nvml,
+  ) -> anyhow::Result<GpuOutput> {
     let device = nvml.device_by_index(0)?;
 
     let name = device.name()?;
@@ -73,12 +75,19 @@ impl Provider for GpuProvider {
   }
 
   fn start_sync(&mut self) {
-    let mut interval = SyncInterval::new(self.config.refresh_interval);
+    let nvml = Nvml::init();
+    let mut interval =
+      SyncInterval::new(self.config.refresh_interval);
 
     loop {
       crossbeam::select! {
         recv(interval.tick()) -> _ => {
-          let output = self.run_interval();
+          let output = match &nvml {
+            Ok(nvml) => self.run_interval(nvml),
+            Err(e) => Err(anyhow::anyhow!(
+              "Failed to initialize NVML: {e}"
+            )),
+          };
           self.common.emitter.emit_output(output);
         }
         recv(self.common.input.sync_rx) -> input => {
