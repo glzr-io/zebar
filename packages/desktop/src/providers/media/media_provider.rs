@@ -145,13 +145,13 @@ impl MediaProvider {
           if let Ok(event) = event {
             debug!("Got media session event: {:?}", event);
 
-            if let Err(err) = self.handle_event(event) {
+            if let Err(err) = self.handle_event(event, &manager) {
               warn!("Error handling media session event: {}", err);
             }
           }
         }
         recv(timeline_interval) -> _ => {
-          if let Err(err) = self.handle_event(MediaSessionEvent::TimelineRefresh) {
+          if let Err(err) = self.handle_event(MediaSessionEvent::TimelineRefresh, &manager) {
             warn!("Error handling timeline refresh: {}", err);
           }
         }
@@ -180,15 +180,14 @@ impl MediaProvider {
   fn handle_event(
     &mut self,
     event: MediaSessionEvent,
+    manager: &GsmtcManager,
   ) -> anyhow::Result<()> {
     match event {
       MediaSessionEvent::CurrentSessionChanged => {
-        let manager = GsmtcManager::RequestAsync()?.get()?;
-        self.update_current_session(&manager)?;
+        self.update_current_session(manager)?;
       }
       MediaSessionEvent::SessionAddOrRemove => {
-        let manager = GsmtcManager::RequestAsync()?.get()?;
-        self.update_session_states(&manager)?;
+        self.update_session_states(manager)?;
       }
       MediaSessionEvent::TimelineRefresh => {
         // Update timeline properties for all playing sessions.
