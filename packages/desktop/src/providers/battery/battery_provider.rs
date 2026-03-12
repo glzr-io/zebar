@@ -55,12 +55,8 @@ impl BatteryProvider {
     manager.refresh(battery)?;
 
     Ok(BatteryOutput {
-      charge_percent: battery
-        .state_of_charge()
-        .get::<percent>(),
-      health_percent: battery
-        .state_of_health()
-        .get::<percent>(),
+      charge_percent: battery.state_of_charge().get::<percent>(),
+      health_percent: battery.state_of_health().get::<percent>(),
       state: battery.state().to_string(),
       is_charging: battery.state() == State::Charging,
       time_till_full: battery
@@ -69,9 +65,7 @@ impl BatteryProvider {
       time_till_empty: battery
         .time_to_empty()
         .map(|time| time.get::<millisecond>()),
-      power_consumption: battery
-        .energy_rate()
-        .get::<watt>(),
+      power_consumption: battery.energy_rate().get::<watt>(),
       voltage: battery.voltage().get::<volt>(),
       cycle_count: battery.cycle_count(),
     })
@@ -95,27 +89,21 @@ impl Provider for BatteryProvider {
       }
     };
 
-    let mut battery = match manager
-      .batteries()
-      .and_then(|mut b| b.nth(0).transpose())
-    {
-      Ok(Some(b)) => b,
-      other => {
-        let err = match other {
-          Ok(None) => anyhow::anyhow!("No battery found."),
-          Err(e) => e.into(),
-          _ => unreachable!(),
-        };
-        self
-          .common
-          .emitter
-          .emit_output::<BatteryOutput>(Err(err));
-        return;
-      }
-    };
+    let mut battery =
+      match manager.batteries().and_then(|mut b| b.nth(0).transpose()) {
+        Ok(Some(b)) => b,
+        other => {
+          let err = match other {
+            Ok(None) => anyhow::anyhow!("No battery found."),
+            Err(e) => e.into(),
+            _ => unreachable!(),
+          };
+          self.common.emitter.emit_output::<BatteryOutput>(Err(err));
+          return;
+        }
+      };
 
-    let mut interval =
-      SyncInterval::new(self.config.refresh_interval);
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
 
     loop {
       crossbeam::select! {
