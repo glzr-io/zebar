@@ -54,17 +54,12 @@ impl TempCache {
 
   #[cfg(windows)]
   fn init_wmi() -> Option<wmi::WMIConnection> {
-    for namespace in [
-      "root\\LibreHardwareMonitor",
-      "root\\OpenHardwareMonitor",
-    ] {
-      if let Ok(con) =
-        wmi::COMLibrary::new().and_then(|lib| {
-          wmi::WMIConnection::with_namespace_path(
-            namespace, lib,
-          )
-        })
-      {
+    for namespace in
+      ["root\\LibreHardwareMonitor", "root\\OpenHardwareMonitor"]
+    {
+      if let Ok(con) = wmi::COMLibrary::new().and_then(|lib| {
+        wmi::WMIConnection::with_namespace_path(namespace, lib)
+      }) {
         return Some(con);
       }
     }
@@ -87,8 +82,7 @@ impl CpuProvider {
     let mut sysinfo = self.common.sysinfo.blocking_lock();
     sysinfo.refresh_cpu();
 
-    let temperature =
-      Self::get_temperature(temp_cache);
+    let temperature = Self::get_temperature(temp_cache);
 
     Ok(CpuOutput {
       usage: sysinfo.global_cpu_info().cpu_usage(),
@@ -102,22 +96,16 @@ impl CpuProvider {
     })
   }
 
-  fn get_temperature(
-    cache: &mut TempCache,
-  ) -> Option<f32> {
+  fn get_temperature(cache: &mut TempCache) -> Option<f32> {
     // Try platform-specific methods first, fall back to
     // sysinfo.
     #[cfg(windows)]
     {
-      if let Some(temp) =
-        Self::get_temperature_lhm_http()
-      {
+      if let Some(temp) = Self::get_temperature_lhm_http() {
         return Some(temp);
       }
       if let Some(ref con) = cache.wmi_connection {
-        if let Some(temp) =
-          Self::get_temperature_wmi(con)
-        {
+        if let Some(temp) = Self::get_temperature_wmi(con) {
           return Some(temp);
         }
       }
@@ -148,17 +136,20 @@ impl CpuProvider {
   /// (Options > Remote Web Server > Run).
   #[cfg(windows)]
   fn get_temperature_lhm_http() -> Option<f32> {
-    use std::io::{BufRead, BufReader, Write};
-    use std::net::TcpStream;
-    use std::time::Duration;
+    use std::{
+      io::{BufRead, BufReader, Write},
+      net::TcpStream,
+      time::Duration,
+    };
 
-    let mut stream =
-      TcpStream::connect_timeout(
-        &"127.0.0.1:8085".parse().ok()?,
-        Duration::from_millis(100),
-      )
+    let mut stream = TcpStream::connect_timeout(
+      &"127.0.0.1:8085".parse().ok()?,
+      Duration::from_millis(100),
+    )
+    .ok()?;
+    stream
+      .set_read_timeout(Some(Duration::from_millis(500)))
       .ok()?;
-    stream.set_read_timeout(Some(Duration::from_millis(500))).ok()?;
     stream
       .write_all(b"GET /data.json HTTP/1.0\r\nHost: localhost\r\n\r\n")
       .ok()?;
@@ -181,13 +172,12 @@ impl CpuProvider {
 
   /// Recursively search the LHM JSON tree for a CPU temperature node.
   #[cfg(windows)]
-  fn find_cpu_temp_in_lhm_json(
-    node: &serde_json::Value,
-  ) -> Option<f32> {
+  fn find_cpu_temp_in_lhm_json(node: &serde_json::Value) -> Option<f32> {
     let text = node.get("Text")?.as_str()?;
     let children = node.get("Children")?.as_array()?;
 
-    // Look for CPU hardware nodes (e.g. "AMD Ryzen ...", "Intel Core ...").
+    // Look for CPU hardware nodes (e.g. "AMD Ryzen ...", "Intel Core
+    // ...").
     let text_lower = text.to_lowercase();
     let is_cpu_hardware = text_lower.contains("ryzen")
       || text_lower.contains("intel")
@@ -258,9 +248,7 @@ impl CpuProvider {
   /// Note: WMI is broken in LHM v0.9.5+, but kept as a fallback
   /// for older versions and OpenHardwareMonitor.
   #[cfg(windows)]
-  fn get_temperature_wmi(
-    con: &wmi::WMIConnection,
-  ) -> Option<f32> {
+  fn get_temperature_wmi(con: &wmi::WMIConnection) -> Option<f32> {
     #[derive(Deserialize, Debug)]
     #[serde(rename_all = "PascalCase")]
     struct WmiSensor {
@@ -296,8 +284,7 @@ impl CpuProvider {
       sensors.iter().find_map(|s| {
         let name = s.name.to_lowercase();
         if s.sensor_type == "Temperature"
-          && (name.starts_with("cpu core")
-            || name.starts_with("core #"))
+          && (name.starts_with("cpu core") || name.starts_with("core #"))
         {
           Some(s.value)
         } else {
@@ -315,8 +302,7 @@ impl Provider for CpuProvider {
 
   fn start_sync(&mut self) {
     let mut temp_cache = TempCache::new();
-    let mut interval =
-      SyncInterval::new(self.config.refresh_interval);
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
 
     loop {
       crossbeam::select! {

@@ -37,23 +37,19 @@ impl GpuProvider {
     GpuProvider { config, common }
   }
 
-  fn run_interval(
-    &self,
-    nvml: &Nvml,
-  ) -> anyhow::Result<GpuOutput> {
+  fn run_interval(&self, nvml: &Nvml) -> anyhow::Result<GpuOutput> {
     let device = nvml.device_by_index(0)?;
 
     let name = device.name()?;
 
     let temperature = device
-      .temperature(nvml_wrapper::enum_wrappers::device::TemperatureSensor::Gpu)
+      .temperature(
+        nvml_wrapper::enum_wrappers::device::TemperatureSensor::Gpu,
+      )
       .ok()
       .map(|t| t as f32);
 
-    let usage = device
-      .utilization_rates()
-      .ok()
-      .map(|u| u.gpu as f32);
+    let usage = device.utilization_rates().ok().map(|u| u.gpu as f32);
 
     let memory_info = device.memory_info().ok();
     let memory_used = memory_info.as_ref().map(|m| m.used);
@@ -76,8 +72,7 @@ impl Provider for GpuProvider {
 
   fn start_sync(&mut self) {
     let nvml = Nvml::init();
-    let mut interval =
-      SyncInterval::new(self.config.refresh_interval);
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
 
     loop {
       crossbeam::select! {

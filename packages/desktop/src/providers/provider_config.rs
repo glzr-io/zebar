@@ -3,9 +3,8 @@ use serde::Deserialize;
 #[cfg(windows)]
 use super::{
   audio::AudioProviderConfig, gpu::GpuProviderConfig,
-  keyboard::KeyboardProviderConfig,
-  komorebi::KomorebiProviderConfig, media::MediaProviderConfig,
-  systray::SystrayProviderConfig,
+  keyboard::KeyboardProviderConfig, komorebi::KomorebiProviderConfig,
+  media::MediaProviderConfig, systray::SystrayProviderConfig,
 };
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
