@@ -85,6 +85,10 @@ impl SystrayProvider {
         &args.icon_id.parse()?,
         &SystrayIconAction::LeftClick,
       ),
+      SystrayFunction::IconLeftDoubleClick(args) => systray.send_action(
+        &args.icon_id.parse()?,
+        &SystrayIconAction::LeftDoubleClick,
+      ),
       SystrayFunction::IconRightClick(args) => systray.send_action(
         &args.icon_id.parse()?,
         &SystrayIconAction::RightClick,

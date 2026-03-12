@@ -16,6 +16,7 @@ export interface SystrayOutput {
   onHoverMove: (iconId: string) => Promise<void>;
   onRightClick: (iconId: string) => Promise<void>;
   onLeftClick: (iconId: string) => Promise<void>;
+  onLeftDoubleClick: (iconId: string) => Promise<void>;
   onMiddleClick: (iconId: string) => Promise<void>;
 }
 

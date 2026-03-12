@@ -14,9 +14,9 @@ use windows::Win32::{
     Shell::{NIN_POPUPCLOSE, NIN_POPUPOPEN, NIN_SELECT},
     WindowsAndMessaging::{
       AllowSetForegroundWindow, GetWindowThreadProcessId, IsWindow,
-      SendNotifyMessageW, WM_CONTEXTMENU, WM_LBUTTONDOWN, WM_LBUTTONUP,
-      WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE, WM_RBUTTONDOWN,
-      WM_RBUTTONUP,
+      SendNotifyMessageW, WM_CONTEXTMENU, WM_LBUTTONDBLCLK,
+      WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
+      WM_MOUSEMOVE, WM_RBUTTONDOWN, WM_RBUTTONUP,
     },
   },
 };
@@ -209,6 +209,7 @@ pub enum SystrayIconAction {
   HoverLeave,
   HoverMove,
   LeftClick,
+  LeftDoubleClick,
   RightClick,
   MiddleClick,
 }
@@ -440,6 +441,7 @@ impl Systray {
     let is_mouse_click = matches!(
       action,
       SystrayIconAction::LeftClick
+        | SystrayIconAction::LeftDoubleClick
         | SystrayIconAction::RightClick
         | SystrayIconAction::MiddleClick
     );
@@ -461,6 +463,9 @@ impl Systray {
 
     let wm_messages = match action {
       SystrayIconAction::LeftClick => vec![WM_LBUTTONDOWN, WM_LBUTTONUP],
+      SystrayIconAction::LeftDoubleClick => {
+        vec![WM_LBUTTONDBLCLK, WM_LBUTTONUP]
+      }
       SystrayIconAction::RightClick => {
         vec![WM_RBUTTONDOWN, WM_RBUTTONUP]
       }
@@ -489,7 +494,9 @@ impl Systray {
       let v3_message = match action {
         SystrayIconAction::HoverEnter => NIN_POPUPOPEN,
         SystrayIconAction::HoverLeave => NIN_POPUPCLOSE,
-        SystrayIconAction::LeftClick => NIN_SELECT,
+        SystrayIconAction::LeftClick | SystrayIconAction::LeftDoubleClick => {
+          NIN_SELECT
+        }
         SystrayIconAction::RightClick => WM_CONTEXTMENU,
         _ => return Ok(()),
       };
