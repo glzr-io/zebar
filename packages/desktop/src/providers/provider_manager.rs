@@ -11,7 +11,7 @@ use tracing::info;
 
 #[cfg(windows)]
 use super::{
-  audio::AudioProvider, keyboard::KeyboardProvider,
+  audio::AudioProvider, gpu::GpuProvider, keyboard::KeyboardProvider,
   komorebi::KomorebiProvider, media::MediaProvider,
   systray::SystrayProvider,
 };
@@ -296,6 +296,11 @@ impl ProviderManager {
           }
           ProviderConfig::Cpu(config) => {
             let mut provider = CpuProvider::new(config, common);
+            provider.start_sync();
+          }
+          #[cfg(windows)]
+          ProviderConfig::Gpu(config) => {
+            let mut provider = GpuProvider::new(config, common);
             provider.start_sync();
           }
           ProviderConfig::Host(config) => {
