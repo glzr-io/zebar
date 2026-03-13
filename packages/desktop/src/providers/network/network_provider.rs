@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sysinfo::Networks;
 
 use super::{
-  wifi_hotspot::{default_gateway_wifi, WifiHotstop},
+  wifi_hotspot::{WifiHotstop, WlanMonitor},
   InterfaceType, NetworkGateway, NetworkInterface, NetworkTraffic,
   NetworkTrafficMeasure,
 };
@@ -32,6 +32,7 @@ pub struct NetworkProvider {
   config: NetworkProviderConfig,
   common: CommonProviderState,
   netinfo: Networks,
+  wlan_monitor: Option<WlanMonitor>,
 }
 
 impl NetworkProvider {
@@ -43,6 +44,7 @@ impl NetworkProvider {
       config,
       common,
       netinfo: Networks::new_with_refreshed_list(),
+      wlan_monitor: WlanMonitor::new(),
     }
   }
 
@@ -60,6 +62,9 @@ impl NetworkProvider {
     let transmitted_per_sec =
       transmitted / self.config.refresh_interval * 1000;
 
+    let wifi_info =
+      self.wlan_monitor.as_ref().and_then(|m| m.query().ok());
+
     Ok(NetworkOutput {
       default_interface: default_interface
         .as_ref()
@@ -67,9 +72,7 @@ impl NetworkProvider {
       default_gateway: default_interface
         .and_then(|interface| interface.gateway)
         .and_then(|gateway| {
-          default_gateway_wifi()
-            .map(|wifi| Self::transform_gateway(&gateway, wifi))
-            .ok()
+          wifi_info.map(|wifi| Self::transform_gateway(&gateway, wifi))
         }),
       interfaces: interfaces
         .iter()
