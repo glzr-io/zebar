@@ -151,7 +151,10 @@ impl MediaProvider {
           }
         }
         recv(timeline_interval) -> _ => {
-          if let Err(err) = self.handle_event(MediaSessionEvent::TimelineRefresh, &manager) {
+          if let Err(err) = self.handle_event(
+            MediaSessionEvent::TimelineRefresh,
+            &manager,
+          ) {
             warn!("Error handling timeline refresh: {}", err);
           }
         }

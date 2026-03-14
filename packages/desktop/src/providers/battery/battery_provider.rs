@@ -1,3 +1,4 @@
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use starship_battery::{
   units::{
@@ -47,8 +48,33 @@ impl BatteryProvider {
     BatteryProvider { config, common }
   }
 
+  fn run(&mut self) -> anyhow::Result<()> {
+    let manager = Manager::new()?;
+    let mut battery = manager
+      .batteries()
+      .and_then(|mut batteries| batteries.nth(0).transpose())?
+      .context("No battery found.")?;
+
+    let mut interval = SyncInterval::new(self.config.refresh_interval);
+
+    loop {
+      crossbeam::select! {
+        recv(interval.tick()) -> _ => {
+          let output = Self::run_interval(&manager, &mut battery);
+          self.common.emitter.emit_output(output);
+        }
+        recv(self.common.input.sync_rx) -> input => {
+          if let Ok(ProviderInputMsg::Stop) = input {
+            break;
+          }
+        }
+      }
+    }
+
+    Ok(())
+  }
+
   fn run_interval(
-    &self,
     manager: &Manager,
     battery: &mut starship_battery::Battery,
   ) -> anyhow::Result<BatteryOutput> {
@@ -78,47 +104,8 @@ impl Provider for BatteryProvider {
   }
 
   fn start_sync(&mut self) {
-    let manager = match Manager::new() {
-      Ok(m) => m,
-      Err(e) => {
-        self
-          .common
-          .emitter
-          .emit_output::<BatteryOutput>(Err(e.into()));
-        return;
-      }
-    };
-
-    let mut battery =
-      match manager.batteries().and_then(|mut b| b.nth(0).transpose()) {
-        Ok(Some(b)) => b,
-        other => {
-          let err = match other {
-            Ok(None) => anyhow::anyhow!("No battery found."),
-            Err(e) => e.into(),
-            _ => unreachable!(),
-          };
-          self.common.emitter.emit_output::<BatteryOutput>(Err(err));
-          return;
-        }
-      };
-
-    let mut interval = SyncInterval::new(self.config.refresh_interval);
-
-    loop {
-      crossbeam::select! {
-        recv(interval.tick()) -> _ => {
-          let output = self.run_interval(
-            &manager, &mut battery,
-          );
-          self.common.emitter.emit_output(output);
-        }
-        recv(self.common.input.sync_rx) -> input => {
-          if let Ok(ProviderInputMsg::Stop) = input {
-            break;
-          }
-        }
-      }
+    if let Err(err) = self.run() {
+      self.common.emitter.emit_output::<BatteryOutput>(Err(err));
     }
   }
 }
