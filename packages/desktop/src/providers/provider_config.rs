@@ -1,10 +1,11 @@
 use serde::Deserialize;
 
+#[cfg(any(target_os = "macos", windows))]
+use super::komorebi::KomorebiProviderConfig;
 #[cfg(windows)]
 use super::{
   audio::AudioProviderConfig, keyboard::KeyboardProviderConfig,
-  komorebi::KomorebiProviderConfig, media::MediaProviderConfig,
-  systray::SystrayProviderConfig,
+  media::MediaProviderConfig, systray::SystrayProviderConfig,
 };
 use super::{
   battery::BatteryProviderConfig, cpu::CpuProviderConfig,
@@ -22,7 +23,7 @@ pub enum ProviderConfig {
   Cpu(CpuProviderConfig),
   Host(HostProviderConfig),
   Ip(IpProviderConfig),
-  #[cfg(windows)]
+  #[cfg(any(target_os = "macos", windows))]
   Komorebi(KomorebiProviderConfig),
   #[cfg(windows)]
   Media(MediaProviderConfig),

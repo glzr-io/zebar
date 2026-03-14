@@ -1,9 +1,11 @@
 use serde::Serialize;
 
+#[cfg(any(target_os = "macos", windows))]
+use super::komorebi::KomorebiOutput;
 #[cfg(windows)]
 use super::{
-  audio::AudioOutput, keyboard::KeyboardOutput, komorebi::KomorebiOutput,
-  media::MediaOutput, systray::SystrayOutput,
+  audio::AudioOutput, keyboard::KeyboardOutput, media::MediaOutput,
+  systray::SystrayOutput,
 };
 use super::{
   battery::BatteryOutput, cpu::CpuOutput, disk::DiskOutput,
@@ -33,7 +35,7 @@ pub enum ProviderOutput {
   Cpu(CpuOutput),
   Host(HostOutput),
   Ip(IpOutput),
-  #[cfg(windows)]
+  #[cfg(any(target_os = "macos", windows))]
   Komorebi(KomorebiOutput),
   #[cfg(windows)]
   Media(MediaOutput),
@@ -58,11 +60,16 @@ impl_provider_output! {
   Weather(WeatherOutput)
 }
 
+#[cfg(target_os = "macos")]
+impl_provider_output! {
+  Komorebi(KomorebiOutput),
+}
+
 #[cfg(windows)]
 impl_provider_output! {
   Audio(AudioOutput),
-  Komorebi(KomorebiOutput),
   Media(MediaOutput),
   Keyboard(KeyboardOutput),
+  Komorebi(KomorebiOutput),
   Systray(SystrayOutput),
 }

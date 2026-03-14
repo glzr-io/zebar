@@ -14,4 +14,6 @@ serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
 uds_windows = "1"

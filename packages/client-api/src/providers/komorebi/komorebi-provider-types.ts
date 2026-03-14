@@ -53,9 +53,10 @@ export interface KomorebiResponse {
 
 export interface KomorebiMonitor {
   id: number;
+  device: string | null;
   deviceId: string;
   focusedWorkspaceIndex: number;
-  name: string;
+  name: string | null;
   size: KomorebiRect;
   workAreaOffset: number | null;
   workAreaSize: KomorebiRect;
@@ -82,10 +83,14 @@ export interface KomorebiContainer {
 }
 
 export interface KomorebiWindow {
+  id: number | null;
   class: string | null;
   exe: string | null;
-  hwnd: number;
+  hwnd: number | null;
   title: string | null;
+  role: string | null;
+  subrole: string | null;
+  icon_path: string | null;
 }
 
 export interface KomorebiRect {

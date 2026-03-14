@@ -41,9 +41,10 @@ impl<'de> Deserialize<'de> for KomorebiOutput {
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiMonitor {
   pub id: isize,
-  pub device_id: String,
+  pub device: Option<String>,
+  pub device_id: Option<String>,
   pub focused_workspace_index: usize,
-  pub name: String,
+  pub name: Option<String>,
   pub size: Rect,
   pub work_area_offset: Option<Rect>,
   pub work_area_size: Rect,
@@ -58,8 +59,9 @@ impl<'de> Deserialize<'de> for KomorebiMonitor {
     #[derive(Deserialize)]
     struct Monitor {
       id: isize,
-      device_id: String,
-      name: String,
+      device: Option<String>,
+      device_id: Option<String>,
+      name: Option<String>,
       size: Rect,
       work_area_offset: Option<Rect>,
       work_area_size: Rect,
@@ -76,6 +78,7 @@ impl<'de> Deserialize<'de> for KomorebiMonitor {
 
     Ok(KomorebiMonitor {
       id: monitor.id,
+      device: monitor.device,
       device_id: monitor.device_id,
       name: monitor.name,
       size: monitor.size,
@@ -183,13 +186,60 @@ impl<'de> Deserialize<'de> for KomorebiContainer {
   }
 }
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KomorebiWindow {
+  pub id: Option<u64>,
   pub class: Option<String>,
   pub exe: Option<String>,
-  pub hwnd: u64,
+  pub hwnd: Option<u64>,
   pub title: Option<String>,
+  pub role: Option<String>,
+  pub subrole: Option<String>,
+  pub icon_path: Option<String>,
+}
+impl<'de> Deserialize<'de> for KomorebiWindow {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    #[derive(Deserialize, Default)]
+    struct WindowDetails {
+      title: Option<String>,
+      exe: Option<String>,
+      role: Option<String>,
+      subrole: Option<String>,
+      icon_path: Option<String>,
+    }
+
+    #[derive(Deserialize)]
+    struct Window {
+      id: Option<u64>,
+      class: Option<String>,
+      exe: Option<String>,
+      hwnd: Option<u64>,
+      title: Option<String>,
+      role: Option<String>,
+      subrole: Option<String>,
+      icon_path: Option<String>,
+      details: Option<WindowDetails>,
+    }
+
+    let window = Window::deserialize(deserializer)?;
+    let details = window.details.unwrap_or_default();
+
+    // Prefer top-level fields, fallback to `details`.
+    Ok(KomorebiWindow {
+      id: window.id,
+      class: window.class,
+      exe: window.exe.or(details.exe),
+      hwnd: window.hwnd,
+      title: window.title.or(details.title),
+      role: window.role.or(details.role),
+      subrole: window.subrole.or(details.subrole),
+      icon_path: window.icon_path.or(details.icon_path),
+    })
+  }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

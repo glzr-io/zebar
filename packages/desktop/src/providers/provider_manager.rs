@@ -9,10 +9,11 @@ use tokio::{
 };
 use tracing::info;
 
+#[cfg(any(target_os = "macos", windows))]
+use super::komorebi::KomorebiProvider;
 #[cfg(windows)]
 use super::{
-  audio::AudioProvider, keyboard::KeyboardProvider,
-  komorebi::KomorebiProvider, media::MediaProvider,
+  audio::AudioProvider, keyboard::KeyboardProvider, media::MediaProvider,
   systray::SystrayProvider,
 };
 use super::{
@@ -249,10 +250,10 @@ impl ProviderManager {
       ProviderConfig::Ip(..) | ProviderConfig::Weather(..) => {
         RuntimeType::Async
       }
+      #[cfg(any(target_os = "macos", windows))]
+      ProviderConfig::Komorebi(..) => RuntimeType::Async,
       #[cfg(windows)]
-      ProviderConfig::Systray(..) | ProviderConfig::Komorebi(..) => {
-        RuntimeType::Async
-      }
+      ProviderConfig::Systray(..) => RuntimeType::Async,
       _ => RuntimeType::Sync,
     };
 
@@ -268,14 +269,14 @@ impl ProviderManager {
             let mut provider = WeatherProvider::new(config, common);
             provider.start_async().await;
           }
-          #[cfg(windows)]
-          ProviderConfig::Systray(config) => {
-            let mut provider = SystrayProvider::new(config, common);
+          #[cfg(any(target_os = "macos", windows))]
+          ProviderConfig::Komorebi(config) => {
+            let mut provider = KomorebiProvider::new(config, common);
             provider.start_async().await;
           }
           #[cfg(windows)]
-          ProviderConfig::Komorebi(config) => {
-            let mut provider = KomorebiProvider::new(config, common);
+          ProviderConfig::Systray(config) => {
+            let mut provider = SystrayProvider::new(config, common);
             provider.start_async().await;
           }
           _ => unreachable!(),
