@@ -9,17 +9,18 @@ use tokio::{
 };
 use tracing::info;
 
+#[cfg(any(target_os = "macos", windows))]
+use super::komorebi::KomorebiProvider;
 #[cfg(windows)]
 use super::{
-  audio::AudioProvider, keyboard::KeyboardProvider,
-  media::MediaProvider, systray::SystrayProvider,
+  audio::AudioProvider, keyboard::KeyboardProvider, media::MediaProvider,
+  systray::SystrayProvider,
 };
 use super::{
   battery::BatteryProvider, cpu::CpuProvider, disk::DiskProvider,
-  host::HostProvider, ip::IpProvider, komorebi::KomorebiProvider,
-  memory::MemoryProvider, network::NetworkProvider,
-  weather::WeatherProvider, Provider, ProviderConfig,
-  ProviderFunction, ProviderFunctionResponse,
+  host::HostProvider, ip::IpProvider, memory::MemoryProvider,
+  network::NetworkProvider, weather::WeatherProvider, Provider,
+  ProviderConfig, ProviderFunction, ProviderFunctionResponse,
   ProviderFunctionResult, ProviderOutput, RuntimeType,
 };
 
@@ -246,13 +247,13 @@ impl ProviderManager {
     common: CommonProviderState,
   ) -> anyhow::Result<(task::JoinHandle<()>, RuntimeType)> {
     let runtime_type = match config {
-      ProviderConfig::Ip(..) | ProviderConfig::Komorebi(..) | ProviderConfig::Weather(..) => {
+      ProviderConfig::Ip(..) | ProviderConfig::Weather(..) => {
         RuntimeType::Async
       }
+      #[cfg(any(target_os = "macos", windows))]
+      ProviderConfig::Komorebi(..) => RuntimeType::Async,
       #[cfg(windows)]
-      ProviderConfig::Systray(..) => {
-        RuntimeType::Async
-      }
+      ProviderConfig::Systray(..) => RuntimeType::Async,
       _ => RuntimeType::Sync,
     };
 
@@ -268,13 +269,14 @@ impl ProviderManager {
             let mut provider = WeatherProvider::new(config, common);
             provider.start_async().await;
           }
+          #[cfg(any(target_os = "macos", windows))]
+          ProviderConfig::Komorebi(config) => {
+            let mut provider = KomorebiProvider::new(config, common);
+            provider.start_async().await;
+          }
           #[cfg(windows)]
           ProviderConfig::Systray(config) => {
             let mut provider = SystrayProvider::new(config, common);
-            provider.start_async().await;
-          }
-          ProviderConfig::Komorebi(config) => {
-            let mut provider = KomorebiProvider::new(config, common);
             provider.start_async().await;
           }
           _ => unreachable!(),

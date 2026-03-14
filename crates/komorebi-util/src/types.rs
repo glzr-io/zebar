@@ -203,7 +203,7 @@ impl<'de> Deserialize<'de> for KomorebiWindow {
   where
     D: Deserializer<'de>,
   {
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Default)]
     struct WindowDetails {
       title: Option<String>,
       exe: Option<String>,
@@ -222,39 +222,22 @@ impl<'de> Deserialize<'de> for KomorebiWindow {
       role: Option<String>,
       subrole: Option<String>,
       icon_path: Option<String>,
-      details: Option<WindowDetails>
+      details: Option<WindowDetails>,
     }
 
     let window = Window::deserialize(deserializer)?;
+    let details = window.details.unwrap_or_default();
 
-    // Prefer top-level, else details, else None
-    let (
-      exe,
-      title,
-      role,
-      subrole,
-      icon_path,
-    ) = match window.details {
-      Some(details) => (
-        window.exe.or(details.exe),
-        window.title.or(details.title),
-        window.role.or(details.role),
-        window.subrole.or(details.subrole),
-        window.icon_path.or(details.icon_path),
-      ),
-      None => (window.exe, window.title, window.role, window.subrole, window.icon_path),
-    };
-
-
+    // Prefer top-level fields, fallback to `details`.
     Ok(KomorebiWindow {
       id: window.id,
       class: window.class,
-      exe,
+      exe: window.exe.or(details.exe),
       hwnd: window.hwnd,
-      title,
-      role,
-      subrole,
-      icon_path,
+      title: window.title.or(details.title),
+      role: window.role.or(details.role),
+      subrole: window.subrole.or(details.subrole),
+      icon_path: window.icon_path.or(details.icon_path),
     })
   }
 }

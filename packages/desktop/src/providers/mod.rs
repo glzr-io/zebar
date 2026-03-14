@@ -7,6 +7,7 @@ mod host;
 mod ip;
 #[cfg(windows)]
 mod keyboard;
+#[cfg(any(target_os = "macos", windows))]
 mod komorebi;
 #[cfg(windows)]
 mod media;
