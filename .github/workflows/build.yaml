@@ -99,11 +99,10 @@ jobs:
             -f pkcs12 \
             -k "$KEYCHAIN_PATH"
 
-          # Verify that the certificate was imported.
-          CERT_INFO=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Apple Development")
-          CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
-          echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
-          echo "Certificate imported."
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          # Store the keychain path for later steps.
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
 
       - name: Tauri build
         uses: tauri-apps/tauri-action@v0
@@ -118,7 +117,7 @@ jobs:
           VERSION_NUMBER: ${{ inputs.version-number || '0.0.0' }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         with:
           projectPath: packages/desktop
           args: --target ${{ matrix.tauri-target }}
