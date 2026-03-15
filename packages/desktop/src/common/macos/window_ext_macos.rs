@@ -5,28 +5,17 @@ use cocoa::{
 };
 use tauri::{Runtime, Window};
 
-pub enum CustomWindowLevel {
-  AboveMenuBar,
-  // TODO: Use this for bottom-most windows.
-  Backstop,
-}
-
 pub trait WindowExtMacOs {
-  fn set_level(&self, level: CustomWindowLevel) -> anyhow::Result<()>;
+  fn set_above_menu_bar(&self) -> anyhow::Result<()>;
 }
 
 impl<R: Runtime> WindowExtMacOs for Window<R> {
-  fn set_level(&self, level: CustomWindowLevel) -> anyhow::Result<()> {
+  fn set_above_menu_bar(&self) -> anyhow::Result<()> {
     let ns_win =
       self.ns_window().context("Failed to get window handle.")? as id;
 
-    let level = match level {
-      CustomWindowLevel::AboveMenuBar => NSMainMenuWindowLevel as i64 + 1,
-      CustomWindowLevel::Backstop => -20,
-    };
-
     unsafe {
-      ns_win.setLevel_(level);
+      ns_win.setLevel_(NSMainMenuWindowLevel as i64 + 1);
     }
 
     Ok(())

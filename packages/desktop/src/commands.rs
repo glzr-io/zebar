@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use tauri::{State, Window};
 
 #[cfg(target_os = "macos")]
-use crate::common::macos::{CustomWindowLevel, WindowExtMacOs};
+use crate::common::macos::WindowExtMacOs;
 #[cfg(target_os = "windows")]
 use crate::common::windows::WindowExtWindows;
 use crate::{
@@ -245,7 +245,7 @@ pub async fn stop_all_preview_widgets(
 #[tauri::command]
 pub fn set_always_on_top(window: Window) -> anyhow::Result<(), String> {
   #[cfg(target_os = "macos")]
-  let res = window.set_level(CustomWindowLevel::AboveMenuBar);
+  let res = window.set_above_menu_bar();
 
   #[cfg(not(target_os = "macos"))]
   let res = window.set_always_on_top(true);
