@@ -13,7 +13,10 @@ use tauri::{
     MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder,
     TrayIconEvent,
   },
-  AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Wry,
+  utils::config::WindowEffectsConfig,
+  window::{Color, Effect, EffectsBuilder},
+  AppHandle, Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder,
+  Wry,
 };
 use tokio::task;
 use tracing::{error, info};
@@ -462,8 +465,16 @@ impl SysTray {
         )
         .title("Settings - Zebar")
         .focused(true)
-        .visible(true)
+        .transparent(true)
+        // .shadow(false)
+        // .decorations(false)
         .inner_size(900., 600.)
+        .title_bar_style(TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .background_color(Color(0, 0, 0, 1)) // <-
+        .effects(
+          EffectsBuilder::new().effects(vec![Effect::Sidebar]).build(),
+        )
         .build()
         .context("Failed to build the settings window.")?;
 

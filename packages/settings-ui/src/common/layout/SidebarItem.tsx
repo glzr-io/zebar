@@ -31,7 +31,7 @@ export function SidebarItem(props: SidebarItemProps) {
       end={true}
       class={cn(
         buttonVariants({ variant: 'ghost' }),
-        'flex justify-start min-w-0 m-2 pl-2',
+        'flex justify-start min-w-0 m-1 pl-2',
       )}
     >
       <div class="mr-2">{props.icon}</div>
@@ -52,7 +52,7 @@ export function SidebarItem(props: SidebarItemProps) {
             variant: 'ghost',
             size: 'icon',
           }),
-          'm-2',
+          'm-1',
         )}
       >
         {props.icon}

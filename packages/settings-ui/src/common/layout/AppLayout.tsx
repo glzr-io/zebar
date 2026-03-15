@@ -21,11 +21,11 @@ export function AppLayout(props: AppLayoutProps & RouteSectionProps) {
   const [sizes, setSizes] = createSignal<number[]>([0.2, 0.8]);
 
   // Disable the right-click context menu.
-  onMount(() => {
-    document.addEventListener('contextmenu', (e: MouseEvent) => {
-      e.preventDefault();
-    });
-  });
+  // onMount(() => {
+  //   document.addEventListener('contextmenu', (e: MouseEvent) => {
+  //     e.preventDefault();
+  //   });
+  // });
 
   return (
     <>
