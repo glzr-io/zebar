@@ -20,7 +20,7 @@ use tokio::{
 use tracing::{error, info};
 
 #[cfg(target_os = "macos")]
-use crate::common::macos::WindowExtMacOs;
+use crate::common::macos::{CustomWindowLevel, WindowExtMacOs};
 #[cfg(target_os = "windows")]
 use crate::common::windows::{remove_app_bar, WindowExtWindows};
 use crate::{
@@ -361,12 +361,15 @@ impl WidgetFactory {
           // Default z-order, no special handling needed.
         }
         ZOrder::TopMost => {
-          let _ = window.set_always_on_top(true);
-
           // On MacOS, we need to set the window as above the menu bar for
           // it to truly be always on top.
           #[cfg(target_os = "macos")]
-          let _ = window.as_ref().window().set_above_menu_bar();
+          let _ = window
+            .as_ref()
+            .window()
+            .set_level(CustomWindowLevel::AboveMenuBar);
+          #[cfg(not(target_os = "macos"))]
+          let _ = window.set_always_on_top(true);
         }
         ZOrder::BottomMost => {
           let _ = window.set_always_on_bottom(true);
