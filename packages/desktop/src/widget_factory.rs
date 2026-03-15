@@ -356,25 +356,7 @@ impl WidgetFactory {
       }
 
       // Adjust the z-order of the window.
-      match widget_config.z_order {
-        ZOrder::Normal => {
-          // Default z-order, no special handling needed.
-        }
-        ZOrder::TopMost => {
-          // On MacOS, we need to set the window as above the menu bar for
-          // it to truly be always on top.
-          #[cfg(target_os = "macos")]
-          let _ = window
-            .as_ref()
-            .window()
-            .set_level(CustomWindowLevel::AboveMenuBar);
-          #[cfg(not(target_os = "macos"))]
-          let _ = window.set_always_on_top(true);
-        }
-        ZOrder::BottomMost => {
-          let _ = window.set_always_on_bottom(true);
-        }
-      }
+      Self::set_z_order(&window, &widget_config.z_order, placement)?;
 
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
       // so we also set the window as a tool window.
@@ -405,6 +387,60 @@ impl WidgetFactory {
     }
 
     Ok(())
+  }
+
+  /// Sets the z-order of the window.
+  fn set_z_order(
+    window: &tauri::WebviewWindow,
+    z_order: &ZOrder,
+    placement: &WidgetPlacement,
+  ) -> anyhow::Result<()> {
+    // On macOS, the window level must be set above the menu bar or at the
+    // backstop level to prevent it from being shifted down beneath the
+    // menu bar.
+    #[cfg(target_os = "macos")]
+    {
+      if placement.dock_to_edge.enabled
+        && placement.dock_to_edge.edge == Some(DockEdge::Top)
+      {
+        return if *z_order == ZOrder::TopMost {
+          window
+            .as_ref()
+            .window()
+            .set_level(CustomWindowLevel::AboveMenuBar)
+        } else {
+          window
+            .as_ref()
+            .window()
+            .set_level(CustomWindowLevel::Backstop)
+        };
+      }
+    }
+
+    match z_order {
+      ZOrder::Normal => {
+        // Default z-order, no special handling needed.
+        Ok(())
+      }
+      ZOrder::TopMost => {
+        #[cfg(not(target_os = "macos"))]
+        {
+          window.set_always_on_top(true).map_err(anyhow::Error::from)
+        }
+        // On macOS, we need to set the window above the menu bar for it
+        // to truly be always on top.
+        #[cfg(target_os = "macos")]
+        {
+          window
+            .as_ref()
+            .window()
+            .set_level(CustomWindowLevel::AboveMenuBar)
+        }
+      }
+      ZOrder::BottomMost => window
+        .set_always_on_bottom(true)
+        .map_err(anyhow::Error::from),
+    }
   }
 
   /// Dock the widget window to a given edge. This might result in the
