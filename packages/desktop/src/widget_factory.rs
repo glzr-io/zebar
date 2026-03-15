@@ -344,12 +344,25 @@ impl WidgetFactory {
       };
 
       info!("Positioning widget to {:?} {:?}", size, position);
+
+      // Convert to logical coordinates using the target monitor's scale
+      // factor. Using the physical size/position directly positions the
+      // window incorrectly on macOS.
+      let scale = coordinates.monitor.scale_factor as f64;
+      let size = tauri::LogicalSize::new(
+        size.width as f64 / scale,
+        size.height as f64 / scale,
+      );
+      let position = tauri::LogicalPosition::new(
+        position.x as f64 / scale,
+        position.y as f64 / scale,
+      );
       let _ = window.set_size(size);
       let _ = window.set_position(position);
 
       // On Windows, we need to set the position twice to account for
       // different monitor scale factors.
-      #[cfg(target_os = "windows")]
+      #[cfg(windows)]
       {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
