@@ -7,6 +7,10 @@ on:
         type: boolean
         default: false
         description: Whether to publish the release as a draft.
+      npm-publish:
+        type: boolean
+        default: true
+        description: Whether to publish the release to npm.
 
 permissions:
   contents: write
@@ -84,7 +88,7 @@ jobs:
                 "label": "${nextRelease.gitTag} Installer (Linux AppImage)"
               }
             ]
-          npm-publish: true
+          npm-publish: ${{ inputs.npm-publish }}
           npm-token: ${{ secrets.NPM_TOKEN }}
           npm-package-root: packages/client-api
           npm-package-manager: pnpm
