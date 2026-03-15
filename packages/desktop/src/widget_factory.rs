@@ -425,7 +425,7 @@ impl WidgetFactory {
       ZOrder::TopMost => {
         #[cfg(not(target_os = "macos"))]
         {
-          window.set_always_on_top(true)
+          window.set_always_on_top(true).map_err(anyhow::Error::from)
         }
         // On macOS, we need to set the window above the menu bar for it
         // to truly be always on top.
