@@ -17,7 +17,6 @@ pub struct WifiHotstop {
   pub signal_strength: Option<u32>,
 }
 
-#[derive(Debug)]
 #[cfg(target_os = "windows")]
 struct WlanHandle(HANDLE);
 
@@ -30,84 +29,108 @@ impl Drop for WlanHandle {
   }
 }
 
-/// Gets wifi ssid and signal strength using winapi
-pub fn default_gateway_wifi() -> anyhow::Result<WifiHotstop> {
-  #[cfg(not(target_os = "windows"))]
-  {
-    Ok(WifiHotstop {
-      ssid: None,
-      signal_strength: None,
-    })
+/// Cached WLAN handle for querying WiFi connection info
+/// without reopening the handle on every poll.
+#[cfg(target_os = "windows")]
+pub struct WlanMonitor {
+  handle: WlanHandle,
+}
+
+#[cfg(not(target_os = "windows"))]
+pub struct WlanMonitor;
+
+impl WlanMonitor {
+  pub fn new() -> Option<Self> {
+    #[cfg(target_os = "windows")]
+    {
+      let mut pdw_negotiated_version = 0;
+      let mut wlan_handle = WlanHandle(INVALID_HANDLE_VALUE);
+
+      WIN32_ERROR(unsafe {
+        WlanOpenHandle(
+          2,
+          None,
+          &mut pdw_negotiated_version,
+          &mut wlan_handle.0,
+        )
+      })
+      .ok()
+      .ok()?;
+
+      Some(WlanMonitor {
+        handle: wlan_handle,
+      })
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    Some(WlanMonitor)
   }
-  #[cfg(target_os = "windows")]
-  {
-    let mut pdw_negotiated_version = 0;
-    let mut wlan_handle = WlanHandle(INVALID_HANDLE_VALUE);
 
-    WIN32_ERROR(unsafe {
-      WlanOpenHandle(
-        2,
-        None,
-        &mut pdw_negotiated_version,
-        &mut wlan_handle.0,
-      )
-    })
-    .ok()
-    .context("Failed to open Wlan handle")?;
+  pub fn query(&self) -> anyhow::Result<WifiHotstop> {
+    #[cfg(not(target_os = "windows"))]
+    {
+      Ok(WifiHotstop {
+        ssid: None,
+        signal_strength: None,
+      })
+    }
 
-    let mut wlan_interface_info_list = std::ptr::null_mut();
-    WIN32_ERROR(unsafe {
-      WlanEnumInterfaces(
-        wlan_handle.0,
-        None,
-        &mut wlan_interface_info_list,
-      )
-    })
-    .ok()
-    .context("Failed to get Wlan interfaces")?;
+    #[cfg(target_os = "windows")]
+    {
+      let mut wlan_interface_info_list = std::ptr::null_mut();
+      WIN32_ERROR(unsafe {
+        WlanEnumInterfaces(
+          self.handle.0,
+          None,
+          &mut wlan_interface_info_list,
+        )
+      })
+      .ok()
+      .context("Failed to get Wlan interfaces")?;
 
-    let guid = (unsafe { *wlan_interface_info_list }).InterfaceInfo[0]
-      .InterfaceGuid;
-    unsafe { WlanFreeMemory(wlan_interface_info_list as *mut c_void) };
+      let guid = (unsafe { *wlan_interface_info_list }).InterfaceInfo[0]
+        .InterfaceGuid;
+      unsafe { WlanFreeMemory(wlan_interface_info_list as *mut c_void) };
 
-    let mut data_size = 0;
-    let mut pdata = std::ptr::null_mut();
+      let mut data_size = 0;
+      let mut pdata = std::ptr::null_mut();
 
-    WIN32_ERROR(unsafe {
-      WlanQueryInterface(
-        wlan_handle.0,
-        &guid,
-        wlan_intf_opcode_current_connection,
-        None,
-        &mut data_size,
-        &mut pdata,
-        None,
-      )
-    })
-    .ok()
-    .context("Failed to get connected Wlan interface")?;
+      WIN32_ERROR(unsafe {
+        WlanQueryInterface(
+          self.handle.0,
+          &guid,
+          wlan_intf_opcode_current_connection,
+          None,
+          &mut data_size,
+          &mut pdata,
+          None,
+        )
+      })
+      .ok()
+      .context("Failed to get connected Wlan interface")?;
 
-    let wlan_connection_atributes =
-      pdata as *mut WLAN_CONNECTION_ATTRIBUTES;
-    let atributes =
-      unsafe { *wlan_connection_atributes }.wlanAssociationAttributes;
+      let wlan_connection_atributes =
+        pdata as *mut WLAN_CONNECTION_ATTRIBUTES;
+      let atributes =
+        unsafe { *wlan_connection_atributes }.wlanAssociationAttributes;
 
-    unsafe { WlanFreeMemory(pdata) };
+      unsafe { WlanFreeMemory(pdata) };
 
-    // needed to remove leading zeros in array
-    let ssid_arr = atributes.dot11Ssid.ucSSID;
-    let mut ssid_vec = ssid_arr
-      .into_iter()
-      .rev()
-      .skip_while(|&byte| byte == 0)
-      .collect::<Vec<_>>();
-    ssid_vec.reverse();
-    let ssid =
-      String::from_utf8(ssid_vec).context("Incorrectly formatted ssid")?;
+      // needed to remove leading zeros in array
+      let ssid_arr = atributes.dot11Ssid.ucSSID;
+      let mut ssid_vec = ssid_arr
+        .into_iter()
+        .rev()
+        .skip_while(|&byte| byte == 0)
+        .collect::<Vec<_>>();
+      ssid_vec.reverse();
+      let ssid = String::from_utf8(ssid_vec)
+        .context("Incorrectly formatted ssid")?;
 
-    Ok(WifiHotstop {
-      ssid: Some(ssid),
-      signal_strength: Some(atributes.wlanSignalQuality),
-    })
+      Ok(WifiHotstop {
+        ssid: Some(ssid),
+        signal_strength: Some(atributes.wlanSignalQuality),
+      })
+    }
   }
 }
