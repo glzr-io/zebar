@@ -348,27 +348,26 @@ impl WidgetFactory {
 
       info!("Positioning widget to {:?} {:?}", size, position);
 
-      // Convert to logical coordinates using the target monitor's scale
-      // factor. Using the physical size/position directly positions the
-      // window incorrectly on macOS.
-      let scale = coordinates.monitor.scale_factor as f64;
-      let size = tauri::LogicalSize::new(
-        size.width as f64 / scale,
-        size.height as f64 / scale,
-      );
-      let position = tauri::LogicalPosition::new(
-        position.x as f64 / scale,
-        position.y as f64 / scale,
-      );
-      let _ = window.set_size(size);
-      let _ = window.set_position(position);
-
       // On Windows, we need to set the position twice to account for
-      // different monitor scale factors.
+      // different monitor scale factors. Using the logical position/size
+      // positions the window incorrectly (see: https://github.com/glzr-io/zebar/issues/273).
       #[cfg(windows)]
       {
         let _ = window.set_size(size);
         let _ = window.set_position(position);
+        let _ = window.set_size(size);
+        let _ = window.set_position(position);
+      }
+
+      // On macOS/Linux, convert to logical coordinates using the target
+      // monitor's scale factor. Using the physical position/size positions
+      // the window incorrectly.
+      #[cfg(not(windows))]
+      {
+        let scale_factor = coordinates.monitor.scale_factor as f64;
+        let _ = window.set_size(size.to_logical::<f64>(scale_factor));
+        let _ =
+          window.set_position(position.to_logical::<f64>(scale_factor));
       }
 
       // On Windows, Tauri's `skip_taskbar` option isn't 100% reliable,
