@@ -407,20 +407,21 @@ impl WidgetFactory {
     z_order: &ZOrder,
     placement: &WidgetPlacement,
   ) -> anyhow::Result<()> {
-    // On macOS, the window level must be set above the menu bar or at the
-    // bottom-most level to prevent it from being shifted down beneath the
-    // menu bar.
+    // On macOS, the window level must be set above the menu bar to
+    // prevent it from being shifted down beneath the menu bar/notch.
+    // This applies to all z-orders except BottomMost when docked to
+    // the top edge.
     #[cfg(target_os = "macos")]
     {
       if placement.dock_to_edge.enabled
         && placement.dock_to_edge.edge == Some(DockEdge::Top)
       {
-        return if *z_order == ZOrder::TopMost {
-          window.as_ref().window().set_above_menu_bar()
-        } else {
+        return if *z_order == ZOrder::BottomMost {
           window
             .set_always_on_bottom(true)
             .map_err(anyhow::Error::from)
+        } else {
+          window.as_ref().window().set_above_menu_bar()
         };
       }
     }
