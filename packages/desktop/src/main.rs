@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![feature(iterator_try_collect)]
 
-use std::{env, path::Path, sync::Arc};
+use std::{env, path::Path, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use clap::Parser;
@@ -11,7 +11,7 @@ use tauri::{
   Manager, RunEvent, WebviewUrl, WebviewWindowBuilder,
 };
 use tokio::{sync::mpsc, task};
-use tracing::{error, info, Level};
+use tracing::{error, info, warn, Level};
 use tracing_subscriber::{
   fmt::{self, writer::MakeWriterExt},
   layer::SubscriberExt,
@@ -305,7 +305,41 @@ fn listen_events(
         },
         Ok(_) = monitors_change_rx.recv() => {
           info!("Monitors changed.");
-          widget_factory.relaunch_all().await
+
+          if let Err(err) = widget_factory.relaunch_all().await {
+            error!("Failed to relaunch widgets on monitor change: {:?}", err);
+          }
+
+          // Safety net: if all widgets were lost during relaunch (e.g.
+          // monitors were transiently unavailable), retry from startup
+          // config with backoff.
+          if widget_factory.states().await.is_empty() {
+            let startup_configs = app_settings.startup_configs().await;
+
+            if !startup_configs.is_empty() {
+              warn!(
+                "No widgets running after monitor change, \
+                 attempting recovery from startup config."
+              );
+
+              for attempt in 1..=3u64 {
+                tokio::time::sleep(
+                  Duration::from_millis(attempt * 500)
+                ).await;
+
+                if let Err(err) = widget_factory.startup().await {
+                  error!("Widget recovery attempt {} failed: {:?}", attempt, err);
+                }
+
+                if !widget_factory.states().await.is_empty() {
+                  info!("Widget recovery successful on attempt {}.", attempt);
+                  break;
+                }
+              }
+            }
+          }
+
+          Ok(())
         },
         Ok((pack_id, changed_config)) = widget_configs_change_rx.recv() => {
           info!("Widget config changed.");
