@@ -17,7 +17,7 @@ use tokio::{
   sync::{broadcast, Mutex},
   task,
 };
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[cfg(target_os = "macos")]
 use crate::common::macos::WindowExtMacOs;
@@ -268,7 +268,17 @@ impl WidgetFactory {
       }
     };
 
-    for coordinates in self.widget_coordinates(placement).await {
+    let all_coordinates = self.widget_coordinates(placement).await;
+
+    if all_coordinates.is_empty() {
+      warn!(
+        "No monitors matched selection {:?} for widget '{}'. \
+         Widget will not be created.",
+        placement.monitor_selection, widget_name
+      );
+    }
+
+    for coordinates in all_coordinates {
       let new_count =
         self.widget_count.fetch_add(1, Ordering::Relaxed) + 1;
 
@@ -824,6 +834,8 @@ impl WidgetFactory {
         .collect::<Vec<_>>()
     };
 
+    let mut errors = vec![];
+
     for widget_state in &changed_states {
       info!(
         "Relaunching widget {} from {} (#{}).",
@@ -832,17 +844,28 @@ impl WidgetFactory {
 
       let _ = self.stop_by_id(&widget_state.id);
 
-      self
+      if let Err(err) = self
         .start_widget_by_id(
           &widget_state.pack_id,
           &widget_state.name,
           &widget_state.open_options,
           false,
         )
-        .await?;
+        .await
+      {
+        error!(
+          "Failed to relaunch widget {} from {}: {:?}",
+          widget_state.name, widget_state.pack_id, err
+        );
+        errors.push(err);
+      }
     }
 
-    Ok(())
+    if let Some(first_err) = errors.into_iter().next() {
+      Err(first_err)
+    } else {
+      Ok(())
+    }
   }
 
   /// Relaunches widgets with the given config paths.

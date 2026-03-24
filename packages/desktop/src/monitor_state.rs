@@ -6,7 +6,7 @@ use tokio::{
   sync::{broadcast, RwLock},
   task,
 };
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::widget_pack::MonitorSelection;
 
@@ -76,6 +76,19 @@ impl MonitorState {
           let current_monitors = monitors.read().await;
           *current_monitors != new_monitors
         };
+
+        // Skip broadcasting when the monitor list is empty. During
+        // macOS display reconfiguration, `available_monitors()` can
+        // transiently return an empty list. Broadcasting this would
+        // trigger a relaunch that creates zero windows, permanently
+        // losing all widget state.
+        if new_monitors.is_empty() {
+          warn!(
+            "available_monitors() returned empty list, \
+             skipping update (likely transient during display change)."
+          );
+          continue;
+        }
 
         if should_update {
           info!("Detected change in monitors.");
