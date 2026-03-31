@@ -119,25 +119,87 @@
           }
         }
 
+        // Helper function to get window display name
+        function getWindowDisplayName(window) {
+          return window.title || window.processName || 'Unknown Window';
+        }
+
         return (
           <div className="app">
             <div className="left">
               <i className="logo nf nf-fa-windows"></i>
               {output.glazewm && (
                 <div className="workspaces">
-                  {output.glazewm.currentWorkspaces.map(workspace => (
-                    <button
-                      className={`workspace ${workspace.hasFocus && 'focused'} ${workspace.isDisplayed && 'displayed'}`}
-                      onClick={() =>
-                        output.glazewm.runCommand(
-                          `focus --workspace ${workspace.name}`,
-                        )
-                      }
-                      key={workspace.name}
-                    >
-                      {workspace.displayName ?? workspace.name}
-                    </button>
-                  ))}
+                  {output.glazewm.currentWorkspaces.map(workspace => {
+                    // Use the windows array directly from the workspace
+                    const windows = workspace.windows || [];
+
+                    return (
+                      <div
+                        key={workspace.name}
+                        className="workspace-container"
+                      >
+                        <button
+                          className={`workspace ${workspace.hasFocus && 'focused'} ${workspace.isDisplayed && 'displayed'}`}
+                          onClick={() =>
+                            output.glazewm.runCommand(
+                              `focus --workspace ${workspace.name}`,
+                            )
+                          }
+                        >
+                          <span className="workspace-name">{workspace.displayName ?? workspace.name}</span>
+                          {windows.length > 0 && (
+                            <div className="workspace-windows">
+                              {windows.map((window, index) => {
+                                // Check if we have a real icon (base64 data)
+                                if (window.icon && window.icon.startsWith('data:image/raw;base64,')) {
+                                  // Parse the data URL to get base64 and dimensions
+                                  const parts = window.icon.split('|');
+                                  const dataUrl = parts[0];
+                                  const dimensions = parts[1]?.split('x') || ['16', '16'];
+                                  const width = parseInt(dimensions[0]) || 16;
+                                  const height = parseInt(dimensions[1]) || 16;
+                                  
+                                  // Extract base64 data
+                                  const base64Data = dataUrl.split(',')[1];
+                                  
+                                  return (
+                                    <canvas
+                                      key={index}
+                                      ref={(canvas) => {
+                                        if (canvas && base64Data) {
+                                          const ctx = canvas.getContext('2d');
+                                          const imgData = ctx.createImageData(width, height);
+                                          const decoded = atob(base64Data);
+                                          for (let i = 0; i < decoded.length; i++) {
+                                            imgData.data[i] = decoded.charCodeAt(i);
+                                          }
+                                          ctx.putImageData(imgData, 0, 0);
+                                        }
+                                      }}
+                                      width={width}
+                                      height={height}
+                                      style={{width: '8px', height: '8px', imageRendering: 'pixelated'}}
+                                      title={getWindowDisplayName(window)}
+                                    />
+                                  );
+                                }
+                                
+                                // Fallback to NerdFont icon
+                                return (
+                                  <i 
+                                    key={index} 
+                                    className={`window-icon`}
+                                    title={getWindowDisplayName(window)}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
