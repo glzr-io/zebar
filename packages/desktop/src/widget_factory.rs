@@ -405,15 +405,15 @@ impl WidgetFactory {
   fn set_z_order(
     window: &tauri::WebviewWindow,
     z_order: &ZOrder,
-    placement: &WidgetPlacement,
+    _placement: &WidgetPlacement,
   ) -> anyhow::Result<()> {
     // On macOS, the window level must be set above the menu bar or at the
     // bottom-most level to prevent it from being shifted down beneath the
     // menu bar.
     #[cfg(target_os = "macos")]
     {
-      if placement.dock_to_edge.enabled
-        && placement.dock_to_edge.edge == Some(DockEdge::Top)
+      if _placement.dock_to_edge.enabled
+        && _placement.dock_to_edge.edge == Some(DockEdge::Top)
       {
         return if *z_order == ZOrder::TopMost {
           window.as_ref().window().set_above_menu_bar()

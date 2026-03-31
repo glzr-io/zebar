@@ -11,6 +11,8 @@ pub struct OpenMeteoWeather {
   #[serde(rename = "windspeed")]
   pub wind_speed: f32,
   #[serde(rename = "winddirection")]
+  // TODO: Surface wind_direction in widget data (#279)
+  #[allow(dead_code)]
   pub wind_direction: f32,
   #[serde(rename = "weathercode")]
   pub weather_code: u32,
