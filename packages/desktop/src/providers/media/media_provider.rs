@@ -45,6 +45,8 @@ pub struct MediaSession {
   pub end_time: u64,
   pub position: u64,
   pub is_playing: bool,
+  pub is_next_enabled: bool,
+  pub is_previous_enabled: bool,
   pub is_current_session: bool,
 }
 
@@ -61,6 +63,8 @@ impl Default for MediaSession {
       end_time: 0,
       position: 0,
       is_playing: false,
+      is_next_enabled: false,
+      is_previous_enabled: false,
       is_current_session: false,
     }
   }
@@ -536,6 +540,10 @@ impl MediaProvider {
 
     session_output.is_playing =
       info.PlaybackStatus()? == GsmtcPlaybackStatus::Playing;
+
+    let controls = info.Controls()?;
+    session_output.is_next_enabled = controls.IsNextEnabled()?;
+    session_output.is_previous_enabled = controls.IsPreviousEnabled()?;
 
     Ok(())
   }
