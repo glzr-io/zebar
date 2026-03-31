@@ -1,5 +1,6 @@
-use core::slice::memchr;
 use std::io::{BufRead, BufReader};
+
+use memchr;
 
 use crate::{Buffer, Encoding};
 

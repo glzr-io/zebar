@@ -5173,6 +5173,7 @@ name = "shell-util"
 version = "0.0.0"
 dependencies = [
  "encoding_rs",
+ "memchr",
  "os_pipe",
  "regex",
  "serde",

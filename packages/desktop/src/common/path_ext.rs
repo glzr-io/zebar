@@ -25,6 +25,8 @@ where
   /// slashes.
   ///
   /// Returns a relative path (e.g. 'subdir/file.json').
+  /// Currently unused helper, remove the compiler warning
+  #[allow(dead_code)]
   fn to_relative(&self, base_path: &Path) -> anyhow::Result<PathBuf>;
 
   /// Joins the given base path.
