@@ -1,0 +1,235 @@
+/**
+ * Omarchy top bar — Tokyo Night theme for Zebar + GlazeWM.
+ * Palette: bg #1a1b26 / #24283b, fg #c0caf5, blue #7aa2f7, cyan #7dcfff,
+ * green #9ece6a, magenta #bb9af7, red #f7768e, yellow #e0af68, orange #ff9e64.
+ */
+
+/* Nerd Font icons (md / fa / weather / oct / linux glyph sets). */
+@import 'https://www.nerdfonts.com/assets/css/webfont.css';
+
+:root {
+  --bg: rgba(26, 27, 38, 0.92);
+  --bg-raised: #24283b;
+  --fg: #c0caf5;
+  --fg-dim: #a9b1d6;
+  --blue: #7aa2f7;
+  --cyan: #7dcfff;
+  --green: #9ece6a;
+  --magenta: #bb9af7;
+  --red: #f7768e;
+  --yellow: #e0af68;
+  --orange: #ff9e64;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  color: var(--fg);
+  font-family: 'Cascadia Code', ui-monospace, 'Cascadia Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+  background: transparent;
+}
+
+i {
+  color: var(--fg);
+  font-style: normal;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 100%;
+  padding: 0 10px;
+  background: var(--bg);
+  backdrop-filter: blur(12px);
+}
+
+.left,
+.center,
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.left {
+  justify-self: start;
+}
+
+.center {
+  justify-self: center;
+  color: var(--fg);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 3px 14px;
+  background: var(--bg-raised);
+  border-radius: 9px;
+}
+
+.right {
+  justify-self: end;
+}
+
+/* Arch / brand logo. */
+.logo {
+  color: var(--blue);
+  font-size: 17px;
+  padding: 0 6px;
+}
+
+/* Workspace pills. */
+.workspaces {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 8px;
+  color: var(--fg-dim);
+  background: var(--bg-raised);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.workspace:hover {
+  color: var(--fg);
+  border-color: var(--magenta);
+}
+
+.workspace.displayed {
+  color: var(--fg);
+  background: #2a2f44;
+}
+
+.workspace.focused {
+  color: #1a1b26;
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 0 8px rgba(122, 162, 247, 0.5);
+}
+
+/* Open-window icons rendered inside each workspace pill. */
+.workspace-container {
+  display: flex;
+  align-items: center;
+}
+
+.workspace-name {
+  display: inline-block;
+}
+
+.workspace-windows {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+}
+
+.window-icon {
+  font-size: 8px;
+  color: var(--fg-dim);
+  transition: color 120ms ease;
+}
+
+.window-icon:hover {
+  color: var(--fg);
+}
+
+/* Right-side status chips. */
+.right > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  background: var(--bg-raised);
+  border-radius: 8px;
+}
+
+.network i {
+  color: var(--cyan);
+}
+
+.memory i {
+  color: var(--magenta);
+}
+
+.cpu i {
+  color: var(--green);
+}
+
+.cpu .high-usage {
+  color: var(--red);
+}
+
+.battery i {
+  color: var(--green);
+}
+
+.battery .charging-icon {
+  color: var(--yellow);
+  margin-right: 2px;
+}
+
+.weather i {
+  color: var(--yellow);
+}
+
+/* Tiling direction toggle. */
+.tiling-direction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  color: var(--fg);
+  background: var(--bg-raised);
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tiling-direction:hover {
+  color: var(--blue);
+}
+
+/* Paused / binding-mode badges. */
+.paused-button,
+.binding-mode {
+  color: #1a1b26;
+  background: var(--orange);
+  border: none;
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

@@ -82,6 +82,7 @@ impl MarketplaceInstaller {
     // is the first run.
     if installer.app_settings.is_first_run {
       installer.install_starter_pack()?;
+      installer.install_omarchy_skin()?;
     }
 
     Ok((Arc::new(installer), installed_rx))
@@ -231,6 +232,32 @@ impl MarketplaceInstaller {
         .marketplace_pack_metadata_path(STARTER_PACK_ID),
       serde_json::to_string_pretty(&metadata)? + "\n",
     )?;
+
+    Ok(())
+  }
+
+  /// Installs the bundled `omarchy` skin as a local widget pack.
+  ///
+  /// Copies the embedded `omarchy` resource into the user's config
+  /// directory (as `<config_dir>/omarchy`) so it's picked up as a local
+  /// pack. This is the default startup skin (see
+  /// `AppSettings::create_default`).
+  fn install_omarchy_skin(&self) -> anyhow::Result<()> {
+    let omarchy_dir = self
+      .app_handle
+      .path()
+      .resolve("../../resources/omarchy", BaseDirectory::Resource)
+      .context("Unable to resolve omarchy skin resource.")?;
+
+    let dest_dir = self.app_settings.config_dir.join("omarchy");
+
+    // Don't clobber an existing local pack of the same name.
+    if dest_dir.exists() {
+      return Ok(());
+    }
+
+    fs::create_dir_all(&dest_dir)?;
+    copy_dir_all(&omarchy_dir, &dest_dir, true)?;
 
     Ok(())
   }
