@@ -23,11 +23,11 @@ use windows::{
         NOTIFY_ICON_MESSAGE, NOTIFY_ICON_STATE,
       },
       WindowsAndMessaging::{
-        DefWindowProcW, GetWindowThreadProcessId, PostMessageW,
-        RegisterWindowMessageW, SendMessageW, SendNotifyMessageW,
-        SetTimer, SetWindowPos, HWND_BROADCAST, HWND_TOPMOST,
-        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WM_ACTIVATEAPP,
-        WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
+        DefWindowProcW, GetWindowThreadProcessId, IsWindow,
+        PostMessageW, RegisterWindowMessageW, SendMessageW,
+        SendNotifyMessageW, SetTimer, SetWindowPos, HWND_BROADCAST,
+        HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+        WM_ACTIVATEAPP, WM_COMMAND, WM_COPYDATA, WM_TIMER, WM_USER,
       },
     },
   },
@@ -355,7 +355,25 @@ impl TraySpy {
         let tray_event =
           match NOTIFY_ICON_MESSAGE(tray_message.message_type) {
             NIM_ADD => {
-              Some(TrayEvent::IconAdd(tray_message.icon_data.into()))
+              let icon_data: IconEventData =
+                tray_message.icon_data.into();
+
+              // Skip icons from dead windows at runtime.
+              let is_alive = icon_data
+                .window_handle
+                .is_none_or(|hwnd| {
+                  unsafe { IsWindow(HWND(hwnd as _)) }.as_bool()
+                });
+
+              if is_alive {
+                Some(TrayEvent::IconAdd(icon_data))
+              } else {
+                tracing::info!(
+                  "Ignoring NIM_ADD for stale icon (dead window: {:?}).",
+                  icon_data.window_handle,
+                );
+                None
+              }
             }
             NIM_MODIFY | NIM_SETVERSION => {
               Some(TrayEvent::IconUpdate(tray_message.icon_data.into()))
@@ -494,7 +512,22 @@ impl TraySpy {
         if let Ok(icon) =
           Self::read_tray_icon(tray_process, buffer, toolbar, index)
         {
-          icons.push(icon);
+          // Skip icons whose owning window no longer exists.
+          // This filters out stale entries left by apps that crashed
+          // or exited without calling Shell_NotifyIcon(NIM_DELETE).
+          let is_alive = icon
+            .window_handle
+            .is_none_or(|hwnd| unsafe { IsWindow(HWND(hwnd as _)) }.as_bool());
+
+          if is_alive {
+            icons.push(icon);
+          } else {
+            tracing::info!(
+              "Skipping stale tray icon (dead window: {:?}, tooltip: {:?}).",
+              icon.window_handle,
+              icon.tooltip,
+            );
+          }
         }
       }
     }
