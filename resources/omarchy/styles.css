@@ -86,11 +86,12 @@ i {
   justify-self: end;
 }
 
-/* Arch / brand logo. */
+/* Windows / brand logo. */
 .logo {
-  color: var(--blue);
-  font-size: 17px;
+  height: 26px;
+  width: 26px;
   padding: 0 6px;
+  object-fit: contain;
 }
 
 /* Workspace pills. */

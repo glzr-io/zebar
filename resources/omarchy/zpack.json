@@ -15,7 +15,7 @@
       "focused": false,
       "resizable": false,
       "transparent": true,
-      "includeFiles": ["*.html", "*.css"],
+      "includeFiles": ["*.html", "*.css", "*.png"],
       "presets": [
         {
           "name": "default",
