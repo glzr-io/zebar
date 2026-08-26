@@ -603,16 +603,19 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     default_device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
     if role == eMultimedia {
-      let id = if default_device_id.0.is_null() {
-        None
+      if default_device_id.0.is_null() {
+        let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
+          None,
+          DeviceType::from(flow),
+        ));
       } else {
-        unsafe { default_device_id.to_string().ok() }
-      };
-
-      let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
-        id,
-        DeviceType::from(flow),
-      ));
+        if let Ok(id) = unsafe { default_device_id.to_string() } {
+          let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
+            Some(id),
+            DeviceType::from(flow),
+          ));
+        }
+      }
     }
 
     Ok(())
