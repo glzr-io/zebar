@@ -27,3 +27,49 @@ jobs:
 
       - run: pnpm i
       - run: pnpm run lint
+
+  clippy-fix-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17
+        with:
+          toolchain: nightly
+          components: clippy
+          targets: x86_64-pc-windows-msvc
+
+      - uses: swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf gcc-mingw-w64-x86-64 pkg-config
+
+      - name: Check for autofixable clippy warnings
+        shell: bash
+        run: |
+          cargo clippy --workspace --all-targets --fix --exclude systray-util
+          if git status --porcelain | grep -q .; then
+            echo "::error::Detected autofixable clippy warnings. Please run 'cargo clippy --workspace --all-targets --fix --exclude systray-util' locally, commit, and push."
+            git diff --stat
+            exit 1
+          fi
+
+      - name: Check for autofixable clippy warnings (windows cross target)
+        if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        env:
+          RC: x86_64-w64-mingw32-windres
+        run: |
+          cargo clippy --workspace --all-targets --fix --target x86_64-pc-windows-msvc
+          if git status --porcelain | grep -q .; then
+            echo "::error::Detected autofixable clippy warnings. Please run 'cargo clippy --workspace --all-targets --fix --target x86_64-pc-windows-msvc' locally, commit, and push."
+            git diff --stat
+            exit 1
+          fi
