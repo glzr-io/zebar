@@ -82,6 +82,12 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          # NOTE: Secrets are unavailable on PRs from forks.
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "APPLE_CERTIFICATE is not set, skipping certificate import."
+            exit 0
+          fi
+
           # Create a temporary keychain.
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -123,7 +129,8 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: packages/desktop
-          args: --target ${{ matrix.tauri-target }}
+          # Skip signing when secrets are unavailable.
+          args: --target ${{ matrix.tauri-target }} ${{ secrets.APPLE_CERTIFICATE == '' && '--no-sign' || '' }}
 
       - name: Move & rename artifacts
         shell: bash
