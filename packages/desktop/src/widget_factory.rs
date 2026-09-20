@@ -496,7 +496,7 @@ impl WidgetFactory {
       // not be smaller than the size of the window.
       let window_margin = dock_config
         .window_margin
-        .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
+        .to_px_scaled(window_length, coords.monitor.scale_factor)
         .clamp(-coords.size.height, i32::MAX);
 
       let monitor_length = if edge.is_horizontal() {

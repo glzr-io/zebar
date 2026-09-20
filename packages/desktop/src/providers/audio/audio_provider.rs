@@ -408,9 +408,9 @@ impl AudioProvider {
       info!("Audio device removed: {}", device_id);
 
       unsafe {
-        state.com_volume.UnregisterControlChangeNotify(
-          &IAudioEndpointVolumeCallback::from(state.com_volume_callback),
-        )
+        state
+          .com_volume
+          .UnregisterControlChangeNotify(&state.com_volume_callback)
       }?;
     }
 

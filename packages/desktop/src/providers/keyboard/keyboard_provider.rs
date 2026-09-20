@@ -52,7 +52,7 @@ impl KeyboardProvider {
     };
 
     GetGUIThreadInfo(0, &mut gui_thread_info)?;
-    return Ok(gui_thread_info.hwndFocus);
+    Ok(gui_thread_info.hwndFocus)
   }
 
   fn run_interval(&mut self) -> anyhow::Result<KeyboardOutput> {

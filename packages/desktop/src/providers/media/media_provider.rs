@@ -484,9 +484,9 @@ impl MediaProvider {
     let mut session_output = MediaSession::default();
 
     session_output.session_id = session_id.to_string();
-    Self::update_media_properties(&mut session_output, &session)?;
-    Self::update_timeline_properties(&mut session_output, &session)?;
-    Self::update_playback_info(&mut session_output, &session)?;
+    Self::update_media_properties(&mut session_output, session)?;
+    Self::update_timeline_properties(&mut session_output, session)?;
+    Self::update_playback_info(&mut session_output, session)?;
 
     Ok(session_output)
   }
@@ -551,7 +551,7 @@ impl MediaProvider {
 
 impl Drop for MediaProvider {
   fn drop(&mut self) {
-    for (_, session_state) in &self.session_states {
+    for session_state in self.session_states.values() {
       Self::remove_session_listeners(
         &session_state.session,
         &session_state.tokens,
