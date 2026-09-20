@@ -10,8 +10,7 @@ use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
   tray::{
-    MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder,
-    TrayIconEvent,
+    TrayIcon, TrayIconBuilder,
   },
   AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Wry,
 };
@@ -475,7 +474,7 @@ impl SysTray {
       }
       Some(window) => {
         window
-          .eval(&format!("location.replace('{}')", route))
+          .eval(format!("location.replace('{}')", route))
           .context("Failed to navigate to widget edit page.")?;
 
         window

@@ -1,6 +1,6 @@
 use std::{
   fs,
-  path::{Component, Path, PathBuf, Prefix},
+  path::{Path, PathBuf},
 };
 
 use anyhow::Context;

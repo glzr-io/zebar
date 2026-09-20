@@ -280,7 +280,7 @@ pub async fn shell_exec(
 ) -> anyhow::Result<shell_util::ShellExecOutput, String> {
   let widget_id = window.label();
   shell_state
-    .exec(&widget_id, &program, args, &options)
+    .exec(widget_id, &program, args, &options)
     .await
     .map_err(|err| err.to_string())
 }
@@ -295,7 +295,7 @@ pub async fn shell_spawn(
 ) -> anyhow::Result<shell_util::ProcessId, String> {
   let widget_id = window.label();
   shell_state
-    .spawn(&widget_id, &program, args, &options)
+    .spawn(widget_id, &program, args, &options)
     .await
     .map_err(|err| err.to_string())
 }

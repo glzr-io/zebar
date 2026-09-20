@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
     ])
     .build(tauri::generate_context!())?;
 
-  app.run(|app, event| {
+  app.run(|_app, event| {
     if let RunEvent::ExitRequested { .. } = &event {
       // Deallocate any appbars on Windows.
       #[cfg(target_os = "windows")]
@@ -145,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
 fn output_query(app: &tauri::App, args: QueryArgs) -> anyhow::Result<()> {
   match args {
     QueryArgs::Monitors => {
-      let monitors = MonitorState::new(&app.handle());
+      let monitors = MonitorState::new(app.handle());
       cli::print_and_exit(monitors.output_str());
       Ok(())
     }
