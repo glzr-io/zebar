@@ -9,12 +9,9 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
-serde_json = { workspace = true }
 tokio = { workspace = true }
-tracing = { workspace = true }
 thiserror = { workspace = true }
 shared_child = "1"
-regex = "1"
 encoding_rs = "0.8"
 os_pipe = "1"
 memchr = "2"

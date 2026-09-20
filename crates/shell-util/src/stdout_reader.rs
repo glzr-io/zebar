@@ -1,6 +1,5 @@
 use std::io::{BufRead, BufReader};
 
-
 use crate::{Buffer, Encoding};
 
 /// A pipe reader for stdout/stderr.

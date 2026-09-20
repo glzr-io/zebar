@@ -6,12 +6,12 @@ use std::{
 };
 
 use anyhow::{bail, Context};
+#[cfg(windows)]
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
-  tray::{
-    TrayIcon, TrayIconBuilder,
-  },
+  tray::{TrayIcon, TrayIconBuilder},
   AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Wry,
 };
 use tokio::task;

@@ -131,7 +131,7 @@ async fn main() -> anyhow::Result<()> {
       // Deallocate any appbars on Windows.
       #[cfg(target_os = "windows")]
       {
-        for (_, window) in app.webview_windows() {
+        for (_, window) in _app.webview_windows() {
           let _ = window.as_ref().window().deallocate_app_bar();
         }
       }

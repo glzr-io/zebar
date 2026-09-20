@@ -300,7 +300,9 @@ impl WidgetFactory {
         .await?,
       );
 
-      let state = WidgetState {
+      // Allow unused mut as windows compilation needs it, unix doesn't
+      #[allow(unused_mut)]
+      let mut state = WidgetState {
         id: widget_id.clone(),
         name: widget_name.to_string(),
         pack_id: widget_pack.id.clone(),
@@ -453,10 +455,12 @@ impl WidgetFactory {
   /// docked to the given edge).
   ///
   /// Returns the new window size and position.
+  /// Allow unused variables as windows compilation uses them, unix doesn't
+  #[allow(unused_variables)]
   fn dock_to_edge(
     &self,
-    _window: &tauri::WebviewWindow,
-    _dock_config: &DockConfig,
+    window: &tauri::WebviewWindow,
+    dock_config: &DockConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     #[cfg(not(target_os = "windows"))]
@@ -606,6 +610,9 @@ impl WidgetFactory {
   }
 
   /// Registers window events for a given widget.
+  /// Allow unused variables as windows compilation uses them, unix
+  /// doesn't
+  #[allow(unused_variables)]
   fn register_window_events(
     &self,
     window: &tauri::WebviewWindow,
@@ -624,7 +631,7 @@ impl WidgetFactory {
           let mut widget_states = widget_states.lock().await;
 
           // Remove the widget state.
-          let _state = widget_states.remove(&widget_id);
+          let state = widget_states.remove(&widget_id);
 
           // Ensure appbar space is deallocated on close.
           #[cfg(target_os = "windows")]
@@ -801,6 +808,8 @@ impl WidgetFactory {
   }
 
   /// Relaunches widgets with the given widget ID's.
+  /// Allow unused variables as windows compilation uses them, unix doesn't
+  #[allow(unused_variables)]
   pub async fn relaunch_by_ids(
     &self,
     widget_ids: &Vec<String>,
@@ -812,7 +821,7 @@ impl WidgetFactory {
       widget_ids
         .iter()
         .filter_map(|id| widget_states.remove(id))
-        .inspect(|_widget_state| {
+        .inspect(|widget_state| {
           // Need to clean up any appbars prior to restarting.
           #[cfg(target_os = "windows")]
           {

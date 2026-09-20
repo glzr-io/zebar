@@ -1,3 +1,5 @@
+#![cfg(target_os = "windows")]
+
 mod error;
 mod systray;
 mod tray_spy;

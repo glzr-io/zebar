@@ -1,3 +1,5 @@
+#[cfg(target_os = "windows")]
+use std::path::{Component, Prefix};
 use std::{
   fs,
   path::{Path, PathBuf},
