@@ -1,8 +1,9 @@
 use std::{
   collections::HashMap,
   io::Cursor,
+  net::TcpListener,
   path::{Path, PathBuf},
-  sync::LazyLock,
+  sync::{LazyLock, OnceLock},
 };
 
 use rocket::{
@@ -17,8 +18,21 @@ use uuid::Uuid;
 
 use crate::common::{glob_util, PathExt};
 
-/// Port for the localhost asset server.
-const ASSET_SERVER_PORT: u16 = 6124;
+/// Preferred port for the localhost asset server.
+const DEFAULT_ASSET_SERVER_PORT: u16 = 6124;
+
+/// Port that the localhost asset server is listening on.
+///
+/// Resolved at startup rather than fixed, since a port is machine-wide and
+/// a second logged-in user would otherwise fail to bind.
+static ASSET_SERVER_PORT: OnceLock<u16> = OnceLock::new();
+
+/// Port of the running asset server.
+pub fn asset_server_port() -> u16 {
+  *ASSET_SERVER_PORT
+    .get()
+    .unwrap_or(&DEFAULT_ASSET_SERVER_PORT)
+}
 
 /// Map of tokens to their corresponding path and file patterns.
 static ASSET_SERVER_TOKENS: LazyLock<Mutex<HashMap<String, TokenAccess>>> =
@@ -34,11 +48,29 @@ struct TokenAccess {
   file_patterns: Vec<String>,
 }
 
+/// Picks the port for the asset server.
+///
+/// Sticks to [`DEFAULT_ASSET_SERVER_PORT`] whenever it's free, and asks
+/// the OS for any free port when it isn't, which is the case for every
+/// logged-in user after the first.
+///
+/// Rocket needs the port up front, so the listener used to claim it is
+/// dropped again before Rocket binds. Nothing else is expected to grab a
+/// localhost port in that window.
+fn pick_port() -> anyhow::Result<u16> {
+  let listener =
+    TcpListener::bind(("127.0.0.1", DEFAULT_ASSET_SERVER_PORT))
+      .or_else(|_| TcpListener::bind("127.0.0.1:0"))?;
+
+  Ok(listener.local_addr()?.port())
+}
+
 pub async fn setup_asset_server() -> anyhow::Result<()> {
+  let port = pick_port()?;
+  let _ = ASSET_SERVER_PORT.set(port);
+
   let rocket = rocket::build()
-    .configure(
-      rocket::Config::figment().merge(("port", ASSET_SERVER_PORT)),
-    )
+    .configure(rocket::Config::figment().merge(("port", port)))
     .mount("/", routes![sw_js, normalize_css, init, serve]);
 
   // Test if the server can start (this doesn't block).
@@ -71,7 +103,7 @@ pub async fn create_init_url(
   );
 
   let url = tauri::Url::parse_with_params(
-    &format!("http://127.0.0.1:{}/__zebar/init", ASSET_SERVER_PORT),
+    &format!("http://127.0.0.1:{}/__zebar/init", asset_server_port()),
     &[("token", &token), ("redirect", &redirect)],
   )?;
 

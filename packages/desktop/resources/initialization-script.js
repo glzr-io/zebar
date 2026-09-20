@@ -1,3 +1,24 @@
+// Only the first logged-in user's GlazeWM gets port 6123, since a port is
+// machine-wide. The rest listen on a port picked at runtime. Widgets load
+// `glazewm-js` straight from a CDN with 6123 baked in, so those connections
+// are pointed at the running WM here instead of every widget being patched.
+// On a machine with one user this whole block is skipped.
+if (window.__ZEBAR_PORTS.glazewmIpc !== 6123) {
+  const NativeWebSocket = window.WebSocket;
+
+  window.WebSocket = class extends NativeWebSocket {
+    constructor(url, protocols) {
+      super(
+        String(url).replace(
+          /^(wss?:\/\/(?:localhost|127\.0\.0\.1)):6123(?=\/|$)/,
+          `$1:${window.__ZEBAR_PORTS.glazewmIpc}`,
+        ),
+        protocols,
+      );
+    }
+  };
+}
+
 // Clear console every 15 minutes.
 setInterval(
   () => {
@@ -11,7 +32,9 @@ setInterval(
   1000 * 60 * 15,
 );
 
-if (window.location.host === '127.0.0.1:6124') {
+if (
+  window.location.host === `127.0.0.1:${window.__ZEBAR_PORTS.assetServer}`
+) {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/__zebar/sw.js', { scope: '/' })

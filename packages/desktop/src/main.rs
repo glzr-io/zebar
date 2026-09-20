@@ -40,6 +40,7 @@ mod cli;
 mod commands;
 mod common;
 mod config_migration;
+mod glazewm_ipc;
 mod marketplace_installer;
 mod monitor_state;
 mod providers;

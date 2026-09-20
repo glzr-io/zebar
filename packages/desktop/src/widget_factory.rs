@@ -600,9 +600,17 @@ impl WidgetFactory {
     let state_script =
       format!("window.__ZEBAR_STATE={};", serde_json::to_string(state)?);
 
+    // Both ports are picked at runtime, so that one instance per logged-in
+    // user can run at once. Widgets are told which ones to use.
+    let ports_script = format!(
+      "window.__ZEBAR_PORTS={{assetServer:{},glazewmIpc:{}}};",
+      crate::asset_server::asset_server_port(),
+      crate::glazewm_ipc::ipc_port(&self.app_handle),
+    );
+
     let sw_script = include_str!("../resources/initialization-script.js");
 
-    Ok(format!("{state_script}\n{sw_script}"))
+    Ok(format!("{ports_script}\n{state_script}\n{sw_script}"))
   }
 
   /// Registers window events for a given widget.
