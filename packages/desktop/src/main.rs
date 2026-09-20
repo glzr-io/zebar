@@ -345,11 +345,15 @@ fn setup_single_instance(
       task::spawn(async move {
         let res = match Cli::try_parse_from(args) {
           Ok(cli) => {
-            // No-op if no subcommand is provided.
-            if cli.command() != CliCommand::Empty {
-              open_widgets_by_cli_command(cli, widget_factory).await
-            } else {
+            // No-op if no subcommand is provided and widgets are still
+            // running. If all widgets have been destroyed (e.g. after
+            // a WM restart), re-run startup to recreate them.
+            if cli.command() == CliCommand::Empty
+              && !widget_factory.states().await.is_empty()
+            {
               Ok(())
+            } else {
+              open_widgets_by_cli_command(cli, widget_factory).await
             }
           }
           _ => Err(anyhow::anyhow!("Failed to parse CLI arguments.")),
