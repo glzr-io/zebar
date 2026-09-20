@@ -374,6 +374,8 @@ No config options.
 | `position` | Timestamp (in seconds) of current playback position.      | `number` |
 | `isPlaying` | Whether the media session is currently playing.      | `boolean` |
 | `isCurrentSession` | Whether this is the currently active session (i.e. `currentSession`).      | `boolean` |
+| `isNextEnabled` | Whether the media session can be skipped. | `boolean` |
+| `isPreviousEnabled` | Whether the media session can be rewound | `boolean` |
 
 #### `MediaControlOptions`
 

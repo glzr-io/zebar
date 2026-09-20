@@ -31,6 +31,8 @@ export interface MediaSession {
   endTime: number;
   position: number;
   isPlaying: boolean;
+  isNextEnabled: boolean;
+  isPreviousEnabled: boolean;
   isCurrentSession: boolean;
 }
 
