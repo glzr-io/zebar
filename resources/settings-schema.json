@@ -6,22 +6,45 @@
   "required": ["startupConfigs"],
   "properties": {
     "startupConfigs": {
+      "description": "Widget presets to launch automatically when Zebar starts. Each entry identifies an installed widget pack, a widget in that pack, and one of that widget's presets.",
       "type": "array",
       "items": {
+        "description": "An installed widget preset that Zebar launches on startup.",
         "type": "object",
         "properties": {
           "pack": {
+            "description": "ID of the installed widget pack, for example 'glzr-io.starter'.",
             "type": "string"
           },
           "widget": {
+            "description": "Widget name from the pack's zpack.json 'widgets' array.",
             "type": "string"
           },
           "preset": {
+            "description": "Preset name from the selected widget's 'presets' array.",
             "type": "string"
           }
         },
-        "required": ["pack", "widget", "preset"]
+        "required": ["pack", "widget", "preset"],
+        "examples": [
+          {
+            "pack": "glzr-io.starter",
+            "widget": "vanilla",
+            "preset": "default"
+          }
+        ]
       }
     }
-  }
+  },
+  "examples": [
+    {
+      "startupConfigs": [
+        {
+          "pack": "glzr-io.starter",
+          "widget": "vanilla",
+          "preset": "default"
+        }
+      ]
+    }
+  ]
 }
