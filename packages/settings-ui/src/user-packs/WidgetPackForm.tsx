@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardContent,
   TextField,
@@ -34,6 +35,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
       tags: [],
       previewImages: [],
       repositoryUrl: '',
+      mimeTypes: [],
     },
     { schema: configSchemas.widgetPack },
   );
@@ -62,6 +64,7 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
             tags: props.pack.tags,
             previewImages: props.pack.previewImages,
             repositoryUrl: props.pack.repositoryUrl,
+            mimeTypes: props.pack.mimeTypes ?? [],
           });
         }
       },
@@ -95,6 +98,19 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
     }
 
     form.setFieldValue('previewImages', validImages);
+  }
+
+  function addMimeType() {
+    form.setFieldValue('mimeTypes', mimeTypes => [
+      ...mimeTypes,
+      { extension: '', contentType: '' },
+    ]);
+  }
+
+  function deleteMimeType(targetIndex: number) {
+    form.setFieldValue('mimeTypes', mimeTypes =>
+      mimeTypes.filter((_, index) => index !== targetIndex),
+    );
   }
 
   return (
@@ -174,6 +190,63 @@ export function WidgetPackForm(props: WidgetPackFormProps) {
               />
             )}
           </Field>
+
+          <div class="space-y-3">
+            <div>
+              <h3 class="font-medium">Custom asset MIME types</h3>
+              <p class="text-sm text-muted-foreground">
+                Override the content type used when serving files with
+                these extensions. Extensions are case-insensitive and omit
+                the dot.
+              </p>
+            </div>
+
+            {form.value.mimeTypes.map((_, index) => (
+              <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                <Field of={form} path={`mimeTypes.${index}.extension`}>
+                  {(inputProps, field) => (
+                    <TextField
+                      label="Extension"
+                      placeholder="tsx"
+                      disabled={props.disabled}
+                      error={field.error()}
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                <Field of={form} path={`mimeTypes.${index}.contentType`}>
+                  {(inputProps, field) => (
+                    <TextField
+                      label="Content type"
+                      placeholder="text/javascript"
+                      disabled={props.disabled}
+                      error={field.error()}
+                      {...inputProps()}
+                    />
+                  )}
+                </Field>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={props.disabled}
+                  onClick={() => deleteMimeType(index)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              disabled={props.disabled}
+              onClick={addMimeType}
+            >
+              Add MIME type
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </form>

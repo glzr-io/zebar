@@ -29,6 +29,19 @@
     "repositoryUrl": {
       "type": "string"
     },
+    "mimeTypes": {
+      "type": "array",
+      "description": "Additional or overridden MIME types used by the local asset server.",
+      "items": {
+        "type": "object",
+        "required": ["extension", "contentType"],
+        "properties": {
+          "extension": { "type": "string", "minLength": 1 },
+          "contentType": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
     "widgets": {
       "type": "array",
       "items": {
