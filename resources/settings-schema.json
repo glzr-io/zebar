@@ -13,7 +13,7 @@
         "type": "object",
         "properties": {
           "pack": {
-            "description": "ID of the installed widget pack, for example 'glzr-io.starter'.",
+            "description": "ID of the installed widget pack. Marketplace packs use the 'pack_id' from their metadata (for example, 'glzr-io.starter'); local packs use the 'name' from zpack.json.",
             "type": "string"
           },
           "widget": {
