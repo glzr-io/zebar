@@ -163,6 +163,7 @@ fn migrate_widget_config(config_dir: &Path) -> anyhow::Result<()> {
       tags: vec![],
       preview_images: vec![],
       repository_url: "".to_string(),
+      mime_types: vec![],
       widgets: vec![],
     };
 

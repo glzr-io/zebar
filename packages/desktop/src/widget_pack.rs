@@ -86,9 +86,24 @@ pub struct WidgetPackConfig {
   #[serde(default)]
   pub repository_url: String,
 
+  /// MIME types to use for additional or overridden asset file extensions.
+  #[serde(default)]
+  pub mime_types: Vec<AssetMimeType>,
+
   /// Widgets in the pack.
   #[serde(default)]
   pub widgets: Vec<WidgetConfig>,
+}
+
+/// A content type override for files served from the widget pack.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetMimeType {
+  /// File extension without a leading dot (for example, `tsx`).
+  pub extension: String,
+
+  /// HTTP media type (for example, `text/javascript`).
+  pub content_type: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

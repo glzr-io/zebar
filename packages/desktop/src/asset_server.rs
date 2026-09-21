@@ -15,10 +15,26 @@ use rocket::{
 use tokio::{sync::Mutex, task};
 use uuid::Uuid;
 
-use crate::common::{glob_util, PathExt};
+use crate::{
+  common::{glob_util, PathExt},
+  widget_pack::AssetMimeType,
+};
 
 /// Port for the localhost asset server.
 const ASSET_SERVER_PORT: u16 = 6124;
+
+/// MIME types that Rocket's extension table does not consistently identify as browser JavaScript.
+const DEFAULT_MIME_TYPES: &[(&str, &str)] = &[
+  ("cjs", "text/javascript"),
+  ("cts", "text/javascript"),
+  ("jsx", "text/javascript"),
+  ("mjs", "text/javascript"),
+  ("mts", "text/javascript"),
+  ("ts", "text/javascript"),
+  ("tsx", "text/javascript"),
+  ("wasm", "application/wasm"),
+  ("webmanifest", "application/manifest+json"),
+];
 
 /// Map of tokens to their corresponding path and file patterns.
 static ASSET_SERVER_TOKENS: LazyLock<Mutex<HashMap<String, TokenAccess>>> =
@@ -32,6 +48,9 @@ struct TokenAccess {
 
   /// File patterns for accessible files.
   file_patterns: Vec<String>,
+
+  /// Custom MIME types configured for the widget pack.
+  mime_types: Vec<AssetMimeType>,
 }
 
 pub async fn setup_asset_server() -> anyhow::Result<()> {
@@ -75,10 +94,12 @@ pub async fn create_init_url(
   parent_dir: &Path,
   html_path: &Path,
   file_patterns: Vec<String>,
+  mime_types: Vec<AssetMimeType>,
 ) -> anyhow::Result<tauri::Url> {
   // Generate a unique token to identify requests from the widget to the
   // asset server.
-  let token = upsert_or_get_token(parent_dir, file_patterns).await;
+  let token =
+    upsert_or_get_token(parent_dir, file_patterns, mime_types).await;
 
   let redirect = format!(
     "/{}",
@@ -100,6 +121,7 @@ pub async fn create_init_url(
 async fn upsert_or_get_token(
   directory: &Path,
   file_patterns: Vec<String>,
+  mime_types: Vec<AssetMimeType>,
 ) -> String {
   let mut asset_server_tokens = ASSET_SERVER_TOKENS.lock().await;
 
@@ -113,6 +135,7 @@ async fn upsert_or_get_token(
     // Update the file patterns for the existing token.
     if let Some(access) = asset_server_tokens.get_mut(&token) {
       access.file_patterns = file_patterns;
+      access.mime_types = mime_types;
     }
 
     token
@@ -124,6 +147,7 @@ async fn upsert_or_get_token(
       TokenAccess {
         base_dir: directory.to_path_buf(),
         file_patterns,
+        mime_types,
       },
     );
 
@@ -176,7 +200,7 @@ pub fn normalize_css() -> (ContentType, &'static str) {
 pub async fn serve(
   path: Option<PathBuf>,
   token: ServerToken,
-) -> Option<NamedFile> {
+) -> Option<AssetResponse> {
   // Retrieve access information for the corresponding token.
   let token_access =
     { ASSET_SERVER_TOKENS.lock().await.get(&token.0).cloned() }?;
@@ -204,9 +228,54 @@ pub async fn serve(
     return None;
   }
 
-  // Attempt to open and serve the requested file. Currently returns HTML
-  // `Content-Type` if not found.
-  NamedFile::open(absolute_path).await.ok()
+  let content_type =
+    content_type_for_asset(&relative_path, &token_access.mime_types);
+
+  // NamedFile supplies the standard extension-based type. Override it only when this project
+  // includes a predefined browser type or an explicit mapping in its widget-pack config.
+  let file = NamedFile::open(absolute_path).await.ok()?;
+  Some(AssetResponse { file, content_type })
+}
+
+fn content_type_for_asset(
+  path: &Path,
+  mime_types: &[AssetMimeType],
+) -> Option<ContentType> {
+  let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+  let configured = mime_types.iter().rev().find(|entry| {
+    entry
+      .extension
+      .trim_start_matches('.')
+      .eq_ignore_ascii_case(&extension)
+  });
+  let mime_type = configured
+    .map(|entry| entry.content_type.as_str())
+    .or_else(|| {
+      DEFAULT_MIME_TYPES
+        .iter()
+        .find(|(known_extension, _)| *known_extension == extension)
+        .map(|(_, mime_type)| *mime_type)
+    })?;
+
+  ContentType::parse_flexible(mime_type)
+}
+
+pub struct AssetResponse {
+  file: NamedFile,
+  content_type: Option<ContentType>,
+}
+
+impl<'r> Responder<'r, 'static> for AssetResponse {
+  fn respond_to(
+    self,
+    request: &'r Request<'_>,
+  ) -> response::Result<'static> {
+    let mut response = self.file.respond_to(request)?;
+    if let Some(content_type) = self.content_type {
+      response.set_header(content_type);
+    }
+    Ok(response)
+  }
 }
 
 /// Token for identifying which directory is being accessed.
@@ -231,5 +300,91 @@ impl<'r> FromRequest<'r> for ServerToken {
         anyhow::anyhow!("Missing token for accessing directory."),
       )),
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use rocket::{http::Cookie, local::asynchronous::Client};
+
+  #[test]
+  fn adds_browser_mime_types_for_script_and_webassembly_assets() {
+    let empty = [];
+
+    assert_eq!(
+      content_type_for_asset(Path::new("widget.TSX"), &empty)
+        .map(|content_type| content_type.to_string())
+        .as_deref(),
+      Some("text/javascript")
+    );
+    assert_eq!(
+      content_type_for_asset(Path::new("widget.wasm"), &empty)
+        .map(|content_type| content_type.to_string())
+        .as_deref(),
+      Some("application/wasm")
+    );
+  }
+
+  #[test]
+  fn custom_mime_types_override_defaults_and_accept_extensions_with_a_dot()
+  {
+    let mime_types = vec![AssetMimeType {
+      extension: ".TS".to_string(),
+      content_type: "application/x-typescript".to_string(),
+    }];
+
+    assert_eq!(
+      content_type_for_asset(Path::new("widget.ts"), &mime_types)
+        .map(|content_type| content_type.to_string())
+        .as_deref(),
+      Some("application/x-typescript")
+    );
+  }
+
+  #[tokio::test]
+  async fn serves_configured_content_type_for_custom_file_extensions() {
+    let base_dir = std::env::temp_dir()
+      .join(format!("zebar-asset-mime-{}", Uuid::new_v4()));
+    tokio::fs::create_dir_all(&base_dir).await.unwrap();
+    tokio::fs::write(base_dir.join("widget.custom"), "asset body")
+      .await
+      .unwrap();
+
+    let token = Uuid::new_v4().to_string();
+    ASSET_SERVER_TOKENS.lock().await.insert(
+      token.clone(),
+      TokenAccess {
+        base_dir: base_dir.clone(),
+        file_patterns: vec!["widget.custom".to_string()],
+        mime_types: vec![AssetMimeType {
+          extension: "custom".to_string(),
+          content_type: "text/x-widget".to_string(),
+        }],
+      },
+    );
+
+    let client =
+      Client::tracked(rocket::build().mount("/", routes![serve]))
+        .await
+        .unwrap();
+    let response = client
+      .get("/widget.custom")
+      .cookie(Cookie::new("ZEBAR_TOKEN", token.clone()))
+      .dispatch()
+      .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+      response.content_type().unwrap().to_string(),
+      "text/x-widget"
+    );
+    assert_eq!(
+      response.into_string().await.as_deref(),
+      Some("asset body")
+    );
+
+    ASSET_SERVER_TOKENS.lock().await.remove(&token);
+    tokio::fs::remove_dir_all(base_dir).await.unwrap();
   }
 }

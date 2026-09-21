@@ -73,6 +73,21 @@ Widgets consist of an HTML file, and any surrounding assets (e.g. CSS, JS, image
 
 The schema for `zpack.json` can be found [here](https://github.com/glzr-io/zebar/blob/main/resources/zpack-schema.json) although all options can also be configured via the GUI.
 
+#### Serving TypeScript, JSX, and custom file types
+
+The local asset server uses browser-compatible JavaScript MIME types for `.ts`, `.tsx`, `.jsx`, `.mjs`, `.cjs`, `.mts`, and `.cts` files, and `application/wasm` for `.wasm` files. For other extensions, add a `mimeTypes` list to `zpack.json`. The list applies to every widget in the pack and overrides both the defaults and the server's built-in extension mapping:
+
+```json
+{
+  "mimeTypes": [
+    { "extension": "vue", "contentType": "text/javascript" },
+    { "extension": "tmpl", "contentType": "text/html" }
+  ]
+}
+```
+
+Use the extension without a leading dot. Extension matching is case-insensitive. The setting controls the HTTP `Content-Type`; it does not transpile or compile source files.
+
 #### Querying system information
 
 Zebar exposes various system information (referred to as "providers") which can be used and displayed by your frontend. This includes stats like CPU usage, battery info, various window manager integrations, and lots more. See [Providers](#-providers) for a list of available providers.
