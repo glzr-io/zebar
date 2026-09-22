@@ -10,12 +10,14 @@ edition = "2021"
 [lib]
 path = "src/lib.rs"
 
-[target.'cfg(target_os = "windows")'.dependencies]
+[dependencies]
 image = { version = "0.25", features = ["serde"] }
 serde = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
 windows-core = { workspace = true }
 windows = { workspace = true }

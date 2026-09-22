@@ -1,7 +1,5 @@
-#[cfg(target_os = "windows")]
 use systray_util::{Systray, SystrayEvent};
 
-#[cfg(target_os = "windows")]
 fn main() -> systray_util::Result<()> {
   let mut systray = Systray::new()?;
 
@@ -21,8 +19,3 @@ fn main() -> systray_util::Result<()> {
 
   Ok(())
 }
-
-// systray-util is Windows-only. This stub keeps the example target
-// compilable elsewhere,
-#[cfg(not(target_os = "windows"))]
-fn main() {}
