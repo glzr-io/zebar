@@ -219,12 +219,17 @@ impl Util {
     // channels became standard.  Either white/black is used to
     // represent transparency. Modern icons will have partial transparency
     // throughout the icon from anti-aliasing
-    let is_mask_based =
-      color_buffer.as_chunks::<4>().0.iter().all(|chunk| chunk[3] == 0);
+    let is_mask_based = color_buffer
+      .as_chunks::<4>()
+      .0
+      .iter()
+      .all(|chunk| chunk[3] == 0);
 
     // Combine color and mask data. We also need to convert BGR to RGB,
     // meaning that the red and blue channels get swapped.
-    for (index, chunk) in color_buffer.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+    for (index, chunk) in
+      color_buffer.as_chunks_mut::<4>().0.iter_mut().enumerate()
+    {
       // Get mask bit (every 4th byte since we're reading as 32-bit).
       let mask_alpha = mask_buffer[index * 4];
 
