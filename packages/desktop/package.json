@@ -7,7 +7,9 @@
     "dev:local": "pnpm dev",
     "format": "cargo fmt",
     "lint:check": "cargo clippy --all-targets --no-deps --manifest-path ./Cargo.toml",
+    "lint:check:windows": "cargo clippy --target x86_64-pc-windows-msvc --all-targets --no-deps --manifest-path ./Cargo.toml",
     "lint:fix": "cargo clippy --fix --manifest-path ./Cargo.toml",
+    "lint:fix:windows": "cargo clippy --fix --target x86_64-pc-windows-msvc --manifest-path ./Cargo.toml",
     "tauri": "tauri"
   },
   "dependencies": {},

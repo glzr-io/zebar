@@ -15,7 +15,9 @@
     "js:format:check": "prettier --check .",
     "js:format:fix": "prettier --write .",
     "lint:check": "pnpm -r lint:check",
+    "lint:check:windows": "pnpm -r lint:check:windows",
     "lint:fix": "pnpm -r lint:fix",
+    "lint:fix:windows": "pnpm -r lint:fix:windows",
     "rust:format:check": "cargo fmt --check",
     "rust:format:fix": "cargo fmt"
   },

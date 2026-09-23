@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-22.04, macos-latest, windows-latest]
+        platform: [ubuntu-22.04, macos-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
         with:
           toolchain: nightly
           components: clippy
-          targets: x86_64-pc-windows-gnu
+          targets: x86_64-pc-windows-gnu x86_64-pc-windows-msvc
 
       - uses: swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3
 
@@ -58,6 +58,17 @@ jobs:
           pnpm lint:fix
           if git status --porcelain | grep -q .; then
             echo "::error::Detected autofixable clippy warnings. Please run 'pnpm lint:fix' locally, commit, and push."
+            git diff --stat
+            exit 1
+          fi
+
+      - name: Check for autofixable clippy warnings (windows cross target)
+        if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          pnpm lint:fix:windows
+          if git status --porcelain | grep -q .; then
+            echo "::error::Detected autofixable clippy warnings (windows target). Please run 'pnpm lint:fix:windows' locally, commit, and push."
             git diff --stat
             exit 1
           fi
