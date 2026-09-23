@@ -32,6 +32,8 @@ struct TokenAccess {
 
   /// File patterns for accessible files.
   file_patterns: Vec<String>,
+
+  mime_types: HashMap<String, ContentType>,
 }
 
 pub async fn setup_asset_server() -> anyhow::Result<()> {
@@ -75,10 +77,13 @@ pub async fn create_init_url(
   parent_dir: &Path,
   html_path: &Path,
   file_patterns: Vec<String>,
+  mime_types: &HashMap<String, String>,
 ) -> anyhow::Result<tauri::Url> {
   // Generate a unique token to identify requests from the widget to the
   // asset server.
-  let token = upsert_or_get_token(parent_dir, file_patterns).await;
+  let mime_types = parse_mime_types(mime_types)?;
+  let token =
+    upsert_or_get_token(parent_dir, file_patterns, mime_types).await;
 
   let redirect = format!(
     "/{}",
@@ -100,6 +105,7 @@ pub async fn create_init_url(
 async fn upsert_or_get_token(
   directory: &Path,
   file_patterns: Vec<String>,
+  mime_types: HashMap<String, ContentType>,
 ) -> String {
   let mut asset_server_tokens = ASSET_SERVER_TOKENS.lock().await;
 
@@ -113,6 +119,7 @@ async fn upsert_or_get_token(
     // Update the file patterns for the existing token.
     if let Some(access) = asset_server_tokens.get_mut(&token) {
       access.file_patterns = file_patterns;
+      access.mime_types = mime_types;
     }
 
     token
@@ -124,6 +131,7 @@ async fn upsert_or_get_token(
       TokenAccess {
         base_dir: directory.to_path_buf(),
         file_patterns,
+        mime_types,
       },
     );
 
@@ -176,7 +184,7 @@ pub fn normalize_css() -> (ContentType, &'static str) {
 pub async fn serve(
   path: Option<PathBuf>,
   token: ServerToken,
-) -> Option<NamedFile> {
+) -> Option<(ContentType, NamedFile)> {
   // Retrieve access information for the corresponding token.
   let token_access =
     { ASSET_SERVER_TOKENS.lock().await.get(&token.0).cloned() }?;
@@ -204,14 +212,231 @@ pub async fn serve(
     return None;
   }
 
-  // Attempt to open and serve the requested file. Currently returns HTML
-  // `Content-Type` if not found.
-  NamedFile::open(absolute_path).await.ok()
+  let extension = relative_path
+    .extension()
+    .and_then(|extension| extension.to_str())
+    .unwrap_or_default()
+    .to_ascii_lowercase();
+  let content_type = token_access
+    .mime_types
+    .get(&extension)
+    .cloned()
+    .unwrap_or_else(|| match extension.as_str() {
+      "ts" => ContentType::new("text", "typescript"),
+      "tsx" => ContentType::new("text", "tsx"),
+      "jsx" => ContentType::new("text", "jsx"),
+      _ => ContentType::from_extension(&extension)
+        .unwrap_or(ContentType::Binary),
+    });
+  NamedFile::open(absolute_path)
+    .await
+    .ok()
+    .map(|file| (content_type, file))
+}
+
+fn parse_mime_types(
+  mime_types: &HashMap<String, String>,
+) -> anyhow::Result<HashMap<String, ContentType>> {
+  let mut parsed = HashMap::new();
+  for (extension, value) in mime_types {
+    anyhow::ensure!(
+      !extension.is_empty()
+        && extension.bytes().all(|byte| {
+          byte.is_ascii_lowercase() || byte.is_ascii_digit()
+        }),
+      "Invalid MIME extension '{extension}': use lowercase letters and digits without a dot."
+    );
+    let content_type = value.parse::<ContentType>().map_err(|err| {
+      anyhow::anyhow!("Invalid MIME type for '{extension}': {err}")
+    })?;
+    anyhow::ensure!(
+      content_type.top() != "*" && content_type.sub() != "*",
+      "MIME type for '{extension}' must not contain wildcards."
+    );
+    parsed.insert(extension.clone(), content_type);
+  }
+  Ok(parsed)
 }
 
 /// Token for identifying which directory is being accessed.
 #[derive(Debug)]
 pub struct ServerToken(pub String);
+
+#[cfg(test)]
+mod tests {
+  use rocket::local::asynchronous::Client;
+
+  use super::*;
+
+  #[rocket::async_test]
+  async fn serves_types_without_changing_file_access() {
+    let directory = std::env::temp_dir().join(Uuid::new_v4().to_string());
+    std::fs::create_dir(&directory).unwrap();
+    for name in [
+      "test.jsx",
+      "test.TSX",
+      "test.ts",
+      "test.js",
+      "test.css",
+      "test.vue",
+      "test.unknown",
+      "denied.txt",
+    ] {
+      std::fs::write(directory.join(name), "fixture body").unwrap();
+    }
+    let directory = directory.canonicalize_pretty().unwrap();
+    let patterns = vec![
+      "*.jsx",
+      "*.TSX",
+      "*.ts",
+      "*.js",
+      "*.css",
+      "*.vue",
+      "*.unknown",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let overrides = parse_mime_types(&HashMap::from([
+      ("vue".into(), "text/plain".into()),
+      ("js".into(), "application/javascript".into()),
+    ]))
+    .unwrap();
+    let token = upsert_or_get_token(&directory, patterns, overrides).await;
+    let client =
+      Client::tracked(rocket::build().mount("/", routes![serve]))
+        .await
+        .unwrap();
+    for (path, expected) in [
+      ("/test.jsx", "text/jsx"),
+      ("/test.TSX", "text/tsx"),
+      ("/test.ts", "text/typescript"),
+      ("/test.js", "application/javascript"),
+      ("/test.css", "text/css; charset=utf-8"),
+      ("/test.vue", "text/plain"),
+      ("/test.unknown", "application/octet-stream"),
+    ] {
+      let response = client
+        .get(path)
+        .cookie(Cookie::new("ZEBAR_TOKEN", token.clone()))
+        .dispatch()
+        .await;
+      assert_eq!(response.status(), Status::Ok, "{path}");
+      assert_eq!(
+        response.content_type(),
+        Some(expected.parse().unwrap()),
+        "{path}"
+      );
+      assert_eq!(response.into_string().await.unwrap(), "fixture body");
+    }
+    for path in ["/missing.jsx", "/denied.txt"] {
+      let response = client
+        .get(path)
+        .cookie(Cookie::new("ZEBAR_TOKEN", token.clone()))
+        .dispatch()
+        .await;
+      assert_eq!(response.status(), Status::NotFound, "{path}");
+    }
+    let other_directory = directory.join("other-pack");
+    std::fs::create_dir(&other_directory).unwrap();
+    std::fs::write(other_directory.join("test.jsx"), "other pack")
+      .unwrap();
+    let other_token = upsert_or_get_token(
+      &other_directory,
+      vec!["*.jsx".into()],
+      HashMap::from([("jsx".into(), ContentType::Plain)]),
+    )
+    .await;
+    let response = client
+      .get("/test.jsx")
+      .cookie(Cookie::new("ZEBAR_TOKEN", other_token.clone()))
+      .dispatch()
+      .await;
+    assert_eq!(response.content_type(), Some(ContentType::Plain));
+    assert_eq!(response.into_string().await.unwrap(), "other pack");
+    assert!(serve(
+      Some(PathBuf::from("../test.jsx")),
+      ServerToken(other_token.clone())
+    )
+    .await
+    .is_none());
+    ASSET_SERVER_TOKENS.lock().await.remove(&other_token);
+    assert_eq!(
+      client.get("/test.jsx").dispatch().await.status(),
+      Status::Unauthorized
+    );
+    assert_eq!(
+      client
+        .get("/test.jsx")
+        .cookie(Cookie::new("ZEBAR_TOKEN", "invalid"))
+        .dispatch()
+        .await
+        .status(),
+      Status::NotFound
+    );
+
+    let refreshed = upsert_or_get_token(
+      &directory,
+      vec!["*.jsx".into()],
+      HashMap::from([("jsx".into(), ContentType::Plain)]),
+    )
+    .await;
+    assert_eq!(token, refreshed);
+    let response = client
+      .get("/test.jsx")
+      .cookie(Cookie::new("ZEBAR_TOKEN", token.clone()))
+      .dispatch()
+      .await;
+    assert_eq!(response.content_type(), Some(ContentType::Plain));
+    assert_eq!(
+      client
+        .get("/test.js")
+        .cookie(Cookie::new("ZEBAR_TOKEN", token.clone()))
+        .dispatch()
+        .await
+        .status(),
+      Status::NotFound
+    );
+    ASSET_SERVER_TOKENS.lock().await.remove(&token);
+    std::fs::remove_dir_all(&directory).unwrap();
+  }
+
+  #[test]
+  fn rejects_invalid_mime_configuration() {
+    for (extension, value) in [
+      (".jsx", "text/jsx"),
+      ("JSX", "text/jsx"),
+      ("", "text/plain"),
+      ("jsx", "not a mime type"),
+      ("jsx", "text/*"),
+      ("jsx", "text/plain\r\nX-Injected: yes"),
+    ] {
+      assert!(
+        parse_mime_types(&HashMap::from([(
+          extension.into(),
+          value.into()
+        )]))
+        .is_err(),
+        "{extension}: {value}"
+      );
+    }
+  }
+
+  #[test]
+  fn pack_mime_configuration_is_optional_and_preserved() {
+    use crate::widget_pack::WidgetPackConfig;
+    let mut value = serde_json::json!({"name":"test", "version":"1.0.0"});
+    let pack: WidgetPackConfig =
+      serde_json::from_value(value.clone()).unwrap();
+    assert!(pack.mime_types.is_empty());
+    value["mimeTypes"] = serde_json::json!({"vue":"text/plain"});
+    let mut pack: WidgetPackConfig =
+      serde_json::from_value(value).unwrap();
+    pack.name = "renamed".into();
+    let saved = serde_json::to_value(pack).unwrap();
+    assert_eq!(saved["mimeTypes"]["vue"], "text/plain");
+  }
+}
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for ServerToken {
