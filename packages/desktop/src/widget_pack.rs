@@ -86,6 +86,11 @@ pub struct WidgetPackConfig {
   #[serde(default)]
   pub repository_url: String,
 
+  /// MIME type overrides keyed by lowercase file extension, without a
+  /// dot.
+  #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+  pub mime_types: HashMap<String, String>,
+
   /// Widgets in the pack.
   #[serde(default)]
   pub widgets: Vec<WidgetConfig>,
