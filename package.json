@@ -3,14 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "crates/*"
   ],
   "scripts": {
     "build": "pnpm run -r build",
     "dev": "pnpm run --filter zebar build && pnpm run --parallel dev",
     "dev:local": "pnpm run --filter zebar build && pnpm run --parallel dev:local",
-    "format": "prettier --write . && pnpm run -r format",
-    "lint": "prettier --check . && pnpm run -r lint"
+    "format:check": "pnpm rust:format:check && pnpm js:format:check",
+    "format:fix": "pnpm rust:format:fix && pnpm js:format:fix",
+    "js:format:check": "prettier --check .",
+    "js:format:fix": "prettier --write .",
+    "lint:check": "pnpm -r lint:check",
+    "lint:fix": "pnpm -r lint:fix",
+    "rust:format:check": "cargo fmt --check",
+    "rust:format:fix": "cargo fmt"
   },
   "prettier": "@glzr/style-guide/prettier",
   "dependencies": {},

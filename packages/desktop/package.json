@@ -6,7 +6,8 @@
     "dev": "pnpm tauri dev",
     "dev:local": "pnpm dev",
     "format": "cargo fmt",
-    "lint": "cargo fmt --check",
+    "lint:check": "cargo clippy --all-targets --no-deps --manifest-path ./Cargo.toml",
+    "lint:fix": "cargo clippy --fix --manifest-path ./Cargo.toml",
     "tauri": "tauri"
   },
   "dependencies": {},

@@ -1,0 +1,9 @@
+{
+  "name": "@zebar/shell-util",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "lint:check": "cargo clippy --all-targets --no-deps --manifest-path ./Cargo.toml",
+    "lint:fix": "cargo clippy --fix --manifest-path ./Cargo.toml"
+  }
+}
