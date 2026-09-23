@@ -17,27 +17,41 @@ use crate::{
 
 pub const VERSION_NUMBER: &str = env!("VERSION_NUMBER");
 
+/// General settings for Zebar.
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, schemars(title = "Zebar settings", example = serde_json::json!({
+  "startupConfigs": [{
+    "pack": "glzr-io.starter",
+    "widget": "vanilla",
+    "preset": "default"
+  }]
+})))]
 pub struct AppSettingsValue {
   /// JSON schema URL to validate the settings file.
   #[serde(rename = "$schema")]
   pub schema: Option<String>,
 
-  /// Widget configs to be launched on startup.
+  /// Widget presets to launch automatically when Zebar starts. Each entry
+  /// identifies an installed pack, a widget, and one of its presets.
   pub startup_configs: Vec<StartupConfig>,
 }
 
+/// An installed widget preset that Zebar launches on startup.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct StartupConfig {
-  /// ID of the widget pack to launch on startup.
+  /// ID of the installed widget pack. Marketplace packs use the pack_id
+  /// from their metadata (for example, glzr-io.starter); local packs use
+  /// the name from zpack.json.
   pub pack: String,
 
-  /// Name of the widget within the widget pack to launch on startup.
+  /// Widget name from the pack's zpack.json widgets array.
   pub widget: String,
 
-  /// Preset name within the widget config.
+  /// Preset name from the selected widget's presets array.
   pub preset: String,
 }
 

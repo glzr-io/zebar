@@ -58,7 +58,9 @@ impl WidgetPack {
 ///
 /// This is the type of the `zpack.json` file.
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, schemars(title = "Zebar widget pack"))]
 pub struct WidgetPackConfig {
   /// JSON schema URL to validate the widget pack file.
   #[serde(rename = "$schema")]
@@ -100,6 +102,7 @@ pub enum WidgetPackType {
 
 /// Deserialized widget config.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetConfig {
   /// Name of the widget.
@@ -142,6 +145,7 @@ pub struct WidgetConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ZOrder {
   BottomMost,
@@ -150,6 +154,7 @@ pub enum ZOrder {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(default, rename_all = "camelCase")]
 pub struct WidgetCaching {
   /// Default duration to cache network resources for (in seconds).
@@ -169,6 +174,7 @@ impl Default for WidgetCaching {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetCachingRule {
   /// URL regex pattern to match.
@@ -179,6 +185,7 @@ pub struct WidgetCachingRule {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPreset {
   #[serde(default = "default_preset_name")]
@@ -189,6 +196,7 @@ pub struct WidgetPreset {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPlacement {
   /// Anchor-point of the widget.
@@ -217,6 +225,7 @@ pub struct WidgetPlacement {
 #[derive(
   Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, ValueEnum,
 )]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[clap(rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum AnchorPoint {
@@ -232,6 +241,7 @@ pub enum AnchorPoint {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(tag = "type", content = "match", rename_all = "snake_case")]
 pub enum MonitorSelection {
   All,
@@ -242,6 +252,7 @@ pub enum MonitorSelection {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetPrivileges {
   /// Shell commands that the widget is allowed to run.
@@ -249,6 +260,7 @@ pub struct WidgetPrivileges {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct ShellPrivilege {
   /// Program name (if in PATH) or full path to the program.
@@ -259,6 +271,7 @@ pub struct ShellPrivilege {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct DockConfig {
   /// Whether to dock the widget to the monitor edge and reserve screen
@@ -276,6 +289,7 @@ pub struct DockConfig {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DockEdge {
   Top,

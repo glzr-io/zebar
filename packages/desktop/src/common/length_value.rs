@@ -4,7 +4,10 @@ use anyhow::{bail, Context};
 use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+/// Length in physical pixels or percent, such as 100px or 50%.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(with = "String"))]
 pub struct LengthValue {
   pub amount: f32,
   pub unit: LengthUnit,

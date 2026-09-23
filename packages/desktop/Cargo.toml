@@ -60,3 +60,7 @@ komorebi-util = { path = "../../crates/komorebi-util" }
 # This feature is used for production builds or when `devPath` points to the
 # filesystem. Do not remove!
 custom-protocol = ["tauri/custom-protocol"]
+
+[dev-dependencies]
+jsonschema = { version = "0.46", default-features = false }
+schemars = "1.2"

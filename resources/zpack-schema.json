@@ -1,250 +1,402 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Zebar widget pack",
-  "description": "A widget pack for Zebar.",
-  "type": "object",
-  "required": ["name", "version", "widgets"],
-  "properties": {
-    "name": {
+  "definitions": {
+    "AnchorPoint": {
+      "enum": [
+        "top_left",
+        "top_center",
+        "top_right",
+        "center_left",
+        "center",
+        "center_right",
+        "bottom_left",
+        "bottom_center",
+        "bottom_right"
+      ],
       "type": "string"
     },
-    "version": {
+    "DockConfig": {
+      "properties": {
+        "edge": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DockEdge"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Edge to dock the widget to."
+        },
+        "enabled": {
+          "default": false,
+          "description": "Whether to dock the widget to the monitor edge and reserve screen\nspace for it.",
+          "type": "boolean"
+        },
+        "windowMargin": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/LengthValue"
+            }
+          ],
+          "default": "0px",
+          "description": "Margin to reserve after the widget window. Can be positive or\nnegative."
+        }
+      },
+      "type": "object"
+    },
+    "DockEdge": {
+      "enum": ["top", "bottom", "left", "right"],
       "type": "string"
     },
-    "description": {
+    "LengthValue": {
+      "description": "Length in physical pixels or percent, such as 100px or 50%.",
       "type": "string"
     },
-    "tags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "previewImages": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "repositoryUrl": {
-      "type": "string"
-    },
-    "widgets": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "name",
-          "htmlPath",
-          "zOrder",
-          "shownInTaskbar",
-          "focused",
-          "resizable",
-          "transparent",
-          "presets"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "htmlPath": {
-            "type": "string"
-          },
-          "zOrder": {
-            "type": "string",
-            "enum": ["top_most", "normal", "bottom_most"]
-          },
-          "shownInTaskbar": {
-            "type": "boolean"
-          },
-          "focused": {
-            "type": "boolean"
-          },
-          "resizable": {
-            "type": "boolean"
-          },
-          "transparent": {
-            "type": "boolean"
-          },
-          "includeFiles": {
-            "type": "array",
-            "items": {
+    "MonitorSelection": {
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "const": "all",
               "type": "string"
             }
           },
-          "caching": {
-            "type": "object",
-            "properties": {
-              "defaultDuration": {
-                "type": "integer"
-              },
-              "rules": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "urlRegex": {
-                      "type": "string"
-                    },
-                    "duration": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "primary",
+              "type": "string"
             }
           },
-          "privileges": {
-            "type": "object",
-            "properties": {
-              "shellCommands": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "program": {
-                      "type": "string"
-                    },
-                    "argsRegex": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "secondary",
+              "type": "string"
             }
           },
-          "presets": {
-            "type": "array",
-            "items": [
-              {
-                "type": "object",
-                "required": [
-                  "name",
-                  "anchor",
-                  "offsetX",
-                  "offsetY",
-                  "width",
-                  "height",
-                  "monitorSelection"
-                ],
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "anchor": {
-                    "type": "string",
-                    "enum": [
-                      "top_left",
-                      "top_center",
-                      "top_right",
-                      "center_left",
-                      "center",
-                      "center_right",
-                      "bottom_left",
-                      "bottom_center",
-                      "bottom_right"
-                    ]
-                  },
-                  "offsetX": {
-                    "type": "string"
-                  },
-                  "offsetY": {
-                    "type": "string"
-                  },
-                  "width": {
-                    "type": "string"
-                  },
-                  "height": {
-                    "type": "string"
-                  },
-                  "monitorSelection": {
-                    "type": "object",
-                    "oneOf": [
-                      {
-                        "properties": {
-                          "type": {
-                            "const": "all"
-                          }
-                        },
-                        "required": ["type"],
-                        "additionalProperties": false
-                      },
-                      {
-                        "properties": {
-                          "type": {
-                            "const": "primary"
-                          }
-                        },
-                        "required": ["type"],
-                        "additionalProperties": false
-                      },
-                      {
-                        "properties": {
-                          "type": {
-                            "const": "secondary"
-                          }
-                        },
-                        "required": ["type"],
-                        "additionalProperties": false
-                      },
-                      {
-                        "properties": {
-                          "type": {
-                            "const": "index"
-                          },
-                          "match": {
-                            "type": "integer",
-                            "minimum": 0
-                          }
-                        },
-                        "required": ["type", "match"],
-                        "additionalProperties": false
-                      },
-                      {
-                        "properties": {
-                          "type": {
-                            "const": "name"
-                          },
-                          "match": {
-                            "type": "string"
-                          }
-                        },
-                        "required": ["type", "match"],
-                        "additionalProperties": false
-                      }
-                    ]
-                  },
-                  "dockToEdge": {
-                    "type": "object",
-                    "properties": {
-                      "enabled": {
-                        "type": "boolean",
-                        "default": false
-                      },
-                      "edge": {
-                        "oneOf": [
-                          {
-                            "type": "string",
-                            "enum": ["top", "right", "bottom", "left"]
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "default": null
-                      },
-                      "windowMargin": {
-                        "type": "string"
-                      }
-                    },
-                    "additionalProperties": false
-                  }
-                }
-              }
-            ]
-          }
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "match": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "const": "index",
+              "type": "string"
+            }
+          },
+          "required": ["type", "match"],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "match": {
+              "type": "string"
+            },
+            "type": {
+              "const": "name",
+              "type": "string"
+            }
+          },
+          "required": ["type", "match"],
+          "type": "object"
         }
-      }
+      ]
+    },
+    "ShellPrivilege": {
+      "properties": {
+        "argsRegex": {
+          "description": "Arguments to pass to the program.",
+          "type": "string"
+        },
+        "program": {
+          "description": "Program name (if in PATH) or full path to the program.",
+          "type": "string"
+        }
+      },
+      "required": ["program", "argsRegex"],
+      "type": "object"
+    },
+    "WidgetCaching": {
+      "properties": {
+        "defaultDuration": {
+          "default": 604800,
+          "description": "Default duration to cache network resources for (in seconds).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rules": {
+          "default": [],
+          "description": "Custom cache rules.",
+          "items": {
+            "$ref": "#/definitions/WidgetCachingRule"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "WidgetCachingRule": {
+      "properties": {
+        "duration": {
+          "description": "Duration to cache the matched requests for (in seconds).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "urlRegex": {
+          "description": "URL regex pattern to match.",
+          "type": "string"
+        }
+      },
+      "required": ["urlRegex", "duration"],
+      "type": "object"
+    },
+    "WidgetConfig": {
+      "description": "Deserialized widget config.",
+      "properties": {
+        "caching": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/WidgetCaching"
+            }
+          ],
+          "default": {
+            "defaultDuration": 604800,
+            "rules": []
+          },
+          "description": "How network requests should be cached."
+        },
+        "focused": {
+          "description": "Whether the Tauri window should be focused when opened.",
+          "type": "boolean"
+        },
+        "htmlPath": {
+          "description": "Relative path to entry point HTML file.",
+          "type": "string"
+        },
+        "includeFiles": {
+          "default": [],
+          "description": "Files to include as part of the widget.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Name of the widget.",
+          "type": "string"
+        },
+        "presets": {
+          "description": "Where to place the widget. Add alias for `defaultPlacements` for\ncompatibility with v2.3.0 and earlier.",
+          "items": {
+            "$ref": "#/definitions/WidgetPreset"
+          },
+          "type": "array"
+        },
+        "privileges": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/WidgetPrivileges"
+            }
+          ],
+          "default": {
+            "shellCommands": []
+          },
+          "description": "Privileges for the widget."
+        },
+        "resizable": {
+          "description": "Whether the Tauri window should have resize handles.",
+          "type": "boolean"
+        },
+        "shownInTaskbar": {
+          "description": "Whether the Tauri window should be shown in the taskbar.",
+          "type": "boolean"
+        },
+        "transparent": {
+          "description": "Whether the Tauri window frame should be transparent.",
+          "type": "boolean"
+        },
+        "zOrder": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ZOrder"
+            }
+          ],
+          "description": "Whether to show the Tauri window above/below all others."
+        }
+      },
+      "required": [
+        "name",
+        "htmlPath",
+        "zOrder",
+        "shownInTaskbar",
+        "focused",
+        "resizable",
+        "transparent",
+        "presets"
+      ],
+      "type": "object"
+    },
+    "WidgetPreset": {
+      "properties": {
+        "anchor": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/AnchorPoint"
+            }
+          ],
+          "description": "Anchor-point of the widget."
+        },
+        "dockToEdge": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DockConfig"
+            }
+          ],
+          "default": {
+            "edge": null,
+            "enabled": false,
+            "windowMargin": "0px"
+          },
+          "description": "How to reserve space for the widget."
+        },
+        "height": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/LengthValue"
+            }
+          ],
+          "description": "Height of the widget in % or physical pixels."
+        },
+        "monitorSelection": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/MonitorSelection"
+            }
+          ],
+          "description": "Monitor(s) to place the widget on."
+        },
+        "name": {
+          "default": "default",
+          "type": "string"
+        },
+        "offsetX": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/LengthValue"
+            }
+          ],
+          "description": "Offset from the anchor-point."
+        },
+        "offsetY": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/LengthValue"
+            }
+          ],
+          "description": "Offset from the anchor-point."
+        },
+        "width": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/LengthValue"
+            }
+          ],
+          "description": "Width of the widget in % or physical pixels."
+        }
+      },
+      "required": [
+        "anchor",
+        "offsetX",
+        "offsetY",
+        "width",
+        "height",
+        "monitorSelection"
+      ],
+      "type": "object"
+    },
+    "WidgetPrivileges": {
+      "properties": {
+        "shellCommands": {
+          "description": "Shell commands that the widget is allowed to run.",
+          "items": {
+            "$ref": "#/definitions/ShellPrivilege"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["shellCommands"],
+      "type": "object"
+    },
+    "ZOrder": {
+      "enum": ["bottom_most", "normal", "top_most"],
+      "type": "string"
     }
-  }
+  },
+  "description": "Deserialized widget pack.\n\nThis is the type of the `zpack.json` file.",
+  "properties": {
+    "$schema": {
+      "description": "JSON schema URL to validate the widget pack file.",
+      "type": ["string", "null"]
+    },
+    "description": {
+      "default": "",
+      "description": "Description of the pack.",
+      "type": "string"
+    },
+    "name": {
+      "description": "Name of the pack.",
+      "type": "string"
+    },
+    "previewImages": {
+      "default": [],
+      "description": "Preview images of the pack.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "repositoryUrl": {
+      "default": "",
+      "description": "URL of the repository containing the pack.",
+      "type": "string"
+    },
+    "tags": {
+      "default": [],
+      "description": "Tags of the pack.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "version": {
+      "description": "Version of the pack.",
+      "type": "string"
+    },
+    "widgets": {
+      "default": [],
+      "description": "Widgets in the pack.",
+      "items": {
+        "$ref": "#/definitions/WidgetConfig"
+      },
+      "type": "array"
+    }
+  },
+  "required": ["name", "version"],
+  "title": "Zebar widget pack",
+  "type": "object"
 }
