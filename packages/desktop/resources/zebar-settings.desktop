@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Zebar Settings
+Comment=Open Zebar settings
+Exec=zebar open-settings
+Icon=zebar
+Terminal=false
+Categories=Utility;

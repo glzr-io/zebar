@@ -494,9 +494,8 @@ impl Systray {
       let v3_message = match action {
         SystrayIconAction::HoverEnter => NIN_POPUPOPEN,
         SystrayIconAction::HoverLeave => NIN_POPUPCLOSE,
-        SystrayIconAction::LeftClick | SystrayIconAction::LeftDoubleClick => {
-          NIN_SELECT
-        }
+        SystrayIconAction::LeftClick
+        | SystrayIconAction::LeftDoubleClick => NIN_SELECT,
         SystrayIconAction::RightClick => WM_CONTEXTMENU,
         _ => return Ok(()),
       };
