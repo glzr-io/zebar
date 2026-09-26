@@ -43,6 +43,8 @@ mod marketplace_installer;
 mod monitor_state;
 mod providers;
 mod publish;
+#[cfg(test)]
+mod schema;
 mod shell_state;
 mod sys_tray;
 mod widget_factory;

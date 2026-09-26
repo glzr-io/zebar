@@ -1,27 +1,52 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Zebar settings",
-  "description": "General settings for Zebar.",
-  "type": "object",
-  "required": ["startupConfigs"],
-  "properties": {
-    "startupConfigs": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "pack": {
-            "type": "string"
-          },
-          "widget": {
-            "type": "string"
-          },
-          "preset": {
-            "type": "string"
-          }
+  "definitions": {
+    "StartupConfig": {
+      "description": "An installed widget preset that Zebar launches on startup.",
+      "properties": {
+        "pack": {
+          "description": "ID of the installed widget pack. Marketplace packs use the pack_id\nfrom their metadata (for example, glzr-io.starter); local packs use\nthe name from zpack.json.",
+          "type": "string"
         },
-        "required": ["pack", "widget", "preset"]
-      }
+        "preset": {
+          "description": "Preset name from the selected widget's presets array.",
+          "type": "string"
+        },
+        "widget": {
+          "description": "Widget name from the pack's zpack.json widgets array.",
+          "type": "string"
+        }
+      },
+      "required": ["pack", "widget", "preset"],
+      "type": "object"
     }
-  }
+  },
+  "description": "General settings for Zebar.",
+  "examples": [
+    {
+      "startupConfigs": [
+        {
+          "pack": "glzr-io.starter",
+          "preset": "default",
+          "widget": "vanilla"
+        }
+      ]
+    }
+  ],
+  "properties": {
+    "$schema": {
+      "description": "JSON schema URL to validate the settings file.",
+      "type": ["string", "null"]
+    },
+    "startupConfigs": {
+      "description": "Widget presets to launch automatically when Zebar starts. Each entry\nidentifies an installed pack, a widget, and one of its presets.",
+      "items": {
+        "$ref": "#/definitions/StartupConfig"
+      },
+      "type": "array"
+    }
+  },
+  "required": ["startupConfigs"],
+  "title": "Zebar settings",
+  "type": "object"
 }

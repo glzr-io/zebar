@@ -43,6 +43,23 @@ A Tauri desktop application which acts as the backend for spawning and communica
 
 JS package for communicating with the Tauri backend. Published to npm as [`zebar`](https://www.npmjs.com/package/zebar).
 
+### Configuration schemas
+
+The JSON schemas in `resources/settings-schema.json` and
+`resources/zpack-schema.json` are generated from the Rust configuration types
+with Schemars. Keep descriptions in Rust doc comments. Schema generation uses
+JSON Schema draft 7 and development dependencies only.
+
+After changing a configuration type, run `pnpm schema:generate` and commit the
+generated files with the Rust changes. Run `pnpm schema:check` to check for drift
+and validate monitor selection, length serialization, and starter examples.
+These commands require the desktop build prerequisites above. The Windows build
+job runs the same checks in CI.
+
+`LengthValue` uses a string schema because its custom Serde implementation
+serializes values such as `100px` and `50%`. It must not expose its internal
+`amount` and `unit` fields as a JSON object.
+
 ### How to create a new provider?
 
 1. **Add the client-side logic for the provider.** Most providers aren't client-side heavy, and simply subscribe to some outputs sent from the Tauri backend (eg. [`create-ip-provider.ts`](https://github.com/glzr-io/zebar/tree/main/packages/client-api/src/providers/ip/create-ip-provider.ts)).
