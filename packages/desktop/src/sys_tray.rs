@@ -6,13 +6,12 @@ use std::{
 };
 
 use anyhow::{bail, Context};
+#[cfg(windows)]
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 use tauri::{
   image::Image,
   menu::{CheckMenuItem, Menu, MenuBuilder, Submenu, SubmenuBuilder},
-  tray::{
-    MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder,
-    TrayIconEvent,
-  },
+  tray::{TrayIcon, TrayIconBuilder},
   AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Wry,
 };
 use tokio::task;
@@ -252,7 +251,7 @@ impl SysTray {
   }
 
   /// Returns the image to use for the system tray icon.
-  fn icon_image(&self) -> anyhow::Result<Image> {
+  fn icon_image(&self) -> anyhow::Result<Image<'_>> {
     self
       .app_handle
       .default_window_icon()
@@ -475,7 +474,7 @@ impl SysTray {
       }
       Some(window) => {
         window
-          .eval(&format!("location.replace('{}')", route))
+          .eval(format!("location.replace('{}')", route))
           .context("Failed to navigate to widget edit page.")?;
 
         window

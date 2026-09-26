@@ -109,7 +109,7 @@ impl WeatherProvider {
   }
 
   fn celsius_to_fahrenheit(celsius_temp: f32) -> f32 {
-    return (celsius_temp * 9.) / 5. + 32.;
+    (celsius_temp * 9.) / 5. + 32.
   }
 
   /// Relevant documentation: https://open-meteo.com/en/docs#weathervariables

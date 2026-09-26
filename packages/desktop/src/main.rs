@@ -1,6 +1,5 @@
 // Prevent additional console window on Windows in release mode.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![feature(iterator_try_collect)]
 
 use std::{env, path::Path, sync::Arc};
 
@@ -127,12 +126,12 @@ async fn main() -> anyhow::Result<()> {
     ])
     .build(tauri::generate_context!())?;
 
-  app.run(|app, event| {
+  app.run(|_app, event| {
     if let RunEvent::ExitRequested { .. } = &event {
       // Deallocate any appbars on Windows.
       #[cfg(target_os = "windows")]
       {
-        for (_, window) in app.webview_windows() {
+        for (_, window) in _app.webview_windows() {
           let _ = window.as_ref().window().deallocate_app_bar();
         }
       }
@@ -146,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
 fn output_query(app: &tauri::App, args: QueryArgs) -> anyhow::Result<()> {
   match args {
     QueryArgs::Monitors => {
-      let monitors = MonitorState::new(&app.handle());
+      let monitors = MonitorState::new(app.handle());
       cli::print_and_exit(monitors.output_str());
       Ok(())
     }

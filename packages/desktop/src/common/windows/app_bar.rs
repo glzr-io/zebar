@@ -36,7 +36,7 @@ pub fn create_app_bar(
       DockEdge::Right => ABE_RIGHT,
       DockEdge::Bottom => ABE_BOTTOM,
     },
-    rc: rect.clone(),
+    rc: rect,
     ..Default::default()
   };
 

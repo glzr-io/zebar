@@ -1,5 +1,3 @@
-#![feature(slice_internals)]
-
 mod encoding;
 mod error;
 mod options;

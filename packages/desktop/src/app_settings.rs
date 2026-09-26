@@ -258,8 +258,8 @@ impl AppSettings {
 
     new_settings.startup_configs.retain(|config| {
       config.pack != pack_id
-        || widget_name.map_or(false, |w| config.widget != w)
-        || preset_name.map_or(false, |p| config.preset != p)
+        || widget_name.is_some_and(|w| config.widget != w)
+        || preset_name.is_some_and(|p| config.preset != p)
     });
 
     self.write_settings(new_settings).await

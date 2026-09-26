@@ -5173,14 +5173,12 @@ name = "shell-util"
 version = "0.0.0"
 dependencies = [
  "encoding_rs",
+ "memchr",
  "os_pipe",
- "regex",
  "serde",
- "serde_json",
  "shared_child",
  "thiserror 2.0.18",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -5567,7 +5565,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "uuid",
  "windows 0.58.0",
  "windows-core 0.58.0",

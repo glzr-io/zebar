@@ -15,7 +15,6 @@ image = { version = "0.25", features = ["serde"] }
 serde = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 

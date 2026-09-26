@@ -300,6 +300,8 @@ impl WidgetFactory {
         .await?,
       );
 
+      // LINT: `state` is only used on Windows.
+      #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
       let mut state = WidgetState {
         id: widget_id.clone(),
         name: widget_name.to_string(),
@@ -405,6 +407,8 @@ impl WidgetFactory {
   fn set_z_order(
     window: &tauri::WebviewWindow,
     z_order: &ZOrder,
+    // LINT: `placement` is only used on macOS.
+    #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
     placement: &WidgetPlacement,
   ) -> anyhow::Result<()> {
     // On macOS, the window level must be set above the menu bar or at the
@@ -455,13 +459,16 @@ impl WidgetFactory {
   /// Returns the new window size and position.
   fn dock_to_edge(
     &self,
+    // LINT: `window` and `dock_config` are only used on Windows.
+    #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
     window: &tauri::WebviewWindow,
+    #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
     dock_config: &DockConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
     #[cfg(not(target_os = "windows"))]
     {
-      return Ok((coords.size, coords.position));
+      Ok((coords.size, coords.position))
     }
 
     #[cfg(target_os = "windows")]
@@ -492,7 +499,7 @@ impl WidgetFactory {
       // not be smaller than the size of the window.
       let window_margin = dock_config
         .window_margin
-        .to_px_scaled(window_length as i32, coords.monitor.scale_factor)
+        .to_px_scaled(window_length, coords.monitor.scale_factor)
         .clamp(-coords.size.height, i32::MAX);
 
       let monitor_length = if edge.is_horizontal() {
@@ -624,6 +631,8 @@ impl WidgetFactory {
           let mut widget_states = widget_states.lock().await;
 
           // Remove the widget state.
+          // LINT: `state` is only used on Windows.
+          #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
           let state = widget_states.remove(&widget_id);
 
           // Ensure appbar space is deallocated on close.
@@ -812,15 +821,19 @@ impl WidgetFactory {
       widget_ids
         .iter()
         .filter_map(|id| widget_states.remove(id))
-        .inspect(|widget_state| {
-          // Need to clean up any appbars prior to restarting.
-          #[cfg(target_os = "windows")]
-          {
-            if let Some(window_handle) = widget_state.window_handle {
-              let _ = remove_app_bar(window_handle);
+        .inspect(
+          // LINT: `widget_state` is only used on Windows.
+          #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
+          |widget_state| {
+            // Need to clean up any appbars prior to restarting.
+            #[cfg(target_os = "windows")]
+            {
+              if let Some(window_handle) = widget_state.window_handle {
+                let _ = remove_app_bar(window_handle);
+              }
             }
-          }
-        })
+          },
+        )
         .collect::<Vec<_>>()
     };
 

@@ -1,6 +1,8 @@
+#[cfg(target_os = "windows")]
+use std::path::{Component, Prefix};
 use std::{
   fs,
-  path::{Component, Path, PathBuf, Prefix},
+  path::{Path, PathBuf},
 };
 
 use anyhow::Context;
@@ -25,6 +27,8 @@ where
   /// slashes.
   ///
   /// Returns a relative path (e.g. 'subdir/file.json').
+  // LINT: `to_relative` is currently unused.
+  #[allow(dead_code)]
   fn to_relative(&self, base_path: &Path) -> anyhow::Result<PathBuf>;
 
   /// Joins the given base path.

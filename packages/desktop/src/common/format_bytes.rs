@@ -1,7 +1,7 @@
-const SI_UNITS: [&'static str; 9] =
+const SI_UNITS: [&str; 9] =
   ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
-const IEC_UNITS: [&'static str; 9] =
+const IEC_UNITS: [&str; 9] =
   ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"];
 
 /// Converts a byte value to its SI (decimal) representation.
@@ -27,7 +27,7 @@ pub fn to_si_bytes(bytes: f64) -> (f64, String) {
 ///
 /// Returns a tuple of the value and the IEC unit as a string.
 pub fn to_iec_bytes(bytes: f64) -> (f64, String) {
-  if bytes <= 1. && bytes >= -1. {
+  if (-1. ..=1.).contains(&bytes) {
     return (bytes, "B".into());
   }
 

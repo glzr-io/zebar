@@ -1,4 +1,4 @@
-#[cfg(target_os = "macos")]
+#[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::{
   io::{BufReader, Read, Write},

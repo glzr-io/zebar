@@ -1,5 +1,7 @@
+#[cfg(target_os = "windows")]
 use std::ffi::c_void;
 
+#[cfg(target_os = "windows")]
 use anyhow::Context;
 #[cfg(target_os = "windows")]
 use windows::Win32::{

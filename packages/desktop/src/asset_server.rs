@@ -87,7 +87,7 @@ pub async fn create_init_url(
 
   let url = tauri::Url::parse_with_params(
     &format!("http://127.0.0.1:{}/__zebar/init", ASSET_SERVER_PORT),
-    &[("token", &token), ("redirect", &redirect)],
+    [("token", &token), ("redirect", &redirect)],
   )?;
 
   Ok(url)

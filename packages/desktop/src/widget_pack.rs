@@ -742,7 +742,7 @@ impl WidgetPackManager {
     context.insert("ZEBAR_VERSION", &VERSION_NUMBER.to_string());
 
     self.app_settings.init_template(
-      &Path::new(template_path),
+      Path::new(template_path),
       &widget_dir,
       &context,
     )?;
