@@ -88,7 +88,7 @@ impl From<DeviceType> for EDataFlow {
 enum AudioEvent {
   DeviceAdded(String),
   DeviceRemoved(String),
-  DefaultDeviceChanged(String, DeviceType),
+  DefaultDeviceChanged(Option<String>, DeviceType),
   VolumeChanged(String, f32, bool),
 }
 
@@ -429,10 +429,10 @@ impl AudioProvider {
       AudioEvent::DefaultDeviceChanged(device_id, device_type) => {
         match device_type {
           DeviceType::Playback => {
-            self.default_playback_id = Some(device_id);
+            self.default_playback_id = device_id;
           }
           DeviceType::Recording => {
-            self.default_recording_id = Some(device_id);
+            self.default_recording_id = device_id;
           }
         }
       }
@@ -603,12 +603,16 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     default_device_id: &PCWSTR,
   ) -> windows::core::Result<()> {
     if role == eMultimedia {
-      if let Ok(id) = unsafe { default_device_id.to_string() } {
-        let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
-          id,
-          DeviceType::from(flow),
-        ));
-      }
+      let id = if default_device_id.0.is_null() {
+        None
+      } else {
+        unsafe { default_device_id.to_string().ok() }
+      };
+
+      let _ = self.event_tx.send(AudioEvent::DefaultDeviceChanged(
+        id,
+        DeviceType::from(flow),
+      ));
     }
 
     Ok(())

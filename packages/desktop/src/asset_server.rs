@@ -35,10 +35,25 @@ struct TokenAccess {
 }
 
 pub async fn setup_asset_server() -> anyhow::Result<()> {
+  // Disable Rocket's built-in signal handling (`ctrlc` and Unix
+  // `signals`). By default Rocket listens for SIGTERM/SIGINT and
+  // performs a graceful HTTP-server shutdown — but because the signal
+  // handler *replaces* the OS default, the rest of the process (Tauri)
+  // stays alive. This leaves a zombie process that holds the
+  // single-instance lock, preventing a fresh Zebar from starting.
+  //
+  // With signal handling disabled, SIGTERM/SIGINT fall through to the
+  // OS default (process termination), which is the desired behavior
+  // when Zebar is managed by an external process (e.g. GlazeWM).
+  let figment = rocket::Config::figment()
+    .merge(("port", ASSET_SERVER_PORT))
+    .merge(("shutdown.ctrlc", false));
+
+  #[cfg(unix)]
+  let figment = figment.merge(("shutdown.signals", Vec::<String>::new()));
+
   let rocket = rocket::build()
-    .configure(
-      rocket::Config::figment().merge(("port", ASSET_SERVER_PORT)),
-    )
+    .configure(figment)
     .mount("/", routes![sw_js, normalize_css, init, serve]);
 
   // Test if the server can start (this doesn't block).
