@@ -136,7 +136,7 @@ impl FromStr for MenuEvent {
   }
 }
 
-enum SettingsRoute {
+pub(crate) enum SettingsRoute {
   Index,
   WidgetPack {
     pack_id: String,
@@ -431,7 +431,7 @@ impl SysTray {
     });
   }
 
-  fn open_settings_window(
+  pub(crate) fn open_settings_window(
     app_handle: &AppHandle,
     route: SettingsRoute,
   ) -> anyhow::Result<()> {
@@ -473,6 +473,8 @@ impl SysTray {
         Ok(())
       }
       Some(window) => {
+        window.show()?;
+        window.unminimize()?;
         window
           .eval(format!("location.replace('{}')", route))
           .context("Failed to navigate to widget edit page.")?;
