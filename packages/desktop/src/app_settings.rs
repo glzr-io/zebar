@@ -185,25 +185,32 @@ impl AppSettings {
 
   /// Initializes app settings to the given path.
   ///
-  /// `settings.json` is initialized with either `vanilla` or
-  /// `with-glazewm` from the `glzr-io/starter` widget pack as
-  /// startup config.
+  /// `settings.json` is initialized to launch the bundled `omarchy`
+  /// skin (widget `bar`) when GlazeWM is installed, since that skin is
+  /// built around GlazeWM. Otherwise it falls back to the `vanilla`
+  /// widget from the `glzr-io/starter` widget pack.
   fn create_default(config_dir: &Path) -> anyhow::Result<()> {
     tracing::info!("Initializing app settings from default.",);
+
+    let startup_config = match is_app_installed("glazewm") {
+      true => StartupConfig {
+        pack: "omarchy".into(),
+        widget: "bar".into(),
+        preset: "default".into(),
+      },
+      false => StartupConfig {
+        pack: STARTER_PACK_ID.into(),
+        widget: "vanilla".into(),
+        preset: "default".into(),
+      },
+    };
 
     let default_settings = AppSettingsValue {
       schema: Some(format!(
         "https://github.com/glzr-io/zebar/raw/v{}/resources/settings-schema.json",
         VERSION_NUMBER
       )),
-      startup_configs: vec![StartupConfig {
-        pack: STARTER_PACK_ID.into(),
-        widget: match is_app_installed("glazewm") {
-          true => "with-glazewm".into(),
-          false => "vanilla".into(),
-        },
-        preset: "default".into(),
-      }],
+      startup_configs: vec![startup_config],
     };
 
     let settings_path = config_dir.join("settings.json");

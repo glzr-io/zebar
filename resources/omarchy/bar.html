@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Custom styles. -->
+    <!-- Omarchy (Tokyo Night) styles. -->
     <link rel="stylesheet" type="text/css" href="./styles.css" />
 
     <!-- Allows React to be run buildless via "text/babel" script below. -->
@@ -119,7 +119,7 @@
           }
         }
 
-        // Helper function to get window display name
+        // Helper to get a display name for a window.
         function getWindowDisplayName(window) {
           return window.title || window.processName || 'Unknown Window';
         }
@@ -127,11 +127,11 @@
         return (
           <div className="app">
             <div className="left">
-              <i className="logo nf nf-fa-windows"></i>
+              {/* Windows logo used as the menu/brand mark. */}
+              <img className="logo" src="./windows-logo.png" alt="Windows logo" />
               {output.glazewm && (
                 <div className="workspaces">
                   {output.glazewm.currentWorkspaces.map(workspace => {
-                    // Use the windows array directly from the workspace
                     const windows = workspace.windows || [];
 
                     return (
@@ -147,51 +147,71 @@
                             )
                           }
                         >
-                          <span className="workspace-name">{workspace.displayName ?? workspace.name}</span>
+                          <span className="workspace-name">
+                            {workspace.displayName ?? workspace.name}
+                          </span>
                           {windows.length > 0 && (
                             <div className="workspace-windows">
                               {windows.map((window, index) => {
-                                // Check if we have a real icon (base64 data)
-                                if (window.icon && window.icon.startsWith('data:image/raw;base64,')) {
-                                  // Parse the data URL to get base64 and dimensions
+                                // Render the real app icon when provided as
+                                // raw base64 pixel data.
+                                if (
+                                  window.icon &&
+                                  window.icon.startsWith(
+                                    'data:image/raw;base64,',
+                                  )
+                                ) {
                                   const parts = window.icon.split('|');
                                   const dataUrl = parts[0];
-                                  const dimensions = parts[1]?.split('x') || ['16', '16'];
+                                  const dimensions = parts[1]?.split('x') || [
+                                    '16',
+                                    '16',
+                                  ];
                                   const width = parseInt(dimensions[0]) || 16;
                                   const height = parseInt(dimensions[1]) || 16;
-                                  
-                                  // Extract base64 data
                                   const base64Data = dataUrl.split(',')[1];
-                                  
+
                                   return (
                                     <canvas
                                       key={index}
-                                      ref={(canvas) => {
+                                      ref={canvas => {
                                         if (canvas && base64Data) {
                                           const ctx = canvas.getContext('2d');
-                                          const imgData = ctx.createImageData(width, height);
+                                          const imgData = ctx.createImageData(
+                                            width,
+                                            height,
+                                          );
                                           const decoded = atob(base64Data);
-                                          for (let i = 0; i < decoded.length; i++) {
-                                            imgData.data[i] = decoded.charCodeAt(i);
+                                          for (
+                                            let i = 0;
+                                            i < decoded.length;
+                                            i++
+                                          ) {
+                                            imgData.data[i] =
+                                              decoded.charCodeAt(i);
                                           }
                                           ctx.putImageData(imgData, 0, 0);
                                         }
                                       }}
                                       width={width}
                                       height={height}
-                                      style={{width: '8px', height: '8px', imageRendering: 'pixelated'}}
+                                      style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        imageRendering: 'pixelated',
+                                      }}
                                       title={getWindowDisplayName(window)}
                                     />
                                   );
                                 }
-                                
-                                // Fallback to NerdFont icon
+
+                                // Fallback when no real icon is available.
                                 return (
-                                  <i 
-                                    key={index} 
-                                    className={`window-icon`}
+                                  <i
+                                    key={index}
+                                    className="window-icon nf nf-fa-window_maximize"
                                     title={getWindowDisplayName(window)}
-                                  />
+                                  ></i>
                                 );
                               })}
                             </div>

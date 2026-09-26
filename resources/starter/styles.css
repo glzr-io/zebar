@@ -116,14 +116,24 @@ body,
   align-items: center;
 }
 
+.workspace-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-right: 4px;
+}
+
 .workspace {
   background: rgb(255 255 255 / 5%);
-  margin-right: 4px;
   padding: 4px 8px;
   color: rgb(255 255 255 / 90%);
   border: none;
   border-radius: 2px;
   cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
 
   &.displayed {
     background: rgb(255 255 255 / 15%);
@@ -133,6 +143,28 @@ body,
   &:hover {
     background: rgb(75 115 255 / 50%);
   }
+}
+
+.workspace-name {
+  display: inline-block;
+}
+
+.workspace-windows {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+  align-items: center;
+}
+
+.window-icon {
+  font-size: 7px;
+  color: rgb(255 255 255 / 60%);
+  transition: color 0.2s ease;
+  filter: grayscale(100%);
+}
+
+.window-icon:hover {
+  color: rgb(255 255 255 / 100%);
 }
 
 .binding-mode,
