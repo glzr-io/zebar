@@ -15,12 +15,6 @@ importers:
         specifier: 3.2.5
         version: 3.2.5
 
-  crates/komorebi-util: {}
-
-  crates/shell-util: {}
-
-  crates/systray-util: {}
-
   packages/client-api:
     dependencies:
       '@tauri-apps/api':

@@ -1,9 +1,0 @@
-{
-  "name": "@zebar/systray-util",
-  "version": "0.0.0",
-  "private": true,
-  "scripts": {
-    "lint:check:windows": "cargo clippy --target x86_64-pc-windows-gnu --all-targets --no-deps --manifest-path ./Cargo.toml",
-    "lint:fix:windows": "cargo clippy --fix --target x86_64-pc-windows-gnu --manifest-path ./Cargo.toml"
-  }
-}

@@ -3,23 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "crates/*"
+    "packages/*"
   ],
   "scripts": {
     "build": "pnpm run -r build",
     "dev": "pnpm run --filter zebar build && pnpm run --parallel dev",
     "dev:local": "pnpm run --filter zebar build && pnpm run --parallel dev:local",
-    "format:check": "pnpm rust:format:check && pnpm js:format:check",
-    "format:fix": "pnpm rust:format:fix && pnpm js:format:fix",
-    "js:format:check": "prettier --check .",
-    "js:format:fix": "prettier --write .",
-    "lint:check": "pnpm -r lint:check",
-    "lint:check:windows": "pnpm -r lint:check:windows",
-    "lint:fix": "pnpm -r lint:fix",
-    "lint:fix:windows": "pnpm -r lint:fix:windows",
-    "rust:format:check": "cargo fmt --check",
-    "rust:format:fix": "cargo fmt"
+    "format": "prettier --write . && pnpm run -r format",
+    "lint": "prettier --check . && pnpm run -r lint"
   },
   "prettier": "@glzr/style-guide/prettier",
   "dependencies": {},

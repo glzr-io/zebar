@@ -23,23 +23,6 @@ pnpm dev
 
 After making your changes, push to your fork and [submit a pull request](https://github.com/glzr-io/zebar/pulls). Please try to address only a single feature or fix in the PR so that it's easy to review.
 
-## Linting & formatting
-
-Run these from the repo root:
-
-```shell
-pnpm format:check        # cargo + prettier formatting check
-pnpm lint:check          # clippy on the host platform (warnings only, no changes)
-pnpm lint:fix            # apply clippy autofixes until a fixed point is reached
-pnpm lint:check:windows  # clippy on the Windows view (cross-target)
-pnpm lint:fix:windows    # apply clippy autofixes on the Windows view
-```
-
-- `lint:<action>` runs clippy against the current host, `lint:<action>:windows` against the Windows view. The CI fails if `lint:fix` or `lint:fix:windows` would leave any diff, so run them locally before pushing.
-- Desktop uses `x86_64-pc-windows-msvc` for its Windows view; the other crates use `x86_64-pc-windows-gnu`, which cross-builds from a Linux host without extra toolchains.
-- `systray-util` only builds for Windows, so it defines only the `lint:*:windows` scripts and is skipped by `lint:*`. Its Windows view is linted as part of the `:windows` pass.
-- `pnpm lint:fix` / `cargo clippy --fix` refuse to run while the working tree has uncommitted changes (as the CI check runs on a clean tree).
-
 ### Installing Rust
 
 [rustup](https://rustup.rs/) is the de-facto way to set up the Rust toolchain.
