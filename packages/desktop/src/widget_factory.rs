@@ -296,6 +296,7 @@ impl WidgetFactory {
           &widget_pack.directory_path,
           &html_path,
           widget_pack.include_files(),
+          &widget_pack.config.mime_types,
         )
         .await?,
       );

@@ -121,6 +121,9 @@ const widgetPack = z.object({
     .max(6, 'At most 6 preview images are allowed.'),
   widgets: z.array(widget),
   repositoryUrl: z.string().url().or(z.literal('')),
+  mimeTypes: z
+    .record(z.string().regex(/^[a-z0-9]+$/), z.string())
+    .optional(),
 });
 
 export const configSchemas = {

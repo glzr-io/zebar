@@ -8,6 +8,7 @@ export type WidgetPack =
       version: string;
       previewImages: string[];
       repositoryUrl: string;
+      mimeTypes?: Record<string, string>;
       directoryPath: string;
       description: string;
       widgets: WidgetConfig[];
@@ -25,6 +26,7 @@ export type WidgetPack =
       version: string;
       previewImages: string[];
       repositoryUrl: string;
+      mimeTypes?: Record<string, string>;
       directoryPath: string;
       description: string;
       widgets: WidgetConfig[];

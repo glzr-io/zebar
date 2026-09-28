@@ -71,7 +71,26 @@ Widgets are stored in packs, with each pack being defined by a `zpack.json` file
 
 Widgets consist of an HTML file, and any surrounding assets (e.g. CSS, JS, images, etc.).
 
-The schema for `zpack.json` can be found [here](https://github.com/glzr-io/zebar/blob/main/resources/zpack-schema.json) although all options can also be configured via the GUI.
+The schema for `zpack.json` can be found [here](https://github.com/glzr-io/zebar/blob/main/resources/zpack-schema.json). Most options can also be configured via the GUI.
+
+#### Asset MIME types
+
+The asset server recognizes common file types and serves `.ts`, `.tsx`, and `.jsx` as `text/typescript`, `text/tsx`, and `text/jsx`. Unrecognized extensions use `application/octet-stream`.
+
+To add or override a mapping, edit the pack's `zpack.json` and add a `mimeTypes` object at the top level:
+
+```json
+{
+  "mimeTypes": {
+    "vue": "text/plain",
+    "jsx": "text/javascript"
+  }
+}
+```
+
+Keys must contain only lowercase ASCII letters and digits, without a leading dot. Values must be valid MIME types. These mappings apply to all widgets in the pack and take precedence over built in mappings. Restart the pack's widgets after editing the file. Files must still match the pack's `includeFiles` patterns.
+
+MIME mappings only change response headers. TypeScript and JSX still require a compiler or a browser loader that transforms the source; changing a header does not make raw TypeScript or JSX valid JavaScript.
 
 #### Querying system information
 

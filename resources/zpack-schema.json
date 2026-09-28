@@ -29,6 +29,12 @@
     "repositoryUrl": {
       "type": "string"
     },
+    "mimeTypes": {
+      "description": "MIME type overrides keyed by lowercase file extension, without a dot.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9]+$" },
+      "additionalProperties": { "type": "string" }
+    },
     "widgets": {
       "type": "array",
       "items": {
