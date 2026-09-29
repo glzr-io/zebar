@@ -237,6 +237,16 @@
 
         <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
 
+        <Shortcut
+          Id="SettingsStartMenuShortcut"
+          Name="{{product_name}} Settings"
+          Description="Opens {{product_name}} settings"
+          Target="[!Path]"
+          Arguments="open-settings"
+          Icon="ProductIcon"
+          WorkingDirectory="INSTALLDIR"
+        />
+
         <RegistryValue
           Root="HKCU"
           Key="Software\glzr.io\Zebar"

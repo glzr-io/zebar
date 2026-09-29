@@ -56,6 +56,9 @@ windows = { workspace = true }
 cocoa = "0.25"
 komorebi-util = { path = "../../crates/komorebi-util" }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+x11-dl = "2"
+
 [features]
 # This feature is used for production builds or when `devPath` points to the
 # filesystem. Do not remove!

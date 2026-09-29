@@ -21,8 +21,44 @@ impl Cli {
   }
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parses_settings_and_preserves_default_startup() {
+    assert!(matches!(
+      Cli::try_parse_from(["zebar", "open-settings"])
+        .unwrap()
+        .command(),
+      CliCommand::OpenSettings(_)
+    ));
+    let command = Cli::try_parse_from([
+      "zebar",
+      "open-settings",
+      "--config-dir",
+      "test-config",
+    ])
+    .unwrap()
+    .command();
+    assert!(
+      matches!(command, CliCommand::OpenSettings(args) if args.config_dir == Some(PathBuf::from("test-config")))
+    );
+    assert_eq!(
+      Cli::try_parse_from(["zebar"]).unwrap().command(),
+      CliCommand::Empty
+    );
+    assert!(
+      Cli::try_parse_from(["zebar", "open-settings", "extra"]).is_err()
+    );
+  }
+}
+
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum CliCommand {
+  /// Opens settings, starting Zebar if necessary.
+  OpenSettings(StartupArgs),
+
   /// Opens a widget by its name and chosen placement.
   ///
   /// Starts Zebar if it is not already running.

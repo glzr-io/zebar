@@ -21,6 +21,13 @@
     "publisher": "Glzr Software Pte. Ltd.",
     "resources": ["resources/*", "../../resources/**/*"],
     "targets": ["deb", "appimage", "msi", "dmg"],
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/applications/zebar-settings.desktop": "resources/zebar-settings.desktop"
+        }
+      }
+    },
     "windows": {
       "signCommand": "powershell -ExecutionPolicy Bypass -File ./resources/scripts/sign.ps1 -FilePath %1",
       "wix": {

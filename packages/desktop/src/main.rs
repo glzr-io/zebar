@@ -26,7 +26,7 @@ use crate::{
   monitor_state::MonitorState,
   providers::{ProviderEmission, ProviderManager},
   shell_state::ShellState,
-  sys_tray::SysTray,
+  sys_tray::{SettingsRoute, SysTray},
   widget_factory::{WidgetFactory, WidgetOpenOptions},
   widget_pack::{
     MonitorSelection, WidgetPack, WidgetPackManager, WidgetPlacement,
@@ -57,6 +57,17 @@ extern crate rocket;
 /// subcommand.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+  // GTK and Tao's device thread both use X11, so initialize its locks
+  // first.
+  #[cfg(target_os = "linux")]
+  if env::var_os("DISPLAY").is_some() {
+    let xlib = x11_dl::xlib::Xlib::open()?;
+    anyhow::ensure!(
+      unsafe { (xlib.XInitThreads)() } != 0,
+      "Failed to initialize X11 threading."
+    );
+  }
+
   // Attach to parent console on Windows in release mode.
   #[cfg(all(windows, not(debug_assertions)))]
   {
@@ -155,7 +166,9 @@ fn output_query(app: &tauri::App, args: QueryArgs) -> anyhow::Result<()> {
 /// Starts Zebar - either with a specific widget or all widgets.
 async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   let config_dir = match cli.command() {
-    CliCommand::Startup(args) => args.config_dir,
+    CliCommand::Startup(args) | CliCommand::OpenSettings(args) => {
+      args.config_dir
+    }
     _ => None,
   }
   .unwrap_or(
@@ -226,7 +239,8 @@ async fn start_app(app: &mut tauri::App, cli: Cli) -> anyhow::Result<()> {
   app.manage(manager.clone());
 
   // Open widgets based on CLI command.
-  open_widgets_by_cli_command(cli, widget_factory.clone()).await?;
+  open_by_cli_command(cli, app.handle().clone(), widget_factory.clone())
+    .await?;
 
   // Add application icon to system tray.
   let tray = SysTray::new(
@@ -338,10 +352,11 @@ fn setup_single_instance(
   widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
   app.handle().plugin(tauri_plugin_single_instance::init(
-    move |_, args, _| {
+    move |app_handle, args, _| {
+      let app_handle = app_handle.clone();
       let widget_factory = widget_factory.clone();
 
-      task::spawn(async move {
+      tauri::async_runtime::spawn(async move {
         let res = match Cli::try_parse_from(args) {
           Ok(cli) => {
             // No-op if no subcommand is provided and widgets are still
@@ -352,7 +367,7 @@ fn setup_single_instance(
             {
               Ok(())
             } else {
-              open_widgets_by_cli_command(cli, widget_factory).await
+              open_by_cli_command(cli, app_handle, widget_factory).await
             }
           }
           _ => Err(anyhow::anyhow!("Failed to parse CLI arguments.")),
@@ -368,12 +383,16 @@ fn setup_single_instance(
   Ok(())
 }
 
-/// Opens widgets based on CLI command.
-async fn open_widgets_by_cli_command(
+/// Opens widgets or settings based on CLI command.
+async fn open_by_cli_command(
   cli: Cli,
+  app_handle: AppHandle,
   widget_factory: Arc<WidgetFactory>,
 ) -> anyhow::Result<()> {
   let res = match cli.command() {
+    CliCommand::OpenSettings(_) => {
+      SysTray::open_settings_window(&app_handle, SettingsRoute::Index)
+    }
     CliCommand::StartWidget(args) => {
       widget_factory
         .start_widget_by_id(
@@ -413,7 +432,7 @@ async fn open_widgets_by_cli_command(
   };
 
   if let Err(err) = res {
-    error!("Failed to open widgets: {:?}", err);
+    error!("Failed to execute open command: {:?}", err);
   }
 
   Ok(())
@@ -424,7 +443,9 @@ async fn open_widgets_by_cli_command(
 /// Error logs are saved to `~/.glzr/zebar/errors.log`.
 fn setup_logging(cli: &Cli, config_dir: &Path) -> anyhow::Result<()> {
   let log_level = match cli.command() {
-    CliCommand::Startup(args) => args.verbosity.level(),
+    CliCommand::Startup(args) | CliCommand::OpenSettings(args) => {
+      args.verbosity.level()
+    }
     _ => Level::INFO,
   };
 

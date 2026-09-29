@@ -30,6 +30,10 @@ For building locally, follow the instructions [here](https://github.com/glzr-io/
 
 ### Accessing Zebar GUI
 
+Run `zebar open-settings` to open settings without using the tray icon. If Zebar is already running, the command opens or focuses its settings window. Otherwise, it starts Zebar with settings only; configured startup widgets are not launched by this command.
+
+Windows MSI and Debian installations also provide a **Zebar Settings** start menu entry. For an AppImage, run `./Zebar.AppImage open-settings`, using your downloaded filename.
+
 Click the Zebar icon in your system tray to open the GUI interface.
 
 ### Installing widgets
