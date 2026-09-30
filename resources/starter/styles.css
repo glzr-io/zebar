@@ -124,15 +124,15 @@ body,
   border: none;
   border-radius: 2px;
   cursor: pointer;
+}
 
-  &.displayed {
-    background: rgb(255 255 255 / 15%);
-  }
+.workspace.displayed {
+  background: rgb(255 255 255 / 15%);
+}
 
-  &.focused,
-  &:hover {
-    background: rgb(75 115 255 / 50%);
-  }
+.workspace.focused,
+.workspace:hover {
+  background: rgb(75 115 255 / 50%);
 }
 
 .binding-mode,
