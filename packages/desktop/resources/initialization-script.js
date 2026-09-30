@@ -13,6 +13,12 @@ setInterval(
 
 if (window.location.host === '127.0.0.1:6124') {
   if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data.type === 'GET_CACHE_CONFIG') {
+        event.ports[0].postMessage(window.__ZEBAR_STATE.config.caching);
+      }
+    });
+
     navigator.serviceWorker
       .register('/__zebar/sw.js', { scope: '/' })
       .then(sw => {
@@ -22,11 +28,11 @@ if (window.location.host === '127.0.0.1:6124') {
           'color: inherit',
         );
 
+        // Keep older workers initialized while the updated worker activates.
         const message = {
           type: 'SET_CONFIG',
           config: window.__ZEBAR_STATE.config.caching,
         };
-
         sw.active?.postMessage(message);
         sw.installing?.postMessage(message);
         sw.waiting?.postMessage(message);

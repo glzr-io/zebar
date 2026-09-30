@@ -16,10 +16,12 @@ self.addEventListener('fetch', event => {
   // Use the default browser handling for requests where:
   // - The request method is not GET.
   // - The request is a navigation request.
+  // - The caller explicitly disables caching.
   // - The request is to the same origin as the service worker.
   if (
     event.request.method !== 'GET' ||
     event.request.mode === 'navigate' ||
+    event.request.cache === 'no-store' ||
     new URL(event.request.url).origin === self.location.origin
   ) {
     return;
@@ -28,28 +30,13 @@ self.addEventListener('fetch', event => {
   event.respondWith(handleFetch(event));
 });
 
-/**
- * Config-related state.
- *
- * The cache config is asynchronously resolved by posting a message from
- * the initialization script.
- */
-const deferredConfig = {
-  value: null,
-  resolve: null,
-  promise: new Promise(resolve =>
-    setTimeout(() => (deferredConfig.resolve = resolve)),
-  ),
-};
-
 self.addEventListener('message', event => {
   switch (event.data.type) {
     case 'CLEAR_CACHE':
       event.waitUntil(clearCache());
       break;
     case 'SET_CONFIG':
-      deferredConfig.value = event.data.config;
-      deferredConfig.resolve();
+      // Older widgets still broadcast this; fetches use the caller's policy.
       break;
     default:
       console.error(
@@ -58,6 +45,35 @@ self.addEventListener('message', event => {
       );
   }
 });
+
+async function getCacheConfig(clientId) {
+  if (!clientId) {
+    return null;
+  }
+  const client = await self.clients.get(clientId);
+  if (!client) {
+    return null;
+  }
+
+  // Request the policy from the originating widget so worker restarts and
+  // other widget windows cannot replace it.
+  return new Promise(resolve => {
+    const channel = new MessageChannel();
+    const finish = config => {
+      clearTimeout(timeout);
+      channel.port1.close();
+      channel.port2.close();
+      resolve(config);
+    };
+    const timeout = setTimeout(() => finish(null), 1000);
+    channel.port1.onmessage = event => finish(event.data);
+    try {
+      client.postMessage({ type: 'GET_CACHE_CONFIG' }, [channel.port2]);
+    } catch {
+      finish(null);
+    }
+  });
+}
 
 async function clearCache() {
   await Promise.all(
@@ -68,10 +84,13 @@ async function clearCache() {
 }
 
 async function handleFetch(event) {
-  // Wait for config to be set before processing any requests.
-  const config = await deferredConfig.promise.then(
-    () => deferredConfig.value,
-  );
+  const config = await getCacheConfig(event.clientId);
+  const duration = config
+    ? getCacheDuration(event.request.url, config)
+    : 0;
+  if (duration === 0) {
+    return fetch(event.request);
+  }
 
   const [responseCache, metadataCache] = await Promise.all([
     caches.open('responses-v1'),
@@ -87,8 +106,7 @@ async function handleFetch(event) {
   // Check if there's a valid cached response.
   if (cachedResponse) {
     const hasExpired =
-      !cachedMetadata ||
-      Date.now() > cachedMetadata.timestamp + cachedMetadata.duration;
+      !cachedMetadata || Date.now() >= cachedMetadata.timestamp + duration;
 
     if (!hasExpired) {
       return cachedResponse;
@@ -114,7 +132,6 @@ async function handleFetch(event) {
     ) {
       const metadata = {
         timestamp: Date.now(),
-        duration: getCacheDuration(event.request.url, config),
       };
 
       await Promise.all([
