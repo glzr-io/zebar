@@ -94,16 +94,18 @@ async function handleFetch(event) {
       return cachedResponse;
     }
 
-    // If expired, delete it.
-    await Promise.all([
-      responseCache.delete(event.request),
-      metadataCache.delete(event.request),
-    ]);
+    // If expired, keep the stale entry around until it's successfully
+    // replaced, so that it can be used as a fallback when offline.
   }
 
   try {
     // Otherwise, fetch the resource from the network.
     const networkResponse = await fetch(event.request);
+
+    // Fall back to the stale response on server errors.
+    if (cachedResponse && networkResponse.status >= 500) {
+      return cachedResponse;
+    }
 
     // Cache the response if its status is in the 200-299 range or if
     // it's opaque. Opaque responses are from requests with 'no-cors',
@@ -128,6 +130,16 @@ async function handleFetch(event) {
 
     return networkResponse;
   } catch (error) {
+    // Fall back to the stale response when the network is unavailable.
+    if (cachedResponse) {
+      console.warn(
+        `Network request failed, serving stale cache for ${event.request.url}.`,
+        error,
+      );
+
+      return cachedResponse;
+    }
+
     console.error(error);
     return new Response('Offline or network error occurred.', {
       status: 503,
