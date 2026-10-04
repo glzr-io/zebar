@@ -8,6 +8,30 @@ use std::{
 };
 
 use anyhow::{bail, Context};
+#[cfg(any(
+  target_os = "linux",
+  target_os = "dragonfly",
+  target_os = "freebsd",
+  target_os = "netbsd",
+  target_os = "openbsd"
+))]
+use gdk::WindowTypeHint::Dock;
+#[cfg(any(
+  target_os = "linux",
+  target_os = "dragonfly",
+  target_os = "freebsd",
+  target_os = "netbsd",
+  target_os = "openbsd"
+))]
+use gtk::prelude::{GtkWindowExt, WidgetExt};
+#[cfg(any(
+  target_os = "linux",
+  target_os = "dragonfly",
+  target_os = "freebsd",
+  target_os = "netbsd",
+  target_os = "openbsd"
+))]
+use gtk_layer_shell::{Edge, Layer, LayerShell};
 use serde::Serialize;
 use tauri::{
   self, AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
@@ -333,7 +357,26 @@ impl WidgetFactory {
       .data_directory(
         self.app_settings.webview_cache_dir.join(&widget_pack.id),
       )
+      .visible(false) // initially hide so that wlr_layer_shell works
       .build()?;
+
+      #[cfg(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+      ))]
+      {
+        // we need to engage the layer shell if shown_in_taskbar is false,
+        // not just if docking.
+        if !widget_config.shown_in_taskbar
+          || placement.dock_to_edge.enabled
+        {
+          let gtk_window = window.gtk_window()?;
+          gtk_window.init_layer_shell();
+        }
+      }
 
       // Widget coordinates might be modified when docked to an edge.
       let (size, position) = match placement.dock_to_edge.enabled {
@@ -347,6 +390,8 @@ impl WidgetFactory {
 
       // Adjust the z-order of the window.
       Self::set_z_order(&window, &widget_config.z_order, placement)?;
+
+      window.show()?;
 
       info!("Positioning widget to {:?} {:?}", size, position);
 
@@ -429,6 +474,25 @@ impl WidgetFactory {
       }
     }
 
+    #[cfg(any(
+      target_os = "linux",
+      target_os = "dragonfly",
+      target_os = "freebsd",
+      target_os = "netbsd",
+      target_os = "openbsd"
+    ))]
+    {
+      if placement.dock_to_edge.enabled {
+        let layer = match z_order {
+          ZOrder::TopMost => Layer::Top,
+          ZOrder::BottomMost => Layer::Bottom,
+          ZOrder::Normal => Layer::Overlay, // ??
+        };
+        let gtk_window = window.gtk_window()?;
+        gtk_window.set_layer(layer);
+      }
+    }
+
     match z_order {
       ZOrder::Normal => {
         // Default z-order, no special handling needed.
@@ -466,54 +530,61 @@ impl WidgetFactory {
     dock_config: &DockConfig,
     coords: &WidgetCoordinates,
   ) -> anyhow::Result<(PhysicalSize<i32>, PhysicalPosition<i32>)> {
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(not(any(
+      target_os = "linux",
+      target_os = "dragonfly",
+      target_os = "freebsd",
+      target_os = "netbsd",
+      target_os = "openbsd",
+      target_os = "windows"
+    )))]
     {
-      Ok((coords.size, coords.position))
+      return Ok((coords.size, coords.position));
     }
+
+    // Disallow docking with a centered anchor point. Doesn't make sense.
+    if coords.anchor == AnchorPoint::Center {
+      return Ok((coords.size, coords.position));
+    }
+
+    let edge = dock_config.edge.unwrap_or_else(|| coords.closest_edge());
+
+    // Offset from the monitor edge to the window.
+    let offset = match edge {
+      DockEdge::Top => coords.offset.y,
+      DockEdge::Bottom => -coords.offset.y,
+      DockEdge::Left => coords.offset.x,
+      DockEdge::Right => -coords.offset.x,
+    };
+
+    // Length of the window perpendicular to the monitor edge.
+    let window_length = if edge.is_horizontal() {
+      coords.size.height
+    } else {
+      coords.size.width
+    };
+
+    // Margin to reserve *after* the window. Can be negative, but should
+    // not be smaller than the size of the window.
+    let window_margin = dock_config
+      .window_margin
+      .to_px_scaled(window_length, coords.monitor.scale_factor)
+      .clamp(-coords.size.height, i32::MAX);
+
+    let monitor_length = if edge.is_horizontal() {
+      coords.monitor.height
+    } else {
+      coords.monitor.width
+    };
+
+    // Prevent the reserved amount from exceeding 50% of the monitor
+    // size. This maximum is arbitrary but should be sufficient for
+    // most cases.
+    let reserved_length = (offset + window_length + window_margin)
+      .clamp(0, monitor_length as i32 / 2);
 
     #[cfg(target_os = "windows")]
     {
-      // Disallow docking with a centered anchor point. Doesn't make sense.
-      if coords.anchor == AnchorPoint::Center {
-        return Ok((coords.size, coords.position));
-      }
-
-      let edge = dock_config.edge.unwrap_or_else(|| coords.closest_edge());
-
-      // Offset from the monitor edge to the window.
-      let offset = match edge {
-        DockEdge::Top => coords.offset.y,
-        DockEdge::Bottom => -coords.offset.y,
-        DockEdge::Left => coords.offset.x,
-        DockEdge::Right => -coords.offset.x,
-      };
-
-      // Length of the window perpendicular to the monitor edge.
-      let window_length = if edge.is_horizontal() {
-        coords.size.height
-      } else {
-        coords.size.width
-      };
-
-      // Margin to reserve *after* the window. Can be negative, but should
-      // not be smaller than the size of the window.
-      let window_margin = dock_config
-        .window_margin
-        .to_px_scaled(window_length, coords.monitor.scale_factor)
-        .clamp(-coords.size.height, i32::MAX);
-
-      let monitor_length = if edge.is_horizontal() {
-        coords.monitor.height
-      } else {
-        coords.monitor.width
-      };
-
-      // Prevent the reserved amount from exceeding 50% of the monitor
-      // size. This maximum is arbitrary but should be sufficient for
-      // most cases.
-      let reserved_length = (offset + window_length + window_margin)
-        .clamp(0, monitor_length as i32 / 2);
-
       let reserve_size = if edge.is_horizontal() {
         PhysicalSize::new(coords.monitor.width as i32, reserved_length)
       } else {
@@ -576,6 +647,46 @@ impl WidgetFactory {
       );
 
       Ok((final_size, final_position))
+    }
+
+    #[cfg(any(
+      target_os = "linux",
+      target_os = "dragonfly",
+      target_os = "freebsd",
+      target_os = "netbsd",
+      target_os = "openbsd"
+    ))]
+    {
+      let gtk_edge = match edge {
+        DockEdge::Top => Edge::Top,
+        DockEdge::Right => Edge::Right,
+        DockEdge::Bottom => Edge::Bottom,
+        DockEdge::Left => Edge::Left,
+      };
+
+      let gtk_window = window.gtk_window()?;
+
+      gtk_window.set_type_hint(Dock);
+      gtk_window.set_anchor(gtk_edge, true);
+      gtk_window.set_exclusive_zone(reserved_length);
+      gtk_window.set_layer_shell_margin(gtk_edge, offset);
+
+      // this size request bounds the click/mouse intercept region of the
+      // widget. without it, it blocks clicks even though it doesn't
+      // block the window from drawing in the window management
+      gtk_window.set_size_request(coords.size.width, coords.size.height);
+
+      // explicit monitor placement is required when using layer shell
+      // placement - absolute coordinates don't work
+      if let Some(display) = gdk::Display::default() {
+        if let Some(monitor) =
+          display.monitor_at_point(coords.position.x, coords.position.y)
+        {
+          gtk_window.set_monitor(&monitor);
+        }
+      };
+
+      Ok((coords.size, coords.position))
     }
   }
 
