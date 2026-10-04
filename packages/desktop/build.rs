@@ -1,3 +1,32 @@
+const COMMANDS: &[&str] = &[
+  "widget_packs",
+  "widget_states",
+  "start_widget",
+  "start_widget_preset",
+  "stop_widget_preset",
+  "update_widget_config",
+  "create_widget_pack",
+  "update_widget_pack",
+  "delete_widget_pack",
+  "create_widget_config",
+  "delete_widget_config",
+  "listen_provider",
+  "unlisten_provider",
+  "call_provider_function",
+  "install_widget_pack",
+  "start_preview_widget",
+  "stop_all_preview_widgets",
+  "set_always_on_top",
+  "set_skip_taskbar",
+  "shell_exec",
+  "shell_spawn",
+  "shell_write",
+  "shell_kill",
+];
 fn main() {
-  tauri_build::build()
+  tauri_build::try_build(
+    tauri_build::Attributes::new()
+      .app_manifest(tauri_build::AppManifest::new().commands(&COMMANDS)),
+  )
+  .unwrap();
 }

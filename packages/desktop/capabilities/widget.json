@@ -31,6 +31,15 @@
     "core:window:allow-set-size",
     "core:window:allow-set-title",
     "core:window:allow-set-effects",
-    "core:window:allow-set-ignore-cursor-events"
+    "core:window:allow-set-ignore-cursor-events",
+    "allow-listen-provider",
+    "allow-unlisten-provider",
+    "allow-call-provider-function",
+    "allow-set-always-on-top",
+    "allow-set-skip-taskbar",
+    "allow-shell-spawn",
+    "allow-shell-exec",
+    "allow-shell-write",
+    "allow-shell-kill"
   ]
 }
