@@ -2,9 +2,13 @@ use std::str::FromStr;
 
 use anyhow::{bail, Context};
 use regex::Regex;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq)]
+/// Length in physical pixels or percent, such as 100px or 50%.
+#[derive(
+  Debug, Clone, PartialEq, Deserialize, Serialize, schemars::JsonSchema,
+)]
+#[serde(try_from = "String", into = "String")]
 pub struct LengthValue {
   pub amount: f32,
   pub unit: LengthUnit,
@@ -74,27 +78,20 @@ impl FromStr for LengthValue {
   }
 }
 
-impl Serialize for LengthValue {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: Serializer,
-  {
-    let s = match self.unit {
-      LengthUnit::Percentage => format!("{}%", self.amount),
-      LengthUnit::Pixel => format!("{}px", self.amount),
-    };
-
-    serializer.serialize_str(&s)
+impl From<LengthValue> for String {
+  fn from(value: LengthValue) -> Self {
+    match value.unit {
+      LengthUnit::Percentage => format!("{}%", value.amount),
+      LengthUnit::Pixel => format!("{}px", value.amount),
+    }
   }
 }
 
-impl<'de> Deserialize<'de> for LengthValue {
-  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    let s = String::deserialize(deserializer)?;
-    LengthValue::from_str(&s).map_err(serde::de::Error::custom)
+impl TryFrom<String> for LengthValue {
+  type Error = anyhow::Error;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    value.parse()
   }
 }
 

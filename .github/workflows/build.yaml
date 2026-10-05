@@ -69,6 +69,14 @@ jobs:
       - run: pnpm i
       - run: pnpm run --filter zebar --filter @zebar/settings-ui build
 
+      - name: Check generated configuration schemas
+        if: matrix.tauri-target == 'x86_64-pc-windows-msvc'
+        run: |
+          pnpm schema:generate
+          git diff --exit-code -- resources/settings-schema.json resources/zpack-schema.json
+        env:
+          VERSION_NUMBER: 0.0.0
+
       - name: Set version number
         shell: bash
         run: |

@@ -5,7 +5,6 @@ use std::{
 };
 
 use anyhow::Context;
-use serde::{Deserialize, Serialize};
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 use tokio::sync::{broadcast, Mutex};
 
@@ -17,29 +16,7 @@ use crate::{
 
 pub const VERSION_NUMBER: &str = env!("VERSION_NUMBER");
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AppSettingsValue {
-  /// JSON schema URL to validate the settings file.
-  #[serde(rename = "$schema")]
-  pub schema: Option<String>,
-
-  /// Widget configs to be launched on startup.
-  pub startup_configs: Vec<StartupConfig>,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StartupConfig {
-  /// ID of the widget pack to launch on startup.
-  pub pack: String,
-
-  /// Name of the widget within the widget pack to launch on startup.
-  pub widget: String,
-
-  /// Preset name within the widget config.
-  pub preset: String,
-}
+pub use crate::config_types::{AppSettingsValue, StartupConfig};
 
 #[derive(Debug)]
 pub struct AppSettings {

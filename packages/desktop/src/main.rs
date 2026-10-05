@@ -39,6 +39,7 @@ mod cli;
 mod commands;
 mod common;
 mod config_migration;
+mod config_types;
 mod marketplace_installer;
 mod monitor_state;
 mod providers;
