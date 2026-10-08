@@ -98,63 +98,57 @@ where
   })
 }
 
-macro_rules! build_enum {
-    ($([$($mac:tt)+])* $name:ident{$($($provider:ident($value_type:ty)),+);+}) => {
+macro_rules! impl_from {
+    ($(#[$($mac:tt)+])* pub enum $name:ident{$($provider:ident($value_type:ty)),+}) => {
       $(#[$($mac)+])*
-      pub enum $name{
-        $($($provider($value_type),)+)+
+      pub enum $name {
+        $($provider($value_type),)+
       }
-      $($(
+      $(
         impl From<$value_type> for $name {
           fn from(value: $value_type) -> Self {
             Self::$provider(value)
           }
         }
-      )+)+
+      )+
     };
 }
 
 macro_rules! declare_provider_set {
     (sync[$($sync_provider:ident),+] async[$($async_provider:ident),+]) => {
-      build_enum!(
-        [derive(Deserialize, Debug)]
-        [serde(tag = "type", rename_all = "snake_case")]
-        ProviderConfig {
-          $($sync_provider(<$sync_provider as Provider>::Config)),+;
-          $($async_provider(<$async_provider as Provider>::Config)),+
-        }
-      );
+      #[derive(Deserialize, Debug)]
+      #[serde(tag = "type", rename_all = "snake_case")]
+      pub enum ProviderConfig {
+        $($sync_provider(<$sync_provider as Provider>::Config)),+,
+        $($async_provider(<$async_provider as Provider>::Config)),+
+      }
 
-      build_enum!(
-        [derive(Debug, Clone, PartialEq, Serialize)]
-        [serde(untagged)]
-        ProviderOutput {
-          $($sync_provider(<$sync_provider as Provider>::Output)),+;
+      impl_from!(
+        #[derive(Debug, Clone, PartialEq, Serialize)]
+        #[serde(untagged)]
+        pub enum ProviderOutput {
+          $($sync_provider(<$sync_provider as Provider>::Output)),+,
           $($async_provider(<$async_provider as Provider>::Output)),+
         }
       );
 
-      build_enum!(
-        [derive(Debug, Clone, Serialize, Deserialize)]
-        [serde(tag = "type", content = "function", rename_all = "snake_case")]
-        ProviderFunction {
-          $($sync_provider(<$sync_provider as Provider>::Function)),+;
-          $($async_provider(<$async_provider as Provider>::Function)),+
-        }
-      );
+      #[derive(Debug, Clone, Serialize, Deserialize)]
+      #[serde(tag = "type", content = "function", rename_all = "snake_case")]
+      pub enum ProviderFunction {
+        $($sync_provider(<$sync_provider as Provider>::Function)),+,
+        $($async_provider(<$async_provider as Provider>::Function)),+
+      }
 
-      build_enum!(
-        [derive(Debug, Clone, Serialize)]
-        [serde(untagged)]
-        ProviderResponse {
-          $($sync_provider(<$sync_provider as Provider>::Response)),+;
-          $($async_provider(<$async_provider as Provider>::Response)),+
-        }
-      );
+      #[derive(Debug, Clone, Serialize)]
+      #[serde(untagged)]
+      pub enum ProviderResponse {
+        $($sync_provider(<$sync_provider as Provider>::Response)),+,
+        $($async_provider(<$async_provider as Provider>::Response)),+
+      }
 
-      build_enum!(
-        ProviderSender {
-          $($sync_provider(cb_mpsc::Sender<ProviderInputMsg<$sync_provider>>)),+;
+      impl_from!(
+        pub enum ProviderSender {
+          $($sync_provider(cb_mpsc::Sender<ProviderInputMsg<$sync_provider>>)),+,
           $($async_provider(tk_mpsc::Sender<ProviderInputMsg<$async_provider>>)),+
        }
       );
@@ -176,14 +170,14 @@ macro_rules! declare_provider_set {
             (ProviderSender::$sync_provider(ref tx), ProviderFunction::$sync_provider(_f)) => {
               let (response_tx, response_rx) = oneshot::channel();
               tx.send(ProviderInputMsg::Function(_f, response_tx))?;
-              response_rx.await?.map(ProviderResponse::from)
+              response_rx.await?.map(|r| ProviderResponse::$sync_provider(r))
             },
           )+
           $(
             (ProviderSender::$async_provider(ref tx), ProviderFunction::$async_provider(_f)) => {
               let (response_tx, response_rx) = oneshot::channel();
               tx.send(ProviderInputMsg::Function(_f, response_tx)).await?;
-              response_rx.await?.map(ProviderResponse::from)
+              response_rx.await?.map(|r| ProviderResponse::$async_provider(r))
             },
           )+
           _ => panic!("Sender type did not match function type"),
