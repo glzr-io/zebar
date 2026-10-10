@@ -26,7 +26,8 @@ type ShellEvent<T extends string | Uint8Array = string> =
   | {
       type: 'terminated';
       data: {
-        exitCode: number | null;
+        code: number | null;
+        success: boolean;
         signal: number | null;
       };
     };
@@ -121,7 +122,12 @@ export async function shellSpawn<
             errorCallbacks.forEach(callback => callback(shellEvent.data));
             break;
           case 'terminated':
-            exitCallbacks.forEach(callback => callback(shellEvent.data));
+            exitCallbacks.forEach(callback =>
+              callback({
+                exitCode: shellEvent.data.code,
+                signal: shellEvent.data.signal,
+              }),
+            );
             unlistenEvents();
             break;
         }
