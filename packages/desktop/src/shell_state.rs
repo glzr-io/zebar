@@ -6,19 +6,20 @@ use std::{
 use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
 use shell_util::{
-  Buffer, ChildProcessEvent, CommandOptions, ProcessId, Shell,
-  ShellExecOutput,
+  Buffer, ChildKiller, ChildProcessEvent, CommandOptions, ProcessId,
+  Shell, ShellExecOutput,
 };
 use tauri::{AppHandle, Emitter};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 use crate::widget_factory::WidgetFactory;
 
 /// Handle for managing a spawned child process.
 #[derive(Debug)]
 pub struct ProcessHandle {
+  widget_id: String,
   write_tx: mpsc::UnboundedSender<Buffer>,
-  kill_tx: oneshot::Sender<()>,
+  killer: ChildKiller,
   _event_task: tokio::task::JoinHandle<()>,
 }
 
@@ -119,20 +120,30 @@ impl ShellState {
     let args_vec: Vec<String> = args.into();
     let mut child = Shell::spawn(program, &args_vec, options)?;
     let app_handle = self.app_handle.clone();
-    let widget_id = widget_id.to_string();
+    let children = self.children.clone();
+    let event_widget_id = widget_id.to_string();
     let pid = child.pid();
+    let killer = child.killer();
 
-    // Create channels for write and kill signals.
+    // Create channel for write requests.
     let (write_tx, mut write_rx) = mpsc::unbounded_channel::<Buffer>();
-    let (kill_tx, mut kill_rx) = oneshot::channel();
+
+    // Hold the lock until the handle is inserted, so that the event task
+    // cannot remove the entry before it exists.
+    let mut children_guard = self.children.lock().unwrap();
 
     // Set up event handling.
     let event_task = tokio::spawn(async move {
       loop {
         tokio::select! {
-          // Process events from the child.
-          Some(event) = child.events().recv() => {
-            let _ = app_handle.emit_to(widget_id.clone(), "shell-emit", ShellEmission {
+          // Process events from the child. The channel closes after the
+          // child has terminated.
+          event = child.events().recv() => {
+            let Some(event) = event else {
+              break;
+            };
+
+            let _ = app_handle.emit_to(event_widget_id.clone(), "shell-emit", ShellEmission {
               pid,
               event,
             });
@@ -141,27 +152,24 @@ impl ShellState {
           // Process write requests.
           Some(buffer) = write_rx.recv() => {
             if let Err(err) = child.write(buffer.as_bytes()) {
-              let _ = app_handle.emit_to(widget_id.clone(), "shell-emit", ShellEmission {
+              let _ = app_handle.emit_to(event_widget_id.clone(), "shell-emit", ShellEmission {
                 pid,
                 event: ChildProcessEvent::Error(format!("Write error: {}", err)),
               });
             }
           }
-
-          // Kill the process when signal is received.
-          _ = &mut kill_rx => {
-            let _ = child.kill();
-            break;
-          }
         }
       }
+
+      children.lock().unwrap().remove(&pid);
     });
 
-    self.children.lock().unwrap().insert(
+    children_guard.insert(
       pid,
       ProcessHandle {
+        widget_id: widget_id.to_string(),
         write_tx,
-        kill_tx,
+        killer,
         _event_task: event_task,
       },
     );
@@ -188,13 +196,29 @@ impl ShellState {
   /// Terminates a running process.
   pub fn kill(&self, pid: ProcessId) -> anyhow::Result<()> {
     if let Some(handle) = self.children.lock().unwrap().remove(&pid) {
-      handle
-        .kill_tx
-        .send(())
-        .map_err(|_| anyhow::anyhow!("Failed to send kill command."))?;
+      handle.killer.kill().context("Failed to kill process.")?;
     }
 
     Ok(())
+  }
+
+  /// Terminates all running processes spawned by the given widget.
+  pub fn kill_by_widget(&self, widget_id: &str) {
+    self.children.lock().unwrap().retain(|_, handle| {
+      if handle.widget_id != widget_id {
+        return true;
+      }
+
+      let _ = handle.killer.kill();
+      false
+    });
+  }
+
+  /// Terminates all running processes.
+  pub fn kill_all(&self) {
+    for (_, handle) in self.children.lock().unwrap().drain() {
+      let _ = handle.killer.kill();
+    }
   }
 
   /// Validates whether a widget has privilege to execute a program with
@@ -256,10 +280,6 @@ impl ShellState {
 
 impl Drop for ShellState {
   fn drop(&mut self) {
-    let mut children = self.children.lock().unwrap();
-
-    for (_, child) in children.drain() {
-      let _ = child.kill_tx.send(());
-    }
+    self.kill_all();
   }
 }
