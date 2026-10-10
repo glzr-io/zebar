@@ -5176,6 +5176,7 @@ dependencies = [
  "memchr",
  "os_pipe",
  "serde",
+ "serde_json",
  "shared_child",
  "thiserror 2.0.18",
  "tokio",
