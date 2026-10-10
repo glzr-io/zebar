@@ -65,6 +65,7 @@ export interface SystrayFunction {
       | 'icon_hover_leave'
       | 'icon_hover_move'
       | 'icon_left_click'
+      | 'icon_left_double_click'
       | 'icon_right_click'
       | 'icon_middle_click';
     args: {
