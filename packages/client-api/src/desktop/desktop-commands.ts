@@ -154,11 +154,11 @@ function shellWrite(
   processId: number,
   buffer: string | Uint8Array,
 ): Promise<void> {
-  return invoke<void>('shell_write', { processId, buffer });
+  return invoke<void>('shell_write', { pid: processId, buffer });
 }
 
 function shellKill(processId: number): Promise<void> {
-  return invoke<void>('shell_kill', { processId });
+  return invoke<void>('shell_kill', { pid: processId });
 }
 
 export interface ShellCommandOptions {
