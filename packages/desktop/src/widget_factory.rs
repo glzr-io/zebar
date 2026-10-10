@@ -326,6 +326,7 @@ impl WidgetFactory {
       .shadow(false)
       .decorations(false)
       .resizable(widget_config.resizable)
+      .accept_first_mouse(self.app_settings.accept_first_mouse().await)
       .initialization_script(&self.initialization_script(&state)?)
       // Widgets from the same pack share their browser cache (i.e.
       // `localStorage`, `sessionStorage`, SW cache, etc.).
