@@ -26,6 +26,12 @@ pub struct AppSettingsValue {
 
   /// Widget configs to be launched on startup.
   pub startup_configs: Vec<StartupConfig>,
+
+  /// Whether clicking an unfocused widget also clicks through to the
+  /// widget, instead of only focusing its window. Only has an effect on
+  /// macOS, and applies to widgets opened after the setting changes.
+  #[serde(default)]
+  pub accept_first_mouse: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -204,6 +210,7 @@ impl AppSettings {
         },
         preset: "default".into(),
       }],
+      accept_first_mouse: false,
     };
 
     let settings_path = config_dir.join("settings.json");
@@ -214,6 +221,11 @@ impl AppSettings {
     )?;
 
     Ok(())
+  }
+
+  /// Returns whether widget windows accept the first mouse click.
+  pub async fn accept_first_mouse(&self) -> bool {
+    self.value.lock().await.accept_first_mouse
   }
 
   /// Returns the widget configs to open on startup.

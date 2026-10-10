@@ -108,6 +108,7 @@ fn migrate_startup_config(config_dir: &Path) -> anyhow::Result<()> {
       crate::app_settings::VERSION_NUMBER
     )),
     startup_configs: new_startup_configs,
+    accept_first_mouse: false,
   };
 
   // Write the migrated settings back to the file.

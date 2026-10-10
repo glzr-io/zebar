@@ -22,6 +22,11 @@
         },
         "required": ["pack", "widget", "preset"]
       }
+    },
+    "acceptFirstMouse": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether clicking an unfocused widget also clicks through to the widget, instead of only focusing its window. Only has an effect on macOS, and applies to widgets opened after the setting changes."
     }
   }
 }
