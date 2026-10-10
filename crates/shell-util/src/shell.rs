@@ -123,6 +123,14 @@ impl ChildProcess {
     Ok(())
   }
 
+  /// Returns a handle that can kill the child process while this
+  /// `ChildProcess` is owned elsewhere.
+  pub fn killer(&self) -> ChildKiller {
+    ChildKiller {
+      inner: self.inner.clone(),
+    }
+  }
+
   /// Returns the child process' pid.
   pub fn pid(&self) -> u32 {
     self.inner.id()
@@ -131,6 +139,20 @@ impl ChildProcess {
   /// Returns a channel of events from the child process.
   pub fn events(&mut self) -> &mut mpsc::Receiver<ChildProcessEvent> {
     &mut self.rx
+  }
+}
+
+/// Handle for killing a child process from another thread or task.
+#[derive(Debug)]
+pub struct ChildKiller {
+  inner: Arc<SharedChild>,
+}
+
+impl ChildKiller {
+  /// Sends a kill signal to the child process.
+  pub fn kill(&self) -> crate::Result<()> {
+    self.inner.kill()?;
+    Ok(())
   }
 }
 

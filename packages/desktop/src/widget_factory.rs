@@ -28,6 +28,7 @@ use crate::{
   asset_server::create_init_url,
   common::PathExt,
   monitor_state::{Monitor, MonitorState},
+  shell_state::ShellState,
   widget_pack::{
     AnchorPoint, DockConfig, DockEdge, WidgetConfig, WidgetPack,
     WidgetPackManager, WidgetPlacement, ZOrder,
@@ -618,11 +619,17 @@ impl WidgetFactory {
     window: &tauri::WebviewWindow,
     widget_id: String,
   ) -> anyhow::Result<()> {
+    let app_handle = self.app_handle.clone();
     let widget_states = self.widget_states.clone();
     let close_tx = self.close_tx.clone();
 
     window.on_window_event(move |event| {
       if let WindowEvent::Destroyed = event {
+        // Kill any processes spawned by the widget.
+        if let Some(shell_state) = app_handle.try_state::<ShellState>() {
+          shell_state.kill_by_widget(&widget_id);
+        }
+
         let widget_states = widget_states.clone();
         let close_tx = close_tx.clone();
         let widget_id = widget_id.clone();

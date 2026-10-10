@@ -126,16 +126,24 @@ async fn main() -> anyhow::Result<()> {
     ])
     .build(tauri::generate_context!())?;
 
-  app.run(|_app, event| {
-    if let RunEvent::ExitRequested { .. } = &event {
+  app.run(|app, event| match &event {
+    RunEvent::ExitRequested { .. } => {
       // Deallocate any appbars on Windows.
       #[cfg(target_os = "windows")]
       {
-        for (_, window) in _app.webview_windows() {
+        for (_, window) in app.webview_windows() {
           let _ = window.as_ref().window().deallocate_app_bar();
         }
       }
     }
+    // Kill spawned processes synchronously, since Tauri exits the process
+    // right after this event without dropping managed state.
+    RunEvent::Exit => {
+      if let Some(shell_state) = app.try_state::<ShellState>() {
+        shell_state.kill_all();
+      }
+    }
+    _ => {}
   });
 
   Ok(())
