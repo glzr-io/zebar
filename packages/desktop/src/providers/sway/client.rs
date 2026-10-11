@@ -25,14 +25,10 @@ impl From<Vec<Error>> for SwayErrorGroup {
 
 impl fmt::Display for SwayErrorGroup {
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-    match writeln!(f, "Sway encountered one or more errors. Details:")? {
-      () => {
-        for err in &self.0 {
-          writeln!(f, "{}", err)?
-        }
-      }
-    }
-
+    writeln!(f, "Sway encountered one or more errors. Details:")?;
+    for err in &self.0 {
+      writeln!(f, "{}", err)?
+    };
     Ok(())
   }
 }
@@ -83,28 +79,20 @@ impl SwayClient {
   }
 
   pub async fn get_state(&mut self) -> anyhow::Result<SwayOutput> {
-    match self.write_con.get_workspaces().await? {
-      all_workspaces => match self.write_con.get_outputs().await? {
-        all_outputs => match self.write_con.get_binding_modes().await? {
-          binding_modes => {
-            let active_binding_mode =
-              match self.write_con.get_binding_state().await? {
-                name if !name.is_empty() => Some(name),
-                _ => None,
-              };
-            Ok(SwayOutput {
-              all_workspaces,
-              all_outputs,
-              binding_modes,
-              active_binding_mode,
-            })
-          }
-        },
-      },
-    }
+    let all_workspaces = self.write_con.get_workspaces().await?;
+    let all_outputs = self.write_con.get_outputs().await?;
+    let binding_modes = self.write_con.get_binding_modes().await?;
+    let binding_state = self.write_con.get_binding_state().await?;
+    let active_binding_mode = if !binding_state.is_empty() { Some(binding_state) } else { None };
+    Ok(SwayOutput {
+      all_workspaces,
+      all_outputs,
+      binding_modes,
+      active_binding_mode,
+    })
   }
 
-  pub async fn wait_for_update(&mut self) {
+  pub async fn recv_event(&mut self) {
     _ = self.event_rx.recv().await;
   }
 
@@ -112,19 +100,14 @@ impl SwayClient {
     &mut self,
     payload: T,
   ) -> anyhow::Result<()> {
-    match self.write_con.run_command(payload).await {
-      Ok(results) => {
-        let errs: Vec<Error> = results
-          .into_iter()
-          .filter_map(move |err| err.err())
-          .collect();
-        if errs.is_empty() {
-          Ok(())
-        } else {
-          Err(SwayErrorGroup::new(errs))?
-        }
-      }
-      Err(err) => Err(err)?,
+    let errs: Vec<Error> = self.write_con.run_command(payload).await?
+      .into_iter()
+      .filter_map(Result::err)
+      .collect();
+    if errs.is_empty() {
+      Ok(())
+    } else {
+      Err(SwayErrorGroup::new(errs).into())
     }
   }
 }

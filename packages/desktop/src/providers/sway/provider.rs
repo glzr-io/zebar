@@ -39,7 +39,7 @@ impl Provider for SwayProvider {
         // now loop for updates
         loop {
           tokio::select! {
-            state = client.wait_for_update() => {
+            state = client.recv_event() => {
               self.0.emitter.emit_output(client.get_state().await);
             }
             Some(input) = self.0.input.async_rx.recv() => {
