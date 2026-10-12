@@ -72,6 +72,13 @@ impl MonitorState {
         interval.tick().await;
         let new_monitors = Self::available_monitors(&app_handle);
 
+        // On macOS, sleeping displays are excluded from the available
+        // monitors. Relaunching widgets on an empty list closes them
+        // without reopening them on wake.
+        if new_monitors.is_empty() {
+          continue;
+        }
+
         let should_update = {
           let current_monitors = monitors.read().await;
           *current_monitors != new_monitors
