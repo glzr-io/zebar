@@ -1,5 +1,5 @@
-use std::{future::Future, marker::PhantomData, sync::Arc};
-use std::fmt::Debug;
+use std::{fmt::Debug, future::Future, marker::PhantomData, sync::Arc};
+
 use crossbeam::channel as cb_mpsc;
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -7,32 +7,60 @@ use tokio::{
   task,
 };
 
-use crate::providers::{ProviderEmitter as OldEmitter, ProviderFunctionResponse, ProviderManager, ProviderRef, ProviderSender as OldSender};
+use crate::providers::{
+  ProviderEmitter as OldEmitter, ProviderFunctionResponse,
+  ProviderManager, ProviderRef, ProviderSender as OldSender,
+};
 
-/// Although we do mandate Debug, Clone, and serialization traits as needed the config, output, function, response types can broadly be anything as the need to roll them into an enum is fully encapsulated.
-pub trait Provider where Self : 'static + Send {
+/// Although we do mandate Debug, Clone, and serialization traits as needed
+/// the config, output, function, response types can broadly be anything as
+/// the need to roll them into an enum is fully encapsulated.
+pub trait Provider
+where
+  Self: 'static + Send,
+{
   type Config: Debug + for<'a> Deserialize<'a> + 'static + Send;
   type Output: Debug + Clone + PartialEq + Serialize;
-  type Function: Debug + Clone + Serialize + for<'a> Deserialize<'a> + 'static + Send;
+  type Function: Debug
+    + Clone
+    + Serialize
+    + for<'a> Deserialize<'a>
+    + 'static
+    + Send;
   type Response: Debug + Clone + Serialize + 'static + Send;
 }
 
-pub enum ProviderInputMsg<T> where T : Provider + ?Sized {
+pub enum ProviderInputMsg<T>
+where
+  T: Provider + ?Sized,
+{
   Function(T::Function, oneshot::Sender<anyhow::Result<T::Response>>),
   Stop,
 }
 
-/// This fully insulates the actual provider from the fact that there is an enum involved, since it's only really involved for technical/serialization reasons.
-/// It's similar conceptually to From<T>/Into<T> but doesn't raise conflicting implementation issues and therefore allows Output to be of arbitrary type.
-trait WrapOutput<T> where T : Provider + ?Sized {
+/// This fully insulates the actual provider from the fact that there is an
+/// enum involved, since it's only really involved for
+/// technical/serialization reasons. It's similar conceptually to
+/// From<T>/Into<T> but doesn't raise conflicting implementation issues and
+/// therefore allows Output to be of arbitrary type.
+trait WrapOutput<T>
+where
+  T: Provider + ?Sized,
+{
   fn wrap(output: T::Output) -> ProviderOutput;
 }
-pub struct ProviderEmitter<T> where T : Provider + ?Sized {
+pub struct ProviderEmitter<T>
+where
+  T: Provider + ?Sized,
+{
   inner: OldEmitter,
   _phantom: PhantomData<T>,
 }
 
-pub struct CommonProviderState<P, R> where P : Provider + ?Sized {
+pub struct CommonProviderState<P, R>
+where
+  P: Provider + ?Sized,
+{
   pub emitter: ProviderEmitter<P>,
 
   /// Wrapper around the receiver channel for incoming inputs to the
@@ -46,7 +74,8 @@ pub struct CommonProviderState<P, R> where P : Provider + ?Sized {
 pub trait SyncProvider: Provider {
   fn spawn(
     config: Self::Config,
-    common: CommonProviderState<Self,
+    common: CommonProviderState<
+      Self,
       cb_mpsc::Receiver<ProviderInputMsg<Self>>,
     >,
   );
@@ -55,7 +84,8 @@ pub trait SyncProvider: Provider {
 pub trait AsyncProvider: Provider {
   fn spawn(
     config: Self::Config,
-    common: CommonProviderState<Self,
+    common: CommonProviderState<
+      Self,
       tk_mpsc::Receiver<ProviderInputMsg<Self>>,
     >,
   ) -> impl Future + Send;
@@ -68,10 +98,11 @@ fn spawn_sync<T>(
 ) -> anyhow::Result<ProviderRef>
 where
   T: Provider + SyncProvider + 'static + Send,
-  ProviderSender: From<cb_mpsc::Sender<ProviderInputMsg<T>>>
+  ProviderSender: From<cb_mpsc::Sender<ProviderInputMsg<T>>>,
 {
   let (input_tx, input_rx) = cb_mpsc::bounded(1);
-  let common = manager.create_common_state::<T, _>(config_hash.clone(), input_rx);
+  let common =
+    manager.create_common_state::<T, _>(config_hash.clone(), input_rx);
   let task_handle = task::spawn_blocking(move || {
     T::spawn(config, common);
     tracing::info!("Provider stopped: {}", config_hash);
@@ -90,10 +121,11 @@ fn spawn_async<T>(
 ) -> anyhow::Result<ProviderRef>
 where
   T: Provider + AsyncProvider + 'static + Send,
-  ProviderSender: From<tk_mpsc::Sender<ProviderInputMsg<T>>>
+  ProviderSender: From<tk_mpsc::Sender<ProviderInputMsg<T>>>,
 {
   let (input_tx, input_rx) = tk_mpsc::channel(1);
-  let common = manager.create_common_state::<T, _>(config_hash.clone(), input_rx);
+  let common =
+    manager.create_common_state::<T, _>(config_hash.clone(), input_rx);
   let task_handle = task::spawn(async move {
     T::spawn(config, common).await;
     tracing::info!("Provider stopped: {}", config_hash);
@@ -105,13 +137,20 @@ where
   })
 }
 
-impl<T> ProviderEmitter<T> where T : Provider {
-
+impl<T> ProviderEmitter<T>
+where
+  T: Provider,
+{
   pub fn new(inner: OldEmitter) -> Self {
-    Self { inner, _phantom: Default::default() }
+    Self {
+      inner,
+      _phantom: Default::default(),
+    }
   }
   /// Emits an output from a provider.
-  pub fn emit_output(&self, output: anyhow::Result<T::Output>) where Self : WrapOutput<T>
+  pub fn emit_output(&self, output: anyhow::Result<T::Output>)
+  where
+    Self: WrapOutput<T>,
   {
     self.inner.emit_output(output.map(Self::wrap));
   }
@@ -121,7 +160,9 @@ impl<T> ProviderEmitter<T> where T : Provider {
   ///
   /// Note that this won't share the same cache if the `ProviderEmitter`
   /// is cloned.
-  pub fn emit_output_cached(&mut self, output: anyhow::Result<T::Output>) where Self : WrapOutput<T>
+  pub fn emit_output_cached(&mut self, output: anyhow::Result<T::Output>)
+  where
+    Self: WrapOutput<T>,
   {
     self.inner.emit_output_cached(output.map(Self::wrap));
   }
@@ -258,7 +299,8 @@ impl Provider for TestSyncProvider {
 impl SyncProvider for TestSyncProvider {
   fn spawn(
     config: <Self as Provider>::Config,
-    common: CommonProviderState<Self,
+    common: CommonProviderState<
+      Self,
       cb_mpsc::Receiver<ProviderInputMsg<Self>>,
     >,
   ) {
@@ -278,7 +320,8 @@ impl Provider for TestAsyncProvider {
 impl AsyncProvider for TestAsyncProvider {
   async fn spawn(
     config: <Self as Provider>::Config,
-    common: CommonProviderState<Self,
+    common: CommonProviderState<
+      Self,
       tk_mpsc::Receiver<ProviderInputMsg<Self>>,
     >,
   ) {

@@ -23,7 +23,12 @@ use super::{
   ProviderConfig, ProviderFunction, ProviderFunctionResponse,
   ProviderFunctionResult, ProviderOutput, RuntimeType,
 };
-use crate::providers::self_managed_provider::{call_function, spawn_provider, stop, Provider as SMProvider, CommonProviderState as SMCommonProviderState, ProviderEmitter as SMProviderEmitter, ProviderSender as SMProviderSender};
+use crate::providers::self_managed_provider::{
+  call_function, spawn_provider, stop,
+  CommonProviderState as SMCommonProviderState, Provider as SMProvider,
+  ProviderEmitter as SMProviderEmitter,
+  ProviderSender as SMProviderSender,
+};
 
 /// Common fields for a provider.
 pub struct CommonProviderState {
@@ -350,11 +355,12 @@ impl ProviderManager {
     config_hash: String,
     input_rx: R,
   ) -> SMCommonProviderState<P, R>
-    where P : SMProvider
+  where
+    P: SMProvider,
   {
     SMCommonProviderState::<P, R> {
       input_rx,
-      emitter: SMProviderEmitter::new(ProviderEmitter{
+      emitter: SMProviderEmitter::new(ProviderEmitter {
         emit_tx: self.emit_tx.clone(),
         config_hash: config_hash.clone(),
         prev_emission: None,
@@ -383,8 +389,10 @@ impl ProviderManager {
       .context("No provider found with config.")?;
 
     match (&provider_ref.input_tx, function) {
-      (ProviderSender::SelfManaged(ref sender), ProviderFunction::SelfManaged(f)) =>
-        call_function(sender, f).await,
+      (
+        ProviderSender::SelfManaged(ref sender),
+        ProviderFunction::SelfManaged(f),
+      ) => call_function(sender, f).await,
       (_input_tx, f) => {
         let (tx, rx) = oneshot::channel();
         match &provider_ref.input_tx {
@@ -398,7 +406,7 @@ impl ProviderManager {
           _ => panic!("got wrong sender for the wrong function type"),
         }?;
         rx.await?.map_err(anyhow::Error::msg)
-      },
+      }
     }
     .context("Failed to send function call to provider.")
   }
