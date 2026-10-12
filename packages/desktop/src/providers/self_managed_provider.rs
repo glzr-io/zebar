@@ -168,22 +168,6 @@ where
   }
 }
 
-macro_rules! impl_from {
-    ($(#[$($mac:tt)+])* pub enum $name:ident{$($provider:ident($value_type:ty)),+}) => {
-      $(#[$($mac)+])*
-      pub enum $name {
-        $($provider($value_type),)+
-      }
-      $(
-        impl From<$value_type> for $name {
-          fn from(value: $value_type) -> Self {
-            Self::$provider(value)
-          }
-        }
-      )+
-    };
-}
-
 macro_rules! declare_provider_set {
     (sync[$($sync_provider:ident),+] async[$($async_provider:ident),+]) => {
       #[derive(Deserialize, Debug)]
@@ -200,6 +184,40 @@ macro_rules! declare_provider_set {
         $($async_provider(<$async_provider as Provider>::Output)),+
       }
 
+      #[derive(Debug, Clone, Serialize, Deserialize)]
+      #[serde(tag = "type", content = "function", rename_all = "snake_case")]
+      pub enum ProviderFunction {
+        $($sync_provider(<$sync_provider as Provider>::Function)),+,
+        $($async_provider(<$async_provider as Provider>::Function)),+
+      }
+
+      #[derive(Debug, Clone, Serialize)]
+      #[serde(untagged)]
+      pub enum ProviderResponse {
+        $($sync_provider(<$sync_provider as Provider>::Response)),+,
+        $($async_provider(<$async_provider as Provider>::Response)),+
+      }
+
+      pub enum ProviderSender {
+        $($sync_provider(cb_mpsc::Sender<ProviderInputMsg<$sync_provider>>)),+,
+        $($async_provider(tk_mpsc::Sender<ProviderInputMsg<$async_provider>>)),+
+      }
+
+      $(
+        impl From<cb_mpsc::Sender<ProviderInputMsg<$sync_provider>>> for ProviderSender {
+          fn from(value: cb_mpsc::Sender<ProviderInputMsg<$sync_provider>>) -> Self {
+            Self::$sync_provider(value)
+          }
+        }
+      )+
+      $(
+        impl From<tk_mpsc::Sender<ProviderInputMsg<$async_provider>>> for ProviderSender {
+          fn from(value: tk_mpsc::Sender<ProviderInputMsg<$async_provider>>) -> Self {
+            Self::$async_provider(value)
+          }
+        }
+      )+
+
       $(
         impl WrapOutput<$sync_provider> for ProviderEmitter<$sync_provider> {
           fn wrap(output: <$sync_provider as Provider>::Output) -> ProviderOutput {
@@ -215,27 +233,6 @@ macro_rules! declare_provider_set {
         }
       )+
 
-      #[derive(Debug, Clone, Serialize, Deserialize)]
-      #[serde(tag = "type", content = "function", rename_all = "snake_case")]
-      pub enum ProviderFunction {
-        $($sync_provider(<$sync_provider as Provider>::Function)),+,
-        $($async_provider(<$async_provider as Provider>::Function)),+
-      }
-
-      #[derive(Debug, Clone, Serialize)]
-      #[serde(untagged)]
-      pub enum ProviderResponse {
-        $($sync_provider(<$sync_provider as Provider>::Response)),+,
-        $($async_provider(<$async_provider as Provider>::Response)),+
-      }
-
-      impl_from!(
-        pub enum ProviderSender {
-          $($sync_provider(cb_mpsc::Sender<ProviderInputMsg<$sync_provider>>)),+,
-          $($async_provider(tk_mpsc::Sender<ProviderInputMsg<$async_provider>>)),+
-       }
-      );
-
       pub fn spawn_provider(config_hash: String, config: ProviderConfig, provider_manager: &ProviderManager) -> anyhow::Result<ProviderRef> {
         match config {
           $(
@@ -248,24 +245,24 @@ macro_rules! declare_provider_set {
       }
 
       pub async fn call_function(sender: &ProviderSender, f: ProviderFunction) -> anyhow::Result<ProviderFunctionResponse> {
-        let response = match (sender, f) {
+        match (sender, f) {
           $(
             (ProviderSender::$sync_provider(ref tx), ProviderFunction::$sync_provider(_f)) => {
               let (response_tx, response_rx) = oneshot::channel();
               tx.send(ProviderInputMsg::Function(_f, response_tx))?;
-              response_rx.await?.map(|r| ProviderResponse::$sync_provider(r))
+              response_rx.await?.map(ProviderResponse::$sync_provider)
             },
           )+
           $(
             (ProviderSender::$async_provider(ref tx), ProviderFunction::$async_provider(_f)) => {
               let (response_tx, response_rx) = oneshot::channel();
               tx.send(ProviderInputMsg::Function(_f, response_tx)).await?;
-              response_rx.await?.map(|r| ProviderResponse::$async_provider(r))
+              response_rx.await?.map(ProviderResponse::$async_provider)
             },
           )+
           _ => panic!("Sender type did not match function type"),
-        };
-        response.map(|r|ProviderFunctionResponse::SelfManaged(r))
+        }
+          .map(ProviderFunctionResponse::SelfManaged)
       }
 
       pub async fn stop(sender: &ProviderSender) -> anyhow::Result<()> {
@@ -281,16 +278,16 @@ macro_rules! declare_provider_set {
     };
 }
 
-pub struct TestSyncProvider {}
+pub struct TestSyncProvider;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct TestSyncProviderConfig {}
+pub struct TestSyncProviderConfig;
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
-pub struct TestSyncProviderOutput {}
+pub struct TestSyncProviderOutput;
 
 impl Provider for TestSyncProvider {
-  type Config = (TestSyncProviderConfig);
+  type Config = TestSyncProviderConfig;
   type Output = TestSyncProviderOutput;
   type Function = PhantomData<Self>;
   type Response = PhantomData<Self>;
