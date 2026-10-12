@@ -432,10 +432,10 @@ impl ProviderManager {
       ProviderSender::Async(ref input_tx) => input_tx
         .send(ProviderInputMsg::Stop)
         .await
-        .map_err(|err| err.into()),
+        .map_err(anyhow::Error::from),
       ProviderSender::Sync(ref input_tx) => input_tx
         .send(ProviderInputMsg::Stop)
-        .map_err(|err| err.into()),
+        .map_err(anyhow::Error::from),
       ProviderSender::SelfManaged(ref sender) => stop(sender).await,
     }
     .context("Failed to send shutdown signal to provider.")?;
