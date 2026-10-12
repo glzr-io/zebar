@@ -18,6 +18,7 @@ mod provider_config;
 mod provider_function;
 mod provider_manager;
 mod provider_output;
+mod self_managed_provider;
 #[cfg(windows)]
 mod systray;
 mod weather;
