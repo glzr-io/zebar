@@ -23,11 +23,7 @@ use super::{
   ProviderConfig, ProviderFunction, ProviderFunctionResponse,
   ProviderFunctionResult, ProviderOutput, RuntimeType,
 };
-use crate::providers::self_managed_provider::{
-  call_function, spawn_provider, stop,
-  CommonProviderState as SMCommonProviderState,
-  ProviderSender as SMProviderSender,
-};
+use crate::providers::self_managed_provider::{call_function, spawn_provider, stop, Provider as SMProvider, CommonProviderState as SMCommonProviderState, ProviderEmitter as SMProviderEmitter, ProviderSender as SMProviderSender};
 
 /// Common fields for a provider.
 pub struct CommonProviderState {
@@ -349,18 +345,20 @@ impl ProviderManager {
     Ok((task_handle, runtime_type))
   }
 
-  pub fn create_common_state<T>(
+  pub fn create_common_state<P, R>(
     &self,
     config_hash: String,
-    input_rx: T,
-  ) -> SMCommonProviderState<T> {
-    SMCommonProviderState {
+    input_rx: R,
+  ) -> SMCommonProviderState<P, R>
+    where P : SMProvider
+  {
+    SMCommonProviderState::<P, R> {
       input_rx,
-      emitter: ProviderEmitter {
+      emitter: SMProviderEmitter::new(ProviderEmitter{
         emit_tx: self.emit_tx.clone(),
         config_hash: config_hash.clone(),
         prev_emission: None,
-      },
+      }),
       sysinfo: self.sysinfo.clone(),
     }
   }
@@ -401,7 +399,6 @@ impl ProviderManager {
         }?;
         rx.await?.map_err(anyhow::Error::msg)
       },
-      _ => panic!("got wrong sender for the wrong function type"),
     }
     .context("Failed to send function call to provider.")
   }
