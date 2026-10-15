@@ -56,7 +56,7 @@ jobs:
         run: |
           cargo clippy --workspace --all-targets --fix --exclude systray-util
           if git status --porcelain | grep -q .; then
-            echo "::error::Detected autofixable clippy warnings. Please run 'cargo clippy --workspace --all-targets --fix --exclude systray-util' locally, commit, and push."
+            echo "::error::Detected autofixable clippy warnings. Please run 'pnpm lint:fix' locally, commit, and push."
             git diff --stat
             exit 1
           fi
@@ -67,7 +67,7 @@ jobs:
         run: |
           cargo clippy --workspace --all-targets --fix --target x86_64-pc-windows-msvc
           if git status --porcelain | grep -q .; then
-            echo "::error::Detected autofixable clippy warnings. Please run 'cargo clippy --workspace --all-targets --fix --target x86_64-pc-windows-msvc' locally, commit, and push."
+            echo "::error::Detected autofixable clippy warnings. Please run 'pnpm lint:fix' locally, commit, and push."
             git diff --stat
             exit 1
           fi
