@@ -1,3 +1,5 @@
+use futures::StreamExt;
+use rocket::serde::json::to_string;
 use serde::{Deserialize, Serialize};
 use swayipc_async::EventType;
 
@@ -39,7 +41,7 @@ impl Provider for SwayProvider {
         // now loop for updates
         loop {
           tokio::select! {
-            state = client.recv_event() => {
+            _ = client.events.next() => {
               self.0.emitter.emit_output(client.get_state().await);
             }
             Some(input) = self.0.input.async_rx.recv() => {

@@ -47,7 +47,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { workspace = true }
 
 [target.'cfg(any(target_os = "linux",target_os = "dragonfly",target_os = "freebsd",target_os = "netbsd",target_os = "openbsd"))'.dependencies]
-futures-util = "0.3.34"
+futures = "0.3.34"
 tokio-util = "0.7.19"
 swayipc-async = "3.0.0"
 
