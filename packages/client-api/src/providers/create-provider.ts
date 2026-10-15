@@ -70,6 +70,12 @@ import type {
   SystrayProviderConfig,
   SystrayProvider,
 } from './systray/systray-provider-types';
+import type {
+  SwayProvider,
+  SwayProviderConfig,
+} from '../providers/sway/sway-provider-types';
+import { createSwayProvider } from '../providers/sway/create-sway-provider';
+
 
 export interface ProviderConfigMap {
   audio: AudioProviderConfig;
@@ -87,6 +93,7 @@ export interface ProviderConfigMap {
   keyboard: KeyboardProviderConfig;
   disk: DiskProviderConfig;
   systray: SystrayProviderConfig;
+  sway: SwayProviderConfig;
 }
 
 export interface ProviderMap {
@@ -105,6 +112,7 @@ export interface ProviderMap {
   keyboard: KeyboardProvider;
   disk: DiskProvider;
   systray: SystrayProvider;
+  sway: SwayProvider;
 }
 
 export type ProviderType = keyof ProviderConfigMap;
@@ -158,6 +166,8 @@ export function createProvider<T extends ProviderConfig>(
       return createDiskProvider(config) as any;
     case 'systray':
       return createSystrayProvider(config) as any;
+    case 'sway':
+      return createSwayProvider(config) as any;
     default:
       throw new Error('Not a supported provider type.');
   }

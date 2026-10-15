@@ -13,5 +13,6 @@ export * from './memory/memory-provider-types';
 export * from './network/network-provider-types';
 export * from './weather/weather-provider-types';
 export * from './systray/systray-provider-types';
+export * from './sway/sway-provider-types';
 export * from './create-provider';
 export * from './create-provider-group';
