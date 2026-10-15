@@ -22,6 +22,15 @@ mod provider_output;
 mod systray;
 mod weather;
 
+#[cfg(any(
+  target_os = "linux",
+  target_os = "dragonfly",
+  target_os = "freebsd",
+  target_os = "netbsd",
+  target_os = "openbsd"
+))]
+pub mod sway;
+
 pub use provider::*;
 pub use provider_config::*;
 pub use provider_function::*;

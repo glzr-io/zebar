@@ -24,6 +24,16 @@ use super::{
   ProviderFunctionResult, ProviderOutput, RuntimeType,
 };
 
+#[cfg(any(
+  target_os = "linux",
+  target_os = "dragonfly",
+  target_os = "freebsd",
+  target_os = "netbsd",
+  target_os = "openbsd"
+))]
+use crate::providers::sway::SwayProvider;
+
+
 /// Common fields for a provider.
 pub struct CommonProviderState {
   /// Wrapper around the sender channel of provider emissions.
@@ -254,6 +264,14 @@ impl ProviderManager {
       ProviderConfig::Komorebi(..) => RuntimeType::Async,
       #[cfg(windows)]
       ProviderConfig::Systray(..) => RuntimeType::Async,
+      #[cfg(any(
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+      ))]
+      ProviderConfig::Sway(..) => RuntimeType::Async,
       _ => RuntimeType::Sync,
     };
 
@@ -277,6 +295,17 @@ impl ProviderManager {
           #[cfg(windows)]
           ProviderConfig::Systray(config) => {
             let mut provider = SystrayProvider::new(config, common);
+            provider.start_async().await;
+          }
+          #[cfg(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "openbsd"
+          ))]
+          ProviderConfig::Sway(_) => {
+            let mut provider = SwayProvider::new(common);
             provider.start_async().await;
           }
           _ => unreachable!(),

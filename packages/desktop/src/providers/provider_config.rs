@@ -14,6 +14,18 @@ use super::{
   network::NetworkProviderConfig, weather::WeatherProviderConfig,
 };
 
+#[cfg(any(
+target_os = "linux",
+target_os = "dragonfly",
+target_os = "freebsd",
+target_os = "netbsd",
+target_os = "openbsd"
+))]
+use crate::providers::{
+  sway::SwayProviderConfig,
+};
+
+
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ProviderConfig {
@@ -35,4 +47,12 @@ pub enum ProviderConfig {
   Weather(WeatherProviderConfig),
   #[cfg(windows)]
   Keyboard(KeyboardProviderConfig),
+  #[cfg(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
+  ))]
+  Sway(SwayProviderConfig),
 }

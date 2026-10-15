@@ -1,11 +1,28 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(any(
+  target_os = "linux",
+  target_os = "dragonfly",
+  target_os = "freebsd",
+  target_os = "netbsd",
+  target_os = "openbsd"
+))]
+use crate::providers::sway::SwayFunction;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "function", rename_all = "snake_case")]
 pub enum ProviderFunction {
   Audio(AudioFunction),
   Media(MediaFunction),
   Systray(SystrayFunction),
+  #[cfg(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
+  ))]
+  Sway(SwayFunction),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
