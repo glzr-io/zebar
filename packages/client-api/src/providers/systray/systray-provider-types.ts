@@ -27,4 +27,5 @@ export interface SystrayIcon {
   iconHash: string;
   iconUrl: string;
   tooltip: string;
+  processPath: string;
 }

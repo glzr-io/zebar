@@ -12,7 +12,10 @@ use windows::{
         VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE,
         PAGE_READWRITE,
       },
-      Threading::{OpenProcess, PROCESS_ALL_ACCESS},
+      Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_ALL_ACCESS,
+        PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION,
+      },
     },
     UI::{
       Controls::{TBBUTTON, TBSTATE_HIDDEN},
@@ -32,7 +35,7 @@ use windows::{
     },
   },
 };
-use windows_core::w;
+use windows_core::{w, PWSTR};
 
 use crate::Util;
 
@@ -127,6 +130,7 @@ pub(crate) struct IconEventData {
   pub uid: Option<u32>,
   pub window_handle: Option<isize>,
   pub guid: Option<uuid::Uuid>,
+  pub process_path: Option<String>,
   pub tooltip: Option<String>,
   pub icon_handle: Option<isize>,
   pub callback_message: Option<u32>,
@@ -188,10 +192,14 @@ impl From<NotifyIconData> for IconEventData {
 
     let is_visible = icon_data.state.0 & NIS_HIDDEN.0 == 0;
 
+    let process_path = window_handle
+      .and_then(|handle| TraySpy::executable_path(handle).ok());
+
     IconEventData {
       uid,
       window_handle,
       guid,
+      process_path,
       tooltip,
       icon_handle,
       callback_message,
@@ -223,10 +231,14 @@ impl From<TbButtonItem> for IconEventData {
         .replace('\r', "")
         .to_string();
 
+    let process_path =
+      TraySpy::executable_path(tb_item.window_handle).ok();
+
     IconEventData {
       uid: Some(tb_item.uid),
       window_handle: Some(tb_item.window_handle),
       guid,
+      process_path,
       tooltip: Some(tooltip),
       icon_handle,
       callback_message: Some(tb_item.callback_message),
@@ -506,6 +518,35 @@ impl TraySpy {
     tracing::info!("Retrieved {} icons from system tray.", icons.len());
 
     Ok(icons)
+  }
+
+  fn executable_path(window_handle: isize) -> crate::Result<String> {
+    let mut process_id = u32::default();
+    unsafe {
+      GetWindowThreadProcessId(
+        HWND(window_handle as _),
+        Some(&mut process_id),
+      );
+    }
+
+    let process = unsafe {
+      OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id)
+    }?;
+
+    let mut buffer = vec![0u16; 32_768];
+    let mut length = buffer.len() as u32;
+    let result = unsafe {
+      QueryFullProcessImageNameW(
+        process,
+        PROCESS_NAME_FORMAT(0),
+        PWSTR(buffer.as_mut_ptr()),
+        &mut length,
+      )
+    };
+    let _ = unsafe { CloseHandle(process) };
+    result?;
+
+    Ok(String::from_utf16_lossy(&buffer[..length as usize]))
   }
 
   fn read_tray_icon(

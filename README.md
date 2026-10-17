@@ -463,8 +463,9 @@ No config options.
 | `iconBytes`         | Icon image as a PNG byte array. |  `number[]`    |
 | `iconBlob`         | Icon image as a PNG blob. |  `Blob`    |
 | `iconHash`         | Hash of the icon image. Used to determine if the icon image has changed.  |  `string`    |
-| `iconUrl`         | Icon image URL ready to be be referenced in `<img>` elements.  |  `string`    |
+| `iconUrl`         | Icon image URL ready to be referenced in `<img>` elements.  |  `string`    |
 | `tooltip`         | Tooltip text when hovering over the icon.  |  `string`    |
+| `processPath`     | Path to the executable of the application owning the icon. |  `string`    |
 
 ### Weather
 
