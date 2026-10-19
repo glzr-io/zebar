@@ -379,7 +379,7 @@ impl Systray {
             process_path: icon_data
               .process_path
               .clone()
-              .unwrap_or_else(|| "UNKNOWN".to_string()),
+              .unwrap_or_else(|| "".to_string()),
             tooltip: icon_data
               .tooltip
               .clone()
