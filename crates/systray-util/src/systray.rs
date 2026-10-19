@@ -97,6 +97,9 @@ pub struct SystrayIcon {
   /// handle and uid).
   pub guid: Option<uuid::Uuid>,
 
+  /// Path to the executable of the process that owns the icon.
+  pub process_path: String,
+
   /// Tooltip to show for the icon on hover.
   pub tooltip: String,
 
@@ -135,6 +138,7 @@ impl std::fmt::Debug for SystrayIcon {
       .field("uid", &self.uid)
       .field("window_handle", &self.window_handle)
       .field("guid", &self.guid)
+      .field("process_path", &self.process_path)
       .field("tooltip", &self.tooltip)
       .field("icon_handle", &self.icon_handle)
       .field("icon_image", &self.icon_image.as_ref().map(|_| "..."))
@@ -372,6 +376,10 @@ impl Systray {
             uid: icon_data.uid,
             window_handle: icon_data.window_handle,
             guid: icon_data.guid,
+            process_path: icon_data
+              .process_path
+              .clone()
+              .unwrap_or_else(|| "".to_string()),
             tooltip: icon_data
               .tooltip
               .clone()

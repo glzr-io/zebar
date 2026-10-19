@@ -21,6 +21,7 @@ pub struct SystrayOutput {
 #[serde(rename_all = "camelCase")]
 pub struct SystrayOutputIcon {
   pub id: String,
+  pub process_path: String,
   pub tooltip: String,
   pub icon_bytes: Vec<u8>,
   pub icon_hash: String,
@@ -32,6 +33,7 @@ impl TryFrom<SystrayIcon> for SystrayOutputIcon {
   fn try_from(icon: SystrayIcon) -> Result<Self, Self::Error> {
     Ok(SystrayOutputIcon {
       id: icon.stable_id.to_string(),
+      process_path: icon.process_path.clone(),
       tooltip: icon.tooltip.clone(),
       icon_bytes: icon.to_image_format(ImageFormat::Png)?,
       icon_hash: icon
