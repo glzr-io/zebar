@@ -8,7 +8,7 @@ First fork, then clone the repo:
 git clone git@github.com:your-username/zebar.git
 ```
 
-If not already installed, [install Rust](#installing-rust) and [Node.js v20](#installing-nodejs), then run:
+If not already installed, [install Rust](#installing-rust) and [Node.js v24](#installing-nodejs), then run:
 
 ```shell
 # Install pnpm (package manager).
