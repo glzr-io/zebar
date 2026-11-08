@@ -12,6 +12,7 @@ use crate::widget_pack::MonitorSelection;
 
 #[derive(Debug)]
 pub struct MonitorState {
+  app_handle: AppHandle,
   _change_rx: broadcast::Receiver<Vec<Monitor>>,
 
   pub change_tx: broadcast::Sender<Vec<Monitor>>,
@@ -47,6 +48,7 @@ impl MonitorState {
     );
 
     Self {
+      app_handle: app_handle.clone(),
       monitors,
       _change_rx,
       change_tx,
@@ -72,6 +74,13 @@ impl MonitorState {
         interval.tick().await;
         let new_monitors = Self::available_monitors(&app_handle);
 
+        // On macOS, sleeping displays are excluded from the available
+        // monitors. Relaunching widgets on an empty list closes them
+        // without reopening them on wake.
+        if new_monitors.is_empty() {
+          continue;
+        }
+
         let should_update = {
           let current_monitors = monitors.read().await;
           *current_monitors != new_monitors
@@ -84,6 +93,24 @@ impl MonitorState {
         }
       }
     });
+  }
+
+  #[cfg(target_os = "macos")]
+  pub async fn refresh_after_wake(&self) {
+    // Retry while WindowServer has no usable displays. Never relaunch
+    // widgets against an empty monitor list.
+    for _ in 0..10 {
+      let monitors = Self::available_monitors(&self.app_handle);
+      if !monitors.is_empty() {
+        *self.monitors.write().await = monitors.clone();
+        let _ = self.change_tx.send(monitors);
+        return;
+      }
+      tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+    tracing::warn!(
+      "No displays available after wake; keeping widget placements."
+    );
   }
 
   /// Gets available monitors on the system.
