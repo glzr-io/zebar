@@ -7829,6 +7829,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "block2",
  "clap",
  "cocoa",
  "crossbeam",
@@ -7836,6 +7837,8 @@ dependencies = [
  "globset",
  "komorebi-util",
  "netdev",
+ "objc2",
+ "objc2-foundation",
  "regex",
  "reqwest 0.12.28",
  "rocket",

@@ -270,6 +270,32 @@ fn listen_events(
   mut install_rx: mpsc::Receiver<WidgetPack>,
 ) {
   let app_handle = app_handle.clone();
+  #[cfg(target_os = "macos")]
+  {
+    let (observer, mut session_rx) =
+      crate::common::macos::SessionObserver::new();
+    app_handle.manage(observer);
+    let monitor_state = monitor_state.clone();
+    task::spawn(async move {
+      while session_rx.recv().await.is_some() {
+        // Wait for WindowServer and external displays, coalescing unlock
+        // and wake notifications before refreshing the widgets.
+        loop {
+          match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            session_rx.recv(),
+          )
+          .await
+          {
+            Ok(Some(())) => continue,
+            Ok(None) => return,
+            Err(_) => break,
+          }
+        }
+        monitor_state.refresh_after_wake().await;
+      }
+    });
+  }
   let mut widget_open_rx = widget_factory.open_tx.subscribe();
   let mut widget_close_rx = widget_factory.close_tx.subscribe();
   let mut settings_change_rx = app_settings.settings_change_tx.subscribe();
@@ -304,7 +330,9 @@ fn listen_events(
         },
         Ok(_) = monitors_change_rx.recv() => {
           info!("Monitors changed.");
-          widget_factory.relaunch_all().await
+          let res = widget_factory.relaunch_all().await;
+          // Startup widgets skipped for lack of a display open now.
+          widget_factory.open_pending_startup().await.and(res)
         },
         Ok((pack_id, changed_config)) = widget_configs_change_rx.recv() => {
           info!("Widget config changed.");

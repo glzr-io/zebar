@@ -2,7 +2,7 @@ use std::{
   collections::HashMap,
   path::PathBuf,
   sync::{
-    atomic::{AtomicU32, Ordering},
+    atomic::{AtomicBool, AtomicU32, Ordering},
     Arc,
   },
 };
@@ -62,6 +62,11 @@ pub struct WidgetFactory {
   /// Used to generate unique widget ID's which are used as Tauri window
   /// labels.
   widget_count: Arc<AtomicU32>,
+
+  /// Whether a startup preset could not be placed because no display was
+  /// available (e.g. launched with the lid closed). Retried on the next
+  /// monitor change.
+  startup_pending: Arc<AtomicBool>,
 
   /// Map of widget ID's to their states.
   widget_states: Arc<Mutex<HashMap<String, WidgetState>>>,
@@ -178,6 +183,7 @@ impl WidgetFactory {
       open_tx,
       monitor_state,
       widget_count: Arc::new(AtomicU32::new(0)),
+      startup_pending: Arc::new(AtomicBool::new(false)),
       widget_states: Arc::new(Mutex::new(HashMap::new())),
     }
   }
@@ -584,20 +590,69 @@ impl WidgetFactory {
     let startup_configs = self.app_settings.startup_configs().await;
 
     for startup_config in startup_configs {
-      if let Err(err) = self
+      let created_before = self.widget_count.load(Ordering::Relaxed);
+      let result = self
         .start_widget_by_id(
           &startup_config.pack,
           &startup_config.widget,
-          &WidgetOpenOptions::Preset(startup_config.preset),
+          &WidgetOpenOptions::Preset(startup_config.preset.clone()),
           false,
         )
-        .await
-      {
-        tracing::error!("Failed to start widget on startup: {:?}", err);
+        .await;
+
+      match result {
+        Err(err) => {
+          tracing::error!("Failed to start widget on startup: {:?}", err);
+        }
+        // No window was created. Either the preset is already open, or
+        // no display matched its monitor selection.
+        Ok(())
+          if self.widget_count.load(Ordering::Relaxed)
+            == created_before
+            && !self
+              .is_preset_open(
+                &startup_config.pack,
+                &startup_config.widget,
+                &startup_config.preset,
+              )
+              .await =>
+        {
+          tracing::warn!(
+            "No display available for startup widget {}; opening it once a display appears.",
+            startup_config.widget
+          );
+          self.startup_pending.store(true, Ordering::Relaxed);
+        }
+        Ok(()) => {}
       }
     }
 
     Ok(())
+  }
+
+  /// Opens startup presets that were deferred because no display was
+  /// available. No-op when nothing is pending.
+  pub async fn open_pending_startup(&self) -> anyhow::Result<()> {
+    if self.startup_pending.swap(false, Ordering::Relaxed) {
+      info!("Display available; opening deferred startup widgets.");
+      self.startup().await?;
+    }
+
+    Ok(())
+  }
+
+  async fn is_preset_open(
+    &self,
+    pack_id: &str,
+    widget_name: &str,
+    preset: &str,
+  ) -> bool {
+    let preset = WidgetOpenOptions::Preset(preset.to_string());
+    self.widget_states.lock().await.values().any(|state| {
+      state.pack_id == pack_id
+        && state.name == widget_name
+        && state.open_options == preset
+    })
   }
 
   fn initialization_script(
